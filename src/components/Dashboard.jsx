@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-  import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-  import { supabase } from '../supabaseClient';
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { supabase } from '../supabaseClient';
 
-const COLORS = ['#4f46e5', '#059669', '#d97706', '#dc2626', '#7c3aed', '#0891b2', '#db2777', '#65a30d', '#ea580c', '#0284c7'];
+const COLORS = ['#0d9488', '#0ea5e9', '#14b8a6', '#0284c7', '#2dd4bf', '#38bdf8', '#0f766e', '#0369a1', '#5eead4', '#7dd3fc'];
+const RELATIONS = ['Self', 'Spouse', 'Partner', 'Child', 'Parent', 'Sibling', 'Roommate', 'Other'];
 
 function fmt(n) {
 const v = Number(n) || 0;
@@ -17,7 +18,10 @@ function monthLabel(d) {
 return d.toLocaleString('default', { month: 'long', year: 'numeric' });
 }
 
-export default function Dashboard({ session }) {
+export default function Dashboard({ session, household, onHouseholdChange }) {
+const householdId = household.id;
+const isOwner = household.role === 'owner';
+
 const [currentMonth, setCurrentMonth] = useState(() => {
 const d = new Date();
 d.setDate(1);
@@ -27,9 +31,12 @@ return d;
 const [categories, setCategories] = useState([]);
 const [expenses, setExpenses] = useState([]);
 const [recurringExpenses, setRecurringExpenses] = useState([]);
+const [incomes, setIncomes] = useState([]);
 const [totalBudget, setTotalBudget] = useState(0);
 const [loading, setLoading] = useState(true);
 const [showSettings, setShowSettings] = useState(false);
+const [members, setMembers] = useState([]);
+const [pendingInvites, setPendingInvites] = useState([]);
 
 const [form, setForm] = useState({
 date: new Date().toISOString().slice(0, 10),
@@ -49,29 +56,52 @@ startMonth: monthKey(new Date()),
 endMonth: '',
 });
 const [recurringDrafts, setRecurringDrafts] = useState({});
+const [inviteEmail, setInviteEmail] = useState('');
+const [inviteRelation, setInviteRelation] = useState('Spouse');
+const [inviteStatus, setInviteStatus] = useState('');
+
+const [newIncome, setNewIncome] = useState({
+name: '',
+memberEmail: session.user.email,
+amount: '',
+startMonth: monthKey(new Date()),
+endMonth: '',
+});
+const [incomeDrafts, setIncomeDrafts] = useState({});
 
 async function loadAll() {
 setLoading(true);
-const [{ data: cats }, { data: exps }, { data: settings }, { data: recur }] = await Promise.all([
-supabase.from('categories').select('*').order('name'),
-supabase.from('expenses').select('*').order('expense_date', { ascending: false }),
-supabase.from('settings').select('*').eq('id', 1).single(),
-supabase.from('recurring_expenses').select('*').order('start_date'),
+const [{ data: cats }, { data: exps }, { data: settings }, { data: recur }, { data: mem }, { data: invites }, { data: inc }] = await Promise.all([
+supabase.from('categories').select('*').eq('household_id', householdId).order('name'),
+supabase.from('expenses').select('*').eq('household_id', householdId).order('expense_date', { ascending: false }),
+supabase.from('settings').select('*').eq('household_id', householdId).maybeSingle(),
+supabase.from('recurring_expenses').select('*').eq('household_id', householdId).order('start_date'),
+supabase.from('household_members').select('*').eq('household_id', householdId).order('joined_at'),
+supabase.from('household_invites').select('*').eq('household_id', householdId).eq('status', 'pending'),
+supabase.from('incomes').select('*').eq('household_id', householdId).order('start_date'),
 ]);
 setCategories(cats || []);
 setExpenses(exps || []);
 setRecurringExpenses(recur || []);
+setMembers(mem || []);
+setPendingInvites(invites || []);
+setIncomes(inc || []);
+const iDrafts = {};
+(inc || []).forEach((i) => {
+iDrafts[i.id] = { amount: String(i.amount), endMonth: i.end_date ? i.end_date.slice(0, 7) : '' };
+});
+setIncomeDrafts(iDrafts);
 setTotalBudget(settings?.total_monthly_budget || 0);
 setTotalBudgetDraft(String(settings?.total_monthly_budget || ''));
-  const drafts = {};
+const drafts = {};
 (cats || []).forEach((c) => {
-  drafts[c.id] = c.monthly_budget ? String(c.monthly_budget) : '';
-  });
+drafts[c.id] = c.monthly_budget ? String(c.monthly_budget) : '';
+});
 setCategoryBudgetDrafts(drafts);
 const rDrafts = {};
 (recur || []).forEach((r) => {
-  rDrafts[r.id] = { amount: String(r.amount), endMonth: r.end_date ? r.end_date.slice(0, 7) : '' };
-  });
+rDrafts[r.id] = { amount: String(r.amount), endMonth: r.end_date ? r.end_date.slice(0, 7) : '' };
+});
 setRecurringDrafts(rDrafts);
 if (!form.categoryId && cats && cats.length) {
 setForm((f) => ({ ...f, categoryId: cats[0].id }));
@@ -86,14 +116,18 @@ setLoading(false);
 useEffect(() => {
 loadAll();
 const channel = supabase
-.channel('budget-tracker-changes')
-.on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, loadAll)
-.on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, loadAll)
-.on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, loadAll)
-.on('postgres_changes', { event: '*', schema: 'public', table: 'recurring_expenses' }, loadAll)
+.channel('budget-tracker-changes-' + householdId)
+.on('postgres_changes', { event: '*', schema: 'public', table: 'expenses', filter: `household_id=eq.${householdId}` }, loadAll)
+.on('postgres_changes', { event: '*', schema: 'public', table: 'categories', filter: `household_id=eq.${householdId}` }, loadAll)
+.on('postgres_changes', { event: '*', schema: 'public', table: 'settings', filter: `household_id=eq.${householdId}` }, loadAll)
+.on('postgres_changes', { event: '*', schema: 'public', table: 'recurring_expenses', filter: `household_id=eq.${householdId}` }, loadAll)
+.on('postgres_changes', { event: '*', schema: 'public', table: 'household_members', filter: `household_id=eq.${householdId}` }, loadAll)
+.on('postgres_changes', { event: '*', schema: 'public', table: 'household_invites', filter: `household_id=eq.${householdId}` }, loadAll)
+.on('postgres_changes', { event: '*', schema: 'public', table: 'incomes', filter: `household_id=eq.${householdId}` }, loadAll)
 .subscribe();
 return () => supabase.removeChannel(channel);
-}, []);
+// eslint-disable-next-line react-hooks/exhaustive-deps
+}, [householdId]);
 
 const monthExpenses = useMemo(() => {
 const key = monthKey(currentMonth);
@@ -103,7 +137,7 @@ return expenses.filter((e) => e.expense_date.slice(0, 7) === key);
 const recurringForMonth = useMemo(() => {
 const key = monthKey(currentMonth);
 return recurringExpenses.filter((r) => {
-  if (!r.active) return false;
+if (!r.active) return false;
 const startsOk = r.start_date.slice(0, 7) <= key;
 const endsOk = !r.end_date || r.end_date.slice(0, 7) >= key;
 return startsOk && endsOk;
@@ -134,6 +168,18 @@ const recurringTotal = useMemo(() => recurringForMonth.reduce((s, r) => s + Numb
 const total = oneOffTotal + recurringTotal;
 const remaining = totalBudget - total;
 
+const incomeForMonth = useMemo(() => {
+const key = monthKey(currentMonth);
+return incomes.filter((i) => {
+if (!i.active) return false;
+const startsOk = i.start_date.slice(0, 7) <= key;
+const endsOk = !i.end_date || i.end_date.slice(0, 7) >= key;
+return startsOk && endsOk;
+});
+}, [incomes, currentMonth]);
+const totalIncome = useMemo(() => incomeForMonth.reduce((s, i) => s + Number(i.amount), 0), [incomeForMonth]);
+const netCombined = totalIncome - total;
+
 const overCategories = useMemo(() => {
 return categories
 .filter((c) => c.monthly_budget > 0 && (byCategory[c.name] || 0) > c.monthly_budget)
@@ -150,6 +196,7 @@ alert('Please choose a category and enter a valid amount.');
 return;
 }
 const { error } = await supabase.from('expenses').insert({
+household_id: householdId,
 expense_date: form.date,
 category_id: form.categoryId,
 description: form.description.trim(),
@@ -176,7 +223,7 @@ loadAll();
 async function handleAddCategory() {
 const name = newCategoryName.trim();
 if (!name) return;
-const { error } = await supabase.from('categories').insert({ name });
+const { error } = await supabase.from('categories').insert({ name, household_id: householdId });
 if (error) {
 alert('Could not add category: ' + error.message);
 return;
@@ -195,7 +242,10 @@ loadAll();
 
 async function handleSaveSettings() {
 const total = parseFloat(totalBudgetDraft);
-await supabase.from('settings').update({ total_monthly_budget: isNaN(total) ? 0 : total }).eq('id', 1);
+await supabase
+.from('settings')
+.update({ total_monthly_budget: isNaN(total) ? 0 : total })
+.eq('household_id', householdId);
 for (const c of categories) {
 const val = parseFloat(categoryBudgetDrafts[c.id]);
 await supabase
@@ -218,6 +268,7 @@ alert('Please fill in name, category, amount, and start month.');
 return;
 }
 const { error } = await supabase.from('recurring_expenses').insert({
+household_id: householdId,
 name: newRecurring.name.trim(),
 category_id: newRecurring.categoryId,
 amount,
@@ -254,41 +305,127 @@ if (error) alert('Could not remove: ' + error.message);
 loadAll();
 }
 
+async function handleSendInvite(e) {
+e.preventDefault();
+const email = inviteEmail.trim();
+if (!email) return;
+setInviteStatus('sending');
+const { error } = await supabase.from('household_invites').insert({
+household_id: householdId,
+email,
+relation: inviteRelation,
+invited_by: session.user.id,
+});
+if (error) {
+setInviteStatus('');
+alert('Could not create invite: ' + error.message);
+return;
+}
+setInviteEmail('');
+setInviteStatus('sent');
+loadAll();
+}
+
+async function handleCancelInvite(id) {
+const { error } = await supabase.from('household_invites').delete().eq('id', id);
+if (error) alert('Could not cancel invite: ' + error.message);
+loadAll();
+}
+
+async function handleUpdateMemberRelation(memberId, relation) {
+const { error } = await supabase.from('household_members').update({ relation }).eq('id', memberId);
+if (error) alert('Could not update relation: ' + error.message);
+loadAll();
+}
+
+async function handleAddIncome(e) {
+e.preventDefault();
+const amount = parseFloat(newIncome.amount);
+if (!newIncome.name.trim() || isNaN(amount) || amount <= 0 || !newIncome.startMonth) {
+alert('Please fill in a name, amount, and start month.');
+return;
+}
+const { error } = await supabase.from('incomes').insert({
+household_id: householdId,
+name: newIncome.name.trim(),
+member_email: newIncome.memberEmail,
+amount,
+start_date: newIncome.startMonth + '-01',
+end_date: newIncome.endMonth ? newIncome.endMonth + '-01' : null,
+created_by: session.user.id,
+});
+if (error) {
+alert('Could not save income: ' + error.message);
+return;
+}
+setNewIncome((i) => ({ ...i, name: '', amount: '', endMonth: '' }));
+loadAll();
+}
+
+async function handleSaveIncome(id) {
+const draft = incomeDrafts[id];
+const amount = parseFloat(draft.amount);
+const { error } = await supabase
+.from('incomes')
+.update({
+amount: isNaN(amount) ? 0 : amount,
+end_date: draft.endMonth ? draft.endMonth + '-01' : null,
+})
+.eq('id', id);
+if (error) alert('Could not update: ' + error.message);
+loadAll();
+}
+
+async function handleDeleteIncome(id, name) {
+if (!confirm(`Remove "${name}"?`)) return;
+const { error } = await supabase.from('incomes').delete().eq('id', id);
+if (error) alert('Could not remove: ' + error.message);
+loadAll();
+}
+
 if (loading) return <div className="center-screen">Loading your budget...</div>;
 
 const warnings = [];
 if (totalBudget > 0 && total > totalBudget) {
 warnings.push(`You're ${fmt(total - totalBudget)} over your total monthly budget.`);
-  }
+}
 if (overCategories.length) {
 warnings.push(`Over budget in: ${overCategories.join(', ')}.`);
 }
 
 return (
-  <div className="wrap">
-  <div className="top-bar">
-  <div>
-  <h1>Household Budget Tracker</h1>
-<div className="sub">Signed in as {session.user.email}</div>
-  </div>
-  <button className="btn secondary small" onClick={handleSignOut}>Sign out</button>
-  </div>
+<div className="wrap">
+<div className="top-bar">
+<div>
+<h1>{household.name || 'Household Budget Tracker'}</h1>
+<div className="sub">Signed in as {session.user.email}{isOwner ? ' (owner)' : ''}</div>
+</div>
+<button className="btn secondary small" onClick={handleSignOut}>Sign out</button>
+</div>
 
-  <div className="month-nav">
-  <button onClick={() => setCurrentMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))}>&lsaquo;</button>
-  <div className="label">{monthLabel(currentMonth)}</div>
-  <button onClick={() => setCurrentMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))}>&rsaquo;</button>
-  </div>
+<div className="month-nav">
+<button onClick={() => setCurrentMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))}>&lsaquo;</button>
+<div className="label">{monthLabel(currentMonth)}</div>
+<button onClick={() => setCurrentMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))}>&rsaquo;</button>
+</div>
 
-  {warnings.length > 0 && <div className="warning show">{warnings.join(' ')}</div>}
+{warnings.length > 0 && <div className="warning show">{warnings.join(' ')}</div>}
 
-  <div className="grid">
+<div className="grid">
 <div className="card"><div className="k">Monthly Budget</div><div className="v">{fmt(totalBudget)}</div></div>
 <div className={`card ${totalBudget > 0 && total > totalBudget ? 'over' : ''}`}>
 <div className="k">Spent so far</div><div className="v">{fmt(total)}</div>
 </div>
 <div className={`card ${remaining < 0 ? 'over' : remaining >= 0 && totalBudget > 0 ? 'ok' : ''}`}>
 <div className="k">Remaining</div><div className="v">{fmt(remaining)}</div>
+</div>
+</div>
+
+<div className="grid">
+<div className="card ok"><div className="k">Combined income</div><div className="v">{fmt(totalIncome)}</div></div>
+<div className="card"><div className="k">Combined expenses</div><div className="v">{fmt(total)}</div></div>
+<div className={`card ${netCombined < 0 ? 'over' : 'ok'}`}>
+<div className="k">Net (income - expenses)</div><div className="v">{fmt(netCombined)}</div>
 </div>
 </div>
 
@@ -331,6 +468,108 @@ onChange={(e) => setForm({ ...form, amount: e.target.value })}
 </div>
 <button className="btn" type="submit">Add</button>
 </form>
+</div>
+
+<div className="panel">
+<h2>Household income</h2>
+<form className="row" onSubmit={handleAddIncome}>
+<div className="field" style={{ flex: 1.2 }}>
+<label>Source</label>
+<input
+type="text"
+placeholder="e.g. Salary"
+value={newIncome.name}
+onChange={(e) => setNewIncome({ ...newIncome, name: e.target.value })}
+/>
+</div>
+<div className="field">
+<label>Whose income</label>
+<select
+value={newIncome.memberEmail}
+onChange={(e) => setNewIncome({ ...newIncome, memberEmail: e.target.value })}
+>
+{members.map((m) => (
+<option key={m.id} value={m.email}>{m.email} ({m.relation})</option>
+))}
+</select>
+</div>
+<div className="field">
+<label>Amount / month</label>
+<input
+type="number"
+step="0.01"
+min="0"
+placeholder="0.00"
+value={newIncome.amount}
+onChange={(e) => setNewIncome({ ...newIncome, amount: e.target.value })}
+/>
+</div>
+<div className="field">
+<label>Start month</label>
+<input
+type="month"
+value={newIncome.startMonth}
+onChange={(e) => setNewIncome({ ...newIncome, startMonth: e.target.value })}
+/>
+</div>
+<div className="field">
+<label>End month (optional)</label>
+<input
+type="month"
+value={newIncome.endMonth}
+onChange={(e) => setNewIncome({ ...newIncome, endMonth: e.target.value })}
+/>
+</div>
+<button className="btn" type="submit">Add</button>
+</form>
+
+{incomes.length === 0 ? (
+<div className="empty">No income sources added yet.</div>
+) : (
+<table style={{ marginTop: 14 }}>
+<thead>
+<tr><th>Source</th><th>Member</th><th>Amount</th><th>Start</th><th>End</th><th></th><th></th></tr>
+</thead>
+<tbody>
+{incomes.map((i) => (
+<tr key={i.id}>
+<td>{i.name}</td>
+<td className="muted-small">{i.member_email}</td>
+<td>
+<input
+type="number"
+step="0.01"
+min="0"
+style={{ width: 90 }}
+value={incomeDrafts[i.id]?.amount ?? ''}
+onChange={(e) =>
+setIncomeDrafts({ ...incomeDrafts, [i.id]: { ...incomeDrafts[i.id], amount: e.target.value } })
+}
+/>
+</td>
+<td className="muted-small">{i.start_date.slice(0, 7)}</td>
+<td>
+<input
+type="month"
+style={{ width: 130 }}
+value={incomeDrafts[i.id]?.endMonth ?? ''}
+onChange={(e) =>
+setIncomeDrafts({ ...incomeDrafts, [i.id]: { ...incomeDrafts[i.id], endMonth: e.target.value } })
+}
+/>
+</td>
+<td><button className="btn secondary small" onClick={() => handleSaveIncome(i.id)}>Save</button></td>
+<td><button className="del" onClick={() => handleDeleteIncome(i.id, i.name)}>x</button></td>
+</tr>
+))}
+</tbody>
+</table>
+)}
+{incomeForMonth.length > 0 && (
+<div className="muted-small" style={{ marginTop: 10 }}>
+{fmt(totalIncome)} in combined income counted toward {monthLabel(currentMonth)}.
+</div>
+)}
 </div>
 
 <div className="panel">
@@ -478,6 +717,68 @@ setRecurringDrafts({ ...recurringDrafts, [r.id]: { ...recurringDrafts[r.id], end
 <Legend />
 </PieChart>
 </ResponsiveContainer>
+)}
+</div>
+
+<div className="panel">
+<h2>Household members</h2>
+<table>
+<tbody>
+{members.map((m) => (
+<tr key={m.id}>
+<td>{m.email}</td>
+<td className="muted-small">
+{isOwner && m.role !== 'owner' ? (
+<select value={m.relation} onChange={(e) => handleUpdateMemberRelation(m.id, e.target.value)}>
+{RELATIONS.map((r) => (
+<option key={r} value={r}>{r}</option>
+))}
+</select>
+) : (
+m.relation
+)}
+</td>
+<td className="muted-small">{m.role}</td>
+</tr>
+))}
+</tbody>
+</table>
+
+{isOwner && (
+<>
+<form className="row" style={{ marginTop: 14 }} onSubmit={handleSendInvite}>
+<input
+type="email"
+placeholder="Invite by email"
+style={{ flex: 1.2 }}
+value={inviteEmail}
+onChange={(e) => setInviteEmail(e.target.value)}
+required
+/>
+<select value={inviteRelation} onChange={(e) => setInviteRelation(e.target.value)}>
+{RELATIONS.filter((r) => r !== 'Self').map((r) => (
+<option key={r} value={r}>{r}</option>
+))}
+</select>
+<button className="btn secondary small" type="submit">Invite</button>
+</form>
+<div className="muted-small" style={{ marginTop: 6 }}>
+They'll also need a Supabase sign-in invite from the project admin before their first login.
+</div>
+{inviteStatus === 'sent' && (
+<div className="muted-small" style={{ marginTop: 6, color: 'var(--ok)' }}>Invite created.</div>
+)}
+{pendingInvites.length > 0 && (
+<div className="cat-list" style={{ marginTop: 10 }}>
+{pendingInvites.map((inv) => (
+<div className="cat-chip" key={inv.id}>
+{inv.email}
+<button onClick={() => handleCancelInvite(inv.id)}>x</button>
+</div>
+))}
+</div>
+)}
+</>
 )}
 </div>
 
