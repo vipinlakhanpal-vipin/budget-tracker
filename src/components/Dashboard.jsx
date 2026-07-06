@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, LabelList,
 } from 'recharts';
 import { supabase } from '../supabaseClient';
 
@@ -56,8 +56,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   const [showSettings, setShowSettings] = useState(false);
   const [members, setMembers] = useState([]);
   const [pendingInvites, setPendingInvites] = useState([]);
-  const [editingExpenseId, setEditingExpenseId] = useState(null);
-  const [expenseEditDraft, setExpenseEditDraft] = useState(null);
+  const [expenseDrafts, setExpenseDrafts] = useState({});
   const [myRelationDraft, setMyRelationDraft] = useState('');
 
   const [form, setForm] = useState({
@@ -67,6 +66,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     amount: '',
   });
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [categoryNameDrafts, setCategoryNameDrafts] = useState({});
   const [categoryBudgetDrafts, setCategoryBudgetDrafts] = useState({});
   const [totalBudgetDraft, setTotalBudgetDraft] = useState('');
 
@@ -104,6 +104,11 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     ]);
     setCategories(cats || []);
     setExpenses(exps || []);
+    const eDrafts = {};
+    (exps || []).forEach((e) => {
+      eDrafts[e.id] = { date: e.expense_date, categoryId: e.category_id, description: e.description || '', amount: String(e.amount) };
+    });
+    setExpenseDrafts(eDrafts);
     setRecurringExpenses(recur || []);
     setMembers(mem || []);
     setPendingInvites(invites || []);
@@ -118,10 +123,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     setCurrency(settings?.currency || 'AED');
     setCurrencyDraft(settings?.currency || 'AED');
     const drafts = {};
+    const nameDrafts = {};
     (cats || []).forEach((c) => {
       drafts[c.id] = c.monthly_budget ? String(c.monthly_budget) : '';
+      nameDrafts[c.id] = c.name;
     });
     setCategoryBudgetDrafts(drafts);
+    setCategoryNameDrafts(nameDrafts);
     const rDrafts = {};
     (recur || []).forEach((r) => {
       rDrafts[r.id] = { name: r.name, categoryId: r.category_id, amount: String(r.amount), startDate: r.start_date, endDate: r.end_date || '' };
@@ -246,23 +254,9 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     loadAll();
   }
 
-  function handleStartEditExpense(e) {
-    setEditingExpenseId(e.id);
-    setExpenseEditDraft({
-      date: e.expense_date,
-      categoryId: e.category_id,
-      description: e.description || '',
-      amount: String(e.amount),
-    });
-  }
-
-  function handleCancelEditExpense() {
-    setEditingExpenseId(null);
-    setExpenseEditDraft(null);
-  }
-
-  async function handleSaveEditExpense(id) {
-    const amount = parseFloat(expenseEditDraft.amount);
+  async function handleSaveExpense(id) {
+    const draft = expenseDrafts[id];
+    const amount = parseFloat(draft.amount);
     if (isNaN(amount) || amount <= 0) {
       alert('Please enter a valid amount.');
       return;
@@ -270,9 +264,9 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     const { error } = await supabase
       .from('expenses')
       .update({
-        expense_date: expenseEditDraft.date,
-        category_id: expenseEditDraft.categoryId,
-        description: expenseEditDraft.description.trim(),
+        expense_date: draft.date,
+        category_id: draft.categoryId,
+        description: draft.description.trim(),
         amount,
       })
       .eq('id', id);
@@ -280,8 +274,6 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       alert('Could not update expense: ' + error.message);
       return;
     }
-    setEditingExpenseId(null);
-    setExpenseEditDraft(null);
     loadAll();
   }
 
@@ -308,6 +300,18 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     if (hasExpenses && !confirm(`"${name}" has expenses logged against it. Remove anyway?`)) return;
     const { error } = await supabase.from('categories').delete().eq('id', id);
     if (error) alert('Could not remove category: ' + error.message);
+    loadAll();
+  }
+
+  async function handleRenameCategory(id) {
+    const name = (categoryNameDrafts[id] || '').trim();
+    const current = categories.find((c) => c.id === id);
+    if (!name || (current && name === current.name)) return;
+    const { error } = await supabase.from('categories').update({ name }).eq('id', id);
+    if (error) {
+      alert('Could not rename category: ' + error.message);
+      return;
+    }
     loadAll();
   }
 
@@ -842,68 +846,60 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <div className="table-scroll">
               <table>
                 <thead>
-                  <tr><th>Date</th><th>Category</th><th>Description</th><th style={{ textAlign: 'right' }}>Amount</th><th>By</th><th></th></tr>
+                  <tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th><th>By</th><th></th><th></th></tr>
                 </thead>
                 <tbody>
-                  {monthExpenses.map((e) =>
-                    editingExpenseId === e.id ? (
-                      <tr key={e.id}>
-                        <td>
-                          <input
-                            type="date"
-                            style={{ width: 130 }}
-                            value={expenseEditDraft.date}
-                            onChange={(ev) => setExpenseEditDraft({ ...expenseEditDraft, date: ev.target.value })}
-                          />
-                        </td>
-                        <td>
-                          <select
-                            value={expenseEditDraft.categoryId}
-                            onChange={(ev) => setExpenseEditDraft({ ...expenseEditDraft, categoryId: ev.target.value })}
-                          >
-                            {categories.map((c) => (
-                              <option key={c.id} value={c.id}>{c.name}</option>
-                            ))}
-                          </select>
-                        </td>
-                        <td>
-                          <input
-                            type="text"
-                            style={{ width: '100%' }}
-                            value={expenseEditDraft.description}
-                            onChange={(ev) => setExpenseEditDraft({ ...expenseEditDraft, description: ev.target.value })}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            style={{ width: 90 }}
-                            value={expenseEditDraft.amount}
-                            onChange={(ev) => setExpenseEditDraft({ ...expenseEditDraft, amount: ev.target.value })}
-                          />
-                        </td>
-                        <td className="muted-small">{e.created_by_email?.split('@')[0]}</td>
-                        <td style={{ whiteSpace: 'nowrap' }}>
-                          <button className="btn secondary small" onClick={() => handleSaveEditExpense(e.id)}>Save</button>{' '}
-                          <button className="del" onClick={handleCancelEditExpense}>Cancel</button>
-                        </td>
-                      </tr>
-                    ) : (
-                      <tr key={e.id}>
-                        <td>{fmtDate(e.expense_date)}</td>
-                        <td>{categoryNameById[e.category_id] || 'Uncategorized'}</td>
-                        <td>{e.description}</td>
-                        <td className="amount">{fmt(e.amount)}</td>
-                        <td className="muted-small">{e.created_by_email?.split('@')[0]}</td>
-                        <td style={{ whiteSpace: 'nowrap' }}>
-                          <button className="btn secondary small" onClick={() => handleStartEditExpense(e)}>Edit</button>{' '}
-                          <button className="del" onClick={() => handleDeleteExpense(e.id)}>x</button>
-                        </td>
-                      </tr>
-                    )
-                  )}
+                  {monthExpenses.map((e) => (
+                    <tr key={e.id}>
+                      <td>
+                        <input
+                          type="date"
+                          style={{ width: 130 }}
+                          value={expenseDrafts[e.id]?.date ?? ''}
+                          onChange={(ev) =>
+                            setExpenseDrafts({ ...expenseDrafts, [e.id]: { ...expenseDrafts[e.id], date: ev.target.value } })
+                          }
+                        />
+                      </td>
+                      <td>
+                        <select
+                          value={expenseDrafts[e.id]?.categoryId ?? ''}
+                          onChange={(ev) =>
+                            setExpenseDrafts({ ...expenseDrafts, [e.id]: { ...expenseDrafts[e.id], categoryId: ev.target.value } })
+                          }
+                        >
+                          {categories.map((c) => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td>
+                        <input
+                          type="text"
+                          style={{ width: 140 }}
+                          value={expenseDrafts[e.id]?.description ?? ''}
+                          onChange={(ev) =>
+                            setExpenseDrafts({ ...expenseDrafts, [e.id]: { ...expenseDrafts[e.id], description: ev.target.value } })
+                          }
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          style={{ width: 90 }}
+                          value={expenseDrafts[e.id]?.amount ?? ''}
+                          onChange={(ev) =>
+                            setExpenseDrafts({ ...expenseDrafts, [e.id]: { ...expenseDrafts[e.id], amount: ev.target.value } })
+                          }
+                        />
+                      </td>
+                      <td className="muted-small">{e.created_by_email?.split('@')[0]}</td>
+                      <td><button className="btn secondary small" onClick={() => handleSaveExpense(e.id)}>Save</button></td>
+                      <td><button className="del" onClick={() => handleDeleteExpense(e.id)}>x</button></td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
               </div>
@@ -933,28 +929,35 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             {pieData.length === 0 ? (
               <div className="empty">Add an expense to see the breakdown.</div>
             ) : chartType === 'pie' ? (
-              <ResponsiveContainer width="100%" height={260}>
+              <ResponsiveContainer width="100%" height={280}>
                 <PieChart>
-                  <Pie data={pieData} dataKey="value" nameKey="name" outerRadius={90} label>
+                  <Pie
+                    data={pieData}
+                    dataKey="value"
+                    nameKey="name"
+                    outerRadius={85}
+                    label={{ fontSize: 11, fill: 'var(--text)' }}
+                  >
                     {pieData.map((_, i) => (
                       <Cell key={i} fill={COLORS[i % COLORS.length]} />
                     ))}
                   </Pie>
                   <Tooltip formatter={(v) => fmt(v)} />
-                  <Legend />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <ResponsiveContainer width="100%" height={Math.max(260, pieData.length * 36)}>
-                <BarChart data={pieData} layout="vertical" margin={{ left: 20, right: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" />
-                  <YAxis type="category" dataKey="name" width={110} />
+              <ResponsiveContainer width="100%" height={Math.max(260, pieData.length * 40)}>
+                <BarChart data={pieData} layout="vertical" margin={{ top: 5, right: 50, left: 10, bottom: 5 }} barCategoryGap="35%">
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 11 }} hide />
+                  <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 11 }} />
                   <Tooltip formatter={(v) => fmt(v)} />
-                  <Bar dataKey="value">
+                  <Bar dataKey="value" barSize={14} radius={[0, 4, 4, 0]}>
                     {pieData.map((_, i) => (
                       <Cell key={i} fill={COLORS[i % COLORS.length]} />
                     ))}
+                    <LabelList dataKey="value" position="right" formatter={(v) => fmt(v)} style={{ fontSize: 11, fill: 'var(--text)' }} />
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -1079,10 +1082,20 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   </div>
                 </div>
 
+                <div className="muted-small" style={{ marginBottom: 6 }}>Category names (click to rename)</div>
                 <div className="cat-list">
                   {categories.map((c) => (
                     <div className="cat-chip" key={c.id}>
-                      {c.name}
+                      <input
+                        value={categoryNameDrafts[c.id] ?? c.name}
+                        onChange={(e) => setCategoryNameDrafts({ ...categoryNameDrafts, [c.id]: e.target.value })}
+                        onBlur={() => handleRenameCategory(c.id)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
+                        style={{
+                          border: 'none', background: 'transparent', color: 'inherit', fontWeight: 600,
+                          fontSize: 12, width: Math.max(50, (categoryNameDrafts[c.id]?.length || c.name.length) * 7),
+                        }}
+                      />
                       <button onClick={() => handleRemoveCategory(c.id, c.name)}>x</button>
                     </div>
                   ))}
@@ -1110,6 +1123,26 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 <button className="btn secondary" style={{ marginTop: 14 }} onClick={handleSaveSettings}>
                   Save settings
                 </button>
+
+                {categories.some((c) => c.monthly_budget > 0) && (
+                  <div style={{ marginTop: 18 }}>
+                    <label className="muted-small">
+                      This month's spending vs. budget (shown here, and categories over budget also trigger the warning banner at the top)
+                    </label>
+                    {categories.filter((c) => c.monthly_budget > 0).map((c) => {
+                      const spent = byCategory[c.name] || 0;
+                      const over = spent > c.monthly_budget;
+                      return (
+                        <div className="cat-budget-row" key={c.id}>
+                          <span>{c.name}</span>
+                          <span className={over ? 'muted-small' : 'muted-small'} style={{ color: over ? 'var(--danger)' : 'var(--ok)', fontWeight: 600 }}>
+                            {fmt(spent)} / {fmt(c.monthly_budget)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </div>
