@@ -43,13 +43,25 @@ export default async function handler(req, res) {
     await admin.from('settings').insert({ household_id: targetHouseholdId, total_monthly_budget: 0 });
   }
 
-  const { error: inviteErr } = await admin.from('household_invites').insert({
-    household_id: targetHouseholdId,
-    email: email.trim(),
-    relation,
-    invited_by: adminUser.id,
-  });
-  if (inviteErr) return res.status(500).json({ error: inviteErr.message });
+  // Avoid creating a second pending-invite row if this admin retries after
+  // an earlier attempt (e.g. one that failed on the auth-email rate limit).
+  const { data: existingInvite } = await admin
+    .from('household_invites')
+    .select('id')
+    .eq('household_id', targetHouseholdId)
+    .eq('status', 'pending')
+    .ilike('email', email.trim())
+    .maybeSingle();
+
+  if (!existingInvite) {
+    const { error: inviteErr } = await admin.from('household_invites').insert({
+      household_id: targetHouseholdId,
+      email: email.trim(),
+      relation,
+      invited_by: adminUser.id,
+    });
+    if (inviteErr) return res.status(500).json({ error: inviteErr.message });
+  }
 
   const { error: userErr } = await admin.auth.admin.inviteUserByEmail(email.trim(), {
     redirectTo: SITE_URL,
