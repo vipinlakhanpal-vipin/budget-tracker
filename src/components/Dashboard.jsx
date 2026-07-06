@@ -526,6 +526,7 @@ onChange={(e) => setNewIncome({ ...newIncome, endMonth: e.target.value })}
 {incomes.length === 0 ? (
 <div className="empty">No income sources added yet.</div>
 ) : (
+<div className="table-scroll">
 <table style={{ marginTop: 14 }}>
 <thead>
 <tr><th>Source</th><th>Member</th><th>Amount</th><th>Start</th><th>End</th><th></th><th></th></tr>
@@ -564,6 +565,7 @@ setIncomeDrafts({ ...incomeDrafts, [i.id]: { ...incomeDrafts[i.id], endMonth: e.
 ))}
 </tbody>
 </table>
+</div>
 )}
 {incomeForMonth.length > 0 && (
 <div className="muted-small" style={{ marginTop: 10 }}>
@@ -628,6 +630,7 @@ onChange={(e) => setNewRecurring({ ...newRecurring, endMonth: e.target.value })}
 {recurringExpenses.length === 0 ? (
 <div className="empty">No loans, EMIs, or fixed monthly bills added yet.</div>
 ) : (
+<div className="table-scroll">
 <table style={{ marginTop: 14 }}>
 <thead>
 <tr><th>Name</th><th>Category</th><th>Amount</th><th>Start</th><th>End</th><th></th><th></th></tr>
@@ -666,6 +669,7 @@ setRecurringDrafts({ ...recurringDrafts, [r.id]: { ...recurringDrafts[r.id], end
 ))}
 </tbody>
 </table>
+</div>
 )}
 {recurringForMonth.length > 0 && (
 <div className="muted-small" style={{ marginTop: 10 }}>
@@ -679,6 +683,7 @@ setRecurringDrafts({ ...recurringDrafts, [r.id]: { ...recurringDrafts[r.id], end
 {monthExpenses.length === 0 ? (
 <div className="empty">No one-off expenses logged for this month yet.</div>
 ) : (
+<div className="table-scroll">
 <table>
 <thead>
 <tr><th>Date</th><th>Category</th><th>Description</th><th style={{ textAlign: 'right' }}>Amount</th><th>By</th><th></th></tr>
@@ -696,6 +701,7 @@ setRecurringDrafts({ ...recurringDrafts, [r.id]: { ...recurringDrafts[r.id], end
 ))}
 </tbody>
 </table>
+</div>
 )}
 </div>
 </div>
@@ -722,6 +728,7 @@ setRecurringDrafts({ ...recurringDrafts, [r.id]: { ...recurringDrafts[r.id], end
 
 <div className="panel">
 <h2>Household members</h2>
+<div className="table-scroll">
 <table>
 <tbody>
 {members.map((m) => (
@@ -743,6 +750,7 @@ m.relation
 ))}
 </tbody>
 </table>
+</div>
 
 {isOwner && (
 <>
