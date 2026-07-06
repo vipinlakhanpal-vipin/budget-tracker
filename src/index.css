@@ -1,7 +1,8 @@
 :root {
-  --bg: #f5f6f8; --card: #ffffff; --text: #1f2430; --muted: #6b7280;
-  --accent: #4f46e5; --accent-light: #eef2ff; --danger: #dc2626; --danger-bg: #fef2f2;
-  --ok: #16a34a; --border: #e5e7eb;
+  --bg: #f0f9fb; --card: #ffffff; --text: #0f2a2e; --muted: #5b7c82;
+  --accent: #0d9488; --accent-light: #ccfbf1; --accent2: #0ea5e9; --accent2-light: #e0f2fe;
+  --danger: #dc2626; --danger-bg: #fef2f2;
+  --ok: #0d9488; --border: #d5ecec;
 }
 * { box-sizing: border-box; }
 body {
@@ -61,7 +62,7 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
   font-size: 14px; font-weight: 600; cursor: pointer;
 }
 .btn:hover { opacity: .9; }
-.btn.secondary { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+.btn.secondary { background: transparent; color: var(--accent2); border: 1px solid var(--accent2); }
 .btn.small { padding: 5px 10px; font-size: 12px; }
 
 .content-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; }
@@ -76,10 +77,10 @@ td.amount { font-weight: 600; text-align: right; }
 
 .cat-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .cat-chip {
-  display: flex; align-items: center; gap: 6px; background: var(--accent-light); color: var(--accent);
+  display: flex; align-items: center; gap: 6px; background: var(--accent2-light); color: var(--accent2);
   padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 600;
 }
-.cat-chip button { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 13px; line-height: 1; }
+.cat-chip button { background: none; border: none; color: var(--accent2); cursor: pointer; font-size: 13px; line-height: 1; }
 .empty { color: var(--muted); font-size: 13px; padding: 20px 0; text-align: center; }
 .cat-budget-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; }
 .cat-budget-row span { flex: 1; }
