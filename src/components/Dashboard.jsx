@@ -557,7 +557,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
         </div>
       </div>
 
-      <div className="top-bar-actions" style={{ display: 'flex', gap: 8, flexWrap: 'nowrap', overflowX: 'auto', margin: '4px 0 16px' }}>
+      <div className="action-row-fixed">
         <button className="btn secondary small" onClick={() => setShowSettings((s) => !s)}>
           {showSettings ? 'Hide budget settings' : 'Budget settings'}
         </button>
