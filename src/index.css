@@ -103,6 +103,12 @@ td.amount { font-weight: 600; text-align: right; }
   max-width: 100%;
   box-sizing: border-box;
 }
+.table-scroll table td input[type="date"],
+.table-scroll table td input[type="month"] {
+  min-width: 0;
+  padding: 6px 2px;
+  font-size: 11px;
+}
 
 .cat-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .cat-chip {
