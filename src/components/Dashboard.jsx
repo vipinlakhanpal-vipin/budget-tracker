@@ -557,7 +557,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
         </div>
       </div>
 
-      <div className="top-bar-actions" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '4px 0 16px' }}>
+      <div className="top-bar-actions" style={{ display: 'flex', gap: 8, flexWrap: 'nowrap', overflowX: 'auto', margin: '4px 0 16px' }}>
         <button className="btn secondary small" onClick={() => setShowSettings((s) => !s)}>
           {showSettings ? 'Hide budget settings' : 'Budget settings'}
         </button>
@@ -869,7 +869,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           type="date"
                           style={{ width: 130, fontSize: 11 }}
                           value={recurringDrafts[r.id]?.startDate ?? ''}
-                          onChange={(e) => commitRecurringField(r.id, 'startDate', e.target.value)}
+                          onChange={(e) => updateRecurringDraftField(r.id, 'startDate', e.target.value)}
+                          onBlur={(e) => commitRecurringField(r.id, 'startDate', e.target.value)}
                         />
                       </td>
                       <td>
@@ -877,7 +878,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           type="date"
                           style={{ width: 130, fontSize: 11 }}
                           value={recurringDrafts[r.id]?.endDate ?? ''}
-                          onChange={(e) => commitRecurringField(r.id, 'endDate', e.target.value)}
+                          onChange={(e) => updateRecurringDraftField(r.id, 'endDate', e.target.value)}
+                          onBlur={(e) => commitRecurringField(r.id, 'endDate', e.target.value)}
                         />
                       </td>
                       <td>
