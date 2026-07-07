@@ -24,10 +24,15 @@ body {
 .login-sent { margin-top: 16px; font-size: 14px; }
 .login-error { margin-top: 12px; color: var(--danger); font-size: 13px; }
 
-.wrap { max-width: 1000px; margin: 0 auto; padding: 24px; padding-bottom: 70px; }
+.wrap { max-width: 1000px; margin: 0 auto; padding: 24px; padding-bottom: 90px; }
 .top-bar { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
 .top-bar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.signout-fixed { position: fixed; bottom: 16px; right: 16px; z-index: 1000; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+.action-row-fixed {
+  position: fixed; bottom: 16px; right: 16px; z-index: 1000;
+  display: flex; gap: 8px; flex-wrap: nowrap; max-width: calc(100vw - 32px);
+  overflow-x: auto; background: var(--card); padding: 8px; border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.15); border: 1px solid var(--border);
+}
 h1 { font-size: 22px; margin: 0 0 4px 0; }
 .sub { color: var(--muted); font-size: 13px; }
 .muted-small { color: var(--muted); font-size: 12px; }
