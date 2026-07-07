@@ -48,14 +48,24 @@ export default function App() {
       .ilike('email', email)
       .eq('status', 'pending');
 
+    // Multiple pending invite rows can exist for the same household (e.g. a
+    // retried invite). De-duplicate by household so we don't attempt to
+    // insert the same membership twice.
+    const seenHouseholds = new Set();
     for (const invite of invites || []) {
-      await supabase.from('household_members').insert({
-        household_id: invite.household_id,
-        user_id: session.user.id,
-        email,
-        role: 'member',
-        relation: invite.relation || 'Other',
-      });
+      if (!seenHouseholds.has(invite.household_id)) {
+        seenHouseholds.add(invite.household_id);
+        await supabase.from('household_members').upsert(
+          {
+            household_id: invite.household_id,
+            user_id: session.user.id,
+            email,
+            role: 'member',
+            relation: invite.relation || 'Other',
+          },
+          { onConflict: 'household_id,user_id', ignoreDuplicates: true }
+        );
+      }
       await supabase.from('household_invites').update({ status: 'accepted' }).eq('id', invite.id);
     }
 
@@ -85,22 +95,30 @@ export default function App() {
     return <AdminConsole onClose={() => setShowAdmin(false)} />;
   }
 
-  return (
-    <>
-      {isAdmin && (
-        <button
-          className="btn secondary small"
-          style={{ position: 'fixed', top: 12, right: 12, zIndex: 1000 }}
-          onClick={() => setShowAdmin(true)}
-        >
-          Admin console
-        </button>
-      )}
-      {!household ? (
+  if (!household) {
+    return (
+      <>
+        {isAdmin && (
+          <button
+            className="btn secondary small"
+            style={{ position: 'fixed', top: 12, right: 12, zIndex: 1000 }}
+            onClick={() => setShowAdmin(true)}
+          >
+            Admin console
+          </button>
+        )}
         <CreateHousehold session={session} onCreated={resolveHousehold} />
-      ) : (
-        <Dashboard session={session} household={household} onHouseholdChange={resolveHousehold} />
-      )}
-    </>
+      </>
+    );
+  }
+
+  return (
+    <Dashboard
+      session={session}
+      household={household}
+      onHouseholdChange={resolveHousehold}
+      isAdmin={isAdmin}
+      onOpenAdmin={() => setShowAdmin(true)}
+    />
   );
 }
