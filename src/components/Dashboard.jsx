@@ -6,7 +6,11 @@ import {
 import { supabase } from '../supabaseClient';
 import AdminConsole from './AdminConsole.jsx';
 
-const COLORS = ['#0d9488', '#0ea5e9', '#14b8a6', '#0284c7', '#2dd4bf', '#38bdf8', '#0f766e', '#0369a1', '#5eead4', '#7dd3fc'];
+const COLORS = [
+  '#f97316', '#0ea5e9', '#a855f7', '#22c55e', '#ef4444',
+  '#eab308', '#14b8a6', '#ec4899', '#6366f1', '#84cc16',
+  '#06b6d4', '#f43f5e',
+];
 const RELATIONS = ['Self', 'Spouse', 'Partner', 'Child', 'Parent', 'Sibling', 'Roommate', 'Other'];
 const CURRENCIES = ['AED', 'USD', 'GBP', 'EUR', 'INR', 'SAR', 'PKR'];
 
@@ -107,7 +111,6 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   const [members, setMembers] = useState([]);
   const [pendingInvites, setPendingInvites] = useState([]);
   const [expenseDrafts, setExpenseDrafts] = useState({});
-  const [myRelationDraft, setMyRelationDraft] = useState('');
 
   const [form, setForm] = useState({
     date: new Date().toISOString().slice(0, 10),
@@ -141,6 +144,14 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     month: monthKey(new Date()),
   });
   const [incomeDrafts, setIncomeDrafts] = useState({});
+
+  // Keep the "Add income" form's default Month field in sync with whichever
+  // month the dashboard is currently showing, so adding income while viewing
+  // August defaults to August instead of whatever month the app happened to
+  // load on.
+  useEffect(() => {
+    setNewIncome((i) => ({ ...i, month: monthKey(currentMonth) }));
+  }, [currentMonth]);
 
   async function loadAll() {
     setLoading(true);
@@ -193,8 +204,6 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       };
     });
     setRecurringDrafts(rDrafts);
-    const me = (mem || []).find((m) => m.email.toLowerCase() === session.user.email.toLowerCase());
-    if (me) setMyRelationDraft(me.relation);
     if (!form.categoryId && cats && cats.length) {
       setForm((f) => ({ ...f, categoryId: cats[0].id }));
     }
@@ -315,19 +324,23 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     loadAll();
   }
 
-  async function handleSaveExpense(id) {
-    const draft = expenseDrafts[id];
-    const amount = parseFloat(draft.amount);
-    if (isNaN(amount) || amount <= 0) {
-      alert('Please enter a valid amount.');
-      return;
-    }
+  // Expenses this month auto-saves like Fixed monthly expenses -- text/number
+  // fields commit on blur, dates/dropdowns commit immediately on change.
+  function updateExpenseDraftField(id, field, value) {
+    setExpenseDrafts((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
+  }
+
+  async function commitExpenseField(id, field, value) {
+    const merged = { ...(expenseDrafts[id] || {}), [field]: value };
+    setExpenseDrafts((prev) => ({ ...prev, [id]: merged }));
+    const amount = parseFloat(merged.amount);
+    if (!merged.date || isNaN(amount) || amount <= 0) return;
     const { error } = await supabase
       .from('expenses')
       .update({
-        expense_date: draft.date,
-        category_id: draft.categoryId,
-        description: draft.description.trim(),
+        expense_date: merged.date,
+        category_id: merged.categoryId,
+        description: (merged.description || '').trim(),
         amount,
       })
       .eq('id', id);
@@ -336,12 +349,6 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       return;
     }
     loadAll();
-  }
-
-  async function handleSaveMyRelation() {
-    const me = members.find((m) => m.email.toLowerCase() === session.user.email.toLowerCase());
-    if (!me) return;
-    await handleUpdateMemberRelation(me.id, myRelationDraft);
   }
 
   async function handleAddCategory() {
@@ -737,24 +744,28 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <button className="btn" type="submit">Add</button>
             </form>
             <div className="muted-small" style={{ marginTop: 6 }}>
-              Income is entered per month on purpose -- it won't automatically carry over. Add a new row each month (or edit last month's row's Month field forward).
+              Income is entered per month on purpose -- it won't automatically carry over. The list below only shows entries for {monthLabel(currentMonth)}; add a new row for each new month.
             </div>
 
-            {incomes.length === 0 ? (
-              <div className="empty">No income sources added yet.</div>
+            {incomeForMonth.length === 0 ? (
+              <div className="empty">No income added for {monthLabel(currentMonth)} yet.</div>
             ) : (
               <div className="table-scroll">
               <table className="responsive-table" style={{ marginTop: 14, fontSize: 12 }}>
+                <colgroup>
+                  <col style={{ width: '24%' }} /><col style={{ width: '24%' }} /><col style={{ width: '15%' }} />
+                  <col style={{ width: '16%' }} /><col style={{ width: '12%' }} /><col style={{ width: '9%' }} />
+                </colgroup>
                 <thead>
                   <tr><th>Source</th><th>Member</th><th>Amount</th><th>Month</th><th></th><th></th></tr>
                 </thead>
                 <tbody>
-                  {incomes.map((i) => (
+                  {incomeForMonth.map((i) => (
                     <tr key={i.id}>
                       <td data-label="Source">
                         <input
                           type="text"
-                          style={{ width: 100, fontSize: 12 }}
+                          style={{ fontSize: 12 }}
                           value={incomeDrafts[i.id]?.name ?? ''}
                           onChange={(e) =>
                             setIncomeDrafts({ ...incomeDrafts, [i.id]: { ...incomeDrafts[i.id], name: e.target.value } })
@@ -870,6 +881,11 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             ) : (
               <div className="table-scroll">
               <table className="responsive-table" style={{ marginTop: 14, fontSize: 12 }}>
+                <colgroup>
+                  <col style={{ width: '19%' }} /><col style={{ width: '15%' }} /><col style={{ width: '11%' }} />
+                  <col style={{ width: '15%' }} /><col style={{ width: '15%' }} /><col style={{ width: '17%' }} />
+                  <col style={{ width: '8%' }} />
+                </colgroup>
                 <thead>
                   <tr><th>Name</th><th>Category</th><th>Amount</th><th>Start</th><th>End</th><th>Repeats</th><th></th></tr>
                 </thead>
@@ -959,8 +975,12 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             ) : (
               <div className="table-scroll">
               <table className="responsive-table" style={{ fontSize: 12 }}>
+                <colgroup>
+                  <col style={{ width: '15%' }} /><col style={{ width: '18%' }} /><col style={{ width: '30%' }} />
+                  <col style={{ width: '14%' }} /><col style={{ width: '15%' }} /><col style={{ width: '8%' }} />
+                </colgroup>
                 <thead>
-                  <tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th><th>By</th><th></th><th></th></tr>
+                  <tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th><th>By</th><th></th></tr>
                 </thead>
                 <tbody>
                   {monthExpenses.map((e) => (
@@ -970,18 +990,15 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           type="date"
                           style={{ width: 120, fontSize: 11 }}
                           value={expenseDrafts[e.id]?.date ?? ''}
-                          onChange={(ev) =>
-                            setExpenseDrafts({ ...expenseDrafts, [e.id]: { ...expenseDrafts[e.id], date: ev.target.value } })
-                          }
+                          onChange={(ev) => updateExpenseDraftField(e.id, 'date', ev.target.value)}
+                          onBlur={(ev) => commitExpenseField(e.id, 'date', ev.target.value)}
                         />
                       </td>
                       <td data-label="Category">
                         <select
                           style={{ fontSize: 12 }}
                           value={expenseDrafts[e.id]?.categoryId ?? ''}
-                          onChange={(ev) =>
-                            setExpenseDrafts({ ...expenseDrafts, [e.id]: { ...expenseDrafts[e.id], categoryId: ev.target.value } })
-                          }
+                          onChange={(ev) => commitExpenseField(e.id, 'categoryId', ev.target.value)}
                         >
                           {categories.map((c) => (
                             <option key={c.id} value={c.id}>{c.name}</option>
@@ -993,9 +1010,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           type="text"
                           style={{ width: 120, fontSize: 12 }}
                           value={expenseDrafts[e.id]?.description ?? ''}
-                          onChange={(ev) =>
-                            setExpenseDrafts({ ...expenseDrafts, [e.id]: { ...expenseDrafts[e.id], description: ev.target.value } })
-                          }
+                          onChange={(ev) => updateExpenseDraftField(e.id, 'description', ev.target.value)}
+                          onBlur={(ev) => commitExpenseField(e.id, 'description', ev.target.value)}
                         />
                       </td>
                       <td data-label="Amount">
@@ -1005,13 +1021,11 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           min="0"
                           style={{ width: 75, fontSize: 12 }}
                           value={expenseDrafts[e.id]?.amount ?? ''}
-                          onChange={(ev) =>
-                            setExpenseDrafts({ ...expenseDrafts, [e.id]: { ...expenseDrafts[e.id], amount: ev.target.value } })
-                          }
+                          onChange={(ev) => updateExpenseDraftField(e.id, 'amount', ev.target.value)}
+                          onBlur={(ev) => commitExpenseField(e.id, 'amount', ev.target.value)}
                         />
                       </td>
                       <td data-label="By" className="muted-small">{e.created_by_email?.split('@')[0]}</td>
-                      <td><button className="btn secondary small" onClick={() => handleSaveExpense(e.id)}>Save</button></td>
                       <td><button className="del" onClick={() => handleDeleteExpense(e.id)}>x</button></td>
                     </tr>
                   ))}
@@ -1021,7 +1035,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             )}
             {monthExpenses.length > 0 && (
               <div className="muted-small" style={{ marginTop: 8 }}>
-                {fmt(oneOffTotal)} in regular (one-off) expenses counted toward {monthLabel(currentMonth)}.
+                Changes save automatically. {fmt(oneOffTotal)} in regular (one-off) expenses counted toward {monthLabel(currentMonth)}.
               </div>
             )}
           </div>
@@ -1090,13 +1104,12 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           <div className="panel" ref={panelRef}>
               <div>
                 <h2>Users</h2>
-                <div className="muted-small" style={{ marginBottom: 8 }}>
-                  "Your relation" is how you're labeled to the rest of the household (Self, Spouse, Child, etc.) --
-                  it's just a display label, not a permission. "Save my details" saves your own relation choice below.
-                </div>
-                <div className="muted-small" style={{ marginTop: 14, marginBottom: 4, fontWeight: 600 }}>Active ({members.length})</div>
+                <div className="muted-small" style={{ marginBottom: 4, fontWeight: 600 }}>Active ({members.length})</div>
                 <div className="table-scroll">
                 <table className="responsive-table">
+                  <colgroup>
+                    <col style={{ width: '50%' }} /><col style={{ width: '30%' }} /><col style={{ width: '20%' }} />
+                  </colgroup>
                   <tbody>
                     {members.map((m) => (
                       <tr key={m.id}>
@@ -1117,18 +1130,6 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                     ))}
                   </tbody>
                 </table>
-                </div>
-
-                <div className="row" style={{ marginTop: 14, alignItems: 'center' }}>
-                  <div className="field" style={{ maxWidth: 200 }}>
-                    <label>Your relation</label>
-                    <select value={myRelationDraft} onChange={(e) => setMyRelationDraft(e.target.value)}>
-                      {RELATIONS.map((r) => (
-                        <option key={r} value={r}>{r}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <button className="btn secondary small" onClick={handleSaveMyRelation}>Save my details</button>
                 </div>
 
                 {isOwner && (
@@ -1201,6 +1202,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           {activePanel === 'settings' && (
           <div className="panel" ref={panelRef}>
               <div>
+                <h2>Budget settings</h2>
                 <div className="row" style={{ marginBottom: 12 }}>
                   <div className="field">
                     <label>Total monthly budget</label>
