@@ -555,14 +555,20 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           <h1>{household.name || 'Household Budget Tracker'}</h1>
           <div className="sub">Signed in as {session.user.email}{isOwner ? ' (owner)' : ''}</div>
         </div>
-        <div className="top-bar-actions">
-          {isAdmin && (
-            <button className="btn secondary small" onClick={onOpenAdmin}>Admin console</button>
-          )}
-        </div>
       </div>
 
-      <button className="btn secondary small signout-fixed" onClick={handleSignOut}>Sign out</button>
+      <div className="top-bar-actions" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '4px 0 16px' }}>
+        <button className="btn secondary small" onClick={() => setShowSettings((s) => !s)}>
+          {showSettings ? 'Hide budget settings' : 'Budget settings'}
+        </button>
+        {isAdmin && (
+          <button className="btn secondary small" onClick={onOpenAdmin}>Admin console</button>
+        )}
+        <button className="btn secondary small" onClick={() => setShowMembers((s) => !s)}>
+          {showMembers ? 'Hide household members' : 'Household members'}
+        </button>
+        <button className="btn secondary small" onClick={handleSignOut}>Sign out</button>
+      </div>
 
       <div className="month-nav">
         <button onClick={() => setCurrentMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))}>&lsaquo;</button>
@@ -1034,13 +1040,9 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             )}
           </div>
 
+          {showMembers && (
           <div className="panel">
-            <button className="btn secondary small" onClick={() => setShowMembers((s) => !s)}>
-              {showMembers ? 'Hide household members' : 'Household members'}
-            </button>
-
-            {showMembers && (
-              <div style={{ marginTop: 14 }}>
+              <div>
                 <h2>Members joined</h2>
                 <div className="muted-small" style={{ marginBottom: 8 }}>
                   "Your relation" is how you're labeled to the rest of the household (Self, Spouse, Child, etc.) --
@@ -1125,16 +1127,12 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   </>
                 )}
               </div>
-            )}
           </div>
+          )}
 
+          {showSettings && (
           <div className="panel">
-            <button className="btn secondary small" onClick={() => setShowSettings((s) => !s)}>
-              {showSettings ? 'Hide budget settings' : 'Budget settings'}
-            </button>
-
-            {showSettings && (
-              <div style={{ marginTop: 14 }}>
+              <div>
                 <div className="row" style={{ marginBottom: 12 }}>
                   <div className="field">
                     <label>Total monthly budget</label>
@@ -1232,8 +1230,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   </div>
                 )}
               </div>
-            )}
           </div>
+          )}
         </div>
       </div>
     </div>
