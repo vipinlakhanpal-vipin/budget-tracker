@@ -90,6 +90,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   const [chartType, setChartType] = useState('pie');
   const [loading, setLoading] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
+  const [showMembers, setShowMembers] = useState(false);
   const [members, setMembers] = useState([]);
   const [pendingInvites, setPendingInvites] = useState([]);
   const [expenseDrafts, setExpenseDrafts] = useState({});
@@ -407,34 +408,31 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     loadAll();
   }
 
-  async function handleSaveRecurring(id) {
-    const draft = recurringDrafts[id];
-    const amount = parseFloat(draft.amount);
-    if (!draft.name?.trim() || !draft.startDate) {
-      alert('Name and start date cannot be empty.');
-      return;
-    }
+  // Every field in the Fixed monthly expenses table auto-saves -- there's no
+  // separate "Save" button. Text/number fields (name, amount) save on blur
+  // (once you're done typing); dates/dropdowns save immediately on change
+  // since those only fire once a value is actually picked.
+  function updateRecurringDraftField(id, field, value) {
+    setRecurringDrafts((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
+  }
+
+  async function commitRecurringField(id, field, value) {
+    const merged = { ...(recurringDrafts[id] || {}), [field]: value };
+    setRecurringDrafts((prev) => ({ ...prev, [id]: merged }));
+    if (!merged.name?.trim() || !merged.startDate) return;
+    const amount = parseFloat(merged.amount);
     const { error } = await supabase
       .from('recurring_expenses')
       .update({
-        name: draft.name.trim(),
-        category_id: draft.categoryId,
+        name: merged.name.trim(),
+        category_id: merged.categoryId,
         amount: isNaN(amount) ? 0 : amount,
-        start_date: draft.startDate,
-        end_date: draft.endDate || null,
-        frequency: draft.frequency || 'monthly',
+        start_date: merged.startDate,
+        end_date: merged.endDate || null,
+        frequency: merged.frequency || 'monthly',
       })
       .eq('id', id);
     if (error) alert('Could not update: ' + error.message);
-    loadAll();
-  }
-
-  // Category changes save immediately (no need to hit the row's Save button
-  // for this one field, per user feedback that it felt like it "wasn't saving").
-  async function handleCategoryChangeRecurring(id, categoryId) {
-    setRecurringDrafts((prev) => ({ ...prev, [id]: { ...prev[id], categoryId } }));
-    const { error } = await supabase.from('recurring_expenses').update({ category_id: categoryId }).eq('id', id);
-    if (error) alert('Could not update category: ' + error.message);
     loadAll();
   }
 
@@ -594,7 +592,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
       <div className="grid">
         <div className="card ok"><div className="k">Combined income</div><div className="v">{fmt(totalIncome)}</div></div>
-        <div className="card"><div className="k">Combined expenses</div><div className="v">{fmt(total)}</div></div>
+        <div className="card">
+          <div className="k">Combined expenses</div>
+          <div className="v">{fmt(total)}</div>
+          <div className="muted-small" style={{ marginTop: 4 }}>
+            Regular {fmt(oneOffTotal)} + Fixed {fmt(recurringTotal)}
+          </div>
+        </div>
         <div className={`card ${netCombined < 0 ? 'over' : 'ok'}`}>
           <div className="k">Net (income - expenses)</div><div className="v">{fmt(netCombined)}</div>
         </div>
@@ -693,7 +697,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <div className="empty">No income sources added yet.</div>
             ) : (
               <div className="table-scroll">
-              <table style={{ marginTop: 14 }}>
+              <table style={{ marginTop: 14, fontSize: 12 }}>
                 <thead>
                   <tr><th>Source</th><th>Member</th><th>Amount</th><th>Month</th><th></th><th></th></tr>
                 </thead>
@@ -703,7 +707,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       <td>
                         <input
                           type="text"
-                          style={{ width: 110 }}
+                          style={{ width: 100, fontSize: 12 }}
                           value={incomeDrafts[i.id]?.name ?? ''}
                           onChange={(e) =>
                             setIncomeDrafts({ ...incomeDrafts, [i.id]: { ...incomeDrafts[i.id], name: e.target.value } })
@@ -716,7 +720,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           type="number"
                           step="0.01"
                           min="0"
-                          style={{ width: 90 }}
+                          style={{ width: 80, fontSize: 12 }}
                           value={incomeDrafts[i.id]?.amount ?? ''}
                           onChange={(e) =>
                             setIncomeDrafts({ ...incomeDrafts, [i.id]: { ...incomeDrafts[i.id], amount: e.target.value } })
@@ -726,7 +730,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       <td>
                         <input
                           type="month"
-                          style={{ width: 130 }}
+                          style={{ width: 115, fontSize: 11 }}
                           value={incomeDrafts[i.id]?.month ?? ''}
                           onChange={(e) =>
                             setIncomeDrafts({ ...incomeDrafts, [i.id]: { ...incomeDrafts[i.id], month: e.target.value } })
@@ -816,9 +820,9 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <div className="empty">No loans, EMIs, or fixed monthly bills added yet.</div>
             ) : (
               <div className="table-scroll">
-              <table style={{ marginTop: 14 }}>
+              <table style={{ marginTop: 14, fontSize: 12 }}>
                 <thead>
-                  <tr><th>Name</th><th>Category</th><th>Amount</th><th>Start</th><th>End</th><th>Repeats</th><th></th><th></th></tr>
+                  <tr><th>Name</th><th>Category</th><th>Amount</th><th>Start</th><th>End</th><th>Repeats</th><th></th></tr>
                 </thead>
                 <tbody>
                   {recurringExpenses.map((r) => (
@@ -826,17 +830,17 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       <td>
                         <input
                           type="text"
-                          style={{ width: 120 }}
+                          style={{ width: 110, fontSize: 12 }}
                           value={recurringDrafts[r.id]?.name ?? ''}
-                          onChange={(e) =>
-                            setRecurringDrafts({ ...recurringDrafts, [r.id]: { ...recurringDrafts[r.id], name: e.target.value } })
-                          }
+                          onChange={(e) => updateRecurringDraftField(r.id, 'name', e.target.value)}
+                          onBlur={(e) => commitRecurringField(r.id, 'name', e.target.value)}
                         />
                       </td>
                       <td>
                         <select
+                          style={{ fontSize: 12 }}
                           value={recurringDrafts[r.id]?.categoryId ?? ''}
-                          onChange={(e) => handleCategoryChangeRecurring(r.id, e.target.value)}
+                          onChange={(e) => commitRecurringField(r.id, 'categoryId', e.target.value)}
                         >
                           {categories.map((c) => (
                             <option key={c.id} value={c.id}>{c.name}</option>
@@ -848,46 +852,39 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           type="number"
                           step="0.01"
                           min="0"
-                          style={{ width: 90 }}
+                          style={{ width: 80, fontSize: 12 }}
                           value={recurringDrafts[r.id]?.amount ?? ''}
-                          onChange={(e) =>
-                            setRecurringDrafts({ ...recurringDrafts, [r.id]: { ...recurringDrafts[r.id], amount: e.target.value } })
-                          }
+                          onChange={(e) => updateRecurringDraftField(r.id, 'amount', e.target.value)}
+                          onBlur={(e) => commitRecurringField(r.id, 'amount', e.target.value)}
                         />
                       </td>
                       <td>
                         <input
                           type="date"
-                          style={{ width: 150 }}
+                          style={{ width: 130, fontSize: 11 }}
                           value={recurringDrafts[r.id]?.startDate ?? ''}
-                          onChange={(e) =>
-                            setRecurringDrafts({ ...recurringDrafts, [r.id]: { ...recurringDrafts[r.id], startDate: e.target.value } })
-                          }
+                          onChange={(e) => commitRecurringField(r.id, 'startDate', e.target.value)}
                         />
                       </td>
                       <td>
                         <input
                           type="date"
-                          style={{ width: 150 }}
+                          style={{ width: 130, fontSize: 11 }}
                           value={recurringDrafts[r.id]?.endDate ?? ''}
-                          onChange={(e) =>
-                            setRecurringDrafts({ ...recurringDrafts, [r.id]: { ...recurringDrafts[r.id], endDate: e.target.value } })
-                          }
+                          onChange={(e) => commitRecurringField(r.id, 'endDate', e.target.value)}
                         />
                       </td>
                       <td>
                         <select
+                          style={{ fontSize: 12 }}
                           value={recurringDrafts[r.id]?.frequency ?? 'monthly'}
-                          onChange={(e) =>
-                            setRecurringDrafts({ ...recurringDrafts, [r.id]: { ...recurringDrafts[r.id], frequency: e.target.value } })
-                          }
+                          onChange={(e) => commitRecurringField(r.id, 'frequency', e.target.value)}
                         >
                           {FREQUENCIES.map((f) => (
                             <option key={f.value} value={f.value}>{f.label}</option>
                           ))}
                         </select>
                       </td>
-                      <td><button className="btn secondary small" onClick={() => handleSaveRecurring(r.id)}>Save</button></td>
                       <td><button className="del" onClick={() => handleDeleteRecurring(r.id, r.name)}>x</button></td>
                     </tr>
                   ))}
@@ -895,6 +892,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               </table>
               </div>
             )}
+            <div className="muted-small" style={{ marginTop: 6 }}>Changes save automatically.</div>
             {recurringForMonth.length > 0 && (
               <div className="muted-small" style={{ marginTop: 10 }}>
                 {fmt(recurringTotal)} in fixed expenses counted toward {monthLabel(currentMonth)}.
@@ -908,7 +906,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <div className="empty">No one-off expenses logged for this month yet.</div>
             ) : (
               <div className="table-scroll">
-              <table>
+              <table style={{ fontSize: 12 }}>
                 <thead>
                   <tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th><th>By</th><th></th><th></th></tr>
                 </thead>
@@ -918,7 +916,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       <td>
                         <input
                           type="date"
-                          style={{ width: 130 }}
+                          style={{ width: 120, fontSize: 11 }}
                           value={expenseDrafts[e.id]?.date ?? ''}
                           onChange={(ev) =>
                             setExpenseDrafts({ ...expenseDrafts, [e.id]: { ...expenseDrafts[e.id], date: ev.target.value } })
@@ -927,6 +925,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       </td>
                       <td>
                         <select
+                          style={{ fontSize: 12 }}
                           value={expenseDrafts[e.id]?.categoryId ?? ''}
                           onChange={(ev) =>
                             setExpenseDrafts({ ...expenseDrafts, [e.id]: { ...expenseDrafts[e.id], categoryId: ev.target.value } })
@@ -940,7 +939,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       <td>
                         <input
                           type="text"
-                          style={{ width: 140 }}
+                          style={{ width: 120, fontSize: 12 }}
                           value={expenseDrafts[e.id]?.description ?? ''}
                           onChange={(ev) =>
                             setExpenseDrafts({ ...expenseDrafts, [e.id]: { ...expenseDrafts[e.id], description: ev.target.value } })
@@ -952,7 +951,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           type="number"
                           step="0.01"
                           min="0"
-                          style={{ width: 90 }}
+                          style={{ width: 75, fontSize: 12 }}
                           value={expenseDrafts[e.id]?.amount ?? ''}
                           onChange={(ev) =>
                             setExpenseDrafts({ ...expenseDrafts, [e.id]: { ...expenseDrafts[e.id], amount: ev.target.value } })
@@ -966,6 +965,11 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   ))}
                 </tbody>
               </table>
+              </div>
+            )}
+            {monthExpenses.length > 0 && (
+              <div className="muted-small" style={{ marginTop: 8 }}>
+                {fmt(oneOffTotal)} in regular (one-off) expenses counted toward {monthLabel(currentMonth)}.
               </div>
             )}
           </div>
@@ -1031,78 +1035,96 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           </div>
 
           <div className="panel">
-            <h2>Household members</h2>
-            <div className="table-scroll">
-            <table>
-              <tbody>
-                {members.map((m) => (
-                  <tr key={m.id}>
-                    <td>{m.email}</td>
-                    <td className="muted-small">
-                      {isOwner && m.role !== 'owner' ? (
-                        <select value={m.relation} onChange={(e) => handleUpdateMemberRelation(m.id, e.target.value)}>
-                          {RELATIONS.map((r) => (
-                            <option key={r} value={r}>{r}</option>
-                          ))}
-                        </select>
-                      ) : (
-                        m.relation
-                      )}
-                    </td>
-                    <td className="muted-small">{m.role}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            </div>
+            <button className="btn secondary small" onClick={() => setShowMembers((s) => !s)}>
+              {showMembers ? 'Hide household members' : 'Household members'}
+            </button>
 
-            <div className="row" style={{ marginTop: 14, alignItems: 'center' }}>
-              <div className="field" style={{ maxWidth: 200 }}>
-                <label>Your relation</label>
-                <select value={myRelationDraft} onChange={(e) => setMyRelationDraft(e.target.value)}>
-                  {RELATIONS.map((r) => (
-                    <option key={r} value={r}>{r}</option>
-                  ))}
-                </select>
-              </div>
-              <button className="btn secondary small" onClick={handleSaveMyRelation}>Save my details</button>
-            </div>
-
-            {isOwner && (
-              <>
-                <form className="row" style={{ marginTop: 14 }} onSubmit={handleSendInvite}>
-                  <input
-                    type="email"
-                    placeholder="Invite by email"
-                    style={{ flex: 1.2 }}
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                    required
-                  />
-                  <select value={inviteRelation} onChange={(e) => setInviteRelation(e.target.value)}>
-                    {RELATIONS.filter((r) => r !== 'Self').map((r) => (
-                      <option key={r} value={r}>{r}</option>
-                    ))}
-                  </select>
-                  <button className="btn secondary small" type="submit">Invite</button>
-                </form>
-                <div className="muted-small" style={{ marginTop: 6 }}>
-                  They'll also need a Supabase sign-in invite from the project admin before their first login.
+            {showMembers && (
+              <div style={{ marginTop: 14 }}>
+                <h2>Members joined</h2>
+                <div className="muted-small" style={{ marginBottom: 8 }}>
+                  "Your relation" is how you're labeled to the rest of the household (Self, Spouse, Child, etc.) --
+                  it's just a display label, not a permission. "Save my details" saves your own relation choice below.
                 </div>
-                {inviteStatus === 'sent' && (
-                  <div className="muted-small" style={{ marginTop: 6, color: 'var(--ok)' }}>Invite created.</div>
-                )}
-                {pendingInvites.length > 0 && (
-                  <div className="cat-list" style={{ marginTop: 10 }}>
-                    {pendingInvites.map((inv) => (
-                      <div className="cat-chip" key={inv.id}>
-                        {inv.email}
-                        <button onClick={() => handleCancelInvite(inv.id)}>x</button>
-                      </div>
+                <div className="table-scroll">
+                <table>
+                  <tbody>
+                    {members.map((m) => (
+                      <tr key={m.id}>
+                        <td>{m.email}</td>
+                        <td className="muted-small">
+                          {isOwner && m.role !== 'owner' ? (
+                            <select value={m.relation} onChange={(e) => handleUpdateMemberRelation(m.id, e.target.value)}>
+                              {RELATIONS.map((r) => (
+                                <option key={r} value={r}>{r}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            m.relation
+                          )}
+                        </td>
+                        <td className="muted-small">{m.role}</td>
+                      </tr>
                     ))}
+                  </tbody>
+                </table>
+                </div>
+
+                <div className="row" style={{ marginTop: 14, alignItems: 'center' }}>
+                  <div className="field" style={{ maxWidth: 200 }}>
+                    <label>Your relation</label>
+                    <select value={myRelationDraft} onChange={(e) => setMyRelationDraft(e.target.value)}>
+                      {RELATIONS.map((r) => (
+                        <option key={r} value={r}>{r}</option>
+                      ))}
+                    </select>
                   </div>
+                  <button className="btn secondary small" onClick={handleSaveMyRelation}>Save my details</button>
+                </div>
+
+                {isOwner && (
+                  <>
+                    <h2 style={{ marginTop: 20 }}>Members invited</h2>
+                    <div className="muted-small" style={{ marginBottom: 8 }}>
+                      Invited but haven't signed in and joined yet.
+                    </div>
+                    <form className="row" onSubmit={handleSendInvite}>
+                      <input
+                        type="email"
+                        placeholder="Invite by email"
+                        style={{ flex: 1.2 }}
+                        value={inviteEmail}
+                        onChange={(e) => setInviteEmail(e.target.value)}
+                        required
+                      />
+                      <select value={inviteRelation} onChange={(e) => setInviteRelation(e.target.value)}>
+                        {RELATIONS.filter((r) => r !== 'Self').map((r) => (
+                          <option key={r} value={r}>{r}</option>
+                        ))}
+                      </select>
+                      <button className="btn secondary small" type="submit">Invite</button>
+                    </form>
+                    <div className="muted-small" style={{ marginTop: 6 }}>
+                      They'll also need a Supabase sign-in invite from the project admin before their first login.
+                    </div>
+                    {inviteStatus === 'sent' && (
+                      <div className="muted-small" style={{ marginTop: 6, color: 'var(--ok)' }}>Invite created.</div>
+                    )}
+                    {pendingInvites.length > 0 ? (
+                      <div className="cat-list" style={{ marginTop: 10 }}>
+                        {pendingInvites.map((inv) => (
+                          <div className="cat-chip" key={inv.id}>
+                            {inv.email}
+                            <button onClick={() => handleCancelInvite(inv.id)}>x</button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="muted-small" style={{ marginTop: 10 }}>No pending invites.</div>
+                    )}
+                  </>
                 )}
-              </>
+              </div>
             )}
           </div>
 
