@@ -233,3 +233,10 @@ create policy "owners can cancel invites" on household_invites
   for delete using (
     household_id in (select household_id from household_members where user_id = auth.uid() and role = 'owner')
   );
+
+-- Per-household display currency (e.g. AED, USD, INR). Defaults to AED.
+alter table settings add column if not exists currency text not null default 'AED';
+
+-- Recurring expense repeat cadence: monthly, alternate (every 2 months),
+-- quarterly, half_yearly, or yearly. Defaults to monthly for existing rows.
+alter table recurring_expenses add column if not exists frequency text not null default 'monthly';
