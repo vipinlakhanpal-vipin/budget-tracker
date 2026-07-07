@@ -71,8 +71,9 @@ input[type="date"] {
 .btn.secondary { background: transparent; color: var(--accent2); border: 1px solid var(--accent2); }
 .btn.small { padding: 5px 10px; font-size: 12px; }
 
-.content-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; }
-@media (max-width: 800px) { .content-grid { grid-template-columns: 1fr; } .grid { grid-template-columns: 1fr; } }
+.content-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(300px, 1fr); gap: 20px; }
+@media (max-width: 1000px) { .content-grid { grid-template-columns: 1fr; } }
+@media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
 
 .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
