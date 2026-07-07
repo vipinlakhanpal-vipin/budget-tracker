@@ -9,6 +9,42 @@ const COLORS = ['#0d9488', '#0ea5e9', '#14b8a6', '#0284c7', '#2dd4bf', '#38bdf8'
 const RELATIONS = ['Self', 'Spouse', 'Partner', 'Child', 'Parent', 'Sibling', 'Roommate', 'Other'];
 const CURRENCIES = ['AED', 'USD', 'GBP', 'EUR', 'INR', 'SAR', 'PKR'];
 
+const FREQUENCIES = [
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'alternate', label: 'Alternate month' },
+  { value: 'quarterly', label: 'Quarterly' },
+  { value: 'half_yearly', label: 'Half-yearly' },
+  { value: 'yearly', label: 'Once a year' },
+];
+const FREQUENCY_MONTHS = { monthly: 1, alternate: 2, quarterly: 3, half_yearly: 6, yearly: 12 };
+
+// Difference, in whole months, between two "YYYY-MM" keys (to >= from assumed
+// for the recurring-expense-occurs-this-month check below).
+function monthDiff(fromKey, toKey) {
+  const [fy, fm] = fromKey.split('-').map(Number);
+  const [ty, tm] = toKey.split('-').map(Number);
+  return (ty - fy) * 12 + (tm - fm);
+}
+
+// The UAE's new official Dirham symbol (a "D" crossed by two horizontal
+// strokes) isn't in a shipped Unicode font yet, so it can't be typed as plain
+// text. Since Recharts renders to inline SVG, we draw a vector approximation
+// directly so it displays correctly everywhere without relying on any font.
+function DirhamBarLabel(props) {
+  const { x, y, width, height, value } = props;
+  const cy = y + height / 2;
+  const startX = x + width + 6;
+  const numStr = Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return (
+    <g>
+      <text x={startX} y={cy} dy={3.5} fontSize={10} fontWeight={700} fill="#0f2a2e" fontFamily="Arial, sans-serif">D</text>
+      <line x1={startX - 1} y1={cy - 2.5} x2={startX + 6.5} y2={cy - 2.5} stroke="#0f2a2e" strokeWidth={1} />
+      <line x1={startX - 1} y1={cy + 2.5} x2={startX + 6.5} y2={cy + 2.5} stroke="#0f2a2e" strokeWidth={1} />
+      <text x={startX + 10} y={cy} dy={3.5} fontSize={10} fill="#0f2a2e">{numStr}</text>
+    </g>
+  );
+}
+
 // Module-level so the standalone fmt() helper (used all over the JSX below)
 // can stay a simple function instead of threading a currency prop through
 // every call site. Updated at the top of each Dashboard render from the
@@ -76,18 +112,19 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     amount: '',
     startDate: new Date().toISOString().slice(0, 10),
     endDate: '',
+    frequency: 'monthly',
   });
   const [recurringDrafts, setRecurringDrafts] = useState({});
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRelation, setInviteRelation] = useState('Spouse');
   const [inviteStatus, setInviteStatus] = useState('');
 
+  // Income is entered per month on purpose (no auto-rollover) -- see newIncome.month.
   const [newIncome, setNewIncome] = useState({
     name: '',
     memberEmail: session.user.email,
     amount: '',
-    startDate: new Date().toISOString().slice(0, 10),
-    endDate: '',
+    month: monthKey(new Date()),
   });
   const [incomeDrafts, setIncomeDrafts] = useState({});
 
@@ -115,7 +152,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     setIncomes(inc || []);
     const iDrafts = {};
     (inc || []).forEach((i) => {
-      iDrafts[i.id] = { name: i.name, amount: String(i.amount), startDate: i.start_date, endDate: i.end_date || '' };
+      iDrafts[i.id] = { name: i.name, amount: String(i.amount), month: i.start_date.slice(0, 7) };
     });
     setIncomeDrafts(iDrafts);
     setTotalBudget(settings?.total_monthly_budget || 0);
@@ -132,7 +169,14 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     setCategoryNameDrafts(nameDrafts);
     const rDrafts = {};
     (recur || []).forEach((r) => {
-      rDrafts[r.id] = { name: r.name, categoryId: r.category_id, amount: String(r.amount), startDate: r.start_date, endDate: r.end_date || '' };
+      rDrafts[r.id] = {
+        name: r.name,
+        categoryId: r.category_id,
+        amount: String(r.amount),
+        startDate: r.start_date,
+        endDate: r.end_date || '',
+        frequency: r.frequency || 'monthly',
+      };
     });
     setRecurringDrafts(rDrafts);
     const me = (mem || []).find((m) => m.email.toLowerCase() === session.user.email.toLowerCase());
@@ -172,9 +216,15 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     const key = monthKey(currentMonth);
     return recurringExpenses.filter((r) => {
       if (!r.active) return false;
-      const startsOk = r.start_date.slice(0, 7) <= key;
+      const startKey = r.start_date.slice(0, 7);
+      const startsOk = startKey <= key;
       const endsOk = !r.end_date || r.end_date.slice(0, 7) >= key;
-      return startsOk && endsOk;
+      if (!startsOk || !endsOk) return false;
+      const interval = FREQUENCY_MONTHS[r.frequency] || 1;
+      if (interval <= 1) return true;
+      // Only lands on months that are a whole number of intervals after the start month
+      // (e.g. alternate-month rent counts every 2nd month from its start date).
+      return monthDiff(startKey, key) % interval === 0;
     });
   }, [recurringExpenses, currentMonth]);
 
@@ -204,12 +254,9 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
   const incomeForMonth = useMemo(() => {
     const key = monthKey(currentMonth);
-    return incomes.filter((i) => {
-      if (!i.active) return false;
-      const startsOk = i.start_date.slice(0, 7) <= key;
-      const endsOk = !i.end_date || i.end_date.slice(0, 7) >= key;
-      return startsOk && endsOk;
-    });
+    // Income is entered per month on purpose -- no auto-rollover -- so this is
+    // an exact month match rather than a start/end range like expenses.
+    return incomes.filter((i) => i.active && i.start_date.slice(0, 7) === key);
   }, [incomes, currentMonth]);
   const totalIncome = useMemo(() => incomeForMonth.reduce((s, i) => s + Number(i.amount), 0), [incomeForMonth]);
   const netCombined = totalIncome - total;
@@ -349,6 +396,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       amount,
       start_date: newRecurring.startDate,
       end_date: newRecurring.endDate || null,
+      frequency: newRecurring.frequency,
       created_by: session.user.id,
     });
     if (error) {
@@ -374,9 +422,19 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
         amount: isNaN(amount) ? 0 : amount,
         start_date: draft.startDate,
         end_date: draft.endDate || null,
+        frequency: draft.frequency || 'monthly',
       })
       .eq('id', id);
     if (error) alert('Could not update: ' + error.message);
+    loadAll();
+  }
+
+  // Category changes save immediately (no need to hit the row's Save button
+  // for this one field, per user feedback that it felt like it "wasn't saving").
+  async function handleCategoryChangeRecurring(id, categoryId) {
+    setRecurringDrafts((prev) => ({ ...prev, [id]: { ...prev[id], categoryId } }));
+    const { error } = await supabase.from('recurring_expenses').update({ category_id: categoryId }).eq('id', id);
+    if (error) alert('Could not update category: ' + error.message);
     loadAll();
   }
 
@@ -432,8 +490,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   async function handleAddIncome(e) {
     e.preventDefault();
     const amount = parseFloat(newIncome.amount);
-    if (!newIncome.name.trim() || isNaN(amount) || amount <= 0 || !newIncome.startDate) {
-      alert('Please fill in a name, amount, and start date.');
+    if (!newIncome.name.trim() || isNaN(amount) || amount <= 0 || !newIncome.month) {
+      alert('Please fill in a name, amount, and month.');
       return;
     }
     const { error } = await supabase.from('incomes').insert({
@@ -441,23 +499,23 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       name: newIncome.name.trim(),
       member_email: newIncome.memberEmail,
       amount,
-      start_date: newIncome.startDate,
-      end_date: newIncome.endDate || null,
+      start_date: newIncome.month + '-01',
+      end_date: null,
       created_by: session.user.id,
     });
     if (error) {
       alert('Could not save income: ' + error.message);
       return;
     }
-    setNewIncome((i) => ({ ...i, name: '', amount: '', endDate: '' }));
+    setNewIncome((i) => ({ ...i, name: '', amount: '' }));
     loadAll();
   }
 
   async function handleSaveIncome(id) {
     const draft = incomeDrafts[id];
     const amount = parseFloat(draft.amount);
-    if (!draft.name?.trim() || !draft.startDate) {
-      alert('Source name and start date cannot be empty.');
+    if (!draft.name?.trim() || !draft.month) {
+      alert('Source name and month cannot be empty.');
       return;
     }
     const { error } = await supabase
@@ -465,8 +523,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       .update({
         name: draft.name.trim(),
         amount: isNaN(amount) ? 0 : amount,
-        start_date: draft.startDate,
-        end_date: draft.endDate || null,
+        start_date: draft.month + '-01',
+        end_date: null,
       })
       .eq('id', id);
     if (error) alert('Could not update: ' + error.message);
@@ -618,23 +676,18 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 />
               </div>
               <div className="field">
-                <label>Start date</label>
+                <label>Month</label>
                 <input
-                  type="date"
-                  value={newIncome.startDate}
-                  onChange={(e) => setNewIncome({ ...newIncome, startDate: e.target.value })}
-                />
-              </div>
-              <div className="field">
-                <label>End date (optional)</label>
-                <input
-                  type="date"
-                  value={newIncome.endDate}
-                  onChange={(e) => setNewIncome({ ...newIncome, endDate: e.target.value })}
+                  type="month"
+                  value={newIncome.month}
+                  onChange={(e) => setNewIncome({ ...newIncome, month: e.target.value })}
                 />
               </div>
               <button className="btn" type="submit">Add</button>
             </form>
+            <div className="muted-small" style={{ marginTop: 6 }}>
+              Income is entered per month on purpose -- it won't automatically carry over. Add a new row each month (or edit last month's row's Month field forward).
+            </div>
 
             {incomes.length === 0 ? (
               <div className="empty">No income sources added yet.</div>
@@ -642,7 +695,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <div className="table-scroll">
               <table style={{ marginTop: 14 }}>
                 <thead>
-                  <tr><th>Source</th><th>Member</th><th>Amount</th><th>Start</th><th>End</th><th></th><th></th></tr>
+                  <tr><th>Source</th><th>Member</th><th>Amount</th><th>Month</th><th></th><th></th></tr>
                 </thead>
                 <tbody>
                   {incomes.map((i) => (
@@ -672,21 +725,11 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       </td>
                       <td>
                         <input
-                          type="date"
-                          style={{ width: 150 }}
-                          value={incomeDrafts[i.id]?.startDate ?? ''}
+                          type="month"
+                          style={{ width: 130 }}
+                          value={incomeDrafts[i.id]?.month ?? ''}
                           onChange={(e) =>
-                            setIncomeDrafts({ ...incomeDrafts, [i.id]: { ...incomeDrafts[i.id], startDate: e.target.value } })
-                          }
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="date"
-                          style={{ width: 150 }}
-                          value={incomeDrafts[i.id]?.endDate ?? ''}
-                          onChange={(e) =>
-                            setIncomeDrafts({ ...incomeDrafts, [i.id]: { ...incomeDrafts[i.id], endDate: e.target.value } })
+                            setIncomeDrafts({ ...incomeDrafts, [i.id]: { ...incomeDrafts[i.id], month: e.target.value } })
                           }
                         />
                       </td>
@@ -755,6 +798,17 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   onChange={(e) => setNewRecurring({ ...newRecurring, endDate: e.target.value })}
                 />
               </div>
+              <div className="field">
+                <label>Repeats</label>
+                <select
+                  value={newRecurring.frequency}
+                  onChange={(e) => setNewRecurring({ ...newRecurring, frequency: e.target.value })}
+                >
+                  {FREQUENCIES.map((f) => (
+                    <option key={f.value} value={f.value}>{f.label}</option>
+                  ))}
+                </select>
+              </div>
               <button className="btn" type="submit">Add</button>
             </form>
 
@@ -764,7 +818,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <div className="table-scroll">
               <table style={{ marginTop: 14 }}>
                 <thead>
-                  <tr><th>Name</th><th>Category</th><th>Amount</th><th>Start</th><th>End</th><th></th><th></th></tr>
+                  <tr><th>Name</th><th>Category</th><th>Amount</th><th>Start</th><th>End</th><th>Repeats</th><th></th><th></th></tr>
                 </thead>
                 <tbody>
                   {recurringExpenses.map((r) => (
@@ -782,9 +836,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       <td>
                         <select
                           value={recurringDrafts[r.id]?.categoryId ?? ''}
-                          onChange={(e) =>
-                            setRecurringDrafts({ ...recurringDrafts, [r.id]: { ...recurringDrafts[r.id], categoryId: e.target.value } })
-                          }
+                          onChange={(e) => handleCategoryChangeRecurring(r.id, e.target.value)}
                         >
                           {categories.map((c) => (
                             <option key={c.id} value={c.id}>{c.name}</option>
@@ -822,6 +874,18 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                             setRecurringDrafts({ ...recurringDrafts, [r.id]: { ...recurringDrafts[r.id], endDate: e.target.value } })
                           }
                         />
+                      </td>
+                      <td>
+                        <select
+                          value={recurringDrafts[r.id]?.frequency ?? 'monthly'}
+                          onChange={(e) =>
+                            setRecurringDrafts({ ...recurringDrafts, [r.id]: { ...recurringDrafts[r.id], frequency: e.target.value } })
+                          }
+                        >
+                          {FREQUENCIES.map((f) => (
+                            <option key={f.value} value={f.value}>{f.label}</option>
+                          ))}
+                        </select>
                       </td>
                       <td><button className="btn secondary small" onClick={() => handleSaveRecurring(r.id)}>Save</button></td>
                       <td><button className="del" onClick={() => handleDeleteRecurring(r.id, r.name)}>x</button></td>
@@ -936,28 +1000,28 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                     dataKey="value"
                     nameKey="name"
                     outerRadius={85}
-                    label={{ fontSize: 11, fill: 'var(--text)' }}
+                    label={{ fontSize: 9, fill: 'var(--text)' }}
                   >
                     {pieData.map((_, i) => (
                       <Cell key={i} fill={COLORS[i % COLORS.length]} />
                     ))}
                   </Pie>
                   <Tooltip formatter={(v) => fmt(v)} />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <Legend wrapperStyle={{ fontSize: 10 }} />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
               <ResponsiveContainer width="100%" height={Math.max(260, pieData.length * 40)}>
-                <BarChart data={pieData} layout="vertical" margin={{ top: 5, right: 50, left: 10, bottom: 5 }} barCategoryGap="35%">
+                <BarChart data={pieData} layout="vertical" margin={{ top: 5, right: 55, left: 10, bottom: 5 }} barCategoryGap="40%">
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                  <XAxis type="number" tick={{ fontSize: 11 }} hide />
-                  <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 11 }} />
+                  <XAxis type="number" tick={{ fontSize: 9 }} hide />
+                  <YAxis type="category" dataKey="name" width={95} tick={{ fontSize: 9 }} />
                   <Tooltip formatter={(v) => fmt(v)} />
-                  <Bar dataKey="value" barSize={14} radius={[0, 4, 4, 0]}>
+                  <Bar dataKey="value" barSize={9} radius={[0, 3, 3, 0]}>
                     {pieData.map((_, i) => (
                       <Cell key={i} fill={COLORS[i % COLORS.length]} />
                     ))}
-                    <LabelList dataKey="value" position="right" formatter={(v) => fmt(v)} style={{ fontSize: 11, fill: 'var(--text)' }} />
+                    <LabelList dataKey="value" content={DirhamBarLabel} />
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
