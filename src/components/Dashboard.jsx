@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, LabelList,
 } from 'recharts';
 import { supabase } from '../supabaseClient';
+import AdminConsole from './AdminConsole.jsx';
 
 const COLORS = ['#0d9488', '#0ea5e9', '#14b8a6', '#0284c7', '#2dd4bf', '#38bdf8', '#0f766e', '#0369a1', '#5eead4', '#7dd3fc'];
 const RELATIONS = ['Self', 'Spouse', 'Partner', 'Child', 'Parent', 'Sibling', 'Roommate', 'Other'];
@@ -89,8 +90,19 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   const [currencyDraft, setCurrencyDraft] = useState('AED');
   const [chartType, setChartType] = useState('pie');
   const [loading, setLoading] = useState(true);
-  const [showSettings, setShowSettings] = useState(false);
-  const [showMembers, setShowMembers] = useState(false);
+  // Exactly one of these panels (Budget settings / Users / Admin console / Help)
+  // can be open at a time -- they all render in the same spot below the chart,
+  // and opening one auto-scrolls its title into view.
+  const [activePanel, setActivePanel] = useState(null);
+  const panelRef = useRef(null);
+  function togglePanel(name) {
+    setActivePanel((cur) => (cur === name ? null : name));
+  }
+  useEffect(() => {
+    if (activePanel && panelRef.current) {
+      panelRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [activePanel]);
   const [inputTab, setInputTab] = useState('expense');
   const [members, setMembers] = useState([]);
   const [pendingInvites, setPendingInvites] = useState([]);
@@ -557,14 +569,19 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           <div className="sub">Signed in as {session.user.email}{isOwner ? ' (owner)' : ''}</div>
         </div>
         <div className="action-row-teal">
-          <button className="btn-teal" onClick={() => setShowSettings((s) => !s)}>
-            {showSettings ? 'Hide budget settings' : 'Budget settings'}
+          <button className="btn-teal" onClick={() => togglePanel('help')}>
+            {activePanel === 'help' ? 'Hide help' : 'Help'}
+          </button>
+          <button className="btn-teal" onClick={() => togglePanel('settings')}>
+            {activePanel === 'settings' ? 'Hide budget settings' : 'Budget settings'}
           </button>
           {isAdmin && (
-            <button className="btn-teal" onClick={onOpenAdmin}>Admin console</button>
+            <button className="btn-teal" onClick={() => togglePanel('admin')}>
+              {activePanel === 'admin' ? 'Hide admin console' : 'Admin console'}
+            </button>
           )}
-          <button className="btn-teal" onClick={() => setShowMembers((s) => !s)}>
-            {showMembers ? 'Hide household members' : 'Household members'}
+          <button className="btn-teal" onClick={() => togglePanel('members')}>
+            {activePanel === 'members' ? 'Hide users' : 'Users'}
           </button>
           <button className="btn-teal" onClick={handleSignOut}>Sign out</button>
         </div>
@@ -727,14 +744,14 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <div className="empty">No income sources added yet.</div>
             ) : (
               <div className="table-scroll">
-              <table style={{ marginTop: 14, fontSize: 12 }}>
+              <table className="responsive-table" style={{ marginTop: 14, fontSize: 12 }}>
                 <thead>
                   <tr><th>Source</th><th>Member</th><th>Amount</th><th>Month</th><th></th><th></th></tr>
                 </thead>
                 <tbody>
                   {incomes.map((i) => (
                     <tr key={i.id}>
-                      <td>
+                      <td data-label="Source">
                         <input
                           type="text"
                           style={{ width: 100, fontSize: 12 }}
@@ -744,8 +761,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           }
                         />
                       </td>
-                      <td className="muted-small">{i.member_email}</td>
-                      <td>
+                      <td className="muted-small" data-label="Member">{i.member_email}</td>
+                      <td data-label="Amount">
                         <input
                           type="number"
                           step="0.01"
@@ -757,7 +774,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           }
                         />
                       </td>
-                      <td>
+                      <td data-label="Month">
                         <input
                           type="month"
                           style={{ width: 115, fontSize: 11 }}
@@ -852,14 +869,14 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <div className="empty">No loans, EMIs, or fixed monthly bills added yet.</div>
             ) : (
               <div className="table-scroll">
-              <table style={{ marginTop: 14, fontSize: 12 }}>
+              <table className="responsive-table" style={{ marginTop: 14, fontSize: 12 }}>
                 <thead>
                   <tr><th>Name</th><th>Category</th><th>Amount</th><th>Start</th><th>End</th><th>Repeats</th><th></th></tr>
                 </thead>
                 <tbody>
                   {recurringExpenses.map((r) => (
                     <tr key={r.id}>
-                      <td>
+                      <td data-label="Name">
                         <input
                           type="text"
                           style={{ width: 110, fontSize: 12 }}
@@ -868,7 +885,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           onBlur={(e) => commitRecurringField(r.id, 'name', e.target.value)}
                         />
                       </td>
-                      <td>
+                      <td data-label="Category">
                         <select
                           style={{ fontSize: 12 }}
                           value={recurringDrafts[r.id]?.categoryId ?? ''}
@@ -879,7 +896,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           ))}
                         </select>
                       </td>
-                      <td>
+                      <td data-label="Amount">
                         <input
                           type="number"
                           step="0.01"
@@ -890,7 +907,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           onBlur={(e) => commitRecurringField(r.id, 'amount', e.target.value)}
                         />
                       </td>
-                      <td>
+                      <td data-label="Start">
                         <input
                           type="date"
                           style={{ width: 130, fontSize: 11 }}
@@ -899,7 +916,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           onBlur={(e) => commitRecurringField(r.id, 'startDate', e.target.value)}
                         />
                       </td>
-                      <td>
+                      <td data-label="End">
                         <input
                           type="date"
                           style={{ width: 130, fontSize: 11 }}
@@ -908,7 +925,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           onBlur={(e) => commitRecurringField(r.id, 'endDate', e.target.value)}
                         />
                       </td>
-                      <td>
+                      <td data-label="Repeats">
                         <select
                           style={{ fontSize: 12 }}
                           value={recurringDrafts[r.id]?.frequency ?? 'monthly'}
@@ -941,14 +958,14 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <div className="empty">No one-off expenses logged for this month yet.</div>
             ) : (
               <div className="table-scroll">
-              <table style={{ fontSize: 12 }}>
+              <table className="responsive-table" style={{ fontSize: 12 }}>
                 <thead>
                   <tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th><th>By</th><th></th><th></th></tr>
                 </thead>
                 <tbody>
                   {monthExpenses.map((e) => (
                     <tr key={e.id}>
-                      <td>
+                      <td data-label="Date">
                         <input
                           type="date"
                           style={{ width: 120, fontSize: 11 }}
@@ -958,7 +975,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           }
                         />
                       </td>
-                      <td>
+                      <td data-label="Category">
                         <select
                           style={{ fontSize: 12 }}
                           value={expenseDrafts[e.id]?.categoryId ?? ''}
@@ -971,7 +988,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           ))}
                         </select>
                       </td>
-                      <td>
+                      <td data-label="Description">
                         <input
                           type="text"
                           style={{ width: 120, fontSize: 12 }}
@@ -981,7 +998,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           }
                         />
                       </td>
-                      <td>
+                      <td data-label="Amount">
                         <input
                           type="number"
                           step="0.01"
@@ -993,7 +1010,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           }
                         />
                       </td>
-                      <td className="muted-small">{e.created_by_email?.split('@')[0]}</td>
+                      <td data-label="By" className="muted-small">{e.created_by_email?.split('@')[0]}</td>
                       <td><button className="btn secondary small" onClick={() => handleSaveExpense(e.id)}>Save</button></td>
                       <td><button className="del" onClick={() => handleDeleteExpense(e.id)}>x</button></td>
                     </tr>
@@ -1069,21 +1086,22 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             )}
           </div>
 
-          {showMembers && (
-          <div className="panel">
+          {activePanel === 'members' && (
+          <div className="panel" ref={panelRef}>
               <div>
-                <h2>Members joined</h2>
+                <h2>Users</h2>
                 <div className="muted-small" style={{ marginBottom: 8 }}>
                   "Your relation" is how you're labeled to the rest of the household (Self, Spouse, Child, etc.) --
                   it's just a display label, not a permission. "Save my details" saves your own relation choice below.
                 </div>
+                <div className="muted-small" style={{ marginTop: 14, marginBottom: 4, fontWeight: 600 }}>Active ({members.length})</div>
                 <div className="table-scroll">
-                <table>
+                <table className="responsive-table">
                   <tbody>
                     {members.map((m) => (
                       <tr key={m.id}>
-                        <td>{m.email}</td>
-                        <td className="muted-small">
+                        <td data-label="Email">{m.email}</td>
+                        <td className="muted-small" data-label="Relation">
                           {isOwner && m.role !== 'owner' ? (
                             <select value={m.relation} onChange={(e) => handleUpdateMemberRelation(m.id, e.target.value)}>
                               {RELATIONS.map((r) => (
@@ -1094,7 +1112,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                             m.relation
                           )}
                         </td>
-                        <td className="muted-small">{m.role}</td>
+                        <td className="muted-small" data-label="Role">{m.role}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1115,9 +1133,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
                 {isOwner && (
                   <>
-                    <h2 style={{ marginTop: 20 }}>Members invited</h2>
-                    <div className="muted-small" style={{ marginBottom: 8 }}>
-                      Invited but haven't signed in and joined yet.
+                    <div className="muted-small" style={{ marginTop: 20, marginBottom: 4, fontWeight: 600 }}>
+                      Invited, pending activation ({pendingInvites.length})
                     </div>
                     <form className="row" onSubmit={handleSendInvite}>
                       <input
@@ -1151,7 +1168,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         ))}
                       </div>
                     ) : (
-                      <div className="muted-small" style={{ marginTop: 10 }}>No pending invites.</div>
+                      <div className="muted-small" style={{ marginTop: 10 }}>No one invited and pending right now.</div>
                     )}
                   </>
                 )}
@@ -1159,8 +1176,30 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           </div>
           )}
 
-          {showSettings && (
-          <div className="panel">
+          {activePanel === 'help' && (
+          <div className="panel" ref={panelRef}>
+            <h2>How to use this app</h2>
+            <div className="muted-small" style={{ lineHeight: 1.6 }}>
+              <p><strong>Add an expense</strong> -- log one-off spending (groceries, dining, shopping). Pick the date, category, a short description, and the amount, then Add. It appears under "Expenses this month" and is always editable there -- just type into a field and it saves.</p>
+              <p><strong>Household income</strong> -- add each income source per month (e.g. Salary). Income does NOT roll over automatically -- since pay can change month to month (deductions, advances, etc.), add a fresh row each month with that month's actual amount, or edit an existing row's Month field forward.</p>
+              <p><strong>Fixed monthly expenses</strong> -- for recurring bills, loans, EMIs, and rent. Set a Start date, an optional End date, and how often it repeats (Monthly, Alternate month, Quarterly, Half-yearly, Once a year). Every field auto-saves as you edit -- there's no Save button to click.</p>
+              <p><strong>Expenses this month</strong> is always visible below the tabs so you can see what's been logged without switching tabs.</p>
+              <p><strong>Spending by category</strong> chart -- toggle between Pie and Bar. The totals cards above show your combined income, combined expenses (split into Regular vs Fixed), and what's left of your budget.</p>
+              <p><strong>Budget settings</strong> -- set your total monthly budget, add/rename categories, and set optional per-category budget caps (you'll get a warning banner if you go over).</p>
+              <p><strong>Users</strong> -- see who's active in the household and who's been invited but hasn't joined yet. Owners can invite new members and change their relation label.</p>
+              <p>All figures use your household's chosen currency, set in Budget settings.</p>
+            </div>
+          </div>
+          )}
+
+          {activePanel === 'admin' && isAdmin && (
+          <div className="panel" ref={panelRef}>
+            <AdminConsole embedded onClose={() => setActivePanel(null)} />
+          </div>
+          )}
+
+          {activePanel === 'settings' && (
+          <div className="panel" ref={panelRef}>
               <div>
                 <div className="row" style={{ marginBottom: 12 }}>
                   <div className="field">

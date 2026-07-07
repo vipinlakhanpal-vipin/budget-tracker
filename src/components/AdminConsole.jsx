@@ -3,7 +3,7 @@ import { supabase } from '../supabaseClient';
 
 const RELATIONS = ['Self', 'Spouse', 'Partner', 'Child', 'Parent', 'Sibling', 'Roommate', 'Other'];
 
-export default function AdminConsole({ onClose }) {
+export default function AdminConsole({ onClose, embedded = false }) {
   const [households, setHouseholds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [householdId, setHouseholdId] = useState('');
@@ -62,11 +62,15 @@ export default function AdminConsole({ onClose }) {
     loadHouseholds();
   }
 
+  const Wrap = embedded ? 'div' : 'div';
+  const wrapClass = embedded ? '' : 'center-screen';
+  const cardClass = embedded ? '' : 'login-card';
+
   return (
-    <div className="center-screen">
-      <div className="login-card" style={{ maxWidth: 480, textAlign: 'left' }}>
-        <h1 style={{ textAlign: 'center' }}>Admin console</h1>
-        <p className="sub" style={{ textAlign: 'center' }}>
+    <Wrap className={wrapClass}>
+      <div className={cardClass} style={embedded ? { textAlign: 'left' } : { maxWidth: 480, textAlign: 'left' }}>
+        <h1 style={{ textAlign: embedded ? 'left' : 'center', fontSize: embedded ? 18 : undefined }}>Admin console</h1>
+        <p className="sub" style={{ textAlign: embedded ? 'left' : 'center' }}>
           Create a login and send the household invite in one step.
         </p>
 
@@ -116,9 +120,9 @@ export default function AdminConsole({ onClose }) {
         {error && <div className="login-error">{error}</div>}
 
         <button className="btn secondary small" style={{ marginTop: 16 }} onClick={onClose}>
-          Back
+          {embedded ? 'Close' : 'Back'}
         </button>
       </div>
-    </div>
+    </Wrap>
   );
 }
