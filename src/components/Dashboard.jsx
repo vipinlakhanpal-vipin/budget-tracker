@@ -91,6 +91,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   const [loading, setLoading] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
+  const [inputTab, setInputTab] = useState('expense');
   const [members, setMembers] = useState([]);
   const [pendingInvites, setPendingInvites] = useState([]);
   const [expenseDrafts, setExpenseDrafts] = useState({});
@@ -555,19 +556,18 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           <h1>{household.name || 'Household Budget Tracker'}</h1>
           <div className="sub">Signed in as {session.user.email}{isOwner ? ' (owner)' : ''}</div>
         </div>
-      </div>
-
-      <div className="action-row-fixed">
-        <button className="btn secondary small" onClick={() => setShowSettings((s) => !s)}>
-          {showSettings ? 'Hide budget settings' : 'Budget settings'}
-        </button>
-        {isAdmin && (
-          <button className="btn secondary small" onClick={onOpenAdmin}>Admin console</button>
-        )}
-        <button className="btn secondary small" onClick={() => setShowMembers((s) => !s)}>
-          {showMembers ? 'Hide household members' : 'Household members'}
-        </button>
-        <button className="btn secondary small" onClick={handleSignOut}>Sign out</button>
+        <div className="action-row-teal">
+          <button className="btn-teal" onClick={() => setShowSettings((s) => !s)}>
+            {showSettings ? 'Hide budget settings' : 'Budget settings'}
+          </button>
+          {isAdmin && (
+            <button className="btn-teal" onClick={onOpenAdmin}>Admin console</button>
+          )}
+          <button className="btn-teal" onClick={() => setShowMembers((s) => !s)}>
+            {showMembers ? 'Hide household members' : 'Household members'}
+          </button>
+          <button className="btn-teal" onClick={handleSignOut}>Sign out</button>
+        </div>
       </div>
 
       <div className="month-nav">
@@ -589,7 +589,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             <div className="v">{fmt(remaining)}</div>
           ) : (
             <>
-              <div className="v">â</div>
+              <div className="v">—</div>
               <div className="muted-small" style={{ marginTop: 4 }}>Set a monthly budget to track this</div>
             </>
           )}
@@ -612,6 +612,28 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
       <div className="content-grid">
         <div>
+          <div className="input-tabs">
+            <button
+              className={`btn small ${inputTab === 'expense' ? '' : 'secondary'}`}
+              onClick={() => setInputTab('expense')}
+            >
+              Add an expense
+            </button>
+            <button
+              className={`btn small ${inputTab === 'income' ? '' : 'secondary'}`}
+              onClick={() => setInputTab('income')}
+            >
+              Household income
+            </button>
+            <button
+              className={`btn small ${inputTab === 'fixed' ? '' : 'secondary'}`}
+              onClick={() => setInputTab('fixed')}
+            >
+              Fixed monthly expenses
+            </button>
+          </div>
+
+          {inputTab === 'expense' && (
           <div className="panel">
             <h2>Add an expense</h2>
             <form className="row" onSubmit={handleAddExpense}>
@@ -650,7 +672,9 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <button className="btn" type="submit">Add</button>
             </form>
           </div>
+          )}
 
+          {inputTab === 'income' && (
           <div className="panel">
             <h2>Household income</h2>
             <form className="row" onSubmit={handleAddIncome}>
@@ -757,7 +781,9 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               </div>
             )}
           </div>
+          )}
 
+          {inputTab === 'fixed' && (
           <div className="panel">
             <h2>Fixed monthly expenses (loans, EMIs, credit cards)</h2>
             <form className="row" onSubmit={handleAddRecurring}>
@@ -907,6 +933,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               </div>
             )}
           </div>
+          )}
 
           <div className="panel">
             <h2>Expenses this month</h2>
