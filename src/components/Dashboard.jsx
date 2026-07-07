@@ -993,13 +993,15 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             {pieData.length === 0 ? (
               <div className="empty">Add an expense to see the breakdown.</div>
             ) : chartType === 'pie' ? (
-              <ResponsiveContainer width="100%" height={280}>
-                <PieChart>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart margin={{ top: 24, right: 20, bottom: 0, left: 20 }}>
                   <Pie
                     data={pieData}
                     dataKey="value"
                     nameKey="name"
-                    outerRadius={85}
+                    cy="52%"
+                    outerRadius={62}
+                    isAnimationActive={false}
                     label={{ fontSize: 9, fill: 'var(--text)' }}
                   >
                     {pieData.map((_, i) => (
@@ -1017,7 +1019,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   <XAxis type="number" tick={{ fontSize: 9 }} hide />
                   <YAxis type="category" dataKey="name" width={95} tick={{ fontSize: 9 }} />
                   <Tooltip formatter={(v) => fmt(v)} />
-                  <Bar dataKey="value" barSize={9} radius={[0, 3, 3, 0]}>
+                  <Bar dataKey="value" barSize={9} radius={[0, 3, 3, 0]} isAnimationActive={false}>
                     {pieData.map((_, i) => (
                       <Cell key={i} fill={COLORS[i % COLORS.length]} />
                     ))}
