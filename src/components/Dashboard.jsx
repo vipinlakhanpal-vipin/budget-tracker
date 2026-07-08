@@ -630,18 +630,45 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     loadAll();
   }
 
-  async function handleSaveSettings() {
-    const total = parseFloat(totalBudgetDraft);
-    await supabase
+  // Settings auto-saves field by field (like Income/Fixed Expenses/Savings)
+  // instead of a single "Save settings" button -- each field commits on its
+  // own blur/change, so nothing is lost if someone edits one field and
+  // navigates away without touching the others.
+  async function commitTotalBudget(value) {
+    const total = parseFloat(value);
+    const { error } = await supabase
       .from('settings')
-      .update({ total_monthly_budget: isNaN(total) ? 0 : total, currency: currencyDraft })
+      .update({ total_monthly_budget: isNaN(total) ? 0 : total })
       .eq('household_id', householdId);
-    for (const c of categories) {
-      const val = parseFloat(categoryBudgetDrafts[c.id]);
-      await supabase
-        .from('categories')
-        .update({ monthly_budget: isNaN(val) || val <= 0 ? 0 : val })
-        .eq('id', c.id);
+    if (error) {
+      alert('Could not update total monthly budget: ' + error.message);
+      return;
+    }
+    loadAll();
+  }
+
+  async function commitCurrency(value) {
+    setCurrencyDraft(value);
+    const { error } = await supabase
+      .from('settings')
+      .update({ currency: value })
+      .eq('household_id', householdId);
+    if (error) {
+      alert('Could not update currency: ' + error.message);
+      return;
+    }
+    loadAll();
+  }
+
+  async function commitCategoryBudget(id, value) {
+    const val = parseFloat(value);
+    const { error } = await supabase
+      .from('categories')
+      .update({ monthly_budget: isNaN(val) || val <= 0 ? 0 : val })
+      .eq('id', id);
+    if (error) {
+      alert('Could not update category budget: ' + error.message);
+      return;
     }
     loadAll();
   }
@@ -2429,7 +2456,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <p><strong>Expenses this month</strong> is always visible below the tabs so you can see what's been logged without switching tabs. It also auto-saves.</p>
               <p><strong>Spending by category</strong> chart -- toggle between Pie, Bar, and Pareto. The totals cards above show your combined income, combined expenses (split into Regular, Fixed, and Savings), and what's left of your budget and income after all three are accounted for.</p>
               <p><strong>Report</strong> -- generate a PDF for any date range, then download it or email it. It has 5 pages: (1) Overview -- a bar chart of spending by category plus a summary of income, expenses, savings, and net (income minus expenses and savings); (2) Income & Expenses -- full itemized lists with totals; (3) Fixed Expenses -- every recurring bill occurrence in the range, with a total; (4) Savings -- your savings goals by month, with a total; (5) Spend Analysis -- a Pareto chart (with a total row) showing which categories drive 80% of your spending, plus a few data-driven suggestions on where to cut back.</p>
-              <p><strong>Settings</strong> -- set your total monthly budget, currency, add/rename categories, and set optional per-category budget caps (you'll get a warning banner if you go over).</p>
+              <p><strong>Settings</strong> -- set your total monthly budget, currency, add/rename categories, and set optional per-category budget caps (you'll get a warning banner if you go over). Every field auto-saves as you edit -- there's no Save button to click.</p>
               <p><strong>Users</strong> -- see who's active in the household and who's been invited but hasn't joined yet, with full Name/Email/Phone/Location. Owners can invite new members (which also sends them a notification email), fill in or fix anyone's Name/Phone/Location, and edit their own details under "My details" -- handy for accounts created before these fields existed. The Admin console (if you have access) is separate and never visible to other household members.</p>
               <p>All figures use your household's chosen currency, set in Settings. Your data is confidential and private to your household -- it's never shared with anyone outside it.</p>
             </div>
@@ -2511,17 +2538,19 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       min="0"
                       value={totalBudgetDraft}
                       onChange={(e) => setTotalBudgetDraft(e.target.value)}
+                      onBlur={(e) => commitTotalBudget(e.target.value)}
                     />
                   </div>
                   <div className="field">
                     <label>Currency</label>
-                    <select value={currencyDraft} onChange={(e) => setCurrencyDraft(e.target.value)}>
+                    <select value={currencyDraft} onChange={(e) => commitCurrency(e.target.value)}>
                       {CURRENCIES.map((c) => (
                         <option key={c} value={c}>{c}</option>
                       ))}
                     </select>
                   </div>
                 </div>
+                <div className="muted-small" style={{ marginBottom: 12 }}>Changes save automatically as you edit -- there's no Save button to click.</div>
 
                 <div className="field">
                   <label>Add category</label>
@@ -2570,14 +2599,11 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         onChange={(e) =>
                           setCategoryBudgetDrafts({ ...categoryBudgetDrafts, [c.id]: e.target.value })
                         }
+                        onBlur={(e) => commitCategoryBudget(c.id, e.target.value)}
                       />
                     </div>
                   ))}
                 </div>
-
-                <button className="btn secondary" style={{ marginTop: 14 }} onClick={handleSaveSettings}>
-                  Save settings
-                </button>
 
                 {categories.some((c) => c.monthly_budget > 0) && (
                   <div style={{ marginTop: 18 }}>
