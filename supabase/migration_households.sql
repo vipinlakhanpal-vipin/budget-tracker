@@ -240,3 +240,13 @@ alter table settings add column if not exists currency text not null default 'AE
 -- Recurring expense repeat cadence: monthly, alternate (every 2 months),
 -- quarterly, half_yearly, or yearly. Defaults to monthly for existing rows.
 alter table recurring_expenses add column if not exists frequency text not null default 'monthly';
+
+-- Open sign-up + Users tab (Name/Phone/Status) + rent/bill due-date reminders.
+-- Already run directly against the live Supabase project via SQL Editor; kept
+-- here so the schema file stays the single source of truth.
+alter table household_members add column if not exists name text;
+alter table household_members add column if not exists phone text;
+alter table household_invites add column if not exists name text;
+alter table household_invites add column if not exists phone text;
+alter table recurring_expenses add column if not exists due_date date;
+alter table recurring_expenses add column if not exists remind_before_days int not null default 3;

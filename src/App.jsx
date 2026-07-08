@@ -62,6 +62,8 @@ export default function App() {
             email,
             role: 'member',
             relation: invite.relation || 'Other',
+            name: session.user.user_metadata?.full_name || null,
+            phone: session.user.user_metadata?.phone || null,
           },
           { onConflict: 'household_id,user_id', ignoreDuplicates: true }
         );

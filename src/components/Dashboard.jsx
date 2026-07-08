@@ -131,6 +131,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     startDate: new Date().toISOString().slice(0, 10),
     endDate: '',
     frequency: 'monthly',
+    dueDate: '',
   });
   const [recurringDrafts, setRecurringDrafts] = useState({});
   const [inviteEmail, setInviteEmail] = useState('');
@@ -202,6 +203,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
         startDate: r.start_date,
         endDate: r.end_date || '',
         frequency: r.frequency || 'monthly',
+        dueDate: r.due_date || '',
       };
     });
     setRecurringDrafts(rDrafts);
@@ -284,6 +286,23 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   }, [incomes, currentMonth]);
   const totalIncome = useMemo(() => incomeForMonth.reduce((s, i) => s + Number(i.amount), 0), [incomeForMonth]);
   const netCombined = totalIncome - total;
+
+  // Bills/rent due soon -- an in-app pop-up style banner starting N days
+  // before the due date (default 3) and continuing to show until the due
+  // date itself. Email reminders on the same schedule are a server-side
+  // feature (needs a daily cron + mail sender) and aren't wired up yet.
+  const dueReminders = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return recurringExpenses
+      .filter((r) => r.active && r.due_date)
+      .map((r) => {
+        const due = new Date(r.due_date + 'T00:00:00');
+        const daysUntil = Math.round((due - today) / 86400000);
+        return { ...r, daysUntil };
+      })
+      .filter((r) => r.daysUntil >= 0 && r.daysUntil <= (r.remind_before_days ?? 3));
+  }, [recurringExpenses]);
 
   const overCategories = useMemo(() => {
     return categories
@@ -433,13 +452,14 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       start_date: newRecurring.startDate,
       end_date: newRecurring.endDate || null,
       frequency: newRecurring.frequency,
+      due_date: newRecurring.dueDate || null,
       created_by: session.user.id,
     });
     if (error) {
       alert('Could not save fixed expense: ' + error.message);
       return;
     }
-    setNewRecurring((r) => ({ ...r, name: '', amount: '', endDate: '' }));
+    setNewRecurring((r) => ({ ...r, name: '', amount: '', endDate: '', dueDate: '' }));
     loadAll();
   }
 
@@ -465,6 +485,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
         start_date: merged.startDate,
         end_date: merged.endDate || null,
         frequency: merged.frequency || 'monthly',
+        due_date: merged.dueDate || null,
       })
       .eq('id', id);
     if (error) alert('Could not update: ' + error.message);
@@ -620,6 +641,17 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       </div>
 
       {warnings.length > 0 && <div className="warning show">{warnings.join(' ')}</div>}
+
+      {dueReminders.length > 0 && (
+        <div className="warning reminder">
+          {dueReminders.map((r, i) => (
+            <span key={r.id}>
+              {i > 0 && ' • '}
+              <strong>{r.name}</strong> due {r.daysUntil === 0 ? 'today' : `in ${r.daysUntil} day${r.daysUntil > 1 ? 's' : ''}`} ({fmtDate(r.due_date)})
+            </span>
+          ))}
+        </div>
+      )}
 
       <div className="grid">
         <div className="card"><div className="k">Monthly Budget</div><div className="v">{fmt(totalBudget)}</div></div>
@@ -887,6 +919,14 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   ))}
                 </select>
               </div>
+              <div className="field">
+                <label>Due date (optional, for reminders)</label>
+                <input
+                  type="date"
+                  value={newRecurring.dueDate}
+                  onChange={(e) => setNewRecurring({ ...newRecurring, dueDate: e.target.value })}
+                />
+              </div>
               <button className="btn" type="submit">Add</button>
             </form>
 
@@ -896,12 +936,12 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <div className="table-scroll">
               <table className="responsive-table" style={{ marginTop: 14, fontSize: 12 }}>
                 <colgroup>
-                  <col style={{ width: '19%' }} /><col style={{ width: '15%' }} /><col style={{ width: '11%' }} />
-                  <col style={{ width: '15%' }} /><col style={{ width: '15%' }} /><col style={{ width: '17%' }} />
-                  <col style={{ width: '8%' }} />
+                  <col style={{ width: '16%' }} /><col style={{ width: '13%' }} /><col style={{ width: '10%' }} />
+                  <col style={{ width: '13%' }} /><col style={{ width: '13%' }} /><col style={{ width: '14%' }} />
+                  <col style={{ width: '13%' }} /><col style={{ width: '8%' }} />
                 </colgroup>
                 <thead>
-                  <tr><th>Name</th><th>Category</th><th>Amount</th><th>Start</th><th>End</th><th>Repeats</th><th></th></tr>
+                  <tr><th>Name</th><th>Category</th><th>Amount</th><th>Start</th><th>End</th><th>Repeats</th><th>Due date</th><th></th></tr>
                 </thead>
                 <tbody>
                   {recurringExpenses.map((r) => (
@@ -966,6 +1006,15 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           ))}
                         </select>
                       </td>
+                      <td data-label="Due date">
+                        <input
+                          type="date"
+                          style={{ width: 130, fontSize: 11 }}
+                          value={recurringDrafts[r.id]?.dueDate ?? ''}
+                          onChange={(e) => updateRecurringDraftField(r.id, 'dueDate', e.target.value)}
+                          onBlur={(e) => commitRecurringField(r.id, 'dueDate', e.target.value)}
+                        />
+                      </td>
                       <td><button className="del" onClick={() => handleDeleteRecurring(r.id, r.name)}>x</button></td>
                     </tr>
                   ))}
@@ -973,7 +1022,9 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               </table>
               </div>
             )}
-            <div className="muted-small" style={{ marginTop: 6 }}>Changes save automatically.</div>
+            <div className="muted-small" style={{ marginTop: 6 }}>
+              Changes save automatically. Set a due date on rent or any bill to get an in-app reminder starting 3 days before it's due.
+            </div>
             {recurringForMonth.length > 0 && (
               <div className="muted-small" style={{ marginTop: 10 }}>
                 {fmt(recurringTotal)} in fixed expenses counted toward {monthLabel(currentMonth)}.
@@ -1164,40 +1215,59 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           <div className="panel" ref={panelRef}>
               <div>
                 <h2>Users</h2>
-                <div className="muted-small" style={{ marginBottom: 4, fontWeight: 600 }}>Active ({members.length})</div>
+                <div className="muted-small" style={{ marginBottom: 4, fontWeight: 600 }}>
+                  {members.length + pendingInvites.length} total -- {members.length} active, {pendingInvites.length} pending
+                </div>
                 <div className="table-scroll">
                 <table className="responsive-table users-table">
                   <colgroup>
-                    <col style={{ width: '42%' }} /><col style={{ width: '20%' }} />
-                    <col style={{ width: '18%' }} /><col style={{ width: '20%' }} />
+                    <col style={{ width: '26%' }} /><col style={{ width: '32%' }} />
+                    <col style={{ width: '22%' }} /><col style={{ width: '20%' }} />
                   </colgroup>
+                  <thead>
+                    <tr><th>Name</th><th>Email</th><th>Phone</th><th>Status</th></tr>
+                  </thead>
                   <tbody>
                     {members.map((m) => (
-                      <tr key={m.id}>
+                      <tr key={'m-' + m.id}>
+                        <td data-label="Name">{m.name || <span className="muted-small">--</span>}</td>
                         <td data-label="Email">{m.email}</td>
-                        <td className="muted-small" data-label="Relation">
-                          {isOwner && m.role !== 'owner' ? (
-                            <select value={m.relation} onChange={(e) => handleUpdateMemberRelation(m.id, e.target.value)}>
-                              {RELATIONS.map((r) => (
-                                <option key={r} value={r}>{r}</option>
-                              ))}
-                            </select>
-                          ) : (
-                            m.relation
-                          )}
-                        </td>
-                        <td className="muted-small" data-label="Role">{m.role}</td>
+                        <td className="muted-small" data-label="Phone">{m.phone || '--'}</td>
                         <td data-label="Status"><span className="status-pill active">Active</span></td>
+                      </tr>
+                    ))}
+                    {pendingInvites.map((inv) => (
+                      <tr key={'p-' + inv.id}>
+                        <td data-label="Name">{inv.name || <span className="muted-small">--</span>}</td>
+                        <td data-label="Email">{inv.email}</td>
+                        <td className="muted-small" data-label="Phone">{inv.phone || '--'}</td>
+                        <td data-label="Status"><span className="status-pill pending">Pending</span></td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
                 </div>
 
+                {isOwner && members.some((m) => m.role !== 'owner') && (
+                  <div style={{ marginTop: 14 }}>
+                    <div className="muted-small" style={{ marginBottom: 4, fontWeight: 600 }}>Change a member's relation</div>
+                    {members.filter((m) => m.role !== 'owner').map((m) => (
+                      <div className="row" key={m.id} style={{ alignItems: 'center', marginBottom: 6 }}>
+                        <span className="muted-small" style={{ flex: 1 }}>{m.name || m.email}</span>
+                        <select value={m.relation} onChange={(e) => handleUpdateMemberRelation(m.id, e.target.value)}>
+                          {RELATIONS.map((r) => (
+                            <option key={r} value={r}>{r}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 {isOwner && (
                   <>
                     <div className="muted-small" style={{ marginTop: 20, marginBottom: 4, fontWeight: 600 }}>
-                      Invited, pending activation ({pendingInvites.length})
+                      Invite someone new
                     </div>
                     <form className="row" onSubmit={handleSendInvite}>
                       <input
@@ -1216,22 +1286,20 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       <button className="btn secondary small" type="submit">Invite</button>
                     </form>
                     <div className="muted-small" style={{ marginTop: 6 }}>
-                      They'll also need a Supabase sign-in invite from the project admin before their first login.
+                      They can sign up themselves with this email address, or wait for a Supabase invite email -- either way they'll land in this household automatically.
                     </div>
                     {inviteStatus === 'sent' && (
                       <div className="muted-small" style={{ marginTop: 6, color: 'var(--ok)' }}>Invite created.</div>
                     )}
-                    {pendingInvites.length > 0 ? (
+                    {pendingInvites.length > 0 && (
                       <div className="cat-list" style={{ marginTop: 10 }}>
                         {pendingInvites.map((inv) => (
                           <div className="cat-chip" key={inv.id}>
                             {inv.email}
-                            <button onClick={() => handleCancelInvite(inv.id)}>x</button>
+                            <button onClick={() => handleCancelInvite(inv.id)} title="Cancel invite">x</button>
                           </div>
                         ))}
                       </div>
-                    ) : (
-                      <div className="muted-small" style={{ marginTop: 10 }}>No one invited and pending right now.</div>
                     )}
                   </>
                 )}
