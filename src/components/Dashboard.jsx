@@ -176,6 +176,21 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     dueDate: '',
   });
   const [recurringDrafts, setRecurringDrafts] = useState({});
+
+  // Savings goals -- how much the household wants to set aside each month
+  // (or other frequency), tracked the same way as Fixed Expenses (name,
+  // amount, start/end date, repeat frequency) but kept in a separate table
+  // since it's money being put aside, not spent.
+  const [savingsGoals, setSavingsGoals] = useState([]);
+  const [newSaving, setNewSaving] = useState({
+    name: '',
+    amount: '',
+    startDate: new Date().toISOString().slice(0, 10),
+    endDate: '',
+    frequency: 'monthly',
+  });
+  const [savingsDrafts, setSavingsDrafts] = useState({});
+
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRelation, setInviteRelation] = useState('Spouse');
   const [inviteStatus, setInviteStatus] = useState('');
@@ -331,7 +346,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   // as soon as they tabbed from one field to the next.
   async function loadAll(isInitial = false) {
     if (isInitial) setLoading(true);
-    const [{ data: cats }, { data: exps }, { data: settings }, { data: recur }, { data: mem }, { data: invites }, { data: inc }] = await Promise.all([
+    const [{ data: cats }, { data: exps }, { data: settings }, { data: recur }, { data: mem }, { data: invites }, { data: inc }, { data: savings }] = await Promise.all([
       supabase.from('categories').select('*').eq('household_id', householdId).order('name'),
       supabase.from('expenses').select('*').eq('household_id', householdId).order('expense_date', { ascending: false }),
       supabase.from('settings').select('*').eq('household_id', householdId).maybeSingle(),
@@ -339,6 +354,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       supabase.from('household_members').select('*').eq('household_id', householdId).order('joined_at'),
       supabase.from('household_invites').select('*').eq('household_id', householdId).eq('status', 'pending'),
       supabase.from('incomes').select('*').eq('household_id', householdId).order('start_date'),
+      supabase.from('savings_goals').select('*').eq('household_id', householdId).order('start_date'),
     ]);
     setCategories(cats || []);
     setExpenses(exps || []);
@@ -381,6 +397,18 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       };
     });
     setRecurringDrafts(rDrafts);
+    setSavingsGoals(savings || []);
+    const sDrafts = {};
+    (savings || []).forEach((s) => {
+      sDrafts[s.id] = {
+        name: s.name,
+        amount: String(s.amount),
+        startDate: s.start_date,
+        endDate: s.end_date || '',
+        frequency: s.frequency || 'monthly',
+      };
+    });
+    setSavingsDrafts(sDrafts);
     if (!form.categoryId && cats && cats.length) {
       setForm((f) => ({ ...f, categoryId: cats[0].id }));
     }
@@ -406,6 +434,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       .on('postgres_changes', { event: '*', schema: 'public', table: 'household_members', filter: `household_id=eq.${householdId}` }, refresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'household_invites', filter: `household_id=eq.${householdId}` }, refresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'incomes', filter: `household_id=eq.${householdId}` }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'savings_goals', filter: `household_id=eq.${householdId}` }, refresh)
       .subscribe();
     return () => supabase.removeChannel(channel);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -420,6 +449,14 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     const key = monthKey(currentMonth);
     return recurringExpenses.filter((r) => recurringOccursInMonth(r, key));
   }, [recurringExpenses, currentMonth]);
+
+  // Savings goals occurring in the currently viewed month -- same start/end
+  // date + frequency logic as Fixed Expenses, just against a separate table.
+  const savingsForMonth = useMemo(() => {
+    const key = monthKey(currentMonth);
+    return savingsGoals.filter((s) => recurringOccursInMonth(s, key));
+  }, [savingsGoals, currentMonth]);
+  const savingsTotal = useMemo(() => savingsForMonth.reduce((s, g) => s + Number(g.amount), 0), [savingsForMonth]);
 
   const categoryNameById = useMemo(() => {
     const m = {};
@@ -666,6 +703,77 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     loadAll();
   }
 
+  async function handleAddSaving(e) {
+    e.preventDefault();
+    const amount = parseFloat(newSaving.amount);
+    if (!newSaving.name.trim() || isNaN(amount) || amount <= 0 || !newSaving.startDate) {
+      alert('Please fill in name, amount, and start date.');
+      return;
+    }
+    const { error } = await supabase.from('savings_goals').insert({
+      household_id: householdId,
+      name: newSaving.name.trim(),
+      amount,
+      start_date: newSaving.startDate,
+      end_date: newSaving.endDate || null,
+      frequency: newSaving.frequency,
+      created_by: session.user.id,
+    });
+    if (error) {
+      alert('Could not save: ' + error.message);
+      return;
+    }
+    setNewSaving((s) => ({ ...s, name: '', amount: '', endDate: '' }));
+    loadAll();
+  }
+
+  // Auto-saves on blur (name/amount) or immediately on change (dates/select),
+  // same pattern as Fixed Expenses. Uses an optimistic local state update
+  // instead of loadAll() after commit -- see the comment on
+  // commitMyDetailsField above for why: refetching the whole list on every
+  // field blur can interrupt someone still tabbing through the row.
+  function updateSavingDraftField(id, field, value) {
+    setSavingsDrafts((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
+  }
+
+  async function commitSavingField(id, field, value) {
+    const merged = { ...(savingsDrafts[id] || {}), [field]: value };
+    setSavingsDrafts((prev) => ({ ...prev, [id]: merged }));
+    if (!merged.name?.trim() || !merged.startDate) return;
+    const amount = parseFloat(merged.amount);
+    const { error } = await supabase
+      .from('savings_goals')
+      .update({
+        name: merged.name.trim(),
+        amount: isNaN(amount) ? 0 : amount,
+        start_date: merged.startDate,
+        end_date: merged.endDate || null,
+        frequency: merged.frequency || 'monthly',
+      })
+      .eq('id', id);
+    if (error) {
+      alert('Could not update: ' + error.message);
+      return;
+    }
+    setSavingsGoals((prev) =>
+      prev.map((s) =>
+        s.id === id
+          ? { ...s, name: merged.name.trim(), amount: isNaN(amount) ? 0 : amount, start_date: merged.startDate, end_date: merged.endDate || null, frequency: merged.frequency || 'monthly' }
+          : s
+      )
+    );
+  }
+
+  async function handleDeleteSaving(id, name) {
+    if (!confirm(`Remove the savings goal "${name}"?`)) return;
+    const { error } = await supabase.from('savings_goals').delete().eq('id', id);
+    if (error) {
+      alert('Could not remove: ' + error.message);
+      return;
+    }
+    setSavingsGoals((prev) => prev.filter((s) => s.id !== id));
+  }
+
   async function handleSendInvite(e) {
     e.preventDefault();
     const email = inviteEmail.trim();
@@ -812,9 +920,23 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       });
     });
 
+    // Savings goals use the same recurring-occurrence logic as Fixed
+    // Expenses -- one row per month a goal is actually active within the
+    // chosen range, so a goal that started mid-range or ended early is
+    // counted the right number of times.
+    const rangeSavingsOccurrences = [];
+    rangeMonths.forEach((mKey) => {
+      savingsGoals.forEach((s) => {
+        if (recurringOccursInMonth(s, mKey)) {
+          rangeSavingsOccurrences.push({ ...s, occurredMonth: mKey });
+        }
+      });
+    });
+
     const expenseTotal = rangeExpenses.reduce((s, e) => s + Number(e.amount), 0);
     const incomeTotal = rangeIncomes.reduce((s, i) => s + Number(i.amount), 0);
     const fixedTotal = rangeRecurringOccurrences.reduce((s, r) => s + Number(r.amount), 0);
+    const savingsGoalTotal = rangeSavingsOccurrences.reduce((s, g) => s + Number(g.amount), 0);
 
     // Combined Regular + Fixed spend per category, used by the bar chart.
     const categoryTotals = {};
@@ -1027,14 +1149,77 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       });
     }
 
-    // ---------- Page 4: Spend Analysis -- Pareto chart + suggestions ----------
+    // ---------- Page 4: Savings -- month-wise, with a total ----------
+    // Mirrors the Fixed Expenses page above but for planned savings: one row
+    // per month a savings goal is active within the selected range, plus a
+    // running total, so the household can see how much they've committed to
+    // (or actually set aside) across the whole period at a glance.
+    doc.addPage();
+    y = drawHeader(4, 'Savings');
+
+    drawEyebrow('Money Set Aside', y);
+    y += 7;
+    doc.setFontSize(13);
+    doc.setFont(undefined, 'bold');
+    doc.text('Savings by Month', M, y);
+    doc.setFont(undefined, 'normal');
+    y += 4;
+    if (rangeSavingsOccurrences.length === 0) {
+      doc.setFontSize(9);
+      doc.setTextColor(120);
+      doc.text('No savings goals set for this period. Add one from the Savings tab.', M, y);
+      doc.setTextColor(0);
+      y += 10;
+    } else {
+      autoTable(doc, {
+        ...tableDefaults,
+        startY: y,
+        head: [['Month', 'Savings Goal', 'Amount']],
+        body: rangeSavingsOccurrences
+          .sort((a, b) => (a.occurredMonth < b.occurredMonth ? -1 : a.occurredMonth > b.occurredMonth ? 1 : a.name.localeCompare(b.name)))
+          .map((s) => [s.occurredMonth, s.name, fmt(s.amount)]),
+        foot: [['', 'Total Savings', fmt(savingsGoalTotal)]],
+        headStyles: { fillColor: [34, 197, 94] },
+        footStyles: { fillColor: [220, 252, 231], textColor: [15, 42, 46], fontStyle: 'bold' },
+      });
+      y = doc.lastAutoTable.finalY + 12;
+    }
+
+    // A quick month-by-month summary total makes it easy to see at a glance
+    // how savings build up across the range, not just the grand total.
+    if (rangeMonths.length > 1 && rangeSavingsOccurrences.length > 0) {
+      if (y > 250) { doc.addPage(); y = drawHeader(4, 'Savings'); }
+      drawEyebrow('Month By Month', y);
+      y += 7;
+      doc.setFontSize(13);
+      doc.setFont(undefined, 'bold');
+      doc.text('Total Saved Per Month', M, y);
+      doc.setFont(undefined, 'normal');
+      y += 4;
+      const perMonth = {};
+      rangeSavingsOccurrences.forEach((s) => {
+        perMonth[s.occurredMonth] = (perMonth[s.occurredMonth] || 0) + Number(s.amount);
+      });
+      autoTable(doc, {
+        ...tableDefaults,
+        startY: y,
+        head: [['Month', 'Total Saved']],
+        body: rangeMonths.map((mKey) => [mKey, fmt(perMonth[mKey] || 0)]),
+        foot: [['Total', fmt(savingsGoalTotal)]],
+        headStyles: { fillColor: [34, 197, 94] },
+        footStyles: { fillColor: [220, 252, 231], textColor: [15, 42, 46], fontStyle: 'bold' },
+        columnStyles: { 1: { halign: 'right' } },
+      });
+    }
+
+    // ---------- Page 5: Spend Analysis -- Pareto chart + suggestions ----------
     // A dedicated closing page: the same category totals as the page 1 bar
     // chart, but sorted and annotated with a running cumulative-% so it's
     // obvious which categories are the "vital few" driving most of the
     // spend (the 80/20 rule), plus a short set of data-driven suggestions
     // on where to focus efforts to bring spending under control.
     doc.addPage();
-    y = drawHeader(4, 'Spend Analysis');
+    y = drawHeader(5, 'Spend Analysis');
 
     drawEyebrow('80/20 Breakdown', y);
     y += 7;
@@ -1169,7 +1354,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     }
 
     suggestions.forEach((s) => {
-      if (y > 265) { doc.addPage(); y = drawHeader(4, 'Spend Analysis'); }
+      if (y > 265) { doc.addPage(); y = drawHeader(5, 'Spend Analysis'); }
       doc.setFillColor(accentR, accentG, accentB);
       doc.circle(M + 1.2, y - 1.5, 1.2, 'F');
       doc.setFontSize(9.5);
@@ -1357,6 +1542,12 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               onClick={() => setInputTab('fixed')}
             >
               Fixed Expenses
+            </button>
+            <button
+              className={`btn small ${inputTab === 'savings' ? '' : 'secondary'}`}
+              onClick={() => setInputTab('savings')}
+            >
+              Savings
             </button>
           </div>
 
@@ -1696,6 +1887,146 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             {recurringForMonth.length > 0 && (
               <div className="muted-small" style={{ marginTop: 10 }}>
                 {fmt(recurringTotal)} in fixed expenses counted toward {monthLabel(currentMonth)}.
+              </div>
+            )}
+          </div>
+          )}
+
+          {inputTab === 'savings' && (
+          <div className="panel">
+            <h2>Savings (how much you want to set aside each month)</h2>
+            <form onSubmit={handleAddSaving}>
+            <div className="row">
+              <div className="field" style={{ flex: 1.4 }}>
+                <label>Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Emergency fund"
+                  value={newSaving.name}
+                  onChange={(e) => setNewSaving({ ...newSaving, name: e.target.value })}
+                />
+              </div>
+              <div className="field">
+                <label>Amount / month</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  value={newSaving.amount}
+                  onChange={(e) => setNewSaving({ ...newSaving, amount: e.target.value })}
+                />
+              </div>
+              <div className="field">
+                <label>Start date</label>
+                <input
+                  type="date"
+                  value={newSaving.startDate}
+                  onChange={(e) => setNewSaving({ ...newSaving, startDate: e.target.value })}
+                />
+              </div>
+              <div className="field">
+                <label>End date (optional)</label>
+                <input
+                  type="date"
+                  value={newSaving.endDate}
+                  onChange={(e) => setNewSaving({ ...newSaving, endDate: e.target.value })}
+                />
+              </div>
+              <div className="field">
+                <label>Repeats</label>
+                <select
+                  value={newSaving.frequency}
+                  onChange={(e) => setNewSaving({ ...newSaving, frequency: e.target.value })}
+                >
+                  {FREQUENCIES.map((f) => (
+                    <option key={f.value} value={f.value}>{f.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <button className="btn" type="submit">Add</button>
+            </div>
+            </form>
+
+            {savingsGoals.length === 0 ? (
+              <div className="empty">No savings goals added yet -- set how much you'd like to save each month above.</div>
+            ) : (
+              <div className="table-scroll">
+              <table className="responsive-table" style={{ marginTop: 14, fontSize: 12 }}>
+                <colgroup>
+                  <col style={{ width: '24%' }} /><col style={{ width: '14%' }} /><col style={{ width: '18%' }} />
+                  <col style={{ width: '18%' }} /><col style={{ width: '18%' }} /><col style={{ width: '8%' }} />
+                </colgroup>
+                <thead>
+                  <tr><th>Name</th><th>Amount</th><th>Start</th><th>End</th><th>Repeats</th><th></th></tr>
+                </thead>
+                <tbody>
+                  {savingsGoals.map((s) => (
+                    <tr key={s.id}>
+                      <td data-label="Name">
+                        <input
+                          type="text"
+                          style={{ width: 110, fontSize: 12 }}
+                          value={savingsDrafts[s.id]?.name ?? ''}
+                          onChange={(e) => updateSavingDraftField(s.id, 'name', e.target.value)}
+                          onBlur={(e) => commitSavingField(s.id, 'name', e.target.value)}
+                        />
+                      </td>
+                      <td data-label="Amount">
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          style={{ width: 80, fontSize: 12 }}
+                          value={savingsDrafts[s.id]?.amount ?? ''}
+                          onChange={(e) => updateSavingDraftField(s.id, 'amount', e.target.value)}
+                          onBlur={(e) => commitSavingField(s.id, 'amount', e.target.value)}
+                        />
+                      </td>
+                      <td data-label="Start">
+                        <input
+                          type="date"
+                          style={{ width: 130, fontSize: 11 }}
+                          value={savingsDrafts[s.id]?.startDate ?? ''}
+                          onChange={(e) => updateSavingDraftField(s.id, 'startDate', e.target.value)}
+                          onBlur={(e) => commitSavingField(s.id, 'startDate', e.target.value)}
+                        />
+                      </td>
+                      <td data-label="End">
+                        <input
+                          type="date"
+                          style={{ width: 130, fontSize: 11 }}
+                          value={savingsDrafts[s.id]?.endDate ?? ''}
+                          onChange={(e) => updateSavingDraftField(s.id, 'endDate', e.target.value)}
+                          onBlur={(e) => commitSavingField(s.id, 'endDate', e.target.value)}
+                        />
+                      </td>
+                      <td data-label="Repeats">
+                        <select
+                          style={{ fontSize: 12 }}
+                          value={savingsDrafts[s.id]?.frequency ?? 'monthly'}
+                          onChange={(e) => commitSavingField(s.id, 'frequency', e.target.value)}
+                        >
+                          {FREQUENCIES.map((f) => (
+                            <option key={f.value} value={f.value}>{f.label}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td><button className="del" onClick={() => handleDeleteSaving(s.id, s.name)}>x</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              </div>
+            )}
+            <div className="muted-small" style={{ marginTop: 6 }}>
+              Changes save automatically. This is money you're planning to set aside, separate from spending -- it's tracked in its own report page.
+            </div>
+            {savingsForMonth.length > 0 && (
+              <div className="muted-small" style={{ marginTop: 10 }}>
+                {fmt(savingsTotal)} in planned savings for {monthLabel(currentMonth)}.
               </div>
             )}
           </div>
@@ -2107,12 +2438,14 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             <div className="muted-small" style={{ lineHeight: 1.6 }}>
               <p><strong>Add an expense</strong> -- log one-off spending (groceries, dining, shopping). Pick the date, category, a short description, and the amount, then Add. It appears under "Expenses this month" and is always editable there -- just type into a field and it saves.</p>
               <p><strong>Income</strong> -- add each income source per month (e.g. Salary). Income does NOT roll over automatically -- since pay can change month to month (deductions, advances, etc.), add a fresh row each month with that month's actual amount, or edit an existing row's Month field forward. Every field auto-saves.</p>
-              <p><strong>Fixed Expenses</strong> -- for recurring bills, loans, EMIs, and rent. Set a Start date, an optional End date, and how often it repeats (Monthly, Alternate month, Quarterly, Half-yearly, Once a year). Every field auto-saves as you edit -- there's no Save button to click.</p>
+              <p><strong>Fixed Expenses</strong> -- for recurring bills, loans, EMIs, and rent. Set a Start date, an optional End date, and how often it repeats (Monthly, Alternate month, Quarterly, Half-yearly, Once a year). Every field auto-saves as you edit -- there's no Save button to click. Set a Due date to get an in-app reminder starting 3 days before it's due, and an email reminder if it's set up.</p>
+              <p><strong>Savings</strong> -- set how much you'd like to set aside each month (or other frequency), separate from spending -- e.g. "Emergency fund" or "Investment". Works exactly like Fixed Expenses (Name, Amount, Start/End date, Repeats), and gets its own page in the PDF report so you can see planned savings build up over time.</p>
               <p><strong>Expenses this month</strong> is always visible below the tabs so you can see what's been logged without switching tabs. It also auto-saves.</p>
               <p><strong>Spending by category</strong> chart -- toggle between Pie, Bar, and Pareto. The totals cards above show your combined income, combined expenses (split into Regular vs Fixed), and what's left of your budget.</p>
+              <p><strong>Report</strong> -- generate a PDF for any date range, then download it or email it. It has 5 pages: (1) Overview -- a bar chart of spending by category plus a summary of income/expenses/net; (2) Income & Expenses -- full itemized lists with totals; (3) Fixed Expenses -- every recurring bill occurrence in the range, with a total; (4) Savings -- your savings goals by month, with a total; (5) Spend Analysis -- a Pareto chart showing which categories drive 80% of your spending, plus a few data-driven suggestions on where to cut back.</p>
               <p><strong>Settings</strong> -- set your total monthly budget, currency, add/rename categories, and set optional per-category budget caps (you'll get a warning banner if you go over).</p>
-              <p><strong>Users</strong> -- see who's active in the household and who's been invited but hasn't joined yet. Owners can invite new members and change their relation label.</p>
-              <p>All figures use your household's chosen currency, set in Settings.</p>
+              <p><strong>Users</strong> -- see who's active in the household and who's been invited but hasn't joined yet, with full Name/Email/Phone/Location. Owners can invite new members (which also sends them a notification email), fill in or fix anyone's Name/Phone/Location, and edit their own details under "My details" -- handy for accounts created before these fields existed. The Admin console (if you have access) is separate and never visible to other household members.</p>
+              <p>All figures use your household's chosen currency, set in Settings. Your data is confidential and private to your household -- it's never shared with anyone outside it.</p>
             </div>
           </div>
           )}
@@ -2121,7 +2454,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           <div className="panel" ref={panelRef}>
             <h2>Report</h2>
             <div className="muted-small" style={{ marginBottom: 12 }}>
-              Generate a PDF covering Income, Expenses, and Fixed Expenses for a date range, then download it or email it to any address.
+              Generate a 5-page PDF (Overview, Income &amp; Expenses, Fixed Expenses, Savings, and a Pareto spend analysis with suggestions) for a date range, then download it or email it to any address.
             </div>
             <div className="row" style={{ marginBottom: 12 }}>
               <div className="field">

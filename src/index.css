@@ -99,7 +99,10 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
 .panel h2 { font-size: 15px; margin: 0 0 14px 0; }
 .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
 .field { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 110px; }
-.field label { font-size: 12px; color: var(--muted); }
+/* Bold, higher-contrast labels everywhere (Name, Category, Amount/month,
+   Start date, End date, etc.) -- previously small and muted-gray, which made
+   them hard to read at a glance, especially on mobile. */
+.field label { font-size: 12.5px; font-weight: 800; color: var(--text); }
 .field input, .field select {
   padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; background: #fff;
 }
@@ -123,7 +126,7 @@ input[type="date"] {
 
 table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
 th, td { text-align: left; padding: 7px 4px; border-bottom: 1px solid var(--border); overflow: hidden; }
-th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; }
+th { color: var(--text); font-weight: 800; font-size: 12px; text-transform: uppercase; }
 td.amount { font-weight: 600; text-align: right; }
 .del { cursor: pointer; color: var(--muted); border: none; background: none; font-size: 14px; }
 .del:hover { color: var(--danger); }
@@ -226,33 +229,38 @@ td.amount { font-weight: 600; text-align: right; }
   }
   table.responsive-table tr {
     display: block; position: relative; width: 100%;
-    border: 1px solid var(--border); border-radius: 10px;
-    padding: 12px 40px 8px 12px; margin-bottom: 10px; background: var(--card);
+    border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px 44px 10px 14px; margin-bottom: 12px; background: var(--card);
+    box-shadow: 0 1px 2px rgba(15, 42, 46, .04);
   }
+  /* Each field is its own full-width block -- bold label on its own line,
+     then the input directly below at full width. Replaces the previous
+     "label left / value right, 64% max-width" layout, which was cramming
+     values like phone numbers, dates, and category names into a narrow
+     right-hand strip and clipping them. Stacking removes the truncation
+     entirely and gives every field a bigger, easier-to-tap input. */
   table.responsive-table td {
-    display: flex; align-items: center; justify-content: space-between; gap: 10px;
-    border: none; border-bottom: 1px solid var(--bg); padding: 8px 0; font-size: 13px;
+    display: block; border: none; padding: 8px 0; font-size: 13px;
   }
-  table.responsive-table td:last-child { border-bottom: none; }
+  table.responsive-table td:not(:last-child) { border-bottom: 1px solid var(--bg); }
   table.responsive-table td[data-label]::before {
     content: attr(data-label);
-    flex: 0 0 auto; font-size: 11px; color: var(--muted); font-weight: 600;
-    text-transform: uppercase; letter-spacing: .03em;
+    display: block; font-size: 11px; font-weight: 800; color: var(--text);
+    text-transform: uppercase; letter-spacing: .04em; margin-bottom: 5px;
   }
   table.responsive-table td input,
   table.responsive-table td select {
-    flex: 1 1 auto; width: auto !important; max-width: 64%;
-    font-size: 15px; padding: 7px 8px; text-align: right;
+    width: 100% !important; max-width: 100%;
+    font-size: 16px; padding: 9px 10px; text-align: left;
   }
-  table.responsive-table td select { text-align: left; }
   table.responsive-table td input[type="number"] { font-weight: 700; }
   /* The row's delete "x" button has no data-label (it's not a data field) --
      pin it to the card's top-right corner as a clear tap target instead of
      letting it sit as an awkward extra row. */
   table.responsive-table td:has(button.del) {
-    position: absolute; top: 6px; right: 4px; padding: 0; border: none;
+    position: absolute; top: 8px; right: 6px; padding: 0; border: none;
   }
   table.responsive-table td:has(button.del) button.del {
-    font-size: 20px; padding: 6px 10px; line-height: 1;
+    font-size: 22px; padding: 8px 10px; line-height: 1;
   }
 }

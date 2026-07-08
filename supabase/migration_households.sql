@@ -257,3 +257,30 @@ alter table settings add column if not exists currency text not null default 'AE
 -- Recurring expense repeat cadence: monthly, alternate (every 2 months),
 -- quarterly, half_yearly, or yearly. Defaults to monthly for existing rows.
 alter table recurring_expenses add column if not exists frequency text not null default 'monthly';
+
+-- Savings goals: how much the household wants to set aside each month (or
+-- other frequency). Structured exactly like recurring_expenses (minus
+-- category/due_date, which don't apply to money being saved rather than
+-- spent) so the same start/end-date + frequency "does this occur in month X"
+-- logic can be reused for both the dashboard and the PDF report.
+create table if not exists savings_goals (
+  id uuid primary key default gen_random_uuid(),
+  household_id uuid not null references households(id) on delete cascade,
+  name text not null,
+  amount numeric not null,
+  start_date date not null,
+  end_date date,
+  frequency text not null default 'monthly',
+  active boolean not null default true,
+  created_by uuid references auth.users(id),
+  created_at timestamptz not null default now()
+);
+alter table savings_goals enable row level security;
+create policy "member read savings_goals" on savings_goals
+  for select using (household_id in (select household_id from household_members where user_id = auth.uid()));
+create policy "member write savings_goals" on savings_goals
+  for insert with check (household_id in (select household_id from household_members where user_id = auth.uid()));
+create policy "member update savings_goals" on savings_goals
+  for update using (household_id in (select household_id from household_members where user_id = auth.uid()));
+create policy "member delete savings_goals" on savings_goals
+  for delete using (household_id in (select household_id from household_members where user_id = auth.uid()));
