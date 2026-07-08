@@ -34,6 +34,35 @@ function monthDiff(fromKey, toKey) {
   return (ty - fy) * 12 + (tm - fm);
 }
 
+// Shared by the dashboard's current-month view and the PDF report: whether a
+// recurring expense lands in a given "YYYY-MM" month, honouring its start/end
+// dates and repeat frequency (e.g. alternate-month rent only counts every
+// 2nd month from its start date).
+function recurringOccursInMonth(r, key) {
+  if (!r.active) return false;
+  const startKey = r.start_date.slice(0, 7);
+  const startsOk = startKey <= key;
+  const endsOk = !r.end_date || r.end_date.slice(0, 7) >= key;
+  if (!startsOk || !endsOk) return false;
+  const interval = FREQUENCY_MONTHS[r.frequency] || 1;
+  if (interval <= 1) return true;
+  return monthDiff(startKey, key) % interval === 0;
+}
+
+// All "YYYY-MM" month keys from one date to another, inclusive.
+function monthsBetween(fromDateStr, toDateStr) {
+  const from = new Date(fromDateStr + 'T00:00:00');
+  const to = new Date(toDateStr + 'T00:00:00');
+  const keys = [];
+  let cur = new Date(from.getFullYear(), from.getMonth(), 1);
+  const end = new Date(to.getFullYear(), to.getMonth(), 1);
+  while (cur <= end) {
+    keys.push(monthKey(cur));
+    cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
+  }
+  return keys;
+}
+
 // The UAE's new official Dirham symbol (a "D" crossed by two horizontal
 // strokes) isn't in a shipped Unicode font yet, so it can't be typed as plain
 // text. Since Recharts renders to inline SVG, we draw a vector approximation
@@ -199,8 +228,65 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     loadAll();
   }
 
-  async function loadAll() {
-    setLoading(true);
+  // Lets the owner fill in / fix Name, Phone, Location for anyone else in
+  // the household directly from the Users table -- useful since the owner
+  // usually already knows this info for family members who haven't filled
+  // it in themselves yet. Works for both already-joined members and people
+  // who are still only a pending invite.
+  const [memberDetailDrafts, setMemberDetailDrafts] = useState({});
+  const [inviteDetailDrafts, setInviteDetailDrafts] = useState({});
+
+  useEffect(() => {
+    const drafts = {};
+    members.forEach((m) => {
+      drafts[m.id] = { name: m.name || '', phone: m.phone || '', location: m.location || '' };
+    });
+    setMemberDetailDrafts(drafts);
+  }, [members]);
+
+  useEffect(() => {
+    const drafts = {};
+    pendingInvites.forEach((inv) => {
+      drafts[inv.id] = { name: inv.name || '', phone: inv.phone || '', location: inv.location || '' };
+    });
+    setInviteDetailDrafts(drafts);
+  }, [pendingInvites]);
+
+  function updateMemberDetailDraft(id, field, value) {
+    setMemberDetailDrafts((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
+  }
+
+  async function commitMemberDetailField(id, field, value) {
+    const { error } = await supabase.from('household_members').update({ [field]: value.trim() || null }).eq('id', id);
+    if (error) {
+      alert('Could not save: ' + error.message);
+      return;
+    }
+    loadAll();
+  }
+
+  function updateInviteDetailDraft(id, field, value) {
+    setInviteDetailDrafts((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
+  }
+
+  async function commitInviteDetailField(id, field, value) {
+    const { error } = await supabase.from('household_invites').update({ [field]: value.trim() || null }).eq('id', id);
+    if (error) {
+      alert('Could not save: ' + error.message);
+      return;
+    }
+    loadAll();
+  }
+
+  // isInitial controls whether the full-page "Loading your budget..." spinner
+  // shows. It should only ever be true for the very first load on mount --
+  // every other call (realtime updates, auto-save refreshes after a field
+  // commit) must update state quietly in the background. Toggling loading
+  // to true here on every keystroke-driven save was unmounting the whole
+  // Dashboard mid-edit, which kicked users out of forms like "My details"
+  // as soon as they tabbed from one field to the next.
+  async function loadAll(isInitial = false) {
+    if (isInitial) setLoading(true);
     const [{ data: cats }, { data: exps }, { data: settings }, { data: recur }, { data: mem }, { data: invites }, { data: inc }] = await Promise.all([
       supabase.from('categories').select('*').eq('household_id', householdId).order('name'),
       supabase.from('expenses').select('*').eq('household_id', householdId).order('expense_date', { ascending: false }),
@@ -262,16 +348,20 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   }
 
   useEffect(() => {
-    loadAll();
+    loadAll(true);
+    // Wrapped in arrow functions so the realtime payload object Supabase
+    // passes in isn't mistaken for the isInitial flag (which would re-trigger
+    // the full-page spinner on every background change).
+    const refresh = () => loadAll();
     const channel = supabase
       .channel('budget-tracker-changes-' + householdId)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses', filter: `household_id=eq.${householdId}` }, loadAll)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories', filter: `household_id=eq.${householdId}` }, loadAll)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'settings', filter: `household_id=eq.${householdId}` }, loadAll)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'recurring_expenses', filter: `household_id=eq.${householdId}` }, loadAll)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'household_members', filter: `household_id=eq.${householdId}` }, loadAll)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'household_invites', filter: `household_id=eq.${householdId}` }, loadAll)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'incomes', filter: `household_id=eq.${householdId}` }, loadAll)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses', filter: `household_id=eq.${householdId}` }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories', filter: `household_id=eq.${householdId}` }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'settings', filter: `household_id=eq.${householdId}` }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'recurring_expenses', filter: `household_id=eq.${householdId}` }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'household_members', filter: `household_id=eq.${householdId}` }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'household_invites', filter: `household_id=eq.${householdId}` }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'incomes', filter: `household_id=eq.${householdId}` }, refresh)
       .subscribe();
     return () => supabase.removeChannel(channel);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -284,18 +374,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
   const recurringForMonth = useMemo(() => {
     const key = monthKey(currentMonth);
-    return recurringExpenses.filter((r) => {
-      if (!r.active) return false;
-      const startKey = r.start_date.slice(0, 7);
-      const startsOk = startKey <= key;
-      const endsOk = !r.end_date || r.end_date.slice(0, 7) >= key;
-      if (!startsOk || !endsOk) return false;
-      const interval = FREQUENCY_MONTHS[r.frequency] || 1;
-      if (interval <= 1) return true;
-      // Only lands on months that are a whole number of intervals after the start month
-      // (e.g. alternate-month rent counts every 2nd month from its start date).
-      return monthDiff(startKey, key) % interval === 0;
-    });
+    return recurringExpenses.filter((r) => recurringOccursInMonth(r, key));
   }, [recurringExpenses, currentMonth]);
 
   const categoryNameById = useMemo(() => {
@@ -650,127 +729,82 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     const fromMonth = from.slice(0, 7);
     const toMonth = to.slice(0, 7);
     const rangeIncomes = incomes.filter((i) => i.active && i.start_date.slice(0, 7) >= fromMonth && i.start_date.slice(0, 7) <= toMonth);
-    const rangeRecurring = recurringExpenses.filter((r) => r.active && r.start_date <= to && (!r.end_date || r.end_date >= from));
+
+    // Fixed Expenses are recurring, so a date range spanning more than one
+    // month can include multiple occurrences of the same bill (e.g. two
+    // months of rent). Walk every month in the range and include one row
+    // per month a recurring expense actually falls due, using the same
+    // frequency logic as the dashboard -- this is what makes the total
+    // complete instead of only counting each bill once regardless of range.
+    const rangeMonths = monthsBetween(from, to);
+    const rangeRecurringOccurrences = [];
+    rangeMonths.forEach((mKey) => {
+      recurringExpenses.forEach((r) => {
+        if (recurringOccursInMonth(r, mKey)) {
+          rangeRecurringOccurrences.push({ ...r, occurredMonth: mKey });
+        }
+      });
+    });
 
     const expenseTotal = rangeExpenses.reduce((s, e) => s + Number(e.amount), 0);
     const incomeTotal = rangeIncomes.reduce((s, i) => s + Number(i.amount), 0);
-    const fixedTotal = rangeRecurring.reduce((s, r) => s + Number(r.amount), 0);
+    const fixedTotal = rangeRecurringOccurrences.reduce((s, r) => s + Number(r.amount), 0);
 
-    const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.text(household.name || 'Household Budget Tracker', 14, 18);
-    doc.setFontSize(11);
-    doc.setTextColor(90);
-    doc.text(`Budget report -- ${rangeLabel}`, 14, 26);
-    doc.text(`Generated ${fmtDate(new Date().toISOString().slice(0, 10))} by ${session.user.email}`, 14, 32);
-    doc.setTextColor(0);
-
-    let y = 42;
-
-    // Summary -- the combined regular+fixed total and the net figure, up
-    // front, so the headline numbers don't require adding up three tables.
-    doc.setFontSize(13);
-    doc.text('Summary', 14, y);
-    y += 4;
-    autoTable(doc, {
-      startY: y,
-      body: [
-        ['Total Income', fmt(incomeTotal)],
-        ['Total Regular Expenses', fmt(expenseTotal)],
-        ['Total Fixed Expenses', fmt(fixedTotal)],
-        ['Total Expenses (Regular + Fixed)', fmt(expenseTotal + fixedTotal)],
-        ['Net (Income - Total Expenses)', fmt(incomeTotal - expenseTotal - fixedTotal)],
-      ],
-      theme: 'plain',
-      styles: { fontSize: 10, fontStyle: 'bold', cellPadding: 1.5 },
-      columnStyles: { 0: { cellWidth: 100 }, 1: { halign: 'right' } },
-      margin: { left: 14, right: 14 },
-    });
-    y = doc.lastAutoTable.finalY + 14;
-
-    doc.setFontSize(13);
-    doc.text('Income', 14, y);
-    y += 4;
-    autoTable(doc, {
-      startY: y,
-      head: [['Month', 'Source', 'Amount']],
-      body: rangeIncomes.map((i) => [i.start_date.slice(0, 7), i.name, fmt(i.amount)]),
-      foot: [['', 'Total', fmt(incomeTotal)]],
-      styles: { fontSize: 9 },
-      headStyles: { fillColor: [14, 165, 233] },
-      margin: { left: 14, right: 14 },
-    });
-    y = doc.lastAutoTable.finalY + 12;
-
-    doc.setFontSize(13);
-    doc.text('Expenses', 14, y);
-    y += 4;
-    autoTable(doc, {
-      startY: y,
-      head: [['Date', 'Category', 'Description', 'Amount']],
-      body: rangeExpenses.map((e) => [fmtDate(e.expense_date), categoryNameById[e.category_id] || 'Uncategorized', e.description || '', fmt(e.amount)]),
-      foot: [['', '', 'Total', fmt(expenseTotal)]],
-      styles: { fontSize: 9 },
-      headStyles: { fillColor: [249, 115, 22] },
-      margin: { left: 14, right: 14 },
-    });
-    y = doc.lastAutoTable.finalY + 12;
-
-    doc.setFontSize(13);
-    doc.text('Fixed Expenses', 14, y);
-    y += 4;
-    autoTable(doc, {
-      startY: y,
-      head: [['Name', 'Category', 'Frequency', 'Start', 'End', 'Amount']],
-      body: rangeRecurring.map((r) => [
-        r.name,
-        categoryNameById[r.category_id] || 'Uncategorized',
-        (FREQUENCIES.find((f) => f.value === r.frequency) || {}).label || r.frequency,
-        fmtDate(r.start_date),
-        r.end_date ? fmtDate(r.end_date) : 'Ongoing',
-        fmt(r.amount),
-      ]),
-      foot: [['', '', '', '', 'Total', fmt(fixedTotal)]],
-      styles: { fontSize: 9 },
-      headStyles: { fillColor: [168, 85, 247] },
-      margin: { left: 14, right: 14 },
-    });
-    y = doc.lastAutoTable.finalY + 14;
-
-    // Bar chart -- combined Regular + Fixed spend per category, drawn
-    // directly with jsPDF primitives (no chart library/canvas capture
-    // needed) so it renders crisply at any zoom level in the PDF.
+    // Combined Regular + Fixed spend per category, used by the bar chart.
     const categoryTotals = {};
     rangeExpenses.forEach((e) => {
       const name = categoryNameById[e.category_id] || 'Uncategorized';
       categoryTotals[name] = (categoryTotals[name] || 0) + Number(e.amount);
     });
-    rangeRecurring.forEach((r) => {
+    rangeRecurringOccurrences.forEach((r) => {
       const name = categoryNameById[r.category_id] || 'Uncategorized';
       categoryTotals[name] = (categoryTotals[name] || 0) + Number(r.amount);
     });
     const chartRows = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]);
 
-    if (y > 230) { doc.addPage(); y = 20; }
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const [accentR, accentG, accentB] = hexToRgb('#0d9488');
+
+    // Header banner -- colored band matching the app's teal brand accent,
+    // with the household name, report title, range, and who generated it.
+    doc.setFillColor(accentR, accentG, accentB);
+    doc.rect(0, 0, pageWidth, 34, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(17);
+    doc.setFont(undefined, 'bold');
+    doc.text(household.name || 'Household Budget Tracker', 14, 15);
+    doc.setFont(undefined, 'normal');
+    doc.setFontSize(11);
+    doc.text(`Budget Report -- ${rangeLabel}`, 14, 23);
+    doc.setFontSize(8.5);
+    doc.text(`Generated ${fmtDate(new Date().toISOString().slice(0, 10))} by ${session.user.email}`, 14, 29);
+    doc.setTextColor(0, 0, 0);
+
+    let y = 44;
+
+    // Bar chart up top -- the visual headline before the detail tables.
     doc.setFontSize(13);
-    doc.setTextColor(0);
+    doc.setFont(undefined, 'bold');
     doc.text('Expenses by Category (Regular + Fixed)', 14, y);
+    doc.setFont(undefined, 'normal');
     y += 8;
 
     if (chartRows.length === 0) {
       doc.setFontSize(9);
       doc.setTextColor(120);
       doc.text('No expenses in this period.', 14, y);
+      doc.setTextColor(0);
       y += 10;
     } else {
       const maxVal = Math.max(...chartRows.map(([, v]) => v)) || 1;
       const labelX = 14;
       const barX = 62;
-      const barMaxWidth = 100;
-      const barHeight = 5;
+      const barMaxWidth = pageWidth - barX - 40;
+      const barHeight = 5.5;
       const rowGap = 3;
       chartRows.forEach(([name, val], i) => {
-        if (y > 275) { doc.addPage(); y = 20; }
+        if (y > 270) { doc.addPage(); y = 20; }
         const barWidth = Math.max(1, (val / maxVal) * barMaxWidth);
         const [r, g, b] = hexToRgb(COLORS[i % COLORS.length]);
         doc.setFillColor(r, g, b);
@@ -782,15 +816,128 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
         doc.text(fmt(val), barX + barWidth + 3, y + barHeight - 1);
         y += barHeight + rowGap;
       });
-      y += 10;
+      y += 8;
     }
 
+    // Summary -- the combined regular+fixed total and the net figure, so
+    // the headline numbers don't require adding up three separate tables.
+    // The last two rows are highlighted so the totals that matter most
+    // stand out at a glance.
+    if (y > 240) { doc.addPage(); y = 20; }
+    doc.setFontSize(13);
+    doc.setFont(undefined, 'bold');
+    doc.text('Summary', 14, y);
+    doc.setFont(undefined, 'normal');
+    y += 4;
+    const netTotal = incomeTotal - expenseTotal - fixedTotal;
+    autoTable(doc, {
+      startY: y,
+      body: [
+        ['Total Income', fmt(incomeTotal)],
+        ['Total Regular Expenses', fmt(expenseTotal)],
+        ['Total Fixed Expenses', fmt(fixedTotal)],
+        ['Total Expenses (Regular + Fixed)', fmt(expenseTotal + fixedTotal)],
+        ['Net (Income - Total Expenses)', fmt(netTotal)],
+      ],
+      theme: 'plain',
+      styles: { fontSize: 10, fontStyle: 'bold', cellPadding: 2 },
+      columnStyles: { 0: { cellWidth: 100 }, 1: { halign: 'right' } },
+      margin: { left: 14, right: 14 },
+      didParseCell: (data) => {
+        if (data.row.index === 3) {
+          data.cell.styles.fillColor = [241, 245, 249];
+        }
+        if (data.row.index === 4) {
+          data.cell.styles.fillColor = netTotal >= 0 ? [220, 252, 231] : [254, 226, 226];
+          data.cell.styles.textColor = netTotal >= 0 ? [22, 101, 52] : [153, 27, 27];
+        }
+      },
+    });
+    y = doc.lastAutoTable.finalY + 14;
+
+    const tableDefaults = {
+      styles: { fontSize: 9, cellPadding: 2.5 },
+      alternateRowStyles: { fillColor: [246, 248, 250] },
+      margin: { left: 14, right: 14 },
+    };
+
+    if (y > 250) { doc.addPage(); y = 20; }
+    doc.setFontSize(13);
+    doc.setFont(undefined, 'bold');
+    doc.text('Income', 14, y);
+    doc.setFont(undefined, 'normal');
+    y += 4;
+    autoTable(doc, {
+      ...tableDefaults,
+      startY: y,
+      head: [['Month', 'Source', 'Amount']],
+      body: rangeIncomes.map((i) => [i.start_date.slice(0, 7), i.name, fmt(i.amount)]),
+      foot: [['', 'Total', fmt(incomeTotal)]],
+      headStyles: { fillColor: [14, 165, 233] },
+      footStyles: { fillColor: [226, 240, 250], textColor: [15, 42, 46], fontStyle: 'bold' },
+    });
+    y = doc.lastAutoTable.finalY + 12;
+
+    if (y > 250) { doc.addPage(); y = 20; }
+    doc.setFontSize(13);
+    doc.setFont(undefined, 'bold');
+    doc.text('Expenses', 14, y);
+    doc.setFont(undefined, 'normal');
+    y += 4;
+    autoTable(doc, {
+      ...tableDefaults,
+      startY: y,
+      head: [['Date', 'Category', 'Description', 'Amount']],
+      body: rangeExpenses.map((e) => [fmtDate(e.expense_date), categoryNameById[e.category_id] || 'Uncategorized', e.description || '', fmt(e.amount)]),
+      foot: [['', '', 'Total', fmt(expenseTotal)]],
+      headStyles: { fillColor: [249, 115, 22] },
+      footStyles: { fillColor: [253, 237, 224], textColor: [15, 42, 46], fontStyle: 'bold' },
+    });
+    y = doc.lastAutoTable.finalY + 12;
+
+    if (y > 250) { doc.addPage(); y = 20; }
+    doc.setFontSize(13);
+    doc.setFont(undefined, 'bold');
+    doc.text('Fixed Expenses', 14, y);
+    doc.setFont(undefined, 'normal');
+    y += 4;
+    if (rangeRecurringOccurrences.length === 0) {
+      doc.setFontSize(9);
+      doc.setTextColor(120);
+      doc.text('No fixed expenses due in this period.', 14, y);
+      doc.setTextColor(0);
+      y += 10;
+    } else {
+      autoTable(doc, {
+        ...tableDefaults,
+        startY: y,
+        head: [['Name', 'Category', 'Frequency', 'Month Due', 'Amount']],
+        body: rangeRecurringOccurrences
+          .sort((a, b) => (a.occurredMonth < b.occurredMonth ? -1 : a.occurredMonth > b.occurredMonth ? 1 : a.name.localeCompare(b.name)))
+          .map((r) => [
+            r.name,
+            categoryNameById[r.category_id] || 'Uncategorized',
+            (FREQUENCIES.find((f) => f.value === r.frequency) || {}).label || r.frequency,
+            r.occurredMonth,
+            fmt(r.amount),
+          ]),
+        foot: [['', '', '', 'Total', fmt(fixedTotal)]],
+        headStyles: { fillColor: [168, 85, 247] },
+        footStyles: { fillColor: [240, 229, 250], textColor: [15, 42, 46], fontStyle: 'bold' },
+      });
+      y = doc.lastAutoTable.finalY + 10;
+    }
+
+    // Footer on every page: confidentiality note + page numbers.
     const pageCount = doc.internal.getNumberOfPages();
     for (let p = 1; p <= pageCount; p++) {
       doc.setPage(p);
+      doc.setDrawColor(220);
+      doc.line(14, 285, pageWidth - 14, 285);
       doc.setFontSize(8);
       doc.setTextColor(140);
-      doc.text('Confidential -- for household members only. Not to be shared outside the household.', 14, 289);
+      doc.text('Confidential -- for household members only. Not to be shared outside the household.', 14, 290);
+      doc.text(`Page ${p} of ${pageCount}`, pageWidth - 14, 290, { align: 'right' });
     }
 
     const filename = `budget-report_${from}_to_${to}.pdf`;
@@ -964,7 +1111,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           {inputTab === 'expense' && (
           <div className="panel">
             <h2>Add an expense</h2>
-            <form className="row" onSubmit={handleAddExpense}>
+            <form onSubmit={handleAddExpense}>
+            <div className="row">
               <div className="field">
                 <label>Date</label>
                 <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
@@ -997,7 +1145,10 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   onChange={(e) => setForm({ ...form, amount: e.target.value })}
                 />
               </div>
+            </div>
+            <div style={{ marginTop: 12 }}>
               <button className="btn" type="submit">Add</button>
+            </div>
             </form>
           </div>
           )}
@@ -1005,7 +1156,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           {inputTab === 'income' && (
           <div className="panel">
             <h2>Income</h2>
-            <form className="row" onSubmit={handleAddIncome}>
+            <form onSubmit={handleAddIncome}>
+            <div className="row">
               <div className="field" style={{ flex: 1.2 }}>
                 <label>Source</label>
                 <input
@@ -1045,7 +1197,10 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   onChange={(e) => setNewIncome({ ...newIncome, month: e.target.value })}
                 />
               </div>
+            </div>
+            <div style={{ marginTop: 12 }}>
               <button className="btn" type="submit">Add</button>
+            </div>
             </form>
             <div className="muted-small" style={{ marginTop: 6 }}>
               Income is entered per month on purpose -- it won't automatically carry over. The list below only shows entries for {monthLabel(currentMonth)}; add a new row for each new month.
@@ -1113,7 +1268,12 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           {inputTab === 'fixed' && (
           <div className="panel">
             <h2>Fixed Expenses (loans, EMIs, credit cards, rent)</h2>
-            <form className="row" onSubmit={handleAddRecurring}>
+            {/* With 7 fields, this form can wrap onto several lines on
+                narrower screens -- the Add button is kept on its own row
+                below (rather than inline at flex-end) so it never overlaps
+                a wrapped field. */}
+            <form onSubmit={handleAddRecurring}>
+            <div className="row">
               <div className="field" style={{ flex: 1.4 }}>
                 <label>Name</label>
                 <input
@@ -1180,7 +1340,10 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   onChange={(e) => setNewRecurring({ ...newRecurring, dueDate: e.target.value })}
                 />
               </div>
+            </div>
+            <div style={{ marginTop: 12 }}>
               <button className="btn" type="submit">Add</button>
+            </div>
             </form>
 
             {recurringExpenses.length === 0 ? (
@@ -1506,11 +1669,16 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 <div className="muted-small" style={{ marginBottom: 4, fontWeight: 600 }}>
                   {members.length + pendingInvites.length} total -- {members.length} active, {pendingInvites.length} pending
                 </div>
+                {isOwner && (
+                  <div className="muted-small" style={{ marginBottom: 6 }}>
+                    As owner, you can fill in or fix Name / Phone / Location for anyone below -- handy for family members who haven't set theirs yet.
+                  </div>
+                )}
                 <div className="table-scroll">
                 <table className="responsive-table users-table">
                   <colgroup>
-                    <col style={{ width: '20%' }} /><col style={{ width: '26%' }} />
-                    <col style={{ width: '16%' }} /><col style={{ width: '20%' }} /><col style={{ width: '18%' }} />
+                    <col style={{ width: '18%' }} /><col style={{ width: '24%' }} />
+                    <col style={{ width: '16%' }} /><col style={{ width: '18%' }} /><col style={{ width: '14%' }} />
                   </colgroup>
                   <thead>
                     <tr><th>Name</th><th>Email</th><th>Phone</th><th>Location</th><th>Status</th></tr>
@@ -1518,19 +1686,95 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   <tbody>
                     {members.map((m) => (
                       <tr key={'m-' + m.id}>
-                        <td data-label="Name">{m.name || <span className="muted-small">--</span>}</td>
-                        <td data-label="Email">{m.email}</td>
-                        <td className="muted-small" data-label="Phone">{m.phone || '--'}</td>
-                        <td className="muted-small" data-label="Location">{m.location || '--'}</td>
+                        {isOwner ? (
+                          <>
+                            <td data-label="Name">
+                              <input
+                                data-editable
+                                type="text"
+                                placeholder="--"
+                                value={memberDetailDrafts[m.id]?.name ?? ''}
+                                onChange={(e) => updateMemberDetailDraft(m.id, 'name', e.target.value)}
+                                onBlur={(e) => commitMemberDetailField(m.id, 'name', e.target.value)}
+                              />
+                            </td>
+                            <td data-label="Email">{m.email}</td>
+                            <td data-label="Phone">
+                              <input
+                                data-editable
+                                type="text"
+                                placeholder="--"
+                                value={memberDetailDrafts[m.id]?.phone ?? ''}
+                                onChange={(e) => updateMemberDetailDraft(m.id, 'phone', e.target.value)}
+                                onBlur={(e) => commitMemberDetailField(m.id, 'phone', e.target.value)}
+                              />
+                            </td>
+                            <td data-label="Location">
+                              <input
+                                data-editable
+                                type="text"
+                                placeholder="--"
+                                value={memberDetailDrafts[m.id]?.location ?? ''}
+                                onChange={(e) => updateMemberDetailDraft(m.id, 'location', e.target.value)}
+                                onBlur={(e) => commitMemberDetailField(m.id, 'location', e.target.value)}
+                              />
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td data-label="Name">{m.name || <span className="muted-small">--</span>}</td>
+                            <td data-label="Email">{m.email}</td>
+                            <td className="muted-small" data-label="Phone">{m.phone || '--'}</td>
+                            <td className="muted-small" data-label="Location">{m.location || '--'}</td>
+                          </>
+                        )}
                         <td data-label="Status"><span className="status-pill active">Active</span></td>
                       </tr>
                     ))}
                     {pendingInvites.map((inv) => (
                       <tr key={'p-' + inv.id}>
-                        <td data-label="Name">{inv.name || <span className="muted-small">--</span>}</td>
-                        <td data-label="Email">{inv.email}</td>
-                        <td className="muted-small" data-label="Phone">{inv.phone || '--'}</td>
-                        <td className="muted-small" data-label="Location">{inv.location || '--'}</td>
+                        {isOwner ? (
+                          <>
+                            <td data-label="Name">
+                              <input
+                                data-editable
+                                type="text"
+                                placeholder="--"
+                                value={inviteDetailDrafts[inv.id]?.name ?? ''}
+                                onChange={(e) => updateInviteDetailDraft(inv.id, 'name', e.target.value)}
+                                onBlur={(e) => commitInviteDetailField(inv.id, 'name', e.target.value)}
+                              />
+                            </td>
+                            <td data-label="Email">{inv.email}</td>
+                            <td data-label="Phone">
+                              <input
+                                data-editable
+                                type="text"
+                                placeholder="--"
+                                value={inviteDetailDrafts[inv.id]?.phone ?? ''}
+                                onChange={(e) => updateInviteDetailDraft(inv.id, 'phone', e.target.value)}
+                                onBlur={(e) => commitInviteDetailField(inv.id, 'phone', e.target.value)}
+                              />
+                            </td>
+                            <td data-label="Location">
+                              <input
+                                data-editable
+                                type="text"
+                                placeholder="--"
+                                value={inviteDetailDrafts[inv.id]?.location ?? ''}
+                                onChange={(e) => updateInviteDetailDraft(inv.id, 'location', e.target.value)}
+                                onBlur={(e) => commitInviteDetailField(inv.id, 'location', e.target.value)}
+                              />
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td data-label="Name">{inv.name || <span className="muted-small">--</span>}</td>
+                            <td data-label="Email">{inv.email}</td>
+                            <td className="muted-small" data-label="Phone">{inv.phone || '--'}</td>
+                            <td className="muted-small" data-label="Location">{inv.location || '--'}</td>
+                          </>
+                        )}
                         <td data-label="Status"><span className="status-pill pending">Pending</span></td>
                       </tr>
                     ))}

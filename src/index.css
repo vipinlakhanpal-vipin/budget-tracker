@@ -121,6 +121,10 @@ td.amount { font-weight: 600; text-align: right; }
    tables since these rows are just short status lines, not editable fields. */
 .users-table { font-size: 12px; }
 .users-table td { padding: 5px 4px; line-height: 1.3; }
+/* Emails must never be clipped -- let the Email column wrap onto a second
+   line instead of hard-cutting mid-address like "name@gm...". */
+.users-table td[data-label="Email"] { overflow: visible; white-space: normal; word-break: break-all; }
+.users-table input[data-editable] { width: 100%; font-size: 12px; }
 .users-table .status-pill {
   display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 10px;
   font-weight: 700; text-transform: uppercase; letter-spacing: .02em;
