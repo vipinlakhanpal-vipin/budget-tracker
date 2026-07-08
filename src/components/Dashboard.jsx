@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, LabelList,
+  ComposedChart, Line,
 } from 'recharts';
 import { supabase } from '../supabaseClient';
 import AdminConsole from './AdminConsole.jsx';
@@ -292,6 +293,20 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
   const pieData = Object.entries(byCategory).map(([name, value]) => ({ name, value }));
 
+  // Pareto = categories sorted highest-spend-first with a running cumulative
+  // percentage line overlaid, so it's easy to see which categories make up
+  // the bulk (e.g. 80%) of this month's spending.
+  const paretoData = useMemo(() => {
+    const sorted = [...pieData].sort((a, b) => b.value - a.value);
+    const totalVal = sorted.reduce((s, d) => s + d.value, 0) || 1;
+    let cum = 0;
+    return sorted.map((d) => {
+      cum += d.value;
+      return { ...d, cumulative: Math.round((cum / totalVal) * 1000) / 10 };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [byCategory]);
+
   async function handleAddExpense(e) {
     e.preventDefault();
     const amount = parseFloat(form.amount);
@@ -529,19 +544,23 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     loadAll();
   }
 
-  async function handleSaveIncome(id) {
-    const draft = incomeDrafts[id];
-    const amount = parseFloat(draft.amount);
-    if (!draft.name?.trim() || !draft.month) {
-      alert('Source name and month cannot be empty.');
-      return;
-    }
+  // Income rows auto-save like Fixed Expenses -- text/number fields commit on
+  // blur, the Month field commits immediately on change. No Save button.
+  function updateIncomeDraftField(id, field, value) {
+    setIncomeDrafts((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
+  }
+
+  async function commitIncomeField(id, field, value) {
+    const merged = { ...(incomeDrafts[id] || {}), [field]: value };
+    setIncomeDrafts((prev) => ({ ...prev, [id]: merged }));
+    if (!merged.name?.trim() || !merged.month) return;
+    const amount = parseFloat(merged.amount);
     const { error } = await supabase
       .from('incomes')
       .update({
-        name: draft.name.trim(),
+        name: merged.name.trim(),
         amount: isNaN(amount) ? 0 : amount,
-        start_date: draft.month + '-01',
+        start_date: merged.month + '-01',
         end_date: null,
       })
       .eq('id', id);
@@ -580,7 +599,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             {activePanel === 'help' ? 'Hide help' : 'Help'}
           </button>
           <button className="btn-teal" onClick={() => togglePanel('settings')}>
-            {activePanel === 'settings' ? 'Hide budget settings' : 'Budget settings'}
+            {activePanel === 'settings' ? 'Hide settings' : 'Settings'}
           </button>
           {isAdmin && (
             <button className="btn-teal" onClick={() => togglePanel('admin')}>
@@ -647,13 +666,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               className={`btn small ${inputTab === 'income' ? '' : 'secondary'}`}
               onClick={() => setInputTab('income')}
             >
-              Household income
+              Income
             </button>
             <button
               className={`btn small ${inputTab === 'fixed' ? '' : 'secondary'}`}
               onClick={() => setInputTab('fixed')}
             >
-              Fixed monthly expenses
+              Fixed Expenses
             </button>
           </div>
 
@@ -700,7 +719,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
           {inputTab === 'income' && (
           <div className="panel">
-            <h2>Household income</h2>
+            <h2>Income</h2>
             <form className="row" onSubmit={handleAddIncome}>
               <div className="field" style={{ flex: 1.2 }}>
                 <label>Source</label>
@@ -753,11 +772,11 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <div className="table-scroll">
               <table className="responsive-table" style={{ marginTop: 14, fontSize: 12 }}>
                 <colgroup>
-                  <col style={{ width: '24%' }} /><col style={{ width: '24%' }} /><col style={{ width: '15%' }} />
-                  <col style={{ width: '16%' }} /><col style={{ width: '12%' }} /><col style={{ width: '9%' }} />
+                  <col style={{ width: '26%' }} /><col style={{ width: '26%' }} /><col style={{ width: '17%' }} />
+                  <col style={{ width: '19%' }} /><col style={{ width: '12%' }} />
                 </colgroup>
                 <thead>
-                  <tr><th>Source</th><th>Member</th><th>Amount</th><th>Month</th><th></th><th></th></tr>
+                  <tr><th>Source</th><th>Member</th><th>Amount</th><th>Month</th><th></th></tr>
                 </thead>
                 <tbody>
                   {incomeForMonth.map((i) => (
@@ -767,9 +786,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           type="text"
                           style={{ fontSize: 12 }}
                           value={incomeDrafts[i.id]?.name ?? ''}
-                          onChange={(e) =>
-                            setIncomeDrafts({ ...incomeDrafts, [i.id]: { ...incomeDrafts[i.id], name: e.target.value } })
-                          }
+                          onChange={(e) => updateIncomeDraftField(i.id, 'name', e.target.value)}
+                          onBlur={(e) => commitIncomeField(i.id, 'name', e.target.value)}
                         />
                       </td>
                       <td className="muted-small" data-label="Member">{i.member_email}</td>
@@ -778,24 +796,20 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           type="number"
                           step="0.01"
                           min="0"
-                          style={{ width: 80, fontSize: 12 }}
+                          style={{ fontSize: 12 }}
                           value={incomeDrafts[i.id]?.amount ?? ''}
-                          onChange={(e) =>
-                            setIncomeDrafts({ ...incomeDrafts, [i.id]: { ...incomeDrafts[i.id], amount: e.target.value } })
-                          }
+                          onChange={(e) => updateIncomeDraftField(i.id, 'amount', e.target.value)}
+                          onBlur={(e) => commitIncomeField(i.id, 'amount', e.target.value)}
                         />
                       </td>
                       <td data-label="Month">
                         <input
                           type="month"
-                          style={{ width: 115, fontSize: 11 }}
+                          style={{ fontSize: 11 }}
                           value={incomeDrafts[i.id]?.month ?? ''}
-                          onChange={(e) =>
-                            setIncomeDrafts({ ...incomeDrafts, [i.id]: { ...incomeDrafts[i.id], month: e.target.value } })
-                          }
+                          onChange={(e) => commitIncomeField(i.id, 'month', e.target.value)}
                         />
                       </td>
-                      <td><button className="btn secondary small" onClick={() => handleSaveIncome(i.id)}>Save</button></td>
                       <td><button className="del" onClick={() => handleDeleteIncome(i.id, i.name)}>x</button></td>
                     </tr>
                   ))}
@@ -805,7 +819,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             )}
             {incomeForMonth.length > 0 && (
               <div className="muted-small" style={{ marginTop: 10 }}>
-                {fmt(totalIncome)} in combined income counted toward {monthLabel(currentMonth)}.
+                Changes save automatically. {fmt(totalIncome)} in combined income counted toward {monthLabel(currentMonth)}.
               </div>
             )}
           </div>
@@ -813,7 +827,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
           {inputTab === 'fixed' && (
           <div className="panel">
-            <h2>Fixed monthly expenses (loans, EMIs, credit cards)</h2>
+            <h2>Fixed Expenses (loans, EMIs, credit cards, rent)</h2>
             <form className="row" onSubmit={handleAddRecurring}>
               <div className="field" style={{ flex: 1.4 }}>
                 <label>Name</label>
@@ -1058,6 +1072,12 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 >
                   Bar
                 </button>
+                <button
+                  className={`btn small ${chartType === 'pareto' ? '' : 'secondary'}`}
+                  onClick={() => setChartType('pareto')}
+                >
+                  Pareto
+                </button>
               </div>
             </div>
             {pieData.length === 0 ? (
@@ -1082,7 +1102,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   <Legend wrapperStyle={{ fontSize: 10 }} />
                 </PieChart>
               </ResponsiveContainer>
-            ) : (
+            ) : chartType === 'bar' ? (
               <ResponsiveContainer width="100%" height={Math.max(260, pieData.length * 40)}>
                 <BarChart data={pieData} layout="vertical" margin={{ top: 5, right: 55, left: 10, bottom: 5 }} barCategoryGap="40%">
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} />
@@ -1097,6 +1117,46 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
+            ) : (
+              <ResponsiveContainer width="100%" height={320}>
+                <ComposedChart data={paretoData} margin={{ top: 20, right: 30, left: 0, bottom: 45 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fontSize: 9 }}
+                    interval={0}
+                    angle={-35}
+                    textAnchor="end"
+                    height={60}
+                  />
+                  <YAxis yAxisId="left" tick={{ fontSize: 9 }} width={40} />
+                  <YAxis
+                    yAxisId="right"
+                    orientation="right"
+                    domain={[0, 100]}
+                    tickFormatter={(v) => v + '%'}
+                    tick={{ fontSize: 9 }}
+                    width={34}
+                  />
+                  <Tooltip
+                    formatter={(v, key) => (key === 'cumulative' ? v + '%' : fmt(v))}
+                  />
+                  <Bar yAxisId="left" dataKey="value" barSize={22} isAnimationActive={false}>
+                    {paretoData.map((_, i) => (
+                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                    ))}
+                  </Bar>
+                  <Line
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="cumulative"
+                    stroke="#dc2626"
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                    isAnimationActive={false}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
             )}
           </div>
 
@@ -1106,9 +1166,10 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 <h2>Users</h2>
                 <div className="muted-small" style={{ marginBottom: 4, fontWeight: 600 }}>Active ({members.length})</div>
                 <div className="table-scroll">
-                <table className="responsive-table">
+                <table className="responsive-table users-table">
                   <colgroup>
-                    <col style={{ width: '50%' }} /><col style={{ width: '30%' }} /><col style={{ width: '20%' }} />
+                    <col style={{ width: '42%' }} /><col style={{ width: '20%' }} />
+                    <col style={{ width: '18%' }} /><col style={{ width: '20%' }} />
                   </colgroup>
                   <tbody>
                     {members.map((m) => (
@@ -1126,6 +1187,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           )}
                         </td>
                         <td className="muted-small" data-label="Role">{m.role}</td>
+                        <td data-label="Status"><span className="status-pill active">Active</span></td>
                       </tr>
                     ))}
                   </tbody>
@@ -1182,13 +1244,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             <h2>How to use this app</h2>
             <div className="muted-small" style={{ lineHeight: 1.6 }}>
               <p><strong>Add an expense</strong> -- log one-off spending (groceries, dining, shopping). Pick the date, category, a short description, and the amount, then Add. It appears under "Expenses this month" and is always editable there -- just type into a field and it saves.</p>
-              <p><strong>Household income</strong> -- add each income source per month (e.g. Salary). Income does NOT roll over automatically -- since pay can change month to month (deductions, advances, etc.), add a fresh row each month with that month's actual amount, or edit an existing row's Month field forward.</p>
-              <p><strong>Fixed monthly expenses</strong> -- for recurring bills, loans, EMIs, and rent. Set a Start date, an optional End date, and how often it repeats (Monthly, Alternate month, Quarterly, Half-yearly, Once a year). Every field auto-saves as you edit -- there's no Save button to click.</p>
-              <p><strong>Expenses this month</strong> is always visible below the tabs so you can see what's been logged without switching tabs.</p>
-              <p><strong>Spending by category</strong> chart -- toggle between Pie and Bar. The totals cards above show your combined income, combined expenses (split into Regular vs Fixed), and what's left of your budget.</p>
-              <p><strong>Budget settings</strong> -- set your total monthly budget, add/rename categories, and set optional per-category budget caps (you'll get a warning banner if you go over).</p>
+              <p><strong>Income</strong> -- add each income source per month (e.g. Salary). Income does NOT roll over automatically -- since pay can change month to month (deductions, advances, etc.), add a fresh row each month with that month's actual amount, or edit an existing row's Month field forward. Every field auto-saves.</p>
+              <p><strong>Fixed Expenses</strong> -- for recurring bills, loans, EMIs, and rent. Set a Start date, an optional End date, and how often it repeats (Monthly, Alternate month, Quarterly, Half-yearly, Once a year). Every field auto-saves as you edit -- there's no Save button to click.</p>
+              <p><strong>Expenses this month</strong> is always visible below the tabs so you can see what's been logged without switching tabs. It also auto-saves.</p>
+              <p><strong>Spending by category</strong> chart -- toggle between Pie, Bar, and Pareto. The totals cards above show your combined income, combined expenses (split into Regular vs Fixed), and what's left of your budget.</p>
+              <p><strong>Settings</strong> -- set your total monthly budget, currency, add/rename categories, and set optional per-category budget caps (you'll get a warning banner if you go over).</p>
               <p><strong>Users</strong> -- see who's active in the household and who's been invited but hasn't joined yet. Owners can invite new members and change their relation label.</p>
-              <p>All figures use your household's chosen currency, set in Budget settings.</p>
+              <p>All figures use your household's chosen currency, set in Settings.</p>
             </div>
           </div>
           )}
@@ -1202,7 +1264,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           {activePanel === 'settings' && (
           <div className="panel" ref={panelRef}>
               <div>
-                <h2>Budget settings</h2>
+                <h2>Settings</h2>
                 <div className="row" style={{ marginBottom: 12 }}>
                   <div className="field">
                     <label>Total monthly budget</label>

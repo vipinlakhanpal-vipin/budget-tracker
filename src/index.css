@@ -93,6 +93,18 @@ td.amount { font-weight: 600; text-align: right; }
 .del { cursor: pointer; color: var(--muted); border: none; background: none; font-size: 14px; }
 .del:hover { color: var(--danger); }
 
+/* Compact rows for the Users list -- tighter vertical spacing than the data
+   tables since these rows are just short status lines, not editable fields. */
+.users-table { font-size: 12px; }
+.users-table td { padding: 5px 4px; line-height: 1.3; }
+.users-table .status-pill {
+  display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 10px;
+  font-weight: 700; text-transform: uppercase; letter-spacing: .02em;
+}
+.status-pill.active { background: var(--accent-light); color: var(--accent); }
+.status-pill.pending { background: #fef3c7; color: #92400e; }
+.status-pill.rejected { background: var(--danger-bg); color: var(--danger); }
+
 /* Tables inside panels use table-layout:fixed so columns share the panel's
    full width instead of each input/select claiming its own intrinsic size
    and forcing the row wider than the panel (which is what was causing the
