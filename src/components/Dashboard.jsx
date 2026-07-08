@@ -177,17 +177,15 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   });
   const [recurringDrafts, setRecurringDrafts] = useState({});
 
-  // Savings goals -- how much the household wants to set aside each month
-  // (or other frequency), tracked the same way as Fixed Expenses (name,
-  // amount, start/end date, repeat frequency) but kept in a separate table
-  // since it's money being put aside, not spent.
+  // Savings goals -- how much the household wants to set aside each month.
+  // Entered per month on purpose, exactly like Income (no auto-rollover) --
+  // savings amounts often change month to month, so re-entering a fresh
+  // value each month avoids silently counting last month's amount again.
   const [savingsGoals, setSavingsGoals] = useState([]);
   const [newSaving, setNewSaving] = useState({
     name: '',
     amount: '',
-    startDate: new Date().toISOString().slice(0, 10),
-    endDate: '',
-    frequency: 'monthly',
+    month: monthKey(new Date()),
   });
   const [savingsDrafts, setSavingsDrafts] = useState({});
 
@@ -220,6 +218,11 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   // load on.
   useEffect(() => {
     setNewIncome((i) => ({ ...i, month: monthKey(currentMonth) }));
+  }, [currentMonth]);
+
+  // Same idea for the "Add saving" form's default Month field.
+  useEffect(() => {
+    setNewSaving((s) => ({ ...s, month: monthKey(currentMonth) }));
   }, [currentMonth]);
 
   // Seed the "My details" self-edit fields from the signed-in user's own
@@ -403,9 +406,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       sDrafts[s.id] = {
         name: s.name,
         amount: String(s.amount),
-        startDate: s.start_date,
-        endDate: s.end_date || '',
-        frequency: s.frequency || 'monthly',
+        month: s.start_date.slice(0, 7),
       };
     });
     setSavingsDrafts(sDrafts);
@@ -450,11 +451,11 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     return recurringExpenses.filter((r) => recurringOccursInMonth(r, key));
   }, [recurringExpenses, currentMonth]);
 
-  // Savings goals occurring in the currently viewed month -- same start/end
-  // date + frequency logic as Fixed Expenses, just against a separate table.
+  // Savings entered for the currently viewed month -- exact month match, no
+  // auto-rollover, same as Income (see newIncome/incomeForMonth above).
   const savingsForMonth = useMemo(() => {
     const key = monthKey(currentMonth);
-    return savingsGoals.filter((s) => recurringOccursInMonth(s, key));
+    return savingsGoals.filter((s) => s.active && s.start_date.slice(0, 7) === key);
   }, [savingsGoals, currentMonth]);
   const savingsTotal = useMemo(() => savingsForMonth.reduce((s, g) => s + Number(g.amount), 0), [savingsForMonth]);
 
@@ -714,32 +715,30 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   async function handleAddSaving(e) {
     e.preventDefault();
     const amount = parseFloat(newSaving.amount);
-    if (!newSaving.name.trim() || isNaN(amount) || amount <= 0 || !newSaving.startDate) {
-      alert('Please fill in name, amount, and start date.');
+    if (!newSaving.name.trim() || isNaN(amount) || amount <= 0 || !newSaving.month) {
+      alert('Please fill in a name, amount, and month.');
       return;
     }
     const { error } = await supabase.from('savings_goals').insert({
       household_id: householdId,
       name: newSaving.name.trim(),
       amount,
-      start_date: newSaving.startDate,
-      end_date: newSaving.endDate || null,
-      frequency: newSaving.frequency,
+      start_date: newSaving.month + '-01',
+      end_date: null,
       created_by: session.user.id,
     });
     if (error) {
       alert('Could not save: ' + error.message);
       return;
     }
-    setNewSaving((s) => ({ ...s, name: '', amount: '', endDate: '' }));
+    setNewSaving((s) => ({ ...s, name: '', amount: '' }));
     loadAll();
   }
 
-  // Auto-saves on blur (name/amount) or immediately on change (dates/select),
-  // same pattern as Fixed Expenses. Uses an optimistic local state update
-  // instead of loadAll() after commit -- see the comment on
-  // commitMyDetailsField above for why: refetching the whole list on every
-  // field blur can interrupt someone still tabbing through the row.
+  // Savings rows auto-save like Income -- text/number fields commit on blur,
+  // the Month field commits immediately on change. No Save button, and no
+  // frequency/end date -- entered fresh each month on purpose (see the
+  // comment on savingsGoals above).
   function updateSavingDraftField(id, field, value) {
     setSavingsDrafts((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
   }
@@ -747,16 +746,15 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   async function commitSavingField(id, field, value) {
     const merged = { ...(savingsDrafts[id] || {}), [field]: value };
     setSavingsDrafts((prev) => ({ ...prev, [id]: merged }));
-    if (!merged.name?.trim() || !merged.startDate) return;
+    if (!merged.name?.trim() || !merged.month) return;
     const amount = parseFloat(merged.amount);
     const { error } = await supabase
       .from('savings_goals')
       .update({
         name: merged.name.trim(),
         amount: isNaN(amount) ? 0 : amount,
-        start_date: merged.startDate,
-        end_date: merged.endDate || null,
-        frequency: merged.frequency || 'monthly',
+        start_date: merged.month + '-01',
+        end_date: null,
       })
       .eq('id', id);
     if (error) {
@@ -766,7 +764,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     setSavingsGoals((prev) =>
       prev.map((s) =>
         s.id === id
-          ? { ...s, name: merged.name.trim(), amount: isNaN(amount) ? 0 : amount, start_date: merged.startDate, end_date: merged.endDate || null, frequency: merged.frequency || 'monthly' }
+          ? { ...s, name: merged.name.trim(), amount: isNaN(amount) ? 0 : amount, start_date: merged.month + '-01', end_date: null }
           : s
       )
     );
@@ -928,18 +926,14 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       });
     });
 
-    // Savings goals use the same recurring-occurrence logic as Fixed
-    // Expenses -- one row per month a goal is actually active within the
-    // chosen range, so a goal that started mid-range or ended early is
-    // counted the right number of times.
-    const rangeSavingsOccurrences = [];
-    rangeMonths.forEach((mKey) => {
-      savingsGoals.forEach((s) => {
-        if (recurringOccursInMonth(s, mKey)) {
-          rangeSavingsOccurrences.push({ ...s, occurredMonth: mKey });
-        }
-      });
-    });
+    // Savings is entered per month on purpose (no auto-rollover, same as
+    // Income) -- so a goal only counts toward the months it was actually
+    // entered for, via an exact month-range match rather than a recurrence
+    // walk. "occurredMonth" is kept on each row so the rest of this page's
+    // sorting/grouping logic below doesn't need to change.
+    const rangeSavingsOccurrences = savingsGoals
+      .filter((s) => s.active && s.start_date.slice(0, 7) >= fromMonth && s.start_date.slice(0, 7) <= toMonth)
+      .map((s) => ({ ...s, occurredMonth: s.start_date.slice(0, 7) }));
 
     const expenseTotal = rangeExpenses.reduce((s, e) => s + Number(e.amount), 0);
     const incomeTotal = rangeIncomes.reduce((s, i) => s + Number(i.amount), 0);
@@ -1951,52 +1945,35 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 />
               </div>
               <div className="field">
-                <label>Start date</label>
+                <label>Month</label>
                 <input
-                  type="date"
-                  value={newSaving.startDate}
-                  onChange={(e) => setNewSaving({ ...newSaving, startDate: e.target.value })}
+                  type="month"
+                  value={newSaving.month}
+                  onChange={(e) => setNewSaving({ ...newSaving, month: e.target.value })}
                 />
-              </div>
-              <div className="field">
-                <label>End date (optional)</label>
-                <input
-                  type="date"
-                  value={newSaving.endDate}
-                  onChange={(e) => setNewSaving({ ...newSaving, endDate: e.target.value })}
-                />
-              </div>
-              <div className="field">
-                <label>Repeats</label>
-                <select
-                  value={newSaving.frequency}
-                  onChange={(e) => setNewSaving({ ...newSaving, frequency: e.target.value })}
-                >
-                  {FREQUENCIES.map((f) => (
-                    <option key={f.value} value={f.value}>{f.label}</option>
-                  ))}
-                </select>
               </div>
             </div>
             <div style={{ marginTop: 12 }}>
               <button className="btn" type="submit">Add</button>
             </div>
             </form>
+            <div className="muted-small" style={{ marginTop: 6 }}>
+              Savings is entered per month on purpose -- it won't automatically carry over, exactly like Income. The list below only shows entries for {monthLabel(currentMonth)}; add a new row for each new month. Since it's money leaving your income, it's included in "Spent so far" and "Combined expenses" above and reduces "Remaining"/"Net" -- it also gets its own report page.
+            </div>
 
-            {savingsGoals.length === 0 ? (
-              <div className="empty">No savings goals added yet -- set how much you'd like to save each month above.</div>
+            {savingsForMonth.length === 0 ? (
+              <div className="empty">No savings added for {monthLabel(currentMonth)} yet.</div>
             ) : (
               <div className="table-scroll">
               <table className="responsive-table" style={{ marginTop: 14, fontSize: 12 }}>
                 <colgroup>
-                  <col style={{ width: '24%' }} /><col style={{ width: '14%' }} /><col style={{ width: '18%' }} />
-                  <col style={{ width: '18%' }} /><col style={{ width: '18%' }} /><col style={{ width: '8%' }} />
+                  <col style={{ width: '32%' }} /><col style={{ width: '24%' }} /><col style={{ width: '24%' }} /><col style={{ width: '10%' }} />
                 </colgroup>
                 <thead>
-                  <tr><th>Name</th><th>Amount</th><th>Start</th><th>End</th><th>Repeats</th><th></th></tr>
+                  <tr><th>Name</th><th>Amount</th><th>Month</th><th></th></tr>
                 </thead>
                 <tbody>
-                  {savingsGoals.map((s) => (
+                  {savingsForMonth.map((s) => (
                     <tr key={s.id}>
                       <td data-label="Name">
                         <input
@@ -2018,34 +1995,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           onBlur={(e) => commitSavingField(s.id, 'amount', e.target.value)}
                         />
                       </td>
-                      <td data-label="Start">
+                      <td data-label="Month">
                         <input
-                          type="date"
+                          type="month"
                           style={{ width: 130, fontSize: 11 }}
-                          value={savingsDrafts[s.id]?.startDate ?? ''}
-                          onChange={(e) => updateSavingDraftField(s.id, 'startDate', e.target.value)}
-                          onBlur={(e) => commitSavingField(s.id, 'startDate', e.target.value)}
+                          value={savingsDrafts[s.id]?.month ?? ''}
+                          onChange={(e) => commitSavingField(s.id, 'month', e.target.value)}
                         />
-                      </td>
-                      <td data-label="End">
-                        <input
-                          type="date"
-                          style={{ width: 130, fontSize: 11 }}
-                          value={savingsDrafts[s.id]?.endDate ?? ''}
-                          onChange={(e) => updateSavingDraftField(s.id, 'endDate', e.target.value)}
-                          onBlur={(e) => commitSavingField(s.id, 'endDate', e.target.value)}
-                        />
-                      </td>
-                      <td data-label="Repeats">
-                        <select
-                          style={{ fontSize: 12 }}
-                          value={savingsDrafts[s.id]?.frequency ?? 'monthly'}
-                          onChange={(e) => commitSavingField(s.id, 'frequency', e.target.value)}
-                        >
-                          {FREQUENCIES.map((f) => (
-                            <option key={f.value} value={f.value}>{f.label}</option>
-                          ))}
-                        </select>
                       </td>
                       <td><button className="del" onClick={() => handleDeleteSaving(s.id, s.name)}>x</button></td>
                     </tr>
@@ -2054,9 +2010,6 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               </table>
               </div>
             )}
-            <div className="muted-small" style={{ marginTop: 6 }}>
-              Changes save automatically. Savings counts as money leaving your income, so it's included in "Spent so far" and "Combined expenses" above and reduces "Remaining"/"Net" -- it also gets its own report page.
-            </div>
             {savingsForMonth.length > 0 && (
               <div className="muted-small" style={{ marginTop: 10 }}>
                 {fmt(savingsTotal)} in planned savings for {monthLabel(currentMonth)}.
@@ -2166,14 +2119,14 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             {pieData.length === 0 ? (
               <div className="empty">Add an expense to see the breakdown.</div>
             ) : chartType === 'pie' ? (
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={340}>
                 <PieChart margin={{ top: 24, right: 20, bottom: 0, left: 20 }}>
                   <Pie
                     data={pieData}
                     dataKey="value"
                     nameKey="name"
                     cy="52%"
-                    outerRadius={62}
+                    outerRadius={80}
                     isAnimationActive={false}
                     label={{ fontSize: 9, fill: 'var(--text)' }}
                   >
@@ -2472,7 +2425,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <p><strong>Add an expense</strong> -- log one-off spending (groceries, dining, shopping). Pick the date, category, a short description, and the amount, then Add. It appears under "Expenses this month" and is always editable there -- just type into a field and it saves.</p>
               <p><strong>Income</strong> -- add each income source per month (e.g. Salary). Income does NOT roll over automatically -- since pay can change month to month (deductions, advances, etc.), add a fresh row each month with that month's actual amount, or edit an existing row's Month field forward. Every field auto-saves.</p>
               <p><strong>Fixed Expenses</strong> -- for recurring bills, loans, EMIs, and rent. Set a Start date, an optional End date, and how often it repeats (Monthly, Alternate month, Quarterly, Half-yearly, Once a year). Every field auto-saves as you edit -- there's no Save button to click. Set a Due date to get an in-app reminder starting 3 days before it's due, and an email reminder if it's set up.</p>
-              <p><strong>Savings</strong> -- set how much you'd like to set aside each month (or other frequency) -- e.g. "Emergency fund" or "Investment". Works exactly like Fixed Expenses (Name, Amount, Start/End date, Repeats). Since money you set aside is no longer available to spend, it's treated the same as an expense: it's counted in "Spent so far" and "Combined expenses", and subtracted in "Remaining" and "Net", in addition to getting its own page in the PDF report so you can see planned savings build up over time.</p>
+              <p><strong>Savings</strong> -- set how much you'd like to set aside for the month, e.g. "Emergency fund" or "Investment". Works exactly like Income: entered fresh per month with no auto-rollover, since the amount you're able to save can change month to month -- add a new row each month, or edit an existing row's Month field forward. Since money you set aside is no longer available to spend, it's treated the same as an expense: it's counted in "Spent so far" and "Combined expenses", and subtracted in "Remaining" and "Net", in addition to getting its own page in the PDF report so you can see planned savings build up over time.</p>
               <p><strong>Expenses this month</strong> is always visible below the tabs so you can see what's been logged without switching tabs. It also auto-saves.</p>
               <p><strong>Spending by category</strong> chart -- toggle between Pie, Bar, and Pareto. The totals cards above show your combined income, combined expenses (split into Regular, Fixed, and Savings), and what's left of your budget and income after all three are accounted for.</p>
               <p><strong>Report</strong> -- generate a PDF for any date range, then download it or email it. It has 5 pages: (1) Overview -- a bar chart of spending by category plus a summary of income, expenses, savings, and net (income minus expenses and savings); (2) Income & Expenses -- full itemized lists with totals; (3) Fixed Expenses -- every recurring bill occurrence in the range, with a total; (4) Savings -- your savings goals by month, with a total; (5) Spend Analysis -- a Pareto chart (with a total row) showing which categories drive 80% of your spending, plus a few data-driven suggestions on where to cut back.</p>
