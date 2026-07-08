@@ -2146,31 +2146,49 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             {pieData.length === 0 ? (
               <div className="empty">Add an expense to see the breakdown.</div>
             ) : chartType === 'pie' ? (
-              <ResponsiveContainer width="100%" height={340}>
-                <PieChart margin={{ top: 24, right: 20, bottom: 0, left: 20 }}>
+              // Height grows with the number of categories so the legend below
+              // the pie has room to wrap onto extra rows instead of overlapping
+              // the slices -- this is what got "clumsy" once there were more
+              // than 6-7 categories. Slice labels only show a percentage (and
+              // only for slices big enough to read, >=4%) instead of the full
+              // name, since the Legend below already lists every name -- with
+              // many slices, printing full names right on the pie is what
+              // caused the overlapping-label clutter.
+              <ResponsiveContainer width="100%" height={Math.max(340, 300 + Math.ceil(pieData.length / 4) * 22)}>
+                <PieChart margin={{ top: 20, right: 20, bottom: 0, left: 20 }}>
                   <Pie
                     data={pieData}
                     dataKey="value"
                     nameKey="name"
-                    cy="52%"
-                    outerRadius={80}
+                    cy="46%"
+                    outerRadius={90}
                     isAnimationActive={false}
-                    label={{ fontSize: 9, fill: 'var(--text)' }}
+                    label={({ percent }) => (percent >= 0.04 ? `${Math.round(percent * 100)}%` : '')}
+                    labelLine={false}
                   >
                     {pieData.map((_, i) => (
                       <Cell key={i} fill={COLORS[i % COLORS.length]} />
                     ))}
                   </Pie>
                   <Tooltip formatter={(v) => fmt(v)} />
-                  <Legend wrapperStyle={{ fontSize: 10 }} />
+                  <Legend
+                    wrapperStyle={{ fontSize: 10, lineHeight: '18px', paddingTop: 10 }}
+                    iconSize={8}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             ) : chartType === 'bar' ? (
               <ResponsiveContainer width="100%" height={Math.max(260, pieData.length * 40)}>
-                <BarChart data={pieData} layout="vertical" margin={{ top: 5, right: 55, left: 10, bottom: 5 }} barCategoryGap="40%">
+                <BarChart data={pieData} layout="vertical" margin={{ top: 5, right: 60, left: 10, bottom: 5 }} barCategoryGap="40%">
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                   <XAxis type="number" tick={{ fontSize: 9 }} hide />
-                  <YAxis type="category" dataKey="name" width={95} tick={{ fontSize: 9 }} />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    width={110}
+                    tick={{ fontSize: 9 }}
+                    tickFormatter={(name) => (name.length > 15 ? name.slice(0, 15) + '…' : name)}
+                  />
                   <Tooltip formatter={(v) => fmt(v)} />
                   <Bar dataKey="value" barSize={9} radius={[0, 3, 3, 0]} isAnimationActive={false}>
                     {pieData.map((_, i) => (
@@ -2181,45 +2199,55 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <ResponsiveContainer width="100%" height={320}>
-                <ComposedChart data={paretoData} margin={{ top: 20, right: 30, left: 0, bottom: 45 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="name"
-                    tick={{ fontSize: 9 }}
-                    interval={0}
-                    angle={-35}
-                    textAnchor="end"
-                    height={60}
-                  />
-                  <YAxis yAxisId="left" tick={{ fontSize: 9 }} width={40} />
-                  <YAxis
-                    yAxisId="right"
-                    orientation="right"
-                    domain={[0, 100]}
-                    tickFormatter={(v) => v + '%'}
-                    tick={{ fontSize: 9 }}
-                    width={34}
-                  />
-                  <Tooltip
-                    formatter={(v, key) => (key === 'cumulative' ? v + '%' : fmt(v))}
-                  />
-                  <Bar yAxisId="left" dataKey="value" barSize={22} isAnimationActive={false}>
-                    {paretoData.map((_, i) => (
-                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                    ))}
-                  </Bar>
-                  <Line
-                    yAxisId="right"
-                    type="monotone"
-                    dataKey="cumulative"
-                    stroke="#dc2626"
-                    strokeWidth={2}
-                    dot={{ r: 3 }}
-                    isAnimationActive={false}
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
+              // Horizontally scrollable with a fixed width-per-category, so
+              // adding more expense categories over time gives each bar/label
+              // consistent breathing room instead of squeezing everything
+              // into a fixed-width chart (which is what made labels collide
+              // once there were more than ~6 categories).
+              <div style={{ overflowX: 'auto' }}>
+                <div style={{ minWidth: Math.max(340, paretoData.length * 72) }}>
+                  <ResponsiveContainer width="100%" height={340}>
+                    <ComposedChart data={paretoData} margin={{ top: 20, right: 30, left: 0, bottom: 55 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="name"
+                        tick={{ fontSize: 9 }}
+                        interval={0}
+                        angle={-40}
+                        textAnchor="end"
+                        height={70}
+                        tickFormatter={(name) => (name.length > 14 ? name.slice(0, 14) + '…' : name)}
+                      />
+                      <YAxis yAxisId="left" tick={{ fontSize: 9 }} width={40} />
+                      <YAxis
+                        yAxisId="right"
+                        orientation="right"
+                        domain={[0, 100]}
+                        tickFormatter={(v) => v + '%'}
+                        tick={{ fontSize: 9 }}
+                        width={34}
+                      />
+                      <Tooltip
+                        formatter={(v, key) => (key === 'cumulative' ? v + '%' : fmt(v))}
+                      />
+                      <Bar yAxisId="left" dataKey="value" barSize={22} isAnimationActive={false}>
+                        {paretoData.map((_, i) => (
+                          <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                        ))}
+                      </Bar>
+                      <Line
+                        yAxisId="right"
+                        type="monotone"
+                        dataKey="cumulative"
+                        stroke="#dc2626"
+                        strokeWidth={2}
+                        dot={{ r: 3 }}
+                        isAnimationActive={false}
+                      />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
             )}
           </div>
 
