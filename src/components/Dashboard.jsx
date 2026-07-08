@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, LabelList,
-  ComposedChart, Line,
+  ComposedChart, Line, Treemap,
 } from 'recharts';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -78,6 +78,32 @@ function DirhamBarLabel(props) {
       <line x1={startX - 1} y1={cy - 2.5} x2={startX + 6.5} y2={cy - 2.5} stroke="#0f2a2e" strokeWidth={1} />
       <line x1={startX - 1} y1={cy + 2.5} x2={startX + 6.5} y2={cy + 2.5} stroke="#0f2a2e" strokeWidth={1} />
       <text x={startX + 10} y={cy} dy={3.5} fontSize={10} fill="#0f2a2e">{numStr}</text>
+    </g>
+  );
+}
+
+// Treemap tile renderer -- each category gets a box sized by how much was
+// spent, colored from the same palette as the other charts. Unlike a pie
+// slice, a treemap box has room to print its own label directly inside it,
+// so nothing overlaps regardless of how many categories there are -- boxes
+// too small to hold readable text (the tiny "long tail" categories) simply
+// render as an unlabeled colored tile instead of cramming text in, which is
+// exactly the clutter a many-category pie chart runs into.
+function TreemapTile(props) {
+  const { x, y, width, height, index, name, value } = props;
+  const color = COLORS[index % COLORS.length];
+  const canLabel = width > 46 && height > 24;
+  const canShowValue = width > 60 && height > 40;
+  const label = name && name.length > 14 ? name.slice(0, 14) + '…' : name;
+  return (
+    <g>
+      <rect x={x} y={y} width={width} height={height} style={{ fill: color, stroke: '#fff', strokeWidth: 1.5 }} />
+      {canLabel && (
+        <text x={x + 6} y={y + 16} fontSize={10.5} fontWeight={700} fill="#fff">{label}</text>
+      )}
+      {canShowValue && (
+        <text x={x + 6} y={y + 30} fontSize={9} fill="#fff" fillOpacity={0.9}>{fmt(value)}</text>
+      )}
     </g>
   );
 }
@@ -525,6 +551,21 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
   const pieData = Object.entries(byCategory).map(([name, value]) => ({ name, value }));
 
+  // The pie chart specifically (not Bar/Pareto/Treemap) gets capped to its
+  // biggest slices with everything else folded into "Other". A pie is the
+  // one chart type where every extra category makes EVERY slice harder to
+  // read (more slivers competing for the same ring of space), so this is
+  // what actually fixes clutter -- shrinking or resizing the chart doesn't,
+  // since the underlying problem is too many slices, not too little room.
+  const PIE_TOP_N = 6;
+  const pieChartData = useMemo(() => {
+    if (pieData.length <= PIE_TOP_N) return pieData;
+    const sorted = [...pieData].sort((a, b) => b.value - a.value);
+    const top = sorted.slice(0, PIE_TOP_N);
+    const otherTotal = sorted.slice(PIE_TOP_N).reduce((s, d) => s + d.value, 0);
+    return otherTotal > 0 ? [...top, { name: 'Other', value: otherTotal }] : top;
+  }, [pieData]);
+
   // Pareto = categories sorted highest-spend-first with a running cumulative
   // percentage line overlaid, so it's easy to see which categories make up
   // the bulk (e.g. 80%) of this month's spending.
@@ -538,6 +579,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [byCategory]);
+
+  // Pareto bar thickness/label size shrink as the category count grows, so
+  // every category always fits within the chart's own width -- no horizontal
+  // scrolling needed regardless of how many categories exist.
+  const paretoBarSize = Math.max(6, Math.min(22, Math.floor(260 / Math.max(paretoData.length, 1))));
+  const paretoFontSize = paretoData.length > 14 ? 7 : paretoData.length > 9 ? 8 : 9;
+  const paretoMaxNameLen = paretoData.length > 14 ? 6 : paretoData.length > 9 ? 9 : 14;
 
   async function handleAddExpense(e) {
     e.preventDefault();
@@ -1031,8 +1079,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       margin: { left: M, right: M },
     };
 
-    // ---------- Page 1: Overview -- bar chart + summary ----------
-    let y = drawHeader(1, 'Overview');
+    // ---------- Page 1: Category Breakdown -- bar chart only ----------
+    // The bar chart now gets a page to itself, and its row height/gap and
+    // label font size shrink as the category count grows -- so it always
+    // fits on this one page no matter how many expense categories get added
+    // over time, instead of competing for space with the summary table
+    // (which used to share this page) or overflowing off the bottom.
+    let y = drawHeader(1, 'Category Breakdown');
 
     drawEyebrow('Spending Breakdown', y);
     y += 7;
@@ -1047,32 +1100,44 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       doc.setTextColor(120);
       doc.text('No expenses in this period.', M, y);
       doc.setTextColor(0);
-      y += 10;
     } else {
       const maxVal = Math.max(...chartRows.map(([, v]) => v)) || 1;
       const labelX = M;
       const barX = M + 48;
       const barMaxWidth = pageWidth - barX - M - 26;
-      const barHeight = 6;
-      const rowGap = 3.5;
+      const usableHeight = 258 - y;
+      const rowUnit = Math.min(9.5, Math.max(2.6, usableHeight / chartRows.length));
+      const barHeight = Math.max(1.6, rowUnit * 0.63);
+      const rowGap = Math.max(0.7, rowUnit * 0.37);
+      const labelFontSize = chartRows.length > 30 ? 6 : chartRows.length > 18 ? 7.5 : 8.5;
+      const labelMaxLen = chartRows.length > 30 ? 14 : chartRows.length > 18 ? 17 : 20;
       chartRows.forEach(([name, val], i) => {
+        // Shrinking only goes so far before bars get unreadably thin -- once
+        // an extreme number of categories exists (well beyond a typical
+        // household's list), spill onto a fresh page instead of drawing
+        // past the bottom margin.
+        if (y > 268) { doc.addPage(); y = drawHeader(1, 'Category Breakdown'); }
         const barWidth = Math.max(1, (val / maxVal) * barMaxWidth);
         const [r, g, b] = hexToRgb(COLORS[i % COLORS.length]);
         doc.setFillColor(245, 246, 248);
         doc.roundedRect(barX, y, barMaxWidth, barHeight, 1, 1, 'F');
         doc.setFillColor(r, g, b);
         doc.roundedRect(barX, y, barWidth, barHeight, 1, 1, 'F');
-        doc.setFontSize(8.5);
+        doc.setFontSize(labelFontSize);
         doc.setTextColor(50);
-        const label = name.length > 20 ? name.slice(0, 20) + '...' : name;
-        doc.text(label, labelX, y + barHeight - 1.3);
+        const label = name.length > labelMaxLen ? name.slice(0, labelMaxLen) + '...' : name;
+        const textY = y + barHeight - Math.min(1.3, barHeight * 0.3);
+        doc.text(label, labelX, textY);
         doc.setFont(undefined, 'bold');
-        doc.text(fmt(val), barX + barMaxWidth + 3, y + barHeight - 1.3);
+        doc.text(fmt(val), barX + barMaxWidth + 3, textY);
         doc.setFont(undefined, 'normal');
         y += barHeight + rowGap;
       });
-      y += 10;
     }
+
+    // ---------- Page 2: Summary -- "At A Glance" totals ----------
+    doc.addPage();
+    y = drawHeader(2, 'Summary');
 
     drawEyebrow('At A Glance', y);
     y += 7;
@@ -1106,9 +1171,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       },
     });
 
-    // ---------- Page 2: Income & Expenses ----------
+    // ---------- Page 3: Income ----------
+    // Income and Expenses each now get their own dedicated page (previously
+    // they shared one page, which -- combined with the bar chart on page 1
+    // already showing per-category expense totals -- made it look like
+    // expenses were being shown twice across two pages).
     doc.addPage();
-    y = drawHeader(2, 'Income & Expenses');
+    y = drawHeader(3, 'Income');
 
     drawEyebrow('Money In', y);
     y += 7;
@@ -1126,9 +1195,11 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       headStyles: { fillColor: [14, 165, 233] },
       footStyles: { fillColor: [226, 240, 250], textColor: [15, 42, 46], fontStyle: 'bold' },
     });
-    y = doc.lastAutoTable.finalY + 14;
 
-    if (y > 230) { doc.addPage(); y = drawHeader(2, 'Income & Expenses'); }
+    // ---------- Page 4: Expenses ----------
+    doc.addPage();
+    y = drawHeader(4, 'Expenses');
+
     drawEyebrow('Money Out', y);
     y += 7;
     doc.setFontSize(13);
@@ -1146,9 +1217,9 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       footStyles: { fillColor: [253, 237, 224], textColor: [15, 42, 46], fontStyle: 'bold' },
     });
 
-    // ---------- Page 3: Fixed Expenses ----------
+    // ---------- Page 5: Fixed Expenses ----------
     doc.addPage();
-    y = drawHeader(3, 'Fixed Expenses');
+    y = drawHeader(5, 'Fixed Expenses');
 
     drawEyebrow('Recurring Bills', y);
     y += 7;
@@ -1182,13 +1253,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       });
     }
 
-    // ---------- Page 4: Savings -- month-wise, with a total ----------
+    // ---------- Page 6: Savings -- month-wise, with a total ----------
     // Mirrors the Fixed Expenses page above but for planned savings: one row
     // per month a savings goal is active within the selected range, plus a
     // running total, so the household can see how much they've committed to
     // (or actually set aside) across the whole period at a glance.
     doc.addPage();
-    y = drawHeader(4, 'Savings');
+    y = drawHeader(6, 'Savings');
 
     drawEyebrow('Money Set Aside', y);
     y += 7;
@@ -1221,7 +1292,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     // A quick month-by-month summary total makes it easy to see at a glance
     // how savings build up across the range, not just the grand total.
     if (rangeMonths.length > 1 && rangeSavingsOccurrences.length > 0) {
-      if (y > 250) { doc.addPage(); y = drawHeader(4, 'Savings'); }
+      if (y > 250) { doc.addPage(); y = drawHeader(6, 'Savings'); }
       drawEyebrow('Month By Month', y);
       y += 7;
       doc.setFontSize(13);
@@ -1245,14 +1316,14 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       });
     }
 
-    // ---------- Page 5: Spend Analysis -- Pareto chart + suggestions ----------
+    // ---------- Page 7: Spend Analysis -- Pareto chart + suggestions ----------
     // A dedicated closing page: the same category totals as the page 1 bar
     // chart, but sorted and annotated with a running cumulative-% so it's
     // obvious which categories are the "vital few" driving most of the
     // spend (the 80/20 rule), plus a short set of data-driven suggestions
     // on where to focus efforts to bring spending under control.
     doc.addPage();
-    y = drawHeader(5, 'Spend Analysis');
+    y = drawHeader(7, 'Spend Analysis');
 
     drawEyebrow('80/20 Breakdown', y);
     y += 7;
@@ -1299,8 +1370,19 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       const amtX = cumX - cumColWidth; // right edge of the Amount column
       const amtColWidth = 30; // wide enough for "AED 12,880.00"
       const barMaxWidth = amtX - amtColWidth - barX;
-      const barHeight = 6;
-      const rowGap = 4.5;
+      // Row height/label size shrink as the category count grows (mirrors
+      // the page 1 bar chart), and everything drawn after the bars -- the
+      // total row, the vital-few sentence, the Recommendations heading, and
+      // each suggestion -- checks the remaining space and starts a fresh
+      // page instead of running into the footer. That missing space check
+      // is what previously caused text at the bottom of this page to
+      // overlap the footer / next section.
+      const usableHeight = 228 - y;
+      const rowUnit = Math.min(11, Math.max(3, usableHeight / paretoRows.length));
+      const barHeight = Math.max(1.8, rowUnit * 0.6);
+      const rowGap = Math.max(0.8, rowUnit * 0.4);
+      const labelFontSize = paretoRows.length > 24 ? 6 : paretoRows.length > 14 ? 7.5 : 8.5;
+      const labelMaxLen = paretoRows.length > 24 ? 12 : paretoRows.length > 14 ? 15 : 18;
       doc.setFontSize(7);
       doc.setFont(undefined, 'bold');
       doc.setTextColor(140);
@@ -1309,6 +1391,10 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       doc.setTextColor(0);
       doc.setFont(undefined, 'normal');
       paretoRows.forEach((r, i) => {
+        // Same extreme-case safeguard as the page 1 bar chart: once shrinking
+        // hits its readable floor, spill onto a fresh page rather than
+        // drawing past the bottom margin.
+        if (y > 262) { doc.addPage(); y = drawHeader(7, 'Spend Analysis'); }
         const isVitalFew = r.cumPct <= 80 || i === 0;
         const barWidth = Math.max(1, (r.val / maxVal) * barMaxWidth);
         const [vr, vg, vb] = hexToRgb('#0d9488');
@@ -1317,14 +1403,15 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
         doc.roundedRect(barX, y, barMaxWidth, barHeight, 1, 1, 'F');
         if (isVitalFew) doc.setFillColor(vr, vg, vb); else doc.setFillColor(tr, tg, tb);
         doc.roundedRect(barX, y, barWidth, barHeight, 1, 1, 'F');
-        doc.setFontSize(8.5);
+        doc.setFontSize(labelFontSize);
         doc.setTextColor(50);
-        const label = r.name.length > 18 ? r.name.slice(0, 18) + '...' : r.name;
-        doc.text(label, labelX, y + barHeight - 1.3);
+        const label = r.name.length > labelMaxLen ? r.name.slice(0, labelMaxLen) + '...' : r.name;
+        const textY = y + barHeight - Math.min(1.3, barHeight * 0.3);
+        doc.text(label, labelX, textY);
         doc.setFont(undefined, 'bold');
-        doc.text(fmt(r.val), amtX, y + barHeight - 1.3, { align: 'right' });
+        doc.text(fmt(r.val), amtX, textY, { align: 'right' });
         doc.setTextColor(isVitalFew ? accentR : 150, isVitalFew ? accentG : 150, isVitalFew ? accentB : 150);
-        doc.text(`${Math.round(r.cumPct)}%`, cumX, y + barHeight - 1.3, { align: 'right' });
+        doc.text(`${Math.round(r.cumPct)}%`, cumX, textY, { align: 'right' });
         doc.setTextColor(0);
         doc.setFont(undefined, 'normal');
         y += barHeight + rowGap;
@@ -1332,6 +1419,9 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
       // Total row -- a divider plus the grand total of every figure in the
       // chart above, so the reader doesn't have to add up each bar by hand.
+      // Checked against remaining space first so it can never land on top of
+      // the page footer.
+      if (y > 262) { doc.addPage(); y = drawHeader(7, 'Spend Analysis'); }
       doc.setDrawColor(220, 224, 228);
       doc.line(barX, y, cumX, y);
       y += 6;
@@ -1343,17 +1433,23 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       doc.setFont(undefined, 'normal');
       y += 10;
 
+      if (y > 262) { doc.addPage(); y = drawHeader(7, 'Spend Analysis'); }
       doc.setFontSize(8);
       doc.setTextColor(120);
       const vitalFewLabel = vitalFewNames.length > 1
         ? `${vitalFewNames.slice(0, -1).join(', ')} and ${vitalFewNames[vitalFewNames.length - 1]}`
         : (vitalFewNames[0] || '');
-      doc.text(`${vitalFewNames.length} of ${paretoRows.length} categories (${vitalFewLabel}) make up about 80% of this period's spending.`, M, y, { maxWidth: pageWidth - 2 * M });
+      const vitalFewLines = doc.splitTextToSize(
+        `${vitalFewNames.length} of ${paretoRows.length} categories (${vitalFewLabel}) make up about 80% of this period's spending.`,
+        pageWidth - 2 * M
+      );
+      doc.text(vitalFewLines, M, y);
       doc.setTextColor(0);
-      y += 14;
+      y += vitalFewLines.length * 5 + 9;
     }
 
     // ---------- Suggestions -- generated from this report's own numbers ----------
+    if (y > 255) { doc.addPage(); y = drawHeader(7, 'Spend Analysis'); }
     drawEyebrow('Recommendations', y);
     y += 7;
     doc.setFontSize(13);
@@ -1400,7 +1496,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     }
 
     suggestions.forEach((s) => {
-      if (y > 265) { doc.addPage(); y = drawHeader(5, 'Spend Analysis'); }
+      if (y > 260) { doc.addPage(); y = drawHeader(7, 'Spend Analysis'); }
       doc.setFillColor(accentR, accentG, accentB);
       doc.circle(M + 1.2, y - 1.5, 1.2, 'F');
       doc.setFontSize(9.5);
@@ -1410,6 +1506,24 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       doc.setTextColor(0);
       y += lines.length * 5 + 6;
     });
+
+    // ---------- Data & privacy disclaimer -- always at the very end ----------
+    // A short, plain-language note on how this household's data is handled,
+    // shown as its own boxed callout at the close of the report (in addition
+    // to the shorter confidentiality line already on every page's footer).
+    const disclaimerText =
+      "Data & Privacy: The figures in this report are drawn directly from the data your household has entered into the Budget Tracker. This data is private to your household -- it is not visible to, or shared with, anyone outside your household's account, and it is not sold or provided to third parties. Once downloaded or emailed, this report becomes a standalone file outside the app, so please share it only with people you intend to see your household's financial information.";
+    const disclaimerLines = doc.splitTextToSize(disclaimerText, pageWidth - 2 * M - 12);
+    const disclaimerHeight = disclaimerLines.length * 4.2 + 14;
+    if (y + disclaimerHeight > 262) { doc.addPage(); y = drawHeader(7, 'Spend Analysis'); }
+    y += 6;
+    doc.setDrawColor(230, 234, 238);
+    doc.setFillColor(248, 250, 251);
+    doc.roundedRect(M, y, pageWidth - 2 * M, disclaimerHeight, 2, 2, 'FD');
+    doc.setFontSize(8);
+    doc.setTextColor(90);
+    doc.text(disclaimerLines, M + 6, y + 8);
+    doc.setTextColor(0);
 
     // Footer on every page: a thin rule, confidentiality note, and page count.
     const pageCount = doc.internal.getNumberOfPages();
@@ -2141,113 +2255,145 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 >
                   Pareto
                 </button>
+                <button
+                  className={`btn small ${chartType === 'treemap' ? '' : 'secondary'}`}
+                  onClick={() => setChartType('treemap')}
+                >
+                  Treemap
+                </button>
               </div>
             </div>
             {pieData.length === 0 ? (
               <div className="empty">Add an expense to see the breakdown.</div>
             ) : chartType === 'pie' ? (
-              // Height grows with the number of categories so the legend below
-              // the pie has room to wrap onto extra rows instead of overlapping
-              // the slices -- this is what got "clumsy" once there were more
-              // than 6-7 categories. Slice labels only show a percentage (and
-              // only for slices big enough to read, >=4%) instead of the full
-              // name, since the Legend below already lists every name -- with
-              // many slices, printing full names right on the pie is what
-              // caused the overlapping-label clutter.
-              <ResponsiveContainer width="100%" height={Math.max(340, 300 + Math.ceil(pieData.length / 4) * 22)}>
-                <PieChart margin={{ top: 20, right: 20, bottom: 0, left: 20 }}>
-                  <Pie
-                    data={pieData}
-                    dataKey="value"
-                    nameKey="name"
-                    cy="46%"
-                    outerRadius={90}
-                    isAnimationActive={false}
-                    label={({ percent }) => (percent >= 0.04 ? `${Math.round(percent * 100)}%` : '')}
-                    labelLine={false}
-                  >
-                    {pieData.map((_, i) => (
-                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(v) => fmt(v)} />
-                  <Legend
-                    wrapperStyle={{ fontSize: 10, lineHeight: '18px', paddingTop: 10 }}
-                    iconSize={8}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+              // Capped to the top PIE_TOP_N categories (see pieChartData) --
+              // with everything else folded into one "Other" slice -- since a
+              // pie chart is the one chart type where every extra category
+              // makes every OTHER slice harder to read too. Slice labels only
+              // show a percentage (and only for slices big enough to read,
+              // >=4%) instead of the full name, since the Legend below
+              // already lists every name.
+              <>
+                <ResponsiveContainer width="100%" height={360}>
+                  <PieChart margin={{ top: 20, right: 20, bottom: 0, left: 20 }}>
+                    <Pie
+                      data={pieChartData}
+                      dataKey="value"
+                      nameKey="name"
+                      cy="46%"
+                      outerRadius={95}
+                      isAnimationActive={false}
+                      label={({ percent }) => (percent >= 0.04 ? `${Math.round(percent * 100)}%` : '')}
+                      labelLine={false}
+                    >
+                      {pieChartData.map((_, i) => (
+                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(v) => fmt(v)} />
+                    <Legend
+                      wrapperStyle={{ fontSize: 10, lineHeight: '18px', paddingTop: 10 }}
+                      iconSize={8}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                {pieData.length > PIE_TOP_N && (
+                  <div className="muted-small" style={{ marginTop: 4 }}>
+                    Showing your top {PIE_TOP_N} categories -- the rest are grouped into "Other" to keep this readable. Switch to Treemap or Bar to see every category separately.
+                  </div>
+                )}
+              </>
             ) : chartType === 'bar' ? (
-              <ResponsiveContainer width="100%" height={Math.max(260, pieData.length * 40)}>
-                <BarChart data={pieData} layout="vertical" margin={{ top: 5, right: 60, left: 10, bottom: 5 }} barCategoryGap="40%">
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                  <XAxis type="number" tick={{ fontSize: 9 }} hide />
-                  <YAxis
-                    type="category"
-                    dataKey="name"
-                    width={110}
-                    tick={{ fontSize: 9 }}
-                    tickFormatter={(name) => (name.length > 15 ? name.slice(0, 15) + '…' : name)}
-                  />
+              // Shrunk considerably from the original version -- thinner bars
+              // (7px) and less vertical space per category (26px vs. the
+              // original 40px) so the chart takes up noticeably less room,
+              // with a scrollable cap once there are enough categories that
+              // it would otherwise grow very tall.
+              <div style={{ maxHeight: 380, overflowY: pieData.length > 13 ? 'auto' : 'visible' }}>
+                <ResponsiveContainer width="100%" height={Math.max(160, pieData.length * 26)}>
+                  <BarChart data={pieData} layout="vertical" margin={{ top: 5, right: 55, left: 10, bottom: 5 }} barCategoryGap="30%">
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                    <XAxis type="number" tick={{ fontSize: 8.5 }} hide />
+                    <YAxis
+                      type="category"
+                      dataKey="name"
+                      width={95}
+                      tick={{ fontSize: 8.5 }}
+                      tickFormatter={(name) => (name.length > 13 ? name.slice(0, 13) + '…' : name)}
+                    />
+                    <Tooltip formatter={(v) => fmt(v)} />
+                    <Bar dataKey="value" barSize={7} radius={[0, 3, 3, 0]} isAnimationActive={false}>
+                      {pieData.map((_, i) => (
+                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                      ))}
+                      <LabelList dataKey="value" content={DirhamBarLabel} />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : chartType === 'treemap' ? (
+              // Every category gets its own proportionally-sized box with its
+              // own label printed inside it -- unlike a pie, nothing has to
+              // compete for space around a shared ring, so this stays legible
+              // no matter how many categories there are. The smallest
+              // categories just render as an unlabeled sliver of color
+              // instead of overlapping text (see TreemapTile).
+              <ResponsiveContainer width="100%" height={360}>
+                <Treemap
+                  data={pieData}
+                  dataKey="value"
+                  nameKey="name"
+                  isAnimationActive={false}
+                  content={<TreemapTile />}
+                >
                   <Tooltip formatter={(v) => fmt(v)} />
-                  <Bar dataKey="value" barSize={9} radius={[0, 3, 3, 0]} isAnimationActive={false}>
-                    {pieData.map((_, i) => (
-                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                    ))}
-                    <LabelList dataKey="value" content={DirhamBarLabel} />
-                  </Bar>
-                </BarChart>
+                </Treemap>
               </ResponsiveContainer>
             ) : (
-              // Horizontally scrollable with a fixed width-per-category, so
-              // adding more expense categories over time gives each bar/label
-              // consistent breathing room instead of squeezing everything
-              // into a fixed-width chart (which is what made labels collide
-              // once there were more than ~6 categories).
-              <div style={{ overflowX: 'auto' }}>
-                <div style={{ minWidth: Math.max(340, paretoData.length * 72) }}>
-                  <ResponsiveContainer width="100%" height={340}>
-                    <ComposedChart data={paretoData} margin={{ top: 20, right: 30, left: 0, bottom: 55 }}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis
-                        dataKey="name"
-                        tick={{ fontSize: 9 }}
-                        interval={0}
-                        angle={-40}
-                        textAnchor="end"
-                        height={70}
-                        tickFormatter={(name) => (name.length > 14 ? name.slice(0, 14) + '…' : name)}
-                      />
-                      <YAxis yAxisId="left" tick={{ fontSize: 9 }} width={40} />
-                      <YAxis
-                        yAxisId="right"
-                        orientation="right"
-                        domain={[0, 100]}
-                        tickFormatter={(v) => v + '%'}
-                        tick={{ fontSize: 9 }}
-                        width={34}
-                      />
-                      <Tooltip
-                        formatter={(v, key) => (key === 'cumulative' ? v + '%' : fmt(v))}
-                      />
-                      <Bar yAxisId="left" dataKey="value" barSize={22} isAnimationActive={false}>
-                        {paretoData.map((_, i) => (
-                          <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                        ))}
-                      </Bar>
-                      <Line
-                        yAxisId="right"
-                        type="monotone"
-                        dataKey="cumulative"
-                        stroke="#dc2626"
-                        strokeWidth={2}
-                        dot={{ r: 3 }}
-                        isAnimationActive={false}
-                      />
-                    </ComposedChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
+              // Pareto -- bar thickness and label size shrink as the category
+              // count grows (see paretoBarSize/paretoFontSize/paretoMaxNameLen
+              // above) so every category always fits within the chart's own
+              // width. No horizontal scrolling needed regardless of count.
+              <ResponsiveContainer width="100%" height={340}>
+                <ComposedChart data={paretoData} margin={{ top: 20, right: 30, left: 0, bottom: 60 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fontSize: paretoFontSize }}
+                    interval={0}
+                    angle={-50}
+                    textAnchor="end"
+                    height={75}
+                    tickFormatter={(name) => (name.length > paretoMaxNameLen ? name.slice(0, paretoMaxNameLen) + '…' : name)}
+                  />
+                  <YAxis yAxisId="left" tick={{ fontSize: 9 }} width={40} />
+                  <YAxis
+                    yAxisId="right"
+                    orientation="right"
+                    domain={[0, 100]}
+                    tickFormatter={(v) => v + '%'}
+                    tick={{ fontSize: 9 }}
+                    width={34}
+                  />
+                  <Tooltip
+                    formatter={(v, key) => (key === 'cumulative' ? v + '%' : fmt(v))}
+                  />
+                  <Bar yAxisId="left" dataKey="value" barSize={paretoBarSize} isAnimationActive={false}>
+                    {paretoData.map((_, i) => (
+                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                    ))}
+                  </Bar>
+                  <Line
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="cumulative"
+                    stroke="#dc2626"
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                    isAnimationActive={false}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
             )}
           </div>
 
@@ -2482,8 +2628,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <p><strong>Fixed Expenses</strong> -- for recurring bills, loans, EMIs, and rent. Set a Start date, an optional End date, and how often it repeats (Monthly, Alternate month, Quarterly, Half-yearly, Once a year). Every field auto-saves as you edit -- there's no Save button to click. Set a Due date to get an in-app reminder starting 3 days before it's due, and an email reminder if it's set up.</p>
               <p><strong>Savings</strong> -- set how much you'd like to set aside for the month, e.g. "Emergency fund" or "Investment". Works exactly like Income: entered fresh per month with no auto-rollover, since the amount you're able to save can change month to month -- add a new row each month, or edit an existing row's Month field forward. Since money you set aside is no longer available to spend, it's treated the same as an expense: it's counted in "Spent so far" and "Combined expenses", and subtracted in "Remaining" and "Net", in addition to getting its own page in the PDF report so you can see planned savings build up over time.</p>
               <p><strong>Expenses this month</strong> is always visible below the tabs so you can see what's been logged without switching tabs. It also auto-saves.</p>
-              <p><strong>Spending by category</strong> chart -- toggle between Pie, Bar, and Pareto. The totals cards above show your combined income, combined expenses (split into Regular, Fixed, and Savings), and what's left of your budget and income after all three are accounted for.</p>
-              <p><strong>Report</strong> -- generate a PDF for any date range, then download it or email it. It has 5 pages: (1) Overview -- a bar chart of spending by category plus a summary of income, expenses, savings, and net (income minus expenses and savings); (2) Income & Expenses -- full itemized lists with totals; (3) Fixed Expenses -- every recurring bill occurrence in the range, with a total; (4) Savings -- your savings goals by month, with a total; (5) Spend Analysis -- a Pareto chart (with a total row) showing which categories drive 80% of your spending, plus a few data-driven suggestions on where to cut back.</p>
+              <p><strong>Spending by category</strong> chart -- toggle between Pie, Bar, Pareto, and Treemap. The Pie groups smaller categories into "Other" to stay readable; Bar and Treemap show every category individually. The totals cards above show your combined income, combined expenses (split into Regular, Fixed, and Savings), and what's left of your budget and income after all three are accounted for.</p>
+              <p><strong>Report</strong> -- generate a PDF for any date range, then download it or email it. It has 7 pages, one focused topic per page: (1) Category Breakdown -- a bar chart of spending by category, sized to always fit on one page as you add more expenses; (2) Summary -- income, expenses, savings, and net (income minus expenses and savings); (3) Income -- full itemized list with a total; (4) Expenses -- full itemized list with a total; (5) Fixed Expenses -- every recurring bill occurrence in the range, with a total; (6) Savings -- your savings goals by month, with a total; (7) Spend Analysis -- a Pareto chart (with a total row) showing which categories drive 80% of your spending, plus a few data-driven suggestions on where to cut back, and a data & privacy note at the end.</p>
               <p><strong>Settings</strong> -- set your total monthly budget, currency, add/rename categories, and set optional per-category budget caps (you'll get a warning banner if you go over). Every field auto-saves as you edit -- there's no Save button to click.</p>
               <p><strong>Users</strong> -- see who's active in the household and who's been invited but hasn't joined yet, with full Name/Email/Phone/Location. Owners can invite new members (which also sends them a notification email), fill in or fix anyone's Name/Phone/Location, and edit their own details under "My details" -- handy for accounts created before these fields existed. The Admin console (if you have access) is separate and never visible to other household members.</p>
               <p>All figures use your household's chosen currency, set in Settings. Your data is confidential and private to your household -- it's never shared with anyone outside it.</p>
@@ -2495,7 +2641,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           <div className="panel" ref={panelRef}>
             <h2>Report</h2>
             <div className="muted-small" style={{ marginBottom: 12 }}>
-              Generate a 5-page PDF (Overview, Income &amp; Expenses, Fixed Expenses, Savings, and a Pareto spend analysis with suggestions) for a date range, then download it or email it to any address.
+              Generate a 7-page PDF (Category Breakdown, Summary, Income, Expenses, Fixed Expenses, Savings, and a Pareto spend analysis with suggestions and a data & privacy note) for a date range, then download it or email it to any address.
             </div>
             <div className="row" style={{ marginBottom: 12 }}>
               <div className="field">
