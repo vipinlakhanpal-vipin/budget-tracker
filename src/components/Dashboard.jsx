@@ -4,6 +4,8 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, LabelList,
   ComposedChart, Line,
 } from 'recharts';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { supabase } from '../supabaseClient';
 import AdminConsole from './AdminConsole.jsx';
 
@@ -146,6 +148,16 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     month: monthKey(new Date()),
   });
   const [incomeDrafts, setIncomeDrafts] = useState({});
+
+  // Report panel state -- generates a PDF for a chosen date range covering
+  // Expenses this month / Income / Fixed Expenses. Kept as a data URI in
+  // state after "Generate" so Download and Email can both reuse it without
+  // rebuilding the PDF twice.
+  const [reportFrom, setReportFrom] = useState(() => monthKey(new Date()) + '-01');
+  const [reportTo, setReportTo] = useState(() => new Date().toISOString().slice(0, 10));
+  const [reportDoc, setReportDoc] = useState(null); // { blob, dataUri, filename, rangeLabel }
+  const [reportEmail, setReportEmail] = useState('');
+  const [reportStatus, setReportStatus] = useState('');
 
   // Keep the "Add income" form's default Month field in sync with whichever
   // month the dashboard is currently showing, so adding income while viewing
@@ -596,6 +608,145 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     loadAll();
   }
 
+  // Builds a jsPDF document covering Expenses / Income / Fixed Expenses for
+  // the chosen date range. Returns the doc plus a filename and a human
+  // range label, so the caller can either save it locally or hand it off
+  // to the email endpoint as a base64 attachment.
+  function buildReportPdf(from, to) {
+    const rangeLabel = `${fmtDate(from)} - ${fmtDate(to)}`;
+    const rangeExpenses = expenses.filter((e) => e.expense_date >= from && e.expense_date <= to);
+    const fromMonth = from.slice(0, 7);
+    const toMonth = to.slice(0, 7);
+    const rangeIncomes = incomes.filter((i) => i.active && i.start_date.slice(0, 7) >= fromMonth && i.start_date.slice(0, 7) <= toMonth);
+    const rangeRecurring = recurringExpenses.filter((r) => r.active && r.start_date <= to && (!r.end_date || r.end_date >= from));
+
+    const expenseTotal = rangeExpenses.reduce((s, e) => s + Number(e.amount), 0);
+    const incomeTotal = rangeIncomes.reduce((s, i) => s + Number(i.amount), 0);
+    const fixedTotal = rangeRecurring.reduce((s, r) => s + Number(r.amount), 0);
+
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text(household.name || 'Household Budget Tracker', 14, 18);
+    doc.setFontSize(11);
+    doc.setTextColor(90);
+    doc.text(`Budget report -- ${rangeLabel}`, 14, 26);
+    doc.text(`Generated ${fmtDate(new Date().toISOString().slice(0, 10))} by ${session.user.email}`, 14, 32);
+    doc.setTextColor(0);
+
+    let y = 42;
+    doc.setFontSize(13);
+    doc.text('Income', 14, y);
+    y += 4;
+    autoTable(doc, {
+      startY: y,
+      head: [['Month', 'Source', 'Amount']],
+      body: rangeIncomes.map((i) => [i.start_date.slice(0, 7), i.name, fmt(i.amount)]),
+      foot: [['', 'Total', fmt(incomeTotal)]],
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [14, 165, 233] },
+      margin: { left: 14, right: 14 },
+    });
+    y = doc.lastAutoTable.finalY + 12;
+
+    doc.setFontSize(13);
+    doc.text('Expenses', 14, y);
+    y += 4;
+    autoTable(doc, {
+      startY: y,
+      head: [['Date', 'Category', 'Description', 'Amount']],
+      body: rangeExpenses.map((e) => [fmtDate(e.expense_date), categoryNameById[e.category_id] || 'Uncategorized', e.description || '', fmt(e.amount)]),
+      foot: [['', '', 'Total', fmt(expenseTotal)]],
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [249, 115, 22] },
+      margin: { left: 14, right: 14 },
+    });
+    y = doc.lastAutoTable.finalY + 12;
+
+    doc.setFontSize(13);
+    doc.text('Fixed Expenses', 14, y);
+    y += 4;
+    autoTable(doc, {
+      startY: y,
+      head: [['Name', 'Category', 'Frequency', 'Start', 'End', 'Amount']],
+      body: rangeRecurring.map((r) => [
+        r.name,
+        categoryNameById[r.category_id] || 'Uncategorized',
+        (FREQUENCIES.find((f) => f.value === r.frequency) || {}).label || r.frequency,
+        fmtDate(r.start_date),
+        r.end_date ? fmtDate(r.end_date) : 'Ongoing',
+        fmt(r.amount),
+      ]),
+      foot: [['', '', '', '', 'Total', fmt(fixedTotal)]],
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [168, 85, 247] },
+      margin: { left: 14, right: 14 },
+    });
+    y = doc.lastAutoTable.finalY + 14;
+
+    doc.setFontSize(12);
+    doc.text(`Net for period: ${fmt(incomeTotal - expenseTotal - fixedTotal)}`, 14, y);
+
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let p = 1; p <= pageCount; p++) {
+      doc.setPage(p);
+      doc.setFontSize(8);
+      doc.setTextColor(140);
+      doc.text('Confidential -- for household members only. Not to be shared outside the household.', 14, 289);
+    }
+
+    const filename = `budget-report_${from}_to_${to}.pdf`;
+    return { doc, filename, rangeLabel };
+  }
+
+  function handleGenerateReport() {
+    if (!reportFrom || !reportTo || reportFrom > reportTo) {
+      alert('Please choose a valid From/To date range.');
+      return;
+    }
+    const { doc, filename, rangeLabel } = buildReportPdf(reportFrom, reportTo);
+    const dataUri = doc.output('datauristring');
+    setReportDoc({ dataUri, filename, rangeLabel });
+    setReportStatus('');
+  }
+
+  function handleDownloadReport() {
+    if (!reportDoc) return;
+    const { doc } = buildReportPdf(reportFrom, reportTo);
+    doc.save(reportDoc.filename);
+  }
+
+  async function handleEmailReport(e) {
+    e.preventDefault();
+    if (!reportDoc) return;
+    if (!reportEmail.trim()) {
+      alert('Please enter an email address to send the report to.');
+      return;
+    }
+    setReportStatus('sending');
+    try {
+      const base64 = reportDoc.dataUri.split(',')[1];
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const res = await fetch('/api/send-report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authSession?.access_token}` },
+        body: JSON.stringify({
+          to: reportEmail.trim(),
+          filename: reportDoc.filename,
+          rangeLabel: reportDoc.rangeLabel,
+          pdfBase64: base64,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setReportStatus('error: ' + (json.error || 'Could not send email'));
+        return;
+      }
+      setReportStatus('sent');
+    } catch (err) {
+      setReportStatus('error: ' + err.message);
+    }
+  }
+
   if (loading) return <div className="center-screen">Loading your budget...</div>;
 
   CURRENT_CURRENCY = currency;
@@ -618,6 +769,9 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
         <div className="action-row-teal">
           <button className="btn-teal" onClick={() => togglePanel('help')}>
             {activePanel === 'help' ? 'Hide help' : 'Help'}
+          </button>
+          <button className="btn-teal" onClick={() => togglePanel('report')}>
+            {activePanel === 'report' ? 'Hide report' : 'Report'}
           </button>
           <button className="btn-teal" onClick={() => togglePanel('settings')}>
             {activePanel === 'settings' ? 'Hide settings' : 'Settings'}
@@ -1221,11 +1375,11 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 <div className="table-scroll">
                 <table className="responsive-table users-table">
                   <colgroup>
-                    <col style={{ width: '26%' }} /><col style={{ width: '32%' }} />
-                    <col style={{ width: '22%' }} /><col style={{ width: '20%' }} />
+                    <col style={{ width: '20%' }} /><col style={{ width: '26%' }} />
+                    <col style={{ width: '16%' }} /><col style={{ width: '20%' }} /><col style={{ width: '18%' }} />
                   </colgroup>
                   <thead>
-                    <tr><th>Name</th><th>Email</th><th>Phone</th><th>Status</th></tr>
+                    <tr><th>Name</th><th>Email</th><th>Phone</th><th>Location</th><th>Status</th></tr>
                   </thead>
                   <tbody>
                     {members.map((m) => (
@@ -1233,6 +1387,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         <td data-label="Name">{m.name || <span className="muted-small">--</span>}</td>
                         <td data-label="Email">{m.email}</td>
                         <td className="muted-small" data-label="Phone">{m.phone || '--'}</td>
+                        <td className="muted-small" data-label="Location">{m.location || '--'}</td>
                         <td data-label="Status"><span className="status-pill active">Active</span></td>
                       </tr>
                     ))}
@@ -1241,6 +1396,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         <td data-label="Name">{inv.name || <span className="muted-small">--</span>}</td>
                         <td data-label="Email">{inv.email}</td>
                         <td className="muted-small" data-label="Phone">{inv.phone || '--'}</td>
+                        <td className="muted-small" data-label="Location">{inv.location || '--'}</td>
                         <td data-label="Status"><span className="status-pill pending">Pending</span></td>
                       </tr>
                     ))}
@@ -1320,6 +1476,62 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <p><strong>Users</strong> -- see who's active in the household and who's been invited but hasn't joined yet. Owners can invite new members and change their relation label.</p>
               <p>All figures use your household's chosen currency, set in Settings.</p>
             </div>
+          </div>
+          )}
+
+          {activePanel === 'report' && (
+          <div className="panel" ref={panelRef}>
+            <h2>Report</h2>
+            <div className="muted-small" style={{ marginBottom: 12 }}>
+              Generate a PDF covering Income, Expenses, and Fixed Expenses for a date range, then download it or email it to any address.
+            </div>
+            <div className="row" style={{ marginBottom: 12 }}>
+              <div className="field">
+                <label>From</label>
+                <input
+                  type="date"
+                  value={reportFrom}
+                  onChange={(e) => { setReportFrom(e.target.value); setReportDoc(null); setReportStatus(''); }}
+                />
+              </div>
+              <div className="field">
+                <label>To</label>
+                <input
+                  type="date"
+                  value={reportTo}
+                  onChange={(e) => { setReportTo(e.target.value); setReportDoc(null); setReportStatus(''); }}
+                />
+              </div>
+              <div className="field" style={{ justifyContent: 'flex-end' }}>
+                <button className="btn secondary small" onClick={handleGenerateReport}>Generate report</button>
+              </div>
+            </div>
+
+            {reportDoc && (
+              <div style={{ marginTop: 8 }}>
+                <div className="muted-small" style={{ marginBottom: 8 }}>
+                  Report ready for {reportDoc.rangeLabel}.
+                </div>
+                <div className="row" style={{ marginBottom: 12, alignItems: 'center' }}>
+                  <button className="btn secondary small" onClick={handleDownloadReport}>Download</button>
+                </div>
+                <form className="row" onSubmit={handleEmailReport} style={{ alignItems: 'center' }}>
+                  <input
+                    type="email"
+                    placeholder="Email address to send report to"
+                    style={{ flex: 1 }}
+                    value={reportEmail}
+                    onChange={(e) => setReportEmail(e.target.value)}
+                    required
+                  />
+                  <button className="btn secondary small" type="submit" disabled={reportStatus === 'sending'}>
+                    {reportStatus === 'sending' ? 'Sending...' : 'Email report'}
+                  </button>
+                </form>
+                {reportStatus === 'sent' && <div className="muted-small" style={{ marginTop: 6, color: '#22c55e' }}>Report emailed successfully.</div>}
+                {reportStatus.startsWith('error') && <div className="muted-small" style={{ marginTop: 6, color: '#ef4444' }}>{reportStatus.replace('error: ', '')}</div>}
+              </div>
+            )}
           </div>
           )}
 
@@ -1433,6 +1645,10 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           </div>
           )}
         </div>
+      </div>
+
+      <div className="app-footer">
+        Your data is confidential and private to this household. It is never shared with anyone outside it.
       </div>
     </div>
   );

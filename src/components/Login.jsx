@@ -9,6 +9,7 @@ export default function Login() {
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [location, setLocation] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -29,8 +30,8 @@ export default function Login() {
   async function handleSignUp(e) {
     e.preventDefault();
     setErrorMsg('');
-    if (!name.trim() || !email.trim() || !password) {
-      setErrorMsg('Please fill in your name, email, and a password.');
+    if (!name.trim() || !email.trim() || !location.trim() || !password) {
+      setErrorMsg('Please fill in your name, email, location, and a password.');
       return;
     }
     if (password.length < 6) {
@@ -46,7 +47,7 @@ export default function Login() {
       email: email.trim(),
       password,
       options: {
-        data: { full_name: name.trim(), phone: phone.trim() || null },
+        data: { full_name: name.trim(), location: location.trim(), phone: phone.trim() || null },
         emailRedirectTo: SITE_URL,
       },
     });
@@ -181,6 +182,13 @@ export default function Login() {
                   required
                 />
                 <input
+                  type="text"
+                  placeholder="Location (e.g. Dubai, UAE)"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  required
+                />
+                <input
                   type="tel"
                   placeholder="Phone number (optional)"
                   value={phone}
@@ -241,6 +249,10 @@ export default function Login() {
         )}
 
         {errorMsg && <div className="login-error">{errorMsg}</div>}
+
+        <div className="confidentiality-note">
+          Your data is confidential and private to your household. It is never shared with anyone.
+        </div>
       </div>
     </div>
   );

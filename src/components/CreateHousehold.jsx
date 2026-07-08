@@ -37,6 +37,7 @@ export default function CreateHousehold({ session, onCreated }) {
       relation: 'Self',
       name: session.user.user_metadata?.full_name || null,
       phone: session.user.user_metadata?.phone || null,
+      location: session.user.user_metadata?.location || null,
     });
 
     if (mErr) {

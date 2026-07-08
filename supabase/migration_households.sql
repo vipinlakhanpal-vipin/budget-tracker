@@ -250,3 +250,9 @@ alter table household_invites add column if not exists name text;
 alter table household_invites add column if not exists phone text;
 alter table recurring_expenses add column if not exists due_date date;
 alter table recurring_expenses add column if not exists remind_before_days int not null default 3;
+
+-- Location field at signup (where the user is signing up from), shown in
+-- the Users tab. Already run directly against the live Supabase project via
+-- SQL Editor; kept here so the schema file stays the single source of truth.
+alter table household_members add column if not exists location text;
+alter table household_invites add column if not exists location text;

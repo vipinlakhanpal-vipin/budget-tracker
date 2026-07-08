@@ -30,3 +30,25 @@ export async function requireAdmin(req) {
   }
   return data.user;
 }
+
+// Lighter check than requireAdmin -- just confirms the request carries a
+// valid Supabase session for ANY signed-in user. Used by endpoints (like
+// emailing a report) that any household member should be able to call, not
+// just the app admin.
+export async function requireUser(req) {
+  const authHeader = req.headers.authorization || '';
+  const token = authHeader.replace('Bearer ', '').trim();
+  if (!token) {
+    const err = new Error('Missing auth token');
+    err.status = 401;
+    throw err;
+  }
+  const admin = createAdminClient();
+  const { data, error } = await admin.auth.getUser(token);
+  if (error || !data?.user) {
+    const err = new Error('Invalid session');
+    err.status = 401;
+    throw err;
+  }
+  return data.user;
+}
