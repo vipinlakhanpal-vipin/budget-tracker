@@ -1068,13 +1068,26 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       const maxVal = Math.max(...paretoRows.map((r) => r.val)) || 1;
       const labelX = M;
       const barX = M + 48;
-      const barMaxWidth = pageWidth - barX - M - 40;
+      // Two separate right-aligned columns -- Amount and Cumulative % -- each
+      // with a fixed x position and enough width for their longest possible
+      // value ("AED 12,880.00" / "100%"). Previously the amount was drawn
+      // left-anchored right after the bar while the cumulative % was pinned
+      // to a fixed position near the margin, so a long amount could run
+      // straight into the percentage text. Reserving a dedicated column for
+      // each (with a gap between them) keeps them from ever colliding
+      // regardless of value length.
+      const cumX = pageWidth - M; // right edge of the Cumulative % column
+      const cumColWidth = 22; // wide enough for "CUM. %" header + "100%"
+      const amtX = cumX - cumColWidth; // right edge of the Amount column
+      const amtColWidth = 30; // wide enough for "AED 12,880.00"
+      const barMaxWidth = amtX - amtColWidth - barX;
       const barHeight = 6;
       const rowGap = 4.5;
       doc.setFontSize(7);
       doc.setFont(undefined, 'bold');
       doc.setTextColor(140);
-      doc.text('CUML.', pageWidth - M - 12, y - 3, { align: 'right' });
+      doc.text('AMOUNT', amtX, y - 3, { align: 'right' });
+      doc.text('CUM. %', cumX, y - 3, { align: 'right' });
       doc.setTextColor(0);
       doc.setFont(undefined, 'normal');
       paretoRows.forEach((r, i) => {
@@ -1091,9 +1104,9 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
         const label = r.name.length > 18 ? r.name.slice(0, 18) + '...' : r.name;
         doc.text(label, labelX, y + barHeight - 1.3);
         doc.setFont(undefined, 'bold');
-        doc.text(fmt(r.val), barX + barMaxWidth + 3, y + barHeight - 1.3);
+        doc.text(fmt(r.val), amtX, y + barHeight - 1.3, { align: 'right' });
         doc.setTextColor(isVitalFew ? accentR : 150, isVitalFew ? accentG : 150, isVitalFew ? accentB : 150);
-        doc.text(`${Math.round(r.cumPct)}%`, pageWidth - M - 12, y + barHeight - 1.3, { align: 'right' });
+        doc.text(`${Math.round(r.cumPct)}%`, cumX, y + barHeight - 1.3, { align: 'right' });
         doc.setTextColor(0);
         doc.setFont(undefined, 'normal');
         y += barHeight + rowGap;
