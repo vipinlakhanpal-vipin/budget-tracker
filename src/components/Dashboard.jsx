@@ -479,8 +479,16 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
   const oneOffTotal = useMemo(() => monthExpenses.reduce((s, e) => s + Number(e.amount), 0), [monthExpenses]);
   const recurringTotal = useMemo(() => recurringForMonth.reduce((s, r) => s + Number(r.amount), 0), [recurringForMonth]);
+  // "total" = actual spending only (one-off + fixed), used for the per-category
+  // Pareto/budget-cap checks below since savings goals aren't tied to a category.
   const total = oneOffTotal + recurringTotal;
-  const remaining = totalBudget - total;
+  // "combinedOutflow" = spending + planned savings. Savings is money leaving
+  // your income just like an expense would, so every headline figure the
+  // household actually reads (Spent so far, Remaining, Combined expenses, Net)
+  // needs to account for it -- otherwise "Remaining"/"Net" would overstate how
+  // much is actually free to spend.
+  const combinedOutflow = total + savingsTotal;
+  const remaining = totalBudget - combinedOutflow;
 
   const incomeForMonth = useMemo(() => {
     const key = monthKey(currentMonth);
@@ -489,7 +497,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     return incomes.filter((i) => i.active && i.start_date.slice(0, 7) === key);
   }, [incomes, currentMonth]);
   const totalIncome = useMemo(() => incomeForMonth.reduce((s, i) => s + Number(i.amount), 0), [incomeForMonth]);
-  const netCombined = totalIncome - total;
+  const netCombined = totalIncome - combinedOutflow;
 
   // Bills/rent due soon -- an in-app pop-up style banner starting N days
   // before the due date (default 3) and continuing to show until the due
@@ -954,7 +962,10 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     const pageWidth = doc.internal.pageSize.getWidth();
     const M = 18; // outer margin -- a bit more generous than the previous 14mm for a cleaner, more modern feel.
     const [accentR, accentG, accentB] = hexToRgb('#0d9488');
-    const netTotal = incomeTotal - expenseTotal - fixedTotal;
+    // Savings is money leaving income just like an expense, so it's folded
+    // into the net figure -- mirrors how the dashboard's "Net (income -
+    // expenses - savings)" card is calculated.
+    const netTotal = incomeTotal - expenseTotal - fixedTotal - savingsGoalTotal;
     const today = fmtDate(new Date().toISOString().slice(0, 10));
 
     // Repeated on every page: a slim teal header band with the household
@@ -1055,18 +1066,19 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
         ['Total Income', fmt(incomeTotal)],
         ['Total Regular Expenses', fmt(expenseTotal)],
         ['Total Fixed Expenses', fmt(fixedTotal)],
-        ['Total Expenses (Regular + Fixed)', fmt(expenseTotal + fixedTotal)],
-        ['Net (Income - Total Expenses)', fmt(netTotal)],
+        ['Total Savings', fmt(savingsGoalTotal)],
+        ['Total Outflow (Expenses + Savings)', fmt(expenseTotal + fixedTotal + savingsGoalTotal)],
+        ['Net (Income - Total Outflow)', fmt(netTotal)],
       ],
       theme: 'plain',
       styles: { fontSize: 10.5, fontStyle: 'bold', cellPadding: 3 },
       columnStyles: { 0: { cellWidth: 100 }, 1: { halign: 'right' } },
       margin: { left: M, right: M },
       didParseCell: (data) => {
-        if (data.row.index === 3) {
+        if (data.row.index === 4) {
           data.cell.styles.fillColor = [241, 245, 249];
         }
-        if (data.row.index === 4) {
+        if (data.row.index === 5) {
           data.cell.styles.fillColor = netTotal >= 0 ? [220, 252, 231] : [254, 226, 226];
           data.cell.styles.textColor = netTotal >= 0 ? [22, 101, 52] : [153, 27, 27];
         }
@@ -1296,7 +1308,20 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
         doc.setFont(undefined, 'normal');
         y += barHeight + rowGap;
       });
-      y += 4;
+
+      // Total row -- a divider plus the grand total of every figure in the
+      // chart above, so the reader doesn't have to add up each bar by hand.
+      doc.setDrawColor(220, 224, 228);
+      doc.line(barX, y, cumX, y);
+      y += 6;
+      doc.setFontSize(9);
+      doc.setFont(undefined, 'bold');
+      doc.text('TOTAL', labelX, y);
+      doc.text(fmt(totalSpend), amtX, y, { align: 'right' });
+      doc.text('100%', cumX, y, { align: 'right' });
+      doc.setFont(undefined, 'normal');
+      y += 10;
+
       doc.setFontSize(8);
       doc.setTextColor(120);
       const vitalFewLabel = vitalFewNames.length > 1
@@ -1435,8 +1460,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   CURRENT_CURRENCY = currency;
 
   const warnings = [];
-  if (totalBudget > 0 && total > totalBudget) {
-    warnings.push(`You're ${fmt(total - totalBudget)} over your total monthly budget.`);
+  if (totalBudget > 0 && combinedOutflow > totalBudget) {
+    warnings.push(`You're ${fmt(combinedOutflow - totalBudget)} over your total monthly budget (including planned savings).`);
   }
   if (overCategories.length) {
     warnings.push(`Over budget in: ${overCategories.join(', ')}.`);
@@ -1492,13 +1517,21 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
       <div className="grid">
         <div className="card"><div className="k">Monthly Budget</div><div className="v">{fmt(totalBudget)}</div></div>
-        <div className={`card ${totalBudget > 0 && total > totalBudget ? 'over' : ''}`}>
-          <div className="k">Spent so far</div><div className="v">{fmt(total)}</div>
+        <div className={`card ${totalBudget > 0 && combinedOutflow > totalBudget ? 'over' : ''}`}>
+          <div className="k">Spent so far</div><div className="v">{fmt(combinedOutflow)}</div>
+          {savingsTotal > 0 && (
+            <div className="muted-small" style={{ marginTop: 4 }}>
+              Expenses {fmt(total)} + Savings {fmt(savingsTotal)}
+            </div>
+          )}
         </div>
         <div className={`card ${totalBudget > 0 && remaining < 0 ? 'over' : totalBudget > 0 && remaining >= 0 ? 'ok' : ''}`}>
           <div className="k">Remaining</div>
           {totalBudget > 0 ? (
-            <div className="v">{fmt(remaining)}</div>
+            <>
+              <div className="v">{fmt(remaining)}</div>
+              <div className="muted-small" style={{ marginTop: 4 }}>After expenses and savings</div>
+            </>
           ) : (
             <>
               <div className="v">—</div>
@@ -1512,13 +1545,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
         <div className="card ok"><div className="k">Combined income</div><div className="v">{fmt(totalIncome)}</div></div>
         <div className="card">
           <div className="k">Combined expenses</div>
-          <div className="v">{fmt(total)}</div>
+          <div className="v">{fmt(combinedOutflow)}</div>
           <div className="muted-small" style={{ marginTop: 4 }}>
-            Regular {fmt(oneOffTotal)} + Fixed {fmt(recurringTotal)}
+            Regular {fmt(oneOffTotal)} + Fixed {fmt(recurringTotal)}{savingsTotal > 0 ? ` + Savings ${fmt(savingsTotal)}` : ''}
           </div>
         </div>
         <div className={`card ${netCombined < 0 ? 'over' : 'ok'}`}>
-          <div className="k">Net (income - expenses)</div><div className="v">{fmt(netCombined)}</div>
+          <div className="k">Net (income - expenses - savings)</div><div className="v">{fmt(netCombined)}</div>
         </div>
       </div>
 
@@ -2022,7 +2055,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               </div>
             )}
             <div className="muted-small" style={{ marginTop: 6 }}>
-              Changes save automatically. This is money you're planning to set aside, separate from spending -- it's tracked in its own report page.
+              Changes save automatically. Savings counts as money leaving your income, so it's included in "Spent so far" and "Combined expenses" above and reduces "Remaining"/"Net" -- it also gets its own report page.
             </div>
             {savingsForMonth.length > 0 && (
               <div className="muted-small" style={{ marginTop: 10 }}>
@@ -2439,10 +2472,10 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <p><strong>Add an expense</strong> -- log one-off spending (groceries, dining, shopping). Pick the date, category, a short description, and the amount, then Add. It appears under "Expenses this month" and is always editable there -- just type into a field and it saves.</p>
               <p><strong>Income</strong> -- add each income source per month (e.g. Salary). Income does NOT roll over automatically -- since pay can change month to month (deductions, advances, etc.), add a fresh row each month with that month's actual amount, or edit an existing row's Month field forward. Every field auto-saves.</p>
               <p><strong>Fixed Expenses</strong> -- for recurring bills, loans, EMIs, and rent. Set a Start date, an optional End date, and how often it repeats (Monthly, Alternate month, Quarterly, Half-yearly, Once a year). Every field auto-saves as you edit -- there's no Save button to click. Set a Due date to get an in-app reminder starting 3 days before it's due, and an email reminder if it's set up.</p>
-              <p><strong>Savings</strong> -- set how much you'd like to set aside each month (or other frequency), separate from spending -- e.g. "Emergency fund" or "Investment". Works exactly like Fixed Expenses (Name, Amount, Start/End date, Repeats), and gets its own page in the PDF report so you can see planned savings build up over time.</p>
+              <p><strong>Savings</strong> -- set how much you'd like to set aside each month (or other frequency) -- e.g. "Emergency fund" or "Investment". Works exactly like Fixed Expenses (Name, Amount, Start/End date, Repeats). Since money you set aside is no longer available to spend, it's treated the same as an expense: it's counted in "Spent so far" and "Combined expenses", and subtracted in "Remaining" and "Net", in addition to getting its own page in the PDF report so you can see planned savings build up over time.</p>
               <p><strong>Expenses this month</strong> is always visible below the tabs so you can see what's been logged without switching tabs. It also auto-saves.</p>
-              <p><strong>Spending by category</strong> chart -- toggle between Pie, Bar, and Pareto. The totals cards above show your combined income, combined expenses (split into Regular vs Fixed), and what's left of your budget.</p>
-              <p><strong>Report</strong> -- generate a PDF for any date range, then download it or email it. It has 5 pages: (1) Overview -- a bar chart of spending by category plus a summary of income/expenses/net; (2) Income & Expenses -- full itemized lists with totals; (3) Fixed Expenses -- every recurring bill occurrence in the range, with a total; (4) Savings -- your savings goals by month, with a total; (5) Spend Analysis -- a Pareto chart showing which categories drive 80% of your spending, plus a few data-driven suggestions on where to cut back.</p>
+              <p><strong>Spending by category</strong> chart -- toggle between Pie, Bar, and Pareto. The totals cards above show your combined income, combined expenses (split into Regular, Fixed, and Savings), and what's left of your budget and income after all three are accounted for.</p>
+              <p><strong>Report</strong> -- generate a PDF for any date range, then download it or email it. It has 5 pages: (1) Overview -- a bar chart of spending by category plus a summary of income, expenses, savings, and net (income minus expenses and savings); (2) Income & Expenses -- full itemized lists with totals; (3) Fixed Expenses -- every recurring bill occurrence in the range, with a total; (4) Savings -- your savings goals by month, with a total; (5) Spend Analysis -- a Pareto chart (with a total row) showing which categories drive 80% of your spending, plus a few data-driven suggestions on where to cut back.</p>
               <p><strong>Settings</strong> -- set your total monthly budget, currency, add/rename categories, and set optional per-category budget caps (you'll get a warning banner if you go over).</p>
               <p><strong>Users</strong> -- see who's active in the household and who's been invited but hasn't joined yet, with full Name/Email/Phone/Location. Owners can invite new members (which also sends them a notification email), fill in or fix anyone's Name/Phone/Location, and edit their own details under "My details" -- handy for accounts created before these fields existed. The Admin console (if you have access) is separate and never visible to other household members.</p>
               <p>All figures use your household's chosen currency, set in Settings. Your data is confidential and private to your household -- it's never shared with anyone outside it.</p>
