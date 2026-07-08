@@ -1027,6 +1027,146 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       });
     }
 
+    // ---------- Page 4: Spend Analysis -- Pareto chart + suggestions ----------
+    // A dedicated closing page: the same category totals as the page 1 bar
+    // chart, but sorted and annotated with a running cumulative-% so it's
+    // obvious which categories are the "vital few" driving most of the
+    // spend (the 80/20 rule), plus a short set of data-driven suggestions
+    // on where to focus efforts to bring spending under control.
+    doc.addPage();
+    y = drawHeader(4, 'Spend Analysis');
+
+    drawEyebrow('80/20 Breakdown', y);
+    y += 7;
+    doc.setFontSize(13);
+    doc.setFont(undefined, 'bold');
+    doc.text('Pareto Chart -- Where Your Money Goes', M, y);
+    doc.setFont(undefined, 'normal');
+    y += 9;
+
+    const totalSpend = chartRows.reduce((s, [, v]) => s + v, 0);
+    let vitalFewNames = [];
+
+    if (chartRows.length === 0 || totalSpend <= 0) {
+      doc.setFontSize(9);
+      doc.setTextColor(120);
+      doc.text('No expenses in this period.', M, y);
+      doc.setTextColor(0);
+      y += 10;
+    } else {
+      let cum = 0;
+      const paretoRows = chartRows.map(([name, val]) => {
+        cum += val;
+        return { name, val, cumPct: (cum / totalSpend) * 100 };
+      });
+      vitalFewNames = paretoRows.filter((r) => r.cumPct <= 80).map((r) => r.name);
+      // Always call out at least the single biggest category, even if it
+      // alone already exceeds 80% (the filter above would otherwise return
+      // an empty "vital few" list in that case).
+      if (vitalFewNames.length === 0 && paretoRows.length) vitalFewNames = [paretoRows[0].name];
+
+      const maxVal = Math.max(...paretoRows.map((r) => r.val)) || 1;
+      const labelX = M;
+      const barX = M + 48;
+      const barMaxWidth = pageWidth - barX - M - 40;
+      const barHeight = 6;
+      const rowGap = 4.5;
+      doc.setFontSize(7);
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(140);
+      doc.text('CUML.', pageWidth - M - 12, y - 3, { align: 'right' });
+      doc.setTextColor(0);
+      doc.setFont(undefined, 'normal');
+      paretoRows.forEach((r, i) => {
+        const isVitalFew = r.cumPct <= 80 || i === 0;
+        const barWidth = Math.max(1, (r.val / maxVal) * barMaxWidth);
+        const [vr, vg, vb] = hexToRgb('#0d9488');
+        const [tr, tg, tb] = hexToRgb('#94a3b8');
+        doc.setFillColor(245, 246, 248);
+        doc.roundedRect(barX, y, barMaxWidth, barHeight, 1, 1, 'F');
+        if (isVitalFew) doc.setFillColor(vr, vg, vb); else doc.setFillColor(tr, tg, tb);
+        doc.roundedRect(barX, y, barWidth, barHeight, 1, 1, 'F');
+        doc.setFontSize(8.5);
+        doc.setTextColor(50);
+        const label = r.name.length > 18 ? r.name.slice(0, 18) + '...' : r.name;
+        doc.text(label, labelX, y + barHeight - 1.3);
+        doc.setFont(undefined, 'bold');
+        doc.text(fmt(r.val), barX + barMaxWidth + 3, y + barHeight - 1.3);
+        doc.setTextColor(isVitalFew ? accentR : 150, isVitalFew ? accentG : 150, isVitalFew ? accentB : 150);
+        doc.text(`${Math.round(r.cumPct)}%`, pageWidth - M - 12, y + barHeight - 1.3, { align: 'right' });
+        doc.setTextColor(0);
+        doc.setFont(undefined, 'normal');
+        y += barHeight + rowGap;
+      });
+      y += 4;
+      doc.setFontSize(8);
+      doc.setTextColor(120);
+      const vitalFewLabel = vitalFewNames.length > 1
+        ? `${vitalFewNames.slice(0, -1).join(', ')} and ${vitalFewNames[vitalFewNames.length - 1]}`
+        : (vitalFewNames[0] || '');
+      doc.text(`${vitalFewNames.length} of ${paretoRows.length} categories (${vitalFewLabel}) make up about 80% of this period's spending.`, M, y, { maxWidth: pageWidth - 2 * M });
+      doc.setTextColor(0);
+      y += 14;
+    }
+
+    // ---------- Suggestions -- generated from this report's own numbers ----------
+    drawEyebrow('Recommendations', y);
+    y += 7;
+    doc.setFontSize(13);
+    doc.setFont(undefined, 'bold');
+    doc.text('Where You Can Bring In Controls', M, y);
+    doc.setFont(undefined, 'normal');
+    y += 8;
+
+    const suggestions = [];
+    if (chartRows.length && totalSpend > 0) {
+      const [topName, topVal] = chartRows[0];
+      const topShare = Math.round((topVal / totalSpend) * 100);
+      suggestions.push(
+        `${topName} is your single biggest spend at ${fmt(topVal)} (${topShare}% of total). Even a small cut here moves the needle more than trimming several small categories.`
+      );
+      if (vitalFewNames.length) {
+        suggestions.push(
+          `Focus review time on ${vitalFewNames.length === 1 ? 'this one category' : `these ${vitalFewNames.length} categories`} first -- they drive 80% of your spending, so that's where controls will have the most impact (the 80/20 rule).`
+        );
+      }
+    }
+    if (fixedTotal > expenseTotal && fixedTotal > 0) {
+      suggestions.push(
+        `Fixed/recurring bills (${fmt(fixedTotal)}) are larger than your regular day-to-day spending (${fmt(expenseTotal)}). Review loans, EMIs, and subscriptions for refinancing, consolidation, or cancellation opportunities -- fixed costs compound every month whether or not you notice them.`
+      );
+    }
+    const overBudgetInRange = categories.filter((c) => c.monthly_budget > 0 && (categoryTotals[c.name] || 0) > c.monthly_budget * Math.max(1, rangeMonths.length));
+    if (overBudgetInRange.length) {
+      suggestions.push(
+        `${overBudgetInRange.map((c) => c.name).join(', ')} went over the budget you set for ${overBudgetInRange.length > 1 ? 'them' : 'it'} this period. Consider raising the budget if it's genuinely necessary, or setting a firmer cap if it's discretionary.`
+      );
+    }
+    if (netTotal < 0) {
+      suggestions.push(
+        `You spent ${fmt(Math.abs(netTotal))} more than you earned this period. Before cutting anywhere else, check whether this was a one-off (e.g. an annual bill or a big-ticket purchase) or a pattern -- if it repeats, it's worth revisiting the top categories above.`
+      );
+    } else if (totalSpend > 0) {
+      suggestions.push(
+        `You stayed within income this period (net ${fmt(netTotal)}). Consider directing part of that surplus toward paying down the highest-interest EMI or loan faster, or into savings.`
+      );
+    }
+    if (suggestions.length === 0) {
+      suggestions.push('Not enough data in this period to generate suggestions -- add a few more expenses and generate the report again.');
+    }
+
+    suggestions.forEach((s) => {
+      if (y > 265) { doc.addPage(); y = drawHeader(4, 'Spend Analysis'); }
+      doc.setFillColor(accentR, accentG, accentB);
+      doc.circle(M + 1.2, y - 1.5, 1.2, 'F');
+      doc.setFontSize(9.5);
+      doc.setTextColor(40);
+      const lines = doc.splitTextToSize(s, pageWidth - 2 * M - 8);
+      doc.text(lines, M + 6, y);
+      doc.setTextColor(0);
+      y += lines.length * 5 + 6;
+    });
+
     // Footer on every page: a thin rule, confidentiality note, and page count.
     const pageCount = doc.internal.getNumberOfPages();
     for (let p = 1; p <= pageCount; p++) {
@@ -1776,8 +1916,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 <div className="table-scroll">
                 <table className="responsive-table users-table">
                   <colgroup>
-                    <col style={{ width: '21%' }} /><col style={{ width: '19%' }} />
-                    <col style={{ width: '19%' }} /><col style={{ width: '21%' }} /><col style={{ width: '10%' }} />
+                    <col style={{ width: '20%' }} /><col style={{ width: '16%' }} />
+                    <col style={{ width: '18%' }} /><col style={{ width: '26%' }} /><col style={{ width: '20%' }} />
                   </colgroup>
                   <thead>
                     <tr><th>Name</th><th>Email</th><th>Phone</th><th>Location</th><th>Status</th></tr>

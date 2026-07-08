@@ -129,8 +129,14 @@ td.amount { font-weight: 600; text-align: right; }
 .del:hover { color: var(--danger); }
 
 /* Compact rows for the Users list -- tighter vertical spacing than the data
-   tables since these rows are just short status lines, not editable fields. */
-.users-table { font-size: 12px; }
+   tables since these rows are just short status lines, not editable fields.
+   The Users panel lives in the narrow sidebar column (min 320px), and with
+   table-layout:fixed + percentage columns that meant Phone/Location/Status
+   were being squeezed to ~30-60px and clipped (overflow:hidden on td). Give
+   the table a min-width wider than the panel so columns keep a readable
+   pixel width and .table-scroll's overflow-x:auto kicks in -- values are
+   fully visible via a short horizontal scroll instead of being cut off. */
+.users-table { font-size: 12px; min-width: 620px; }
 .users-table td { padding: 5px 4px; line-height: 1.3; }
 /* Emails must never be clipped -- let the Email column wrap onto a second
    line instead of hard-cutting mid-address like "name@gm...". */

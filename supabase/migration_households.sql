@@ -234,25 +234,26 @@ create policy "owners can cancel invites" on household_invites
     household_id in (select household_id from household_members where user_id = auth.uid() and role = 'owner')
   );
 
+-- The owner-editable Name/Phone/Location fields on the Users tab for
+-- pending invites silently no-op'd (PATCH returned 204 but wrote 0 rows)
+-- because the only UPDATE policy on this table was "invited user can accept
+-- their invite" (matches only the invitee's own email). The owner isn't the
+-- invitee, so their edits were always filtered out by RLS. This adds a
+-- second permissive UPDATE policy so an owner can also update invite rows
+-- in their own household; Postgres OR's multiple permissive policies
+-- together, so the invitee's accept-their-own-invite path is unaffected.
+create policy "owners can edit invite details" on household_invites
+  for update
+  using (
+    household_id in (select household_id from household_members where user_id = auth.uid() and role = 'owner')
+  )
+  with check (
+    household_id in (select household_id from household_members where user_id = auth.uid() and role = 'owner')
+  );
+
 -- Per-household display currency (e.g. AED, USD, INR). Defaults to AED.
 alter table settings add column if not exists currency text not null default 'AED';
 
 -- Recurring expense repeat cadence: monthly, alternate (every 2 months),
 -- quarterly, half_yearly, or yearly. Defaults to monthly for existing rows.
 alter table recurring_expenses add column if not exists frequency text not null default 'monthly';
-
--- Open sign-up + Users tab (Name/Phone/Status) + rent/bill due-date reminders.
--- Already run directly against the live Supabase project via SQL Editor; kept
--- here so the schema file stays the single source of truth.
-alter table household_members add column if not exists name text;
-alter table household_members add column if not exists phone text;
-alter table household_invites add column if not exists name text;
-alter table household_invites add column if not exists phone text;
-alter table recurring_expenses add column if not exists due_date date;
-alter table recurring_expenses add column if not exists remind_before_days int not null default 3;
-
--- Location field at signup (where the user is signing up from), shown in
--- the Users tab. Already run directly against the live Supabase project via
--- SQL Editor; kept here so the schema file stays the single source of truth.
-alter table household_members add column if not exists location text;
-alter table household_invites add column if not exists location text;
