@@ -5,10 +5,21 @@
   --ok: #0d9488; --border: #d5ecec;
 }
 * { box-sizing: border-box; }
+html {
+  /* One consistent type family everywhere, Nunito Light as the base weight
+     for a soft, uniform, "designed as one piece" feel. Buttons, headings,
+     and labels still use heavier Nunito weights (600/700) where emphasis
+     matters -- literally flattening every size/weight would actually hurt
+     readability (a 24px total and a 10px caption need to look different to
+     stay scannable), so this keeps one font and one tightened size scale
+     instead of one single font-size for all text. */
+  font-family: 'Nunito', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
 body {
-  margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  margin: 0; font-family: inherit; font-weight: 300;
   background: var(--bg); color: var(--text);
 }
+button, input, select, textarea { font-family: inherit; }
 .center-screen {
   min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
 }
@@ -124,7 +135,10 @@ td.amount { font-weight: 600; text-align: right; }
 /* Emails must never be clipped -- let the Email column wrap onto a second
    line instead of hard-cutting mid-address like "name@gm...". */
 .users-table td[data-label="Email"] { overflow: visible; white-space: normal; word-break: break-all; }
-.users-table input[data-editable] { width: 100%; font-size: 12px; }
+.users-table input[data-editable] {
+  width: 100%; font-size: 11px; padding: 4px 5px; border-radius: 5px;
+  border: 1px solid var(--border); box-sizing: border-box;
+}
 .users-table .status-pill {
   display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 10px;
   font-weight: 700; text-transform: uppercase; letter-spacing: .02em;
@@ -181,34 +195,58 @@ td.amount { font-weight: 600; text-align: right; }
   .login-card { padding: 22px; }
   .input-tabs { gap: 6px; }
   .input-tabs button { flex: 1 1 auto; }
+  /* Bigger, easier-to-tap fields on the "Add an expense / Income / Fixed
+     Expenses" entry forms -- 16px prevents iOS Safari's automatic zoom-in
+     on focus, which is what was making data entry feel clumsy on a phone. */
+  .field input, .field select {
+    font-size: 16px; padding: 10px 12px;
+  }
+  input[type="date"], .field input[type="date"] {
+    font-size: 15px; min-width: 0; width: 100%;
+  }
+  .btn { width: 100%; padding: 11px 16px; font-size: 15px; }
 }
 
 /* Responsive "card" tables: below 720px, each row becomes a bordered card
-   with its own stacked fields instead of a wide scrolling table -- this is
-   what makes Expenses/Income/Fixed-expenses usable on a phone without
-   needing to scroll sideways to see every column. */
+   with clean "label on the left, value on the right" rows instead of a wide
+   scrolling table -- this is what makes Expenses/Income/Fixed-expenses
+   readable and simple to enter data on a phone without sideways scrolling. */
 @media (max-width: 720px) {
   .table-scroll { overflow-x: visible; }
   table.responsive-table { border: none; }
   table.responsive-table thead { display: none; }
-  table.responsive-table, table.responsive-table tbody,
-  table.responsive-table tr, table.responsive-table td {
+  table.responsive-table, table.responsive-table tbody {
     display: block; width: 100%;
   }
   table.responsive-table tr {
+    display: block; position: relative; width: 100%;
     border: 1px solid var(--border); border-radius: 10px;
-    padding: 10px; margin-bottom: 10px; background: var(--card);
+    padding: 12px 40px 8px 12px; margin-bottom: 10px; background: var(--card);
   }
   table.responsive-table td {
-    border: none; padding: 6px 2px;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    border: none; border-bottom: 1px solid var(--bg); padding: 8px 0; font-size: 13px;
   }
+  table.responsive-table td:last-child { border-bottom: none; }
   table.responsive-table td[data-label]::before {
     content: attr(data-label);
-    display: block; font-size: 11px; color: var(--muted);
-    text-transform: uppercase; letter-spacing: .03em; margin-bottom: 3px;
+    flex: 0 0 auto; font-size: 11px; color: var(--muted); font-weight: 600;
+    text-transform: uppercase; letter-spacing: .03em;
   }
-  table.responsive-table input,
-  table.responsive-table select {
-    width: 100% !important;
+  table.responsive-table td input,
+  table.responsive-table td select {
+    flex: 1 1 auto; width: auto !important; max-width: 64%;
+    font-size: 15px; padding: 7px 8px; text-align: right;
+  }
+  table.responsive-table td select { text-align: left; }
+  table.responsive-table td input[type="number"] { font-weight: 700; }
+  /* The row's delete "x" button has no data-label (it's not a data field) --
+     pin it to the card's top-right corner as a clear tap target instead of
+     letting it sit as an awkward extra row. */
+  table.responsive-table td:has(button.del) {
+    position: absolute; top: 6px; right: 4px; padding: 0; border: none;
+  }
+  table.responsive-table td:has(button.del) button.del {
+    font-size: 20px; padding: 6px 10px; line-height: 1;
   }
 }

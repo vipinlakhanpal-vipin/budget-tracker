@@ -207,25 +207,44 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     setNewIncome((i) => ({ ...i, month: monthKey(currentMonth) }));
   }, [currentMonth]);
 
-  // Keep the "My details" self-edit fields in sync with the signed-in
-  // user's own household_members row once it loads.
+  // Seed the "My details" self-edit fields from the signed-in user's own
+  // household_members row -- but only ONCE, the first time it becomes
+  // available. After that, commitMyDetailsField keeps this draft in sync
+  // directly, so this effect never runs again and can't clobber whatever
+  // the user is currently typing with a stale value from a background
+  // refresh.
+  const didInitMyDetails = useRef(false);
   useEffect(() => {
+    if (didInitMyDetails.current) return;
     const mine = members.find((m) => m.email?.toLowerCase() === session.user.email.toLowerCase());
     if (mine) {
       setMyDetailsDraft({ name: mine.name || '', phone: mine.phone || '', location: mine.location || '' });
+      didInitMyDetails.current = true;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [members]);
 
+  // These three commit functions deliberately do NOT call loadAll() after a
+  // successful save. Doing so previously re-fetched and replaced the whole
+  // `members`/`pendingInvites` arrays on every single field blur -- when
+  // tabbing quickly through Full name -> Phone -> Location, that refresh
+  // (plus the realtime subscription's own echo of the same change) could
+  // land mid-keystroke and effectively knock focus out of the field the
+  // user was still typing into. Updating local state directly with the
+  // exact value just saved keeps the UI in sync instantly with zero risk of
+  // a background refresh interrupting typing; the realtime subscription
+  // still keeps everything else (other users' edits) in sync in the
+  // background.
   async function commitMyDetailsField(field, value) {
     const mine = members.find((m) => m.email?.toLowerCase() === session.user.email.toLowerCase());
     if (!mine) return;
-    const { error } = await supabase.from('household_members').update({ [field]: value.trim() || null }).eq('id', mine.id);
+    const cleaned = value.trim() || null;
+    const { error } = await supabase.from('household_members').update({ [field]: cleaned }).eq('id', mine.id);
     if (error) {
       alert('Could not save: ' + error.message);
       return;
     }
-    loadAll();
+    setMembers((prev) => prev.map((m) => (m.id === mine.id ? { ...m, [field]: cleaned } : m)));
   }
 
   // Lets the owner fill in / fix Name, Phone, Location for anyone else in
@@ -233,23 +252,34 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   // usually already knows this info for family members who haven't filled
   // it in themselves yet. Works for both already-joined members and people
   // who are still only a pending invite.
+  //
+  // These two effects only ADD entries for members/invites we haven't seen
+  // before (or drop ones that were removed) -- they never overwrite an
+  // existing draft entry. That matters because `members`/`pendingInvites`
+  // change on every single field save (including other rows'), and a full
+  // rebuild here would stomp over whatever the owner is mid-typing in a
+  // different row with whatever value happens to already be saved.
   const [memberDetailDrafts, setMemberDetailDrafts] = useState({});
   const [inviteDetailDrafts, setInviteDetailDrafts] = useState({});
 
   useEffect(() => {
-    const drafts = {};
-    members.forEach((m) => {
-      drafts[m.id] = { name: m.name || '', phone: m.phone || '', location: m.location || '' };
+    setMemberDetailDrafts((prev) => {
+      const next = {};
+      members.forEach((m) => {
+        next[m.id] = prev[m.id] ?? { name: m.name || '', phone: m.phone || '', location: m.location || '' };
+      });
+      return next;
     });
-    setMemberDetailDrafts(drafts);
   }, [members]);
 
   useEffect(() => {
-    const drafts = {};
-    pendingInvites.forEach((inv) => {
-      drafts[inv.id] = { name: inv.name || '', phone: inv.phone || '', location: inv.location || '' };
+    setInviteDetailDrafts((prev) => {
+      const next = {};
+      pendingInvites.forEach((inv) => {
+        next[inv.id] = prev[inv.id] ?? { name: inv.name || '', phone: inv.phone || '', location: inv.location || '' };
+      });
+      return next;
     });
-    setInviteDetailDrafts(drafts);
   }, [pendingInvites]);
 
   function updateMemberDetailDraft(id, field, value) {
@@ -257,12 +287,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   }
 
   async function commitMemberDetailField(id, field, value) {
-    const { error } = await supabase.from('household_members').update({ [field]: value.trim() || null }).eq('id', id);
+    const cleaned = value.trim() || null;
+    const { error } = await supabase.from('household_members').update({ [field]: cleaned }).eq('id', id);
     if (error) {
       alert('Could not save: ' + error.message);
       return;
     }
-    loadAll();
+    setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, [field]: cleaned } : m)));
   }
 
   function updateInviteDetailDraft(id, field, value) {
@@ -270,12 +301,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   }
 
   async function commitInviteDetailField(id, field, value) {
-    const { error } = await supabase.from('household_invites').update({ [field]: value.trim() || null }).eq('id', id);
+    const cleaned = value.trim() || null;
+    const { error } = await supabase.from('household_invites').update({ [field]: cleaned }).eq('id', id);
     if (error) {
       alert('Could not save: ' + error.message);
       return;
     }
-    loadAll();
+    setPendingInvites((prev) => prev.map((inv) => (inv.id === id ? { ...inv, [field]: cleaned } : inv)));
   }
 
   // isInitial controls whether the full-page "Loading your budget..." spinner
@@ -648,7 +680,29 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       }
     }
     setInviteEmail('');
-    setInviteStatus('sent');
+
+    // The invite itself (the household_invites row) is what actually lets
+    // this person auto-join when they sign up -- that part always works
+    // regardless of what happens below. This email is just a courtesy
+    // notification over the same free Gmail infra as reports/reminders, so
+    // its failure (e.g. GMAIL_USER/GMAIL_APP_PASSWORD not configured yet)
+    // shouldn't be reported as the invite itself failing.
+    try {
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const res = await fetch('/api/invite-member', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authSession?.access_token}` },
+        body: JSON.stringify({ to: email, householdName: household.name }),
+      });
+      if (res.ok) {
+        setInviteStatus('sent');
+      } else {
+        const json = await res.json().catch(() => ({}));
+        setInviteStatus('sent-no-email: ' + (json.error || 'email not sent'));
+      }
+    } catch {
+      setInviteStatus('sent-no-email: could not reach email service');
+    }
     loadAll();
   }
 
@@ -764,72 +818,103 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
+    const M = 18; // outer margin -- a bit more generous than the previous 14mm for a cleaner, more modern feel.
     const [accentR, accentG, accentB] = hexToRgb('#0d9488');
+    const netTotal = incomeTotal - expenseTotal - fixedTotal;
+    const today = fmtDate(new Date().toISOString().slice(0, 10));
 
-    // Header banner -- colored band matching the app's teal brand accent,
-    // with the household name, report title, range, and who generated it.
-    doc.setFillColor(accentR, accentG, accentB);
-    doc.rect(0, 0, pageWidth, 34, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(17);
-    doc.setFont(undefined, 'bold');
-    doc.text(household.name || 'Household Budget Tracker', 14, 15);
-    doc.setFont(undefined, 'normal');
-    doc.setFontSize(11);
-    doc.text(`Budget Report -- ${rangeLabel}`, 14, 23);
-    doc.setFontSize(8.5);
-    doc.text(`Generated ${fmtDate(new Date().toISOString().slice(0, 10))} by ${session.user.email}`, 14, 29);
-    doc.setTextColor(0, 0, 0);
+    // Repeated on every page: a slim teal header band with the household
+    // name + a per-page "chapter" label (e.g. "01 / Overview"), so each
+    // page reads like a section of one cohesively designed report rather
+    // than a plain stapled-together printout.
+    function drawHeader(pageNum, sectionLabel) {
+      doc.setFillColor(accentR, accentG, accentB);
+      doc.rect(0, 0, pageWidth, 26, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFont(undefined, 'bold');
+      doc.setFontSize(14);
+      doc.text(household.name || 'Household Budget Tracker', M, 11);
+      doc.setFont(undefined, 'normal');
+      doc.setFontSize(8.5);
+      doc.text(`Budget Report -- ${rangeLabel}`, M, 18);
+      doc.setFontSize(9);
+      doc.setFont(undefined, 'bold');
+      doc.text(`0${pageNum} / ${sectionLabel}`, pageWidth - M, 11, { align: 'right' });
+      doc.setFont(undefined, 'normal');
+      doc.setFontSize(7.5);
+      doc.text(`Generated ${today}`, pageWidth - M, 18, { align: 'right' });
+      doc.setTextColor(0, 0, 0);
+      return 38;
+    }
 
-    let y = 44;
+    // Small uppercase "eyebrow" label above a section title -- a common
+    // modern-report typographic touch that adds visual hierarchy without
+    // extra clutter.
+    function drawEyebrow(text, y) {
+      doc.setFontSize(8);
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(accentR, accentG, accentB);
+      doc.text(text.toUpperCase(), M, y);
+      doc.setTextColor(0, 0, 0);
+      doc.setFont(undefined, 'normal');
+    }
 
-    // Bar chart up top -- the visual headline before the detail tables.
+    const tableDefaults = {
+      styles: { fontSize: 9, cellPadding: 3, lineColor: [230, 234, 238], lineWidth: 0.1 },
+      alternateRowStyles: { fillColor: [248, 250, 251] },
+      margin: { left: M, right: M },
+    };
+
+    // ---------- Page 1: Overview -- bar chart + summary ----------
+    let y = drawHeader(1, 'Overview');
+
+    drawEyebrow('Spending Breakdown', y);
+    y += 7;
     doc.setFontSize(13);
     doc.setFont(undefined, 'bold');
-    doc.text('Expenses by Category (Regular + Fixed)', 14, y);
+    doc.text('Expenses by Category', M, y);
     doc.setFont(undefined, 'normal');
-    y += 8;
+    y += 9;
 
     if (chartRows.length === 0) {
       doc.setFontSize(9);
       doc.setTextColor(120);
-      doc.text('No expenses in this period.', 14, y);
+      doc.text('No expenses in this period.', M, y);
       doc.setTextColor(0);
       y += 10;
     } else {
       const maxVal = Math.max(...chartRows.map(([, v]) => v)) || 1;
-      const labelX = 14;
-      const barX = 62;
-      const barMaxWidth = pageWidth - barX - 40;
-      const barHeight = 5.5;
-      const rowGap = 3;
+      const labelX = M;
+      const barX = M + 48;
+      const barMaxWidth = pageWidth - barX - M - 26;
+      const barHeight = 6;
+      const rowGap = 3.5;
       chartRows.forEach(([name, val], i) => {
-        if (y > 270) { doc.addPage(); y = 20; }
         const barWidth = Math.max(1, (val / maxVal) * barMaxWidth);
         const [r, g, b] = hexToRgb(COLORS[i % COLORS.length]);
+        doc.setFillColor(245, 246, 248);
+        doc.roundedRect(barX, y, barMaxWidth, barHeight, 1, 1, 'F');
         doc.setFillColor(r, g, b);
-        doc.rect(barX, y, barWidth, barHeight, 'F');
-        doc.setFontSize(8);
-        doc.setTextColor(30);
-        const label = name.length > 24 ? name.slice(0, 24) + '...' : name;
-        doc.text(label, labelX, y + barHeight - 1);
-        doc.text(fmt(val), barX + barWidth + 3, y + barHeight - 1);
+        doc.roundedRect(barX, y, barWidth, barHeight, 1, 1, 'F');
+        doc.setFontSize(8.5);
+        doc.setTextColor(50);
+        const label = name.length > 20 ? name.slice(0, 20) + '...' : name;
+        doc.text(label, labelX, y + barHeight - 1.3);
+        doc.setFont(undefined, 'bold');
+        doc.text(fmt(val), barX + barMaxWidth + 3, y + barHeight - 1.3);
+        doc.setFont(undefined, 'normal');
         y += barHeight + rowGap;
       });
-      y += 8;
+      y += 10;
     }
 
-    // Summary -- the combined regular+fixed total and the net figure, so
-    // the headline numbers don't require adding up three separate tables.
-    // The last two rows are highlighted so the totals that matter most
-    // stand out at a glance.
-    if (y > 240) { doc.addPage(); y = 20; }
+    drawEyebrow('At A Glance', y);
+    y += 7;
     doc.setFontSize(13);
     doc.setFont(undefined, 'bold');
-    doc.text('Summary', 14, y);
+    doc.text('Summary', M, y);
     doc.setFont(undefined, 'normal');
     y += 4;
-    const netTotal = incomeTotal - expenseTotal - fixedTotal;
     autoTable(doc, {
       startY: y,
       body: [
@@ -840,9 +925,9 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
         ['Net (Income - Total Expenses)', fmt(netTotal)],
       ],
       theme: 'plain',
-      styles: { fontSize: 10, fontStyle: 'bold', cellPadding: 2 },
+      styles: { fontSize: 10.5, fontStyle: 'bold', cellPadding: 3 },
       columnStyles: { 0: { cellWidth: 100 }, 1: { halign: 'right' } },
-      margin: { left: 14, right: 14 },
+      margin: { left: M, right: M },
       didParseCell: (data) => {
         if (data.row.index === 3) {
           data.cell.styles.fillColor = [241, 245, 249];
@@ -853,18 +938,16 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
         }
       },
     });
-    y = doc.lastAutoTable.finalY + 14;
 
-    const tableDefaults = {
-      styles: { fontSize: 9, cellPadding: 2.5 },
-      alternateRowStyles: { fillColor: [246, 248, 250] },
-      margin: { left: 14, right: 14 },
-    };
+    // ---------- Page 2: Income & Expenses ----------
+    doc.addPage();
+    y = drawHeader(2, 'Income & Expenses');
 
-    if (y > 250) { doc.addPage(); y = 20; }
+    drawEyebrow('Money In', y);
+    y += 7;
     doc.setFontSize(13);
     doc.setFont(undefined, 'bold');
-    doc.text('Income', 14, y);
+    doc.text('Income', M, y);
     doc.setFont(undefined, 'normal');
     y += 4;
     autoTable(doc, {
@@ -876,12 +959,14 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       headStyles: { fillColor: [14, 165, 233] },
       footStyles: { fillColor: [226, 240, 250], textColor: [15, 42, 46], fontStyle: 'bold' },
     });
-    y = doc.lastAutoTable.finalY + 12;
+    y = doc.lastAutoTable.finalY + 14;
 
-    if (y > 250) { doc.addPage(); y = 20; }
+    if (y > 230) { doc.addPage(); y = drawHeader(2, 'Income & Expenses'); }
+    drawEyebrow('Money Out', y);
+    y += 7;
     doc.setFontSize(13);
     doc.setFont(undefined, 'bold');
-    doc.text('Expenses', 14, y);
+    doc.text('Expenses', M, y);
     doc.setFont(undefined, 'normal');
     y += 4;
     autoTable(doc, {
@@ -893,20 +978,23 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       headStyles: { fillColor: [249, 115, 22] },
       footStyles: { fillColor: [253, 237, 224], textColor: [15, 42, 46], fontStyle: 'bold' },
     });
-    y = doc.lastAutoTable.finalY + 12;
 
-    if (y > 250) { doc.addPage(); y = 20; }
+    // ---------- Page 3: Fixed Expenses ----------
+    doc.addPage();
+    y = drawHeader(3, 'Fixed Expenses');
+
+    drawEyebrow('Recurring Bills', y);
+    y += 7;
     doc.setFontSize(13);
     doc.setFont(undefined, 'bold');
-    doc.text('Fixed Expenses', 14, y);
+    doc.text('Fixed Expenses', M, y);
     doc.setFont(undefined, 'normal');
     y += 4;
     if (rangeRecurringOccurrences.length === 0) {
       doc.setFontSize(9);
       doc.setTextColor(120);
-      doc.text('No fixed expenses due in this period.', 14, y);
+      doc.text('No fixed expenses due in this period.', M, y);
       doc.setTextColor(0);
-      y += 10;
     } else {
       autoTable(doc, {
         ...tableDefaults,
@@ -925,19 +1013,18 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
         headStyles: { fillColor: [168, 85, 247] },
         footStyles: { fillColor: [240, 229, 250], textColor: [15, 42, 46], fontStyle: 'bold' },
       });
-      y = doc.lastAutoTable.finalY + 10;
     }
 
-    // Footer on every page: confidentiality note + page numbers.
+    // Footer on every page: a thin rule, confidentiality note, and page count.
     const pageCount = doc.internal.getNumberOfPages();
     for (let p = 1; p <= pageCount; p++) {
       doc.setPage(p);
-      doc.setDrawColor(220);
-      doc.line(14, 285, pageWidth - 14, 285);
-      doc.setFontSize(8);
+      doc.setDrawColor(225);
+      doc.line(M, 285, pageWidth - M, 285);
+      doc.setFontSize(7.5);
       doc.setTextColor(140);
-      doc.text('Confidential -- for household members only. Not to be shared outside the household.', 14, 290);
-      doc.text(`Page ${p} of ${pageCount}`, pageWidth - 14, 290, { align: 'right' });
+      doc.text('Confidential -- for household members only. Not to be shared outside the household.', M, 290);
+      doc.text(`Page ${p} of ${pageCount}`, pageWidth - M, 290, { align: 'right' });
     }
 
     const filename = `budget-report_${from}_to_${to}.pdf`;
@@ -1677,8 +1764,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 <div className="table-scroll">
                 <table className="responsive-table users-table">
                   <colgroup>
-                    <col style={{ width: '18%' }} /><col style={{ width: '24%' }} />
-                    <col style={{ width: '16%' }} /><col style={{ width: '18%' }} /><col style={{ width: '14%' }} />
+                    <col style={{ width: '21%' }} /><col style={{ width: '19%' }} />
+                    <col style={{ width: '19%' }} /><col style={{ width: '21%' }} /><col style={{ width: '10%' }} />
                   </colgroup>
                   <thead>
                     <tr><th>Name</th><th>Email</th><th>Phone</th><th>Location</th><th>Status</th></tr>
@@ -1820,10 +1907,18 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       <button className="btn secondary small" type="submit">Invite</button>
                     </form>
                     <div className="muted-small" style={{ marginTop: 6 }}>
-                      They can sign up themselves with this email address, or wait for a Supabase invite email -- either way they'll land in this household automatically.
+                      They'll land in this household automatically the moment they sign up (or sign in) with this exact email address -- an invite notification email is also sent to let them know, once you've set up email sending (see Settings/Vercel setup).
                     </div>
+                    {inviteStatus === 'sending' && (
+                      <div className="muted-small" style={{ marginTop: 6 }}>Sending...</div>
+                    )}
                     {inviteStatus === 'sent' && (
-                      <div className="muted-small" style={{ marginTop: 6, color: 'var(--ok)' }}>Invite created.</div>
+                      <div className="muted-small" style={{ marginTop: 6, color: 'var(--ok)' }}>Invite created and notification email sent.</div>
+                    )}
+                    {inviteStatus.startsWith('sent-no-email') && (
+                      <div className="muted-small" style={{ marginTop: 6, color: '#92400e' }}>
+                        Invite created -- they'll still auto-join when they sign up with this email. The notification email itself couldn't be sent ({inviteStatus.replace('sent-no-email: ', '')}); share the sign-up link with them directly for now.
+                      </div>
                     )}
                     {pendingInvites.length > 0 && (
                       <div className="cat-list" style={{ marginTop: 10 }}>
