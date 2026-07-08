@@ -27,6 +27,21 @@ export default function App() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
+  // IMPORTANT: this only re-resolves the household when the signed-in USER
+  // actually changes (sign in, sign out, switching accounts) -- not on every
+  // `session` object Supabase hands us. Supabase silently refreshes the
+  // access token in the background every ~50-55 minutes (and often
+  // immediately whenever you switch back to the browser tab), firing
+  // onAuthStateChange with a brand new `session` object each time even
+  // though it's still the same logged-in user. That used to re-run this
+  // effect, which calls resolveHousehold() -> setHouseholdChecked(false) ->
+  // renders the full-page "Loading..." screen in place of the Dashboard,
+  // unmounting it and wiping out anything not yet saved (e.g. a half-typed
+  // expense) -- this is what looked like "the page refreshes and my data
+  // disappears". Keying this effect on the user's id instead of the whole
+  // session object means a token refresh updates `session` in the background
+  // (so API calls still use the fresh token) without ever unmounting the
+  // Dashboard.
   useEffect(() => {
     if (session) {
       resolveHousehold();
@@ -35,7 +50,7 @@ export default function App() {
       setHouseholdChecked(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session]);
+  }, [session?.user?.id]);
 
   async function resolveHousehold() {
     setHouseholdChecked(false);
