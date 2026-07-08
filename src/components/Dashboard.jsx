@@ -78,6 +78,11 @@ function fmtDate(dateStr) {
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
+function hexToRgb(hex) {
+  const n = parseInt(hex.replace('#', ''), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
 export default function Dashboard({ session, household, onHouseholdChange, isAdmin, onOpenAdmin }) {
   const householdId = household.id;
   const isOwner = household.role === 'owner';
@@ -113,6 +118,12 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   const [inputTab, setInputTab] = useState('expense');
   const [members, setMembers] = useState([]);
   const [pendingInvites, setPendingInvites] = useState([]);
+  // Lets anyone (including accounts created before the Location field
+  // existed, like the very first owner account) fill in / fix their own
+  // Name, Phone, Location later -- without needing to sign out and sign up
+  // again, since signup metadata only ever gets copied into
+  // household_members once, at the moment a household is first joined.
+  const [myDetailsDraft, setMyDetailsDraft] = useState({ name: '', phone: '', location: '' });
   const [expenseDrafts, setExpenseDrafts] = useState({});
 
   const [form, setForm] = useState({
@@ -166,6 +177,27 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   useEffect(() => {
     setNewIncome((i) => ({ ...i, month: monthKey(currentMonth) }));
   }, [currentMonth]);
+
+  // Keep the "My details" self-edit fields in sync with the signed-in
+  // user's own household_members row once it loads.
+  useEffect(() => {
+    const mine = members.find((m) => m.email?.toLowerCase() === session.user.email.toLowerCase());
+    if (mine) {
+      setMyDetailsDraft({ name: mine.name || '', phone: mine.phone || '', location: mine.location || '' });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [members]);
+
+  async function commitMyDetailsField(field, value) {
+    const mine = members.find((m) => m.email?.toLowerCase() === session.user.email.toLowerCase());
+    if (!mine) return;
+    const { error } = await supabase.from('household_members').update({ [field]: value.trim() || null }).eq('id', mine.id);
+    if (error) {
+      alert('Could not save: ' + error.message);
+      return;
+    }
+    loadAll();
+  }
 
   async function loadAll() {
     setLoading(true);
@@ -634,6 +666,28 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     doc.setTextColor(0);
 
     let y = 42;
+
+    // Summary -- the combined regular+fixed total and the net figure, up
+    // front, so the headline numbers don't require adding up three tables.
+    doc.setFontSize(13);
+    doc.text('Summary', 14, y);
+    y += 4;
+    autoTable(doc, {
+      startY: y,
+      body: [
+        ['Total Income', fmt(incomeTotal)],
+        ['Total Regular Expenses', fmt(expenseTotal)],
+        ['Total Fixed Expenses', fmt(fixedTotal)],
+        ['Total Expenses (Regular + Fixed)', fmt(expenseTotal + fixedTotal)],
+        ['Net (Income - Total Expenses)', fmt(incomeTotal - expenseTotal - fixedTotal)],
+      ],
+      theme: 'plain',
+      styles: { fontSize: 10, fontStyle: 'bold', cellPadding: 1.5 },
+      columnStyles: { 0: { cellWidth: 100 }, 1: { halign: 'right' } },
+      margin: { left: 14, right: 14 },
+    });
+    y = doc.lastAutoTable.finalY + 14;
+
     doc.setFontSize(13);
     doc.text('Income', 14, y);
     y += 4;
@@ -683,8 +737,53 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     });
     y = doc.lastAutoTable.finalY + 14;
 
-    doc.setFontSize(12);
-    doc.text(`Net for period: ${fmt(incomeTotal - expenseTotal - fixedTotal)}`, 14, y);
+    // Bar chart -- combined Regular + Fixed spend per category, drawn
+    // directly with jsPDF primitives (no chart library/canvas capture
+    // needed) so it renders crisply at any zoom level in the PDF.
+    const categoryTotals = {};
+    rangeExpenses.forEach((e) => {
+      const name = categoryNameById[e.category_id] || 'Uncategorized';
+      categoryTotals[name] = (categoryTotals[name] || 0) + Number(e.amount);
+    });
+    rangeRecurring.forEach((r) => {
+      const name = categoryNameById[r.category_id] || 'Uncategorized';
+      categoryTotals[name] = (categoryTotals[name] || 0) + Number(r.amount);
+    });
+    const chartRows = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]);
+
+    if (y > 230) { doc.addPage(); y = 20; }
+    doc.setFontSize(13);
+    doc.setTextColor(0);
+    doc.text('Expenses by Category (Regular + Fixed)', 14, y);
+    y += 8;
+
+    if (chartRows.length === 0) {
+      doc.setFontSize(9);
+      doc.setTextColor(120);
+      doc.text('No expenses in this period.', 14, y);
+      y += 10;
+    } else {
+      const maxVal = Math.max(...chartRows.map(([, v]) => v)) || 1;
+      const labelX = 14;
+      const barX = 62;
+      const barMaxWidth = 100;
+      const barHeight = 5;
+      const rowGap = 3;
+      chartRows.forEach(([name, val], i) => {
+        if (y > 275) { doc.addPage(); y = 20; }
+        const barWidth = Math.max(1, (val / maxVal) * barMaxWidth);
+        const [r, g, b] = hexToRgb(COLORS[i % COLORS.length]);
+        doc.setFillColor(r, g, b);
+        doc.rect(barX, y, barWidth, barHeight, 'F');
+        doc.setFontSize(8);
+        doc.setTextColor(30);
+        const label = name.length > 24 ? name.slice(0, 24) + '...' : name;
+        doc.text(label, labelX, y + barHeight - 1);
+        doc.text(fmt(val), barX + barWidth + 3, y + barHeight - 1);
+        y += barHeight + rowGap;
+      });
+      y += 10;
+    }
 
     const pageCount = doc.internal.getNumberOfPages();
     for (let p = 1; p <= pageCount; p++) {
@@ -1369,6 +1468,41 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           <div className="panel" ref={panelRef}>
               <div>
                 <h2>Users</h2>
+
+                <div style={{ marginBottom: 18, padding: 12, border: '1px solid var(--border)', borderRadius: 8 }}>
+                  <div className="muted-small" style={{ fontWeight: 600, marginBottom: 8 }}>My details</div>
+                  <div className="row">
+                    <div className="field">
+                      <label>Full name</label>
+                      <input
+                        type="text"
+                        value={myDetailsDraft.name}
+                        onChange={(e) => setMyDetailsDraft((d) => ({ ...d, name: e.target.value }))}
+                        onBlur={(e) => commitMyDetailsField('name', e.target.value)}
+                      />
+                    </div>
+                    <div className="field">
+                      <label>Phone (optional)</label>
+                      <input
+                        type="text"
+                        value={myDetailsDraft.phone}
+                        onChange={(e) => setMyDetailsDraft((d) => ({ ...d, phone: e.target.value }))}
+                        onBlur={(e) => commitMyDetailsField('phone', e.target.value)}
+                      />
+                    </div>
+                    <div className="field">
+                      <label>Location</label>
+                      <input
+                        type="text"
+                        value={myDetailsDraft.location}
+                        onChange={(e) => setMyDetailsDraft((d) => ({ ...d, location: e.target.value }))}
+                        onBlur={(e) => commitMyDetailsField('location', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="muted-small" style={{ marginTop: 4 }}>Changes save automatically. Use this to fill in or fix your own info, including for accounts created before this field existed.</div>
+                </div>
+
                 <div className="muted-small" style={{ marginBottom: 4, fontWeight: 600 }}>
                   {members.length + pendingInvites.length} total -- {members.length} active, {pendingInvites.length} pending
                 </div>
