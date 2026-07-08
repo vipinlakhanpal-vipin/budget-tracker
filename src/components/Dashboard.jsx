@@ -245,6 +245,11 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       return;
     }
     setMembers((prev) => prev.map((m) => (m.id === mine.id ? { ...m, [field]: cleaned } : m)));
+    // Keep the owner-editable Users-table row for this same person in sync
+    // too, since it's a separate draft object for the same underlying row --
+    // without this, editing "My details" wouldn't show up in the table below
+    // until a full page reload.
+    setMemberDetailDrafts((prev) => (prev[mine.id] ? { ...prev, [mine.id]: { ...prev[mine.id], [field]: value } } : prev));
   }
 
   // Lets the owner fill in / fix Name, Phone, Location for anyone else in
@@ -294,6 +299,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       return;
     }
     setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, [field]: cleaned } : m)));
+    // If the owner just edited their own row from this table, mirror it
+    // into "My details" too, for the same reason as above -- one row, two
+    // draft objects, both need to agree.
+    const edited = members.find((m) => m.id === id);
+    if (edited && edited.email?.toLowerCase() === session.user.email.toLowerCase()) {
+      setMyDetailsDraft((prev) => ({ ...prev, [field]: value }));
+    }
   }
 
   function updateInviteDetailDraft(id, field, value) {
