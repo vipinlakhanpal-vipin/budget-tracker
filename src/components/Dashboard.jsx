@@ -790,7 +790,14 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           remaining,
           fixedTotal: recurringTotal,
           savingsTotal,
+          // The REAL totals, computed from every category -- categoryBreakdown
+          // below is capped to the top 8 for a readable prompt, so it must
+          // never be summed server-side to derive "total spent" (that was a
+          // real bug: it silently dropped every category past the top 8).
+          totalSpendExcludingSavings: total,
+          totalSpendIncludingSavings: combinedOutflow,
           categoryBreakdown,
+          categoryBreakdownIsPartial: pieData.length > categoryBreakdown.length,
           overBudgetCategories: overCategories,
         }),
       });

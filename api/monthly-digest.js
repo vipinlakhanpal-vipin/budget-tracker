@@ -16,7 +16,8 @@ export default async function handler(req, res) {
 
   const {
     currency, monthLabel, totalIncome, totalBudget, remaining,
-    fixedTotal, savingsTotal, categoryBreakdown, overBudgetCategories,
+    fixedTotal, savingsTotal, categoryBreakdown, categoryBreakdownIsPartial,
+    overBudgetCategories, totalSpendExcludingSavings, totalSpendIncludingSavings,
   } = req.body || {};
 
   if (!monthLabel || !Array.isArray(categoryBreakdown)) {
@@ -27,29 +28,32 @@ export default async function handler(req, res) {
   if (!apiKey) return res.status(200).json({ digest: null, aiEnabled: false });
 
   try {
-    // categoryBreakdown already includes fixed/recurring bills (they're
-    // grouped into their own categories, same as one-off expenses), so its
-    // sum below IS the total spend excluding savings -- fixedTotal is only
-    // passed separately as narrative color (e.g. "bills make up most of
-    // this"), never as something to add on top. Every total the model needs
-    // is precomputed here and handed over as a ready-to-use fact, precisely
-    // so it never has to add up figures itself -- an earlier version left
-    // that arithmetic to the model and it silently miscalculated "total
-    // spent" (adding income + over-budget-amount instead of using the real
-    // total), producing a number that didn't match the dashboard.
+    // Every total below (spend, over-budget amount, etc.) is precomputed by
+    // the app from ALL categories, not derived from categoryBreakdown --
+    // that list is capped to the top 8 purely so the prompt stays short, and
+    // an earlier version of this endpoint mistakenly summed just that capped
+    // list to get "total spent", silently dropping every category past the
+    // top 8 (e.g. showing AED 27,966 when the real total was AED 31,011).
+    // Passing the real totals directly, and telling the model the category
+    // list may be partial, avoids the model reconciling (or re-deriving)
+    // numbers itself -- which is also what caused a separate earlier bug
+    // where it computed "total spent" as income + over-budget-amount.
     const catLines = categoryBreakdown
       .map((c) => `- ${c.name}: ${currency || ''} ${Number(c.amount).toFixed(2)}`)
       .join('\n');
-    const spendExcludingSavings = categoryBreakdown.reduce((s, c) => s + Number(c.amount), 0);
-    const spendIncludingSavings = spendExcludingSavings + Number(savingsTotal || 0);
+    const spendExcludingSavings = Number(totalSpendExcludingSavings || 0);
+    const spendIncludingSavings = Number(totalSpendIncludingSavings || 0);
     const overLine = overBudgetCategories && overBudgetCategories.length
       ? `Categories currently over their own budget cap: ${overBudgetCategories.join(', ')}.`
       : 'No individual category is currently over its budget cap.';
     const budgetLine = Number(remaining || 0) < 0
       ? `This puts the household OVER its total monthly budget by ${currency || ''} ${Math.abs(Number(remaining || 0)).toFixed(2)}.`
       : `This is within the total monthly budget, with ${currency || ''} ${Number(remaining || 0).toFixed(2)} remaining.`;
+    const partialNote = categoryBreakdownIsPartial
+      ? ' (showing only the biggest categories -- there are smaller ones too, already folded into the totals above)'
+      : '';
 
-    const prompt = `You are a friendly household budgeting assistant. Write a short, warm, plain-language summary of this household's spending for ${monthLabel}. Every figure you need is already calculated below -- use these exact numbers as given and do not perform any arithmetic of your own or restate them differently.
+    const prompt = `You are a friendly household budgeting assistant. Write a short, warm, plain-language summary of this household's spending for ${monthLabel}. Every figure you need is already calculated below -- use these exact numbers as given, quoting them exactly where you state a number, and do not perform any arithmetic of your own or re-derive any total.
 
 Total income: ${currency || ''} ${Number(totalIncome || 0).toFixed(2)}
 Total monthly budget: ${currency || ''} ${Number(totalBudget || 0).toFixed(2)}
@@ -58,11 +62,11 @@ Total spent including planned savings set aside: ${currency || ''} ${spendInclud
 ${budgetLine}
 Of the total spent, fixed/recurring bills (rent, loans, EMIs, subscriptions) make up: ${currency || ''} ${Number(fixedTotal || 0).toFixed(2)}
 Planned savings set aside this month: ${currency || ''} ${Number(savingsTotal || 0).toFixed(2)}
-Spending by category, highest first (this already includes fixed bills grouped into their categories):
+Biggest spending categories, highest first${partialNote}:
 ${catLines}
 ${overLine}
 
-Write 2-3 short sentences highlighting what stands out (e.g. the biggest category, whether they're over or under budget -- using the exact figures above, word-for-word where you state a number), then a blank line, then 2 short suggestions as separate lines starting with a dash. Keep the whole thing under 120 words. Plain text only, no markdown formatting, no headers.`;
+Write 2-3 short sentences highlighting what stands out (e.g. the biggest category, whether they're over or under budget), then a blank line, then 2 short suggestions as separate lines starting with a dash. Keep the whole thing under 120 words. Plain text only, no markdown formatting, no headers.`;
 
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
