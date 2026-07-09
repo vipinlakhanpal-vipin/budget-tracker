@@ -8,6 +8,10 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { supabase } from '../supabaseClient';
 import AdminConsole from './AdminConsole.jsx';
+import {
+  Home, Plus, FileText, Users as UsersIcon, Settings as SettingsIcon,
+  Pencil, Trash2, X, ChevronLeft, ChevronRight,
+} from 'lucide-react';
 
 // Bump this with every meaningful change and shown in the top bar (see
 // .app-version below) -- since this app auto-updates in place (there's no
@@ -15,7 +19,7 @@ import AdminConsole from './AdminConsole.jsx';
 // to confirm your browser/home-screen icon is actually showing the latest
 // build rather than a stale cached copy. Format: YYYY-MM-DD.N, where N
 // resets to 1 on a new day and increments for same-day updates.
-const APP_VERSION = '2026-07-09.1';
+const APP_VERSION = '2026-07-09.2';
 
 const COLORS = [
   '#f97316', '#0ea5e9', '#a855f7', '#22c55e', '#ef4444',
@@ -175,6 +179,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     // only one "overlay" on screen at a time, so Report/Users/Settings
     // never end up stacked underneath an already-open Add sheet.
     setAddSheetOpen(false);
+    setEditingExpenseId(null);
     setActivePanel((cur) => (cur === name ? null : name));
   }
 
@@ -195,13 +200,33 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   // section into an overlay, so nothing about desktop's layout or behavior
   // changes.
   const [addSheetOpen, setAddSheetOpen] = useState(false);
+
+  // Drives the mobile-only "Expenses this month" redesign below: on a
+  // narrow screen, that list renders as tappable read-only rows (icon,
+  // description, date, amount) instead of the always-editable input table
+  // desktop uses -- tapping a row opens an edit sheet instead. Tracked in
+  // JS (not just CSS) because which JSX gets rendered actually differs
+  // between the two, not just how it's styled.
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches
+  );
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 640px)');
+    const handler = (e) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  const [editingExpenseId, setEditingExpenseId] = useState(null);
+
   function goToOverview() {
     setActivePanel(null);
     setAddSheetOpen(false);
+    setEditingExpenseId(null);
     topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
   function goToAdd(tab) {
     setActivePanel(null);
+    setEditingExpenseId(null);
     setInputTab(tab);
     setAddSheetOpen(true);
   }
@@ -2309,6 +2334,39 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             <h2>Expenses this month</h2>
             {monthExpenses.length === 0 ? (
               <div className="empty">No one-off expenses logged for this month yet.</div>
+            ) : isMobile ? (
+              // Mobile gets a clean, read-at-a-glance transaction list --
+              // colored category icon, description, category + date, and a
+              // right-aligned amount -- instead of four always-open input
+              // fields per row, which read more like a spreadsheet than an
+              // app. Tapping a row opens the same kind of bottom sheet as
+              // "Add", pre-filled for editing, reusing the exact same
+              // commitExpenseField/handleDeleteExpense logic desktop uses.
+              <div className="mobile-txn-list">
+                {monthExpenses.map((e) => {
+                  const catIdx = categories.findIndex((c) => c.id === e.category_id);
+                  const catColor = COLORS[(catIdx >= 0 ? catIdx : 0) % COLORS.length];
+                  const catName = categoryNameById[e.category_id] || 'Uncategorized';
+                  const title = (expenseDrafts[e.id]?.description || e.description || catName).trim();
+                  return (
+                    <button
+                      key={e.id}
+                      type="button"
+                      className="mobile-txn-row"
+                      onClick={() => { setAddSheetOpen(false); setEditingExpenseId(e.id); }}
+                    >
+                      <span className="mobile-txn-icon" style={{ background: catColor }}>
+                        {catName.charAt(0).toUpperCase()}
+                      </span>
+                      <span className="mobile-txn-mid">
+                        <span className="mobile-txn-title">{title}</span>
+                        <span className="mobile-txn-sub">{catName} &middot; {fmtDate(e.expense_date)}</span>
+                      </span>
+                      <span className="mobile-txn-amount">{fmt(e.amount)}</span>
+                    </button>
+                  );
+                })}
+              </div>
             ) : (
               <div className="table-scroll">
               <table className="responsive-table" style={{ fontSize: 12 }}>
@@ -2376,6 +2434,78 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               </div>
             )}
           </div>
+
+          {/* Mobile edit sheet for a tapped transaction -- same fields, same
+              auto-save-on-blur handlers as desktop's inline row, just
+              presented as a focused sheet instead of four permanently open
+              inputs. */}
+          {isMobile && editingExpenseId && (() => {
+            const e = monthExpenses.find((x) => x.id === editingExpenseId);
+            if (!e) return null;
+            return (
+              <>
+                <div className="mobile-sheet-backdrop" onClick={() => setEditingExpenseId(null)} />
+                <div className="mobile-add-sheet">
+                  <div className="mobile-sheet-handle">
+                    <span className="mobile-sheet-drag" />
+                    <button className="mobile-sheet-close" onClick={() => setEditingExpenseId(null)} aria-label="Close">
+                      <X size={18} />
+                    </button>
+                  </div>
+                  <h2 style={{ margin: '0 0 12px' }}>Edit expense</h2>
+                  <div className="field" style={{ marginBottom: 10 }}>
+                    <label>Date</label>
+                    <input
+                      type="date"
+                      value={expenseDrafts[e.id]?.date ?? ''}
+                      onChange={(ev) => updateExpenseDraftField(e.id, 'date', ev.target.value)}
+                      onBlur={(ev) => commitExpenseField(e.id, 'date', ev.target.value)}
+                    />
+                  </div>
+                  <div className="field" style={{ marginBottom: 10 }}>
+                    <label>Category</label>
+                    <select
+                      value={expenseDrafts[e.id]?.categoryId ?? ''}
+                      onChange={(ev) => commitExpenseField(e.id, 'categoryId', ev.target.value)}
+                    >
+                      {categories.map((c) => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="field" style={{ marginBottom: 10 }}>
+                    <label>Description</label>
+                    <input
+                      type="text"
+                      value={expenseDrafts[e.id]?.description ?? ''}
+                      onChange={(ev) => updateExpenseDraftField(e.id, 'description', ev.target.value)}
+                      onBlur={(ev) => commitExpenseField(e.id, 'description', ev.target.value)}
+                    />
+                  </div>
+                  <div className="field" style={{ marginBottom: 16 }}>
+                    <label>Amount</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={expenseDrafts[e.id]?.amount ?? ''}
+                      onChange={(ev) => updateExpenseDraftField(e.id, 'amount', ev.target.value)}
+                      onBlur={(ev) => commitExpenseField(e.id, 'amount', ev.target.value)}
+                    />
+                  </div>
+                  <button
+                    className="mobile-delete-btn"
+                    onClick={() => {
+                      handleDeleteExpense(e.id);
+                      setEditingExpenseId(null);
+                    }}
+                  >
+                    <Trash2 size={16} /> Delete expense
+                  </button>
+                </div>
+              </>
+            );
+          })()}
         </div>
 
         <div>
@@ -3024,27 +3154,27 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
         aria-label="Add an expense"
         title="Add an expense"
       >
-        +
+        <Plus size={26} strokeWidth={2.5} />
       </button>
       <nav className="mobile-bottom-nav">
-        <button onClick={goToOverview}>
-          <span className="mobile-nav-icon">🏠</span>
-          <span>Overview</span>
+        <button className={!activePanel && !addSheetOpen ? 'active' : ''} onClick={goToOverview}>
+          <Home size={20} strokeWidth={2.2} />
+          <span>Home</span>
         </button>
         <button onClick={() => goToAdd(inputTab || 'expense')}>
-          <span className="mobile-nav-icon">➕</span>
+          <Plus size={20} strokeWidth={2.2} />
           <span>Add</span>
         </button>
         <button className={activePanel === 'report' ? 'active' : ''} onClick={() => togglePanel('report')}>
-          <span className="mobile-nav-icon">📄</span>
+          <FileText size={20} strokeWidth={2.2} />
           <span>Report</span>
         </button>
         <button className={activePanel === 'members' ? 'active' : ''} onClick={() => togglePanel('members')}>
-          <span className="mobile-nav-icon">👥</span>
+          <UsersIcon size={20} strokeWidth={2.2} />
           <span>Users</span>
         </button>
         <button className={activePanel === 'settings' ? 'active' : ''} onClick={() => togglePanel('settings')}>
-          <span className="mobile-nav-icon">⚙️</span>
+          <SettingsIcon size={20} strokeWidth={2.2} />
           <span>Settings</span>
         </button>
       </nav>
