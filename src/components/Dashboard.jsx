@@ -165,6 +165,27 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   function togglePanel(name) {
     setActivePanel((cur) => (cur === name ? null : name));
   }
+
+  // Mobile bottom navigation -- a fixed, thumb-reachable bar (shown only
+  // below 640px via CSS) that jumps straight to the app's main destinations,
+  // instead of making a phone user scroll back up to the top button rows
+  // every time they want to switch sections. It's additive: the existing
+  // top action row and input tabs still work exactly as before on any
+  // screen size, this just gives mobile a faster, app-like way to get
+  // around using the same underlying state.
+  const topRef = useRef(null);
+  const inputTabsSectionRef = useRef(null);
+  function goToOverview() {
+    setActivePanel(null);
+    topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  function goToAdd(tab) {
+    setActivePanel(null);
+    setInputTab(tab);
+    // Wait a tick for the panel to close/re-render before scrolling, so the
+    // target section is in its final position.
+    setTimeout(() => inputTabsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  }
   useEffect(() => {
     if (activePanel && panelRef.current) {
       panelRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1695,7 +1716,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
   return (
     <div className="wrap">
-      <div className="top-bar">
+      <div className="top-bar" ref={topRef}>
         <div>
           <h1>{household.name || 'Household Budget Tracker'}</h1>
           <div className="sub">Signed in as {session.user.email}{isOwner ? ' (owner)' : ''}</div>
@@ -1782,7 +1803,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       </div>
 
       <div className="content-grid">
-        <div>
+        <div ref={inputTabsSectionRef}>
           <div className="input-tabs">
             <button
               className={`btn small ${inputTab === 'expense' ? '' : 'secondary'}`}
@@ -2950,6 +2971,44 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       <div className="app-footer">
         Your data is confidential and private to this household. It is never shared with anyone outside it.
       </div>
+
+      {/* Mobile-only bottom navigation + floating add button (hidden on
+          desktop via CSS, see .mobile-bottom-nav / .mobile-fab in
+          index.css). This reuses the exact same state and handlers as the
+          existing top action row and input tabs -- nothing about desktop
+          changes, this just gives a phone user a thumb-reachable way to
+          jump straight to the main destinations instead of scrolling back
+          up to the top of a long page every time. */}
+      <button
+        className="mobile-fab"
+        onClick={() => goToAdd('expense')}
+        aria-label="Add an expense"
+        title="Add an expense"
+      >
+        +
+      </button>
+      <nav className="mobile-bottom-nav">
+        <button onClick={goToOverview}>
+          <span className="mobile-nav-icon">🏠</span>
+          <span>Overview</span>
+        </button>
+        <button onClick={() => goToAdd(inputTab || 'expense')}>
+          <span className="mobile-nav-icon">➕</span>
+          <span>Add</span>
+        </button>
+        <button className={activePanel === 'report' ? 'active' : ''} onClick={() => togglePanel('report')}>
+          <span className="mobile-nav-icon">📄</span>
+          <span>Report</span>
+        </button>
+        <button className={activePanel === 'members' ? 'active' : ''} onClick={() => togglePanel('members')}>
+          <span className="mobile-nav-icon">👥</span>
+          <span>Users</span>
+        </button>
+        <button className={activePanel === 'settings' ? 'active' : ''} onClick={() => togglePanel('settings')}>
+          <span className="mobile-nav-icon">⚙️</span>
+          <span>Settings</span>
+        </button>
+      </nav>
     </div>
   );
 }
