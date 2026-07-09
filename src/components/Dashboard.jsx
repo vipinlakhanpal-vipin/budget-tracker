@@ -291,6 +291,12 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     description: '',
     amount: '',
   });
+  // AI feature #1 (auto-categorization): a small hint shown next to the
+  // Category field right after the AI picks one for you, so it's clear the
+  // dropdown got auto-filled rather than silently changing. Purely
+  // additive -- if the API key isn't configured yet or the call fails, this
+  // just never fires and the form behaves exactly as before.
+  const [aiCategoryHint, setAiCategoryHint] = useState('');
   const [newCategoryName, setNewCategoryName] = useState('');
   const [categoryNameDrafts, setCategoryNameDrafts] = useState({});
   const [categoryBudgetDrafts, setCategoryBudgetDrafts] = useState({});
@@ -725,6 +731,33 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     setCurrentMonth(new Date(d.getFullYear(), d.getMonth(), 1));
     setForm((f) => ({ ...f, description: '', amount: '' }));
     loadAll();
+  }
+
+  // AI feature #1: ask Claude to pick the best category for what the user
+  // just typed, and auto-fill the dropdown if it's confident. Fires once
+  // the Description field loses focus. Never throws into the UI -- worst
+  // case, nothing gets suggested and the user picks a category as normal.
+  async function suggestCategoryFromDescription(text) {
+    const trimmed = (text || '').trim();
+    if (trimmed.length < 4 || categories.length === 0) return;
+    try {
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const res = await fetch('/api/categorize-expense', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authSession?.access_token}` },
+        body: JSON.stringify({ description: trimmed, categoryNames: categories.map((c) => c.name) }),
+      });
+      if (!res.ok) return;
+      const json = await res.json();
+      if (!json.categoryName) return;
+      const match = categories.find((c) => c.name === json.categoryName);
+      if (!match) return;
+      setForm((f) => (f.description.trim() === trimmed ? { ...f, categoryId: match.id } : f));
+      setAiCategoryHint(`✨ AI-suggested: ${match.name}`);
+      setTimeout(() => setAiCategoryHint((h) => (h.includes(match.name) ? '' : h)), 4000);
+    } catch {
+      // AI suggestion is a nice-to-have -- silently skip on any failure.
+    }
   }
 
   async function handleDeleteExpense(id) {
@@ -1954,11 +1987,12 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               </div>
               <div className="field">
                 <label>Category</label>
-                <select value={form.categoryId} onChange={(e) => setForm({ ...form, categoryId: e.target.value })}>
+                <select value={form.categoryId} onChange={(e) => { setForm({ ...form, categoryId: e.target.value }); setAiCategoryHint(''); }}>
                   {categories.map((c) => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
+                {aiCategoryHint && <div className="ai-hint">{aiCategoryHint}</div>}
               </div>
               <div className="field" style={{ flex: 1.4 }}>
                 <label>Description</label>
@@ -1967,6 +2001,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   placeholder="e.g. Groceries at Trader Joe's"
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  onBlur={(e) => suggestCategoryFromDescription(e.target.value)}
                 />
               </div>
               <div className="field">
