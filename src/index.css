@@ -301,7 +301,18 @@ input[type="date"] {
   position: absolute; left: 9px; font-size: 12px; font-weight: 800; color: var(--muted);
   pointer-events: none; white-space: nowrap;
 }
-.amount-field-wrap input[type="number"] { padding-left: 38px !important; }
+/* .amount-field-wrap is itself a flex container, so its input child doesn't
+   automatically stretch to fill it the way a plain .field's direct-child
+   input does (that stretch comes from .field's own flex column layout).
+   Without an explicit width here, a bare <input type="number"> renders at
+   its browser-default intrinsic size (~210px) regardless of how narrow its
+   parent actually is -- on the "Add fixed expense" row that's wider than
+   the Amount field's own ~110px column, so it visually spills into the
+   Start date field right next to it. min-width: 0 is needed alongside
+   width: 100% because flex items default to a min-width based on their
+   content size, which would otherwise still force the parent wider than
+   intended in a cramped row. */
+.amount-field-wrap input[type="number"] { width: 100%; min-width: 0; padding-left: 38px !important; }
 .amount-field-wrap.tight .currency-prefix { left: 6px; font-size: 10.5px; }
 .amount-field-wrap.tight input[type="number"] { padding-left: 28px !important; }
 .btn {
