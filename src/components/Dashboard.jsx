@@ -237,6 +237,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   const [reportDoc, setReportDoc] = useState(null); // { blob, dataUri, filename, rangeLabel }
   const [reportEmail, setReportEmail] = useState('');
   const [reportStatus, setReportStatus] = useState('');
+  const [reportPreviewOpen, setReportPreviewOpen] = useState(false);
 
   // Keep the "Add income" form's default Month field in sync with whichever
   // month the dashboard is currently showing, so adding income while viewing
@@ -1079,6 +1080,19 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       margin: { left: M, right: M },
     };
 
+    // Font size and cell padding shrink as a table's row count grows, so
+    // longer lists (e.g. a busy month of Expenses) are far more likely to
+    // fit on their one dedicated page instead of spilling onto a second --
+    // rather than every table always using the same roomy fixed size
+    // regardless of how many rows it actually has.
+    function compactTableStyles(rowCount) {
+      if (rowCount > 45) return { fontSize: 6, cellPadding: 1 };
+      if (rowCount > 32) return { fontSize: 6.8, cellPadding: 1.3 };
+      if (rowCount > 22) return { fontSize: 7.5, cellPadding: 1.6 };
+      if (rowCount > 14) return { fontSize: 8, cellPadding: 2.1 };
+      return { fontSize: 8.5, cellPadding: 2.6 };
+    }
+
     // ---------- Page 1: Category Breakdown -- bar chart only ----------
     // The bar chart now gets a page to itself, and its row height/gap and
     // label font size shrink as the category count grows -- so it always
@@ -1188,6 +1202,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     y += 4;
     autoTable(doc, {
       ...tableDefaults,
+      styles: { ...tableDefaults.styles, ...compactTableStyles(rangeIncomes.length) },
       startY: y,
       head: [['Month', 'Source', 'Amount']],
       body: rangeIncomes.map((i) => [i.start_date.slice(0, 7), i.name, fmt(i.amount)]),
@@ -1209,6 +1224,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     y += 4;
     autoTable(doc, {
       ...tableDefaults,
+      styles: { ...tableDefaults.styles, ...compactTableStyles(rangeExpenses.length) },
       startY: y,
       head: [['Date', 'Category', 'Description', 'Amount']],
       body: rangeExpenses.map((e) => [fmtDate(e.expense_date), categoryNameById[e.category_id] || 'Uncategorized', e.description || '', fmt(e.amount)]),
@@ -1236,6 +1252,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     } else {
       autoTable(doc, {
         ...tableDefaults,
+        styles: { ...tableDefaults.styles, ...compactTableStyles(rangeRecurringOccurrences.length) },
         startY: y,
         head: [['Name', 'Category', 'Frequency', 'Month Due', 'Amount']],
         body: rangeRecurringOccurrences
@@ -1277,6 +1294,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     } else {
       autoTable(doc, {
         ...tableDefaults,
+        styles: { ...tableDefaults.styles, ...compactTableStyles(rangeSavingsOccurrences.length) },
         startY: y,
         head: [['Month', 'Savings Goal', 'Amount']],
         body: rangeSavingsOccurrences
@@ -1306,6 +1324,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       });
       autoTable(doc, {
         ...tableDefaults,
+        styles: { ...tableDefaults.styles, ...compactTableStyles(rangeMonths.length) },
         startY: y,
         head: [['Month', 'Total Saved']],
         body: rangeMonths.map((mKey) => [mKey, fmt(perMonth[mKey] || 0)]),
@@ -1550,6 +1569,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     const dataUri = doc.output('datauristring');
     setReportDoc({ dataUri, filename, rangeLabel });
     setReportStatus('');
+    setReportPreviewOpen(true);
   }
 
   function handleDownloadReport() {
@@ -2629,7 +2649,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <p><strong>Savings</strong> -- set how much you'd like to set aside for the month, e.g. "Emergency fund" or "Investment". Works exactly like Income: entered fresh per month with no auto-rollover, since the amount you're able to save can change month to month -- add a new row each month, or edit an existing row's Month field forward. Since money you set aside is no longer available to spend, it's treated the same as an expense: it's counted in "Spent so far" and "Combined expenses", and subtracted in "Remaining" and "Net", in addition to getting its own page in the PDF report so you can see planned savings build up over time.</p>
               <p><strong>Expenses this month</strong> is always visible below the tabs so you can see what's been logged without switching tabs. It also auto-saves.</p>
               <p><strong>Spending by category</strong> chart -- toggle between Pie, Bar, Pareto, and Treemap. The Pie groups smaller categories into "Other" to stay readable; Bar and Treemap show every category individually. The totals cards above show your combined income, combined expenses (split into Regular, Fixed, and Savings), and what's left of your budget and income after all three are accounted for.</p>
-              <p><strong>Report</strong> -- generate a PDF for any date range, then download it or email it. It has 7 pages, one focused topic per page: (1) Category Breakdown -- a bar chart of spending by category, sized to always fit on one page as you add more expenses; (2) Summary -- income, expenses, savings, and net (income minus expenses and savings); (3) Income -- full itemized list with a total; (4) Expenses -- full itemized list with a total; (5) Fixed Expenses -- every recurring bill occurrence in the range, with a total; (6) Savings -- your savings goals by month, with a total; (7) Spend Analysis -- a Pareto chart (with a total row) showing which categories drive 80% of your spending, plus a few data-driven suggestions on where to cut back, and a data & privacy note at the end.</p>
+              <p><strong>Report</strong> -- generate a PDF for any date range, then view it on screen, download it, or email it. It has 7 pages, one focused topic per page: (1) Category Breakdown -- a bar chart of spending by category, sized to always fit on one page as you add more expenses; (2) Summary -- income, expenses, savings, and net (income minus expenses and savings); (3) Income -- full itemized list with a total; (4) Expenses -- full itemized list with a total; (5) Fixed Expenses -- every recurring bill occurrence in the range, with a total; (6) Savings -- your savings goals by month, with a total; (7) Spend Analysis -- a Pareto chart (with a total row) showing which categories drive 80% of your spending, plus a few data-driven suggestions on where to cut back, and a data & privacy note at the end.</p>
               <p><strong>Settings</strong> -- set your total monthly budget, currency, add/rename categories, and set optional per-category budget caps (you'll get a warning banner if you go over). Every field auto-saves as you edit -- there's no Save button to click.</p>
               <p><strong>Users</strong> -- see who's active in the household and who's been invited but hasn't joined yet, with full Name/Email/Phone/Location. Owners can invite new members (which also sends them a notification email), fill in or fix anyone's Name/Phone/Location, and edit their own details under "My details" -- handy for accounts created before these fields existed. The Admin console (if you have access) is separate and never visible to other household members.</p>
               <p>All figures use your household's chosen currency, set in Settings. Your data is confidential and private to your household -- it's never shared with anyone outside it.</p>
@@ -2641,7 +2661,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           <div className="panel" ref={panelRef}>
             <h2>Report</h2>
             <div className="muted-small" style={{ marginBottom: 12 }}>
-              Generate a 7-page PDF (Category Breakdown, Summary, Income, Expenses, Fixed Expenses, Savings, and a Pareto spend analysis with suggestions and a data & privacy note) for a date range, then download it or email it to any address.
+              Generate a 7-page PDF (Category Breakdown, Summary, Income, Expenses, Fixed Expenses, Savings, and a Pareto spend analysis with suggestions and a data & privacy note) for a date range, then view it on screen, download it, or email it to any address.
             </div>
             <div className="row" style={{ marginBottom: 12 }}>
               <div className="field">
@@ -2649,7 +2669,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 <input
                   type="date"
                   value={reportFrom}
-                  onChange={(e) => { setReportFrom(e.target.value); setReportDoc(null); setReportStatus(''); }}
+                  onChange={(e) => { setReportFrom(e.target.value); setReportDoc(null); setReportStatus(''); setReportPreviewOpen(false); }}
                 />
               </div>
               <div className="field">
@@ -2657,7 +2677,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 <input
                   type="date"
                   value={reportTo}
-                  onChange={(e) => { setReportTo(e.target.value); setReportDoc(null); setReportStatus(''); }}
+                  onChange={(e) => { setReportTo(e.target.value); setReportDoc(null); setReportStatus(''); setReportPreviewOpen(false); }}
                 />
               </div>
               <div className="field" style={{ justifyContent: 'flex-end' }}>
@@ -2670,7 +2690,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 <div className="muted-small" style={{ marginBottom: 8 }}>
                   Report ready for {reportDoc.rangeLabel}.
                 </div>
-                <div className="row" style={{ marginBottom: 12, alignItems: 'center' }}>
+                <div className="row" style={{ marginBottom: 12, alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                  <button
+                    className={`btn small ${reportPreviewOpen ? '' : 'secondary'}`}
+                    onClick={() => setReportPreviewOpen((v) => !v)}
+                  >
+                    {reportPreviewOpen ? 'Hide on-screen report' : 'View on screen'}
+                  </button>
                   <button className="btn secondary small" onClick={handleDownloadReport}>Download</button>
                 </div>
                 <form className="row" onSubmit={handleEmailReport} style={{ alignItems: 'center' }}>
@@ -2688,6 +2714,51 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 </form>
                 {reportStatus === 'sent' && <div className="muted-small" style={{ marginTop: 6, color: '#22c55e' }}>Report emailed successfully.</div>}
                 {reportStatus.startsWith('error') && <div className="muted-small" style={{ marginTop: 6, color: '#ef4444' }}>{reportStatus.replace('error: ', '')}</div>}
+
+                {reportPreviewOpen && (
+                  // On-screen preview -- the exact same PDF that Download and
+                  // Email produce, presented in a polished card (rounded
+                  // frame, subtle shadow, teal title bar) instead of a bare
+                  // browser PDF plugin, so viewing it in-app feels like a
+                  // deliberate feature rather than an afterthought.
+                  <div
+                    style={{
+                      marginTop: 16,
+                      borderRadius: 12,
+                      overflow: 'hidden',
+                      border: '1px solid #e2e8f0',
+                      boxShadow: '0 4px 16px rgba(15, 23, 42, 0.08)',
+                      background: '#fff',
+                    }}
+                  >
+                    <div
+                      style={{
+                        background: 'linear-gradient(135deg, #0d9488, #0f766e)',
+                        color: '#fff',
+                        padding: '10px 16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <div style={{ fontSize: 13, fontWeight: 600 }}>
+                        Budget Report -- {reportDoc.rangeLabel}
+                      </div>
+                      <div style={{ fontSize: 11, opacity: 0.85 }}>{reportDoc.filename}</div>
+                    </div>
+                    <iframe
+                      title="Budget report preview"
+                      src={reportDoc.dataUri}
+                      style={{
+                        width: '100%',
+                        height: 'min(80vh, 900px)',
+                        border: 'none',
+                        display: 'block',
+                        background: '#525659',
+                      }}
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>
