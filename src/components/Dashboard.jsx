@@ -1080,17 +1080,19 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       margin: { left: M, right: M },
     };
 
-    // Font size and cell padding shrink as a table's row count grows, so
-    // longer lists (e.g. a busy month of Expenses) are far more likely to
-    // fit on their one dedicated page instead of spilling onto a second --
-    // rather than every table always using the same roomy fixed size
-    // regardless of how many rows it actually has.
+    // Font size and cell padding shrink a little as a table's row count
+    // grows, giving longer lists (e.g. a busy month of Expenses) a better
+    // chance of fitting their one dedicated page -- but readability comes
+    // first, so the floor here stays well above tiny/illegible sizes. A
+    // genuinely long list is allowed to spill onto a second page rather
+    // than being shrunk down to text nobody can actually read on screen,
+    // in print, or on a phone.
     function compactTableStyles(rowCount) {
-      if (rowCount > 45) return { fontSize: 6, cellPadding: 1 };
-      if (rowCount > 32) return { fontSize: 6.8, cellPadding: 1.3 };
-      if (rowCount > 22) return { fontSize: 7.5, cellPadding: 1.6 };
-      if (rowCount > 14) return { fontSize: 8, cellPadding: 2.1 };
-      return { fontSize: 8.5, cellPadding: 2.6 };
+      if (rowCount > 45) return { fontSize: 7.5, cellPadding: 1.4 };
+      if (rowCount > 32) return { fontSize: 8, cellPadding: 1.8 };
+      if (rowCount > 22) return { fontSize: 8.5, cellPadding: 2.2 };
+      if (rowCount > 14) return { fontSize: 9, cellPadding: 2.6 };
+      return { fontSize: 9.5, cellPadding: 3 };
     }
 
     // ---------- Page 1: Category Breakdown -- bar chart only ----------
@@ -1119,12 +1121,21 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       const labelX = M;
       const barX = M + 48;
       const barMaxWidth = pageWidth - barX - M - 26;
+      // Capped low (5.5) rather than growing to fill whatever space is left
+      // on the page -- with only a handful of categories this used to
+      // stretch the chart tall to use up the full page; it now stays
+      // compact regardless of category count, and only shrinks further
+      // (down to the 2.6 floor) once there are enough categories that it
+      // would otherwise overflow.
       const usableHeight = 258 - y;
-      const rowUnit = Math.min(9.5, Math.max(2.6, usableHeight / chartRows.length));
-      const barHeight = Math.max(1.6, rowUnit * 0.63);
-      const rowGap = Math.max(0.7, rowUnit * 0.37);
-      const labelFontSize = chartRows.length > 30 ? 6 : chartRows.length > 18 ? 7.5 : 8.5;
-      const labelMaxLen = chartRows.length > 30 ? 14 : chartRows.length > 18 ? 17 : 20;
+      const rowUnit = Math.min(5.5, Math.max(3, usableHeight / chartRows.length));
+      const barHeight = Math.max(2, rowUnit * 0.63);
+      const rowGap = Math.max(0.9, rowUnit * 0.37);
+      // Readability comes first here: label size only drops a little even
+      // for a long category list, rather than shrinking down to a size
+      // that's hard to read on screen, in print, or on a phone.
+      const labelFontSize = chartRows.length > 30 ? 7.5 : chartRows.length > 18 ? 8.5 : 9.5;
+      const labelMaxLen = chartRows.length > 30 ? 12 : chartRows.length > 18 ? 15 : 19;
       chartRows.forEach(([name, val], i) => {
         // Shrinking only goes so far before bars get unreadably thin -- once
         // an extreme number of categories exists (well beyond a typical
@@ -1389,20 +1400,25 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       const amtX = cumX - cumColWidth; // right edge of the Amount column
       const amtColWidth = 30; // wide enough for "AED 12,880.00"
       const barMaxWidth = amtX - amtColWidth - barX;
-      // Row height/label size shrink as the category count grows (mirrors
-      // the page 1 bar chart), and everything drawn after the bars -- the
-      // total row, the vital-few sentence, the Recommendations heading, and
-      // each suggestion -- checks the remaining space and starts a fresh
-      // page instead of running into the footer. That missing space check
-      // is what previously caused text at the bottom of this page to
-      // overlap the footer / next section.
+      // Capped low (6) rather than growing to fill whatever space is left on
+      // the page -- with few categories this used to stretch the chart tall
+      // to use up the page; it now stays compact regardless of category
+      // count, freeing up room on this page for the total row, suggestions,
+      // and the privacy disclaimer below. Row height/label size still shrink
+      // further (down to the 3 floor) once there are enough categories that
+      // it would otherwise overflow, and everything drawn after the bars --
+      // the total row, the vital-few sentence, the Recommendations heading,
+      // and each suggestion -- checks the remaining space and starts a
+      // fresh page instead of running into the footer.
       const usableHeight = 228 - y;
-      const rowUnit = Math.min(11, Math.max(3, usableHeight / paretoRows.length));
-      const barHeight = Math.max(1.8, rowUnit * 0.6);
-      const rowGap = Math.max(0.8, rowUnit * 0.4);
-      const labelFontSize = paretoRows.length > 24 ? 6 : paretoRows.length > 14 ? 7.5 : 8.5;
-      const labelMaxLen = paretoRows.length > 24 ? 12 : paretoRows.length > 14 ? 15 : 18;
-      doc.setFontSize(7);
+      const rowUnit = Math.min(6, Math.max(3.4, usableHeight / paretoRows.length));
+      const barHeight = Math.max(2.2, rowUnit * 0.6);
+      const rowGap = Math.max(1, rowUnit * 0.4);
+      // Readability comes first here too -- see the matching note on the
+      // page 1 bar chart above.
+      const labelFontSize = paretoRows.length > 24 ? 7.5 : paretoRows.length > 14 ? 8.5 : 9.5;
+      const labelMaxLen = paretoRows.length > 24 ? 9 : paretoRows.length > 14 ? 12 : 15;
+      doc.setFontSize(7.8);
       doc.setFont(undefined, 'bold');
       doc.setTextColor(140);
       doc.text('AMOUNT', amtX, y - 3, { align: 'right' });
