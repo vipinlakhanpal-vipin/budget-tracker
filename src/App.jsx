@@ -5,6 +5,7 @@ import CreateHousehold from './components/CreateHousehold.jsx';
 import Dashboard from './components/Dashboard.jsx';
 import AdminConsole from './components/AdminConsole.jsx';
 import Splash from './components/Splash.jsx';
+import ResetPassword from './components/ResetPassword.jsx';
 
 const ADMIN_EMAIL = 'vipinlakhanpal@gmail.com';
 
@@ -14,6 +15,13 @@ export default function App() {
   const [household, setHousehold] = useState(null);
   const [householdChecked, setHouseholdChecked] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
+  // Supabase fires the 'PASSWORD_RECOVERY' auth event (instead of the usual
+  // 'SIGNED_IN') specifically when a session was established by clicking a
+  // password-reset email link. Previously nothing listened for this, so a
+  // recovery link just quietly logged the person into the Dashboard as-is
+  // -- their password was never actually changed. This flag intercepts that
+  // moment and forces the ResetPassword screen before anything else shows.
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
   // Shown on every app start (fresh load or opening the installed PWA) for
   // a couple of seconds as a branded first impression, then removed. It's
   // purely cosmetic and doesn't block anything underneath -- auth/session
@@ -30,7 +38,10 @@ export default function App() {
       setLoading(false);
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setPasswordRecovery(true);
+      }
       setSession(session);
     });
 
@@ -113,7 +124,11 @@ export default function App() {
 
   let mainContent;
 
-  if (loading || (session && !householdChecked)) {
+  if (loading) {
+    mainContent = <div className="center-screen">Loading...</div>;
+  } else if (passwordRecovery) {
+    mainContent = <ResetPassword onDone={() => setPasswordRecovery(false)} />;
+  } else if (session && !householdChecked) {
     mainContent = <div className="center-screen">Loading...</div>;
   } else if (!session) {
     mainContent = <Login />;
