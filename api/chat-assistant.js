@@ -37,12 +37,14 @@ Keep answers conversational and short (1-4 sentences for most questions) -- like
 
 Reply in plain text only -- this renders directly inside a chat bubble with no markdown support, so do not use asterisks, bullet points, headers, or any other markdown formatting. Write category or number emphasis as plain words instead (e.g. "Rent/Mortgage at AED 12,880" not "**Rent/Mortgage** at AED 12,880").
 
+IMPORTANT: every month object in recentMonths already includes a "remainingVsBudget" field -- a negative number means the household was over its total monthly budget that month by that exact amount; a positive number means that much was left; null means no budget is set. Always use this field directly when asked whether the household is over or under budget -- never recompute it yourself by comparing other totals, since that has previously produced wrong answers.
+
 HOUSEHOLD DATA (currency: ${ctx.currency || 'the household currency'}):
 Total monthly budget: ${ctx.totalBudget ?? 'not set'}
 Category budget caps: ${JSON.stringify(ctx.categoryBudgetCaps || [])}
 Fixed/recurring bills: ${JSON.stringify(ctx.fixedExpenses || [])}
 This month's savings goals: ${JSON.stringify(ctx.savingsGoalsThisMonth || [])}
-Recent months (most recent last), each with income, total expenses, savings, spend broken down by category, and any category that went over its cap that month:
+Recent months (most recent last -- the last entry is the month currently being viewed), each with income, total expenses, savings, spend broken down by category, any category that went over its own cap that month, and remainingVsBudget (see above):
 ${JSON.stringify(ctx.recentMonths || [])}`;
 
     const trimmedHistory = Array.isArray(history) ? history.slice(-MAX_HISTORY_TURNS) : [];

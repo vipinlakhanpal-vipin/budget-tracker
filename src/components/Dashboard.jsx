@@ -982,14 +982,25 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     const overBudget = categories
       .filter((c) => c.monthly_budget > 0 && (catTotals[c.name] || 0) > c.monthly_budget)
       .map((c) => c.name);
+    const expensesTotal = mExp.reduce((s, e) => s + Number(e.amount), 0) + mRecur.reduce((s, r) => s + Number(r.amount), 0);
+    const savingsTotalM = mSavings.reduce((s, g) => s + Number(g.amount), 0);
+    // The household's total monthly budget is a single current setting, not
+    // stored per-month historically, so this same value is applied to every
+    // month here (same simplification the rest of the app already makes).
+    // remainingVsBudget is computed here -- not left for the AI to derive --
+    // after an earlier bug where the chat assistant told the user they were
+    // "not over budget" when they actually were AED 2,112.45 over: it had
+    // been asked to compare raw totals itself and got the arithmetic wrong.
+    const remainingVsBudget = totalBudget > 0 ? totalBudget - (expensesTotal + savingsTotalM) : null;
     const d = new Date(key + '-01T00:00:00');
     return {
       monthLabel: monthLabel(d),
       income: mIncome.reduce((s, i) => s + Number(i.amount), 0),
-      expensesTotal: mExp.reduce((s, e) => s + Number(e.amount), 0) + mRecur.reduce((s, r) => s + Number(r.amount), 0),
-      savingsTotal: mSavings.reduce((s, g) => s + Number(g.amount), 0),
+      expensesTotal,
+      savingsTotal: savingsTotalM,
       categoryTotals: catTotals,
       overBudgetCategories: overBudget,
+      remainingVsBudget, // negative = over budget by this amount that month; null = no budget set
     };
   }
 
