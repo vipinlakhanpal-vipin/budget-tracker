@@ -290,6 +290,16 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   // additive -- if the API key isn't configured yet or the call fails, this
   // just never fires and the form behaves exactly as before.
   const [aiCategoryHint, setAiCategoryHint] = useState('');
+  // AI feature #2 (monthly digest): a short AI-written summary of the
+  // currently viewed month's spending, generated on demand (not
+  // automatically) so it never costs anything unless someone actually asks
+  // for it. Kept in memory only -- reopening the app or switching months
+  // just shows the "Generate" prompt again instead of a stale digest for a
+  // different month.
+  const [aiDigest, setAiDigest] = useState('');
+  const [aiDigestLoading, setAiDigestLoading] = useState(false);
+  const [aiDigestError, setAiDigestError] = useState(false);
+  const [aiDigestMonthKey, setAiDigestMonthKey] = useState(null);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [categoryNameDrafts, setCategoryNameDrafts] = useState({});
   const [categoryBudgetDrafts, setCategoryBudgetDrafts] = useState({});
@@ -750,6 +760,53 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       setTimeout(() => setAiCategoryHint((h) => (h.includes(match.name) ? '' : h)), 4000);
     } catch {
       // AI suggestion is a nice-to-have -- silently skip on any failure.
+    }
+  }
+
+  // AI feature #2: build a short, plain-language summary of the currently
+  // viewed month (income, spending by category, fixed bills, savings, and
+  // whether any category or the overall budget is over) and ask Claude to
+  // turn it into a few sentences of insight plus a couple of concrete
+  // suggestions. Only runs when the user clicks the button -- never
+  // automatically -- since unlike the category auto-fill, this isn't
+  // something that should happen silently in the background on every visit.
+  async function generateMonthlyDigest() {
+    setAiDigestLoading(true);
+    setAiDigestError(false);
+    try {
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const categoryBreakdown = Object.entries(byCategory)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8)
+        .map(([name, amount]) => ({ name, amount }));
+      const res = await fetch('/api/monthly-digest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authSession?.access_token}` },
+        body: JSON.stringify({
+          currency: CURRENT_CURRENCY,
+          monthLabel: monthLabel(currentMonth),
+          totalIncome,
+          totalBudget,
+          remaining,
+          fixedTotal: recurringTotal,
+          savingsTotal,
+          categoryBreakdown,
+          overBudgetCategories: overCategories,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.digest) {
+        setAiDigestError(true);
+        setAiDigest('');
+        return;
+      }
+      setAiDigest(json.digest);
+      setAiDigestMonthKey(monthKey(currentMonth));
+    } catch {
+      setAiDigestError(true);
+      setAiDigest('');
+    } finally {
+      setAiDigestLoading(false);
     }
   }
 
@@ -3069,6 +3126,34 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             )}
           </div>
 
+          <div className="panel" style={{ marginTop: 16 }}>
+            <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+              <h2 style={{ margin: 0 }}>
+                AI Insights <span className="ai-powered-tag">AI powered</span>
+              </h2>
+              <button
+                className="btn small secondary"
+                onClick={generateMonthlyDigest}
+                disabled={aiDigestLoading || pieData.length === 0}
+              >
+                {aiDigestLoading ? 'Thinking...' : aiDigest ? 'Refresh' : 'Generate'}
+              </button>
+            </div>
+            {pieData.length === 0 ? (
+              <div className="empty">Add an expense to get insights on this month.</div>
+            ) : aiDigest && aiDigestMonthKey === monthKey(currentMonth) ? (
+              <div className="muted-small" style={{ lineHeight: 1.6, whiteSpace: 'pre-line', color: 'var(--text)' }}>
+                {aiDigest}
+              </div>
+            ) : aiDigestError ? (
+              <div className="muted-small">Couldn't generate insights right now -- try again in a moment.</div>
+            ) : (
+              <div className="muted-small">
+                Get a short AI-written summary of {monthLabel(currentMonth)}'s spending, with a couple of suggestions -- tap Generate.
+              </div>
+            )}
+          </div>
+
           {activePanel === 'members' && (
           <div className="panel" ref={panelRef}>
               <div>
@@ -3301,6 +3386,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <p><strong>Savings</strong> -- set how much you'd like to set aside for the month, e.g. "Emergency fund" or "Investment". Works exactly like Income: entered fresh per month with no auto-rollover, since the amount you're able to save can change month to month -- add a new row each month, or edit an existing row's Month field forward. Since money you set aside is no longer available to spend, it's treated the same as an expense: it's counted in "Spent so far" and "Combined expenses", and subtracted in "Remaining" and "Net", in addition to getting its own page in the PDF report so you can see planned savings build up over time.</p>
               <p><strong>Expenses this month</strong> is always visible below the tabs so you can see what's been logged without switching tabs. It also auto-saves.</p>
               <p><strong>Spending by category</strong> chart -- toggle between Pie, Bar, Pareto, and Treemap. The Pie groups smaller categories into "Other" to stay readable; Bar and Treemap show every category individually. The totals cards above show your combined income, combined expenses (split into Regular, Fixed, and Savings), and what's left of your budget and income after all three are accounted for.</p>
+              <p><strong>AI Insights</strong> -- tap Generate below the chart for a short AI-written summary of the month you're viewing (spending patterns, whether you're over budget, and a couple of concrete suggestions). It only runs when you tap the button -- never automatically -- and Refresh regenerates it if your numbers have changed.</p>
               <p><strong>Report</strong> -- generate a PDF for any date range, then view it on screen, download it, or email it. Each topic gets its own page -- Income, Expenses, Fixed Expenses, Savings, Spend Analysis (Pareto chart), and Recommendations -- except the Category Breakdown bar chart and the Summary table, which share one page by default and only split onto two once the chart itself grows long enough to need the room. Every table also auto-shrinks its text to try to fit on one page first, and only flows onto a second page if the list is too long even at a readable size. The last page closes with a data & privacy note.</p>
               <p><strong>Settings</strong> -- set your total monthly budget, currency, add/rename categories, and set optional per-category budget caps (you'll get a warning banner if you go over). Every field auto-saves as you edit -- there's no Save button to click.</p>
               <p><strong>Users</strong> -- see who's active in the household and who's been invited but hasn't joined yet, with full Name/Email/Phone/Location. Owners can invite new members (which also sends them a notification email), fill in or fix anyone's Name/Phone/Location, and edit their own details under "My details" -- handy for accounts created before these fields existed. The Admin console (if you have access) is separate and never visible to other household members.</p>
