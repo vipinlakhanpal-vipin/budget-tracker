@@ -275,6 +275,15 @@ td.amount { font-weight: 600; text-align: right; }
    bar is purely additive and calls the same underlying handlers. */
 .mobile-bottom-nav, .mobile-fab { display: none; }
 
+/* When launched as an installed PWA (Add to Home Screen) or later as a
+   Capacitor-wrapped native app, there's no browser chrome to push content
+   below the notch/status bar -- add that clearance ourselves. In a normal
+   browser tab this rule doesn't apply, since the browser's own UI already
+   handles it. */
+@media (display-mode: standalone) {
+  .wrap { padding-top: env(safe-area-inset-top); }
+}
+
 @media (max-width: 640px) {
   /* Leaves enough room at the bottom of the page so the last card/button
      isn't hidden behind the fixed nav bar, and respects the iPhone home

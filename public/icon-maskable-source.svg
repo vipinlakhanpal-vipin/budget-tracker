@@ -1,0 +1,21 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#14b8a6"/>
+      <stop offset="1" stop-color="#0d9488"/>
+    </linearGradient>
+  </defs>
+  <!-- Full-bleed background, no rounded corners baked in. Android applies
+       its own mask shape (circle, squircle, etc.), and the glyph below is
+       scaled down and centered to stay well inside whatever gets cut. -->
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <g transform="translate(76,96) scale(0.7)">
+    <rect x="112" y="176" width="288" height="208" rx="28" fill="#ffffff"/>
+    <rect x="112" y="176" width="288" height="52" rx="28" fill="#e6f7f4"/>
+    <circle cx="336" cy="280" r="30" fill="#0d9488"/>
+    <circle cx="336" cy="280" r="12" fill="#ffffff"/>
+    <rect x="146" y="330" width="22" height="30" rx="4" fill="#99e6da"/>
+    <rect x="176" y="316" width="22" height="44" rx="4" fill="#5fd6c4"/>
+    <rect x="206" y="300" width="22" height="60" rx="4" fill="#0d9488"/>
+  </g>
+</svg>
