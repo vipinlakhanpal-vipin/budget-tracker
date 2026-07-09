@@ -109,12 +109,25 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
    them hard to read at a glance, especially on mobile. */
 .field label { font-size: 12.5px; font-weight: 800; color: var(--text); }
 .field input, .field select {
-  padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; background: #fff;
+  padding: 9px 11px; border: 1.5px solid var(--border); border-radius: 9px; font-size: 14px; background: #fff;
+  color: var(--text); transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
 }
+/* Clear, friendly focus + hover states -- previously an input looked
+   identical whether idle, hovered, or actively focused, which made data
+   entry feel flat and gave no feedback about which field you're in. */
+.field input:hover, .field select:hover { border-color: #a9d9d5; }
+.field input:focus, .field select:focus {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light);
+}
+.field input::placeholder { color: var(--muted); opacity: .75; }
+.field input:disabled, .field select:disabled { background: var(--bg); color: var(--muted); cursor: not-allowed; }
 input[type="date"] {
   font-size: 12px; min-width: 122px; padding: 8px 6px;
 }
 .field input[type="date"] { min-width: 130px; }
+/* Bold, right-aligned amounts read more like a receipt/ledger and are
+   easier to compare at a glance than left-aligned plain numbers. */
+.field input[type="number"] { font-weight: 700; text-align: right; }
 .btn {
   background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 9px 16px;
   font-size: 14px; font-weight: 600; cursor: pointer;
@@ -153,6 +166,15 @@ td.amount { font-weight: 600; text-align: right; }
   width: 100%; font-size: 11px; padding: 4px 5px; border-radius: 5px;
   border: 1px solid var(--border); box-sizing: border-box;
 }
+/* "My details" sits directly above this same Users table, so its inputs
+   should match the table's compact cell size (11px) rather than the larger
+   default .field size (14px) used by the Add-expense-style forms -- the
+   mismatch made "My details" look like a different, oversized component
+   glued on top of the table below it. */
+.my-details-box .field input {
+  font-size: 11px; padding: 4px 5px; border-radius: 5px;
+}
+.my-details-box .field label { font-size: 11px; }
 .users-table .status-pill {
   display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 10px;
   font-weight: 700; text-transform: uppercase; letter-spacing: .02em;
@@ -170,6 +192,24 @@ td.amount { font-weight: 600; text-align: right; }
   width: 100% !important;
   max-width: 100%;
   box-sizing: border-box;
+  transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+}
+/* These inline table cells are quietly always-editable (no separate "edit
+   mode"), which isn't obvious from a plain bordered box that looks the same
+   as read-only text. A faint tint plus a visible focus ring gives a clearer
+   "this is a live field, tap to change it" signal without adding any new UI
+   chrome. */
+.table-scroll table td input:not([type="date"]):not([type="month"]),
+.table-scroll table td select {
+  background: var(--bg);
+}
+.table-scroll table td input:hover,
+.table-scroll table td select:hover {
+  border-color: #a9d9d5;
+}
+.table-scroll table td input:focus,
+.table-scroll table td select:focus {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-light); background: #fff;
 }
 .table-scroll table td input[type="date"],
 .table-scroll table td input[type="month"] {

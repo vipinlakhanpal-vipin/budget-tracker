@@ -19,7 +19,7 @@ import {
 // to confirm your browser/home-screen icon is actually showing the latest
 // build rather than a stale cached copy. Format: YYYY-MM-DD.N, where N
 // resets to 1 on a new day and increments for same-day updates.
-const APP_VERSION = '2026-07-09.2';
+const APP_VERSION = '2026-07-09.3';
 
 const COLORS = [
   '#f97316', '#0ea5e9', '#a855f7', '#22c55e', '#ef4444',
@@ -179,7 +179,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     // only one "overlay" on screen at a time, so Report/Users/Settings
     // never end up stacked underneath an already-open Add sheet.
     setAddSheetOpen(false);
-    setEditingExpenseId(null);
+    closeAllMobileEditSheets();
     setActivePanel((cur) => (cur === name ? null : name));
   }
 
@@ -217,16 +217,28 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     return () => mq.removeEventListener('change', handler);
   }, []);
   const [editingExpenseId, setEditingExpenseId] = useState(null);
+  // Same tap-to-edit pattern as Expenses, applied to Income / Fixed
+  // Expenses / Savings so all four mobile lists behave consistently.
+  const [editingIncomeId, setEditingIncomeId] = useState(null);
+  const [editingRecurringId, setEditingRecurringId] = useState(null);
+  const [editingSavingId, setEditingSavingId] = useState(null);
+
+  function closeAllMobileEditSheets() {
+    setEditingExpenseId(null);
+    setEditingIncomeId(null);
+    setEditingRecurringId(null);
+    setEditingSavingId(null);
+  }
 
   function goToOverview() {
     setActivePanel(null);
     setAddSheetOpen(false);
-    setEditingExpenseId(null);
+    closeAllMobileEditSheets();
     topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
   function goToAdd(tab) {
     setActivePanel(null);
-    setEditingExpenseId(null);
+    closeAllMobileEditSheets();
     setInputTab(tab);
     setAddSheetOpen(true);
   }
@@ -1990,6 +2002,29 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
             {incomeForMonth.length === 0 ? (
               <div className="empty">No income added for {monthLabel(currentMonth)} yet.</div>
+            ) : isMobile ? (
+              <div className="mobile-txn-list">
+                {incomeForMonth.map((i) => {
+                  const title = (incomeDrafts[i.id]?.name || i.name || 'Income').trim();
+                  return (
+                    <button
+                      key={i.id}
+                      type="button"
+                      className="mobile-txn-row"
+                      onClick={() => { setAddSheetOpen(false); setEditingIncomeId(i.id); }}
+                    >
+                      <span className="mobile-txn-icon" style={{ background: COLORS[0] }}>
+                        {title.charAt(0).toUpperCase()}
+                      </span>
+                      <span className="mobile-txn-mid">
+                        <span className="mobile-txn-title">{title}</span>
+                        <span className="mobile-txn-sub">{i.member_email}</span>
+                      </span>
+                      <span className="mobile-txn-amount">{fmt(i.amount)}</span>
+                    </button>
+                  );
+                })}
+              </div>
             ) : (
               <div className="table-scroll">
               <table className="responsive-table" style={{ marginTop: 14, fontSize: 12 }}>
@@ -2044,6 +2079,60 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 Changes save automatically. {fmt(totalIncome)} in combined income counted toward {monthLabel(currentMonth)}.
               </div>
             )}
+
+            {/* Mobile edit sheet for a tapped income row -- same fields/handlers as desktop's inline row. */}
+            {isMobile && editingIncomeId && (() => {
+              const i = incomeForMonth.find((x) => x.id === editingIncomeId);
+              if (!i) return null;
+              return (
+                <>
+                  <div className="mobile-sheet-backdrop" onClick={() => setEditingIncomeId(null)} />
+                  <div className="mobile-add-sheet">
+                    <div className="mobile-sheet-handle">
+                      <span className="mobile-sheet-drag" />
+                      <button className="mobile-sheet-close" onClick={() => setEditingIncomeId(null)} aria-label="Close">
+                        <X size={18} />
+                      </button>
+                    </div>
+                    <h2 style={{ margin: '0 0 12px' }}>Edit income</h2>
+                    <div className="field" style={{ marginBottom: 10 }}>
+                      <label>Source</label>
+                      <input
+                        type="text"
+                        value={incomeDrafts[i.id]?.name ?? ''}
+                        onChange={(e) => updateIncomeDraftField(i.id, 'name', e.target.value)}
+                        onBlur={(e) => commitIncomeField(i.id, 'name', e.target.value)}
+                      />
+                    </div>
+                    <div className="field" style={{ marginBottom: 10 }}>
+                      <label>Amount</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={incomeDrafts[i.id]?.amount ?? ''}
+                        onChange={(e) => updateIncomeDraftField(i.id, 'amount', e.target.value)}
+                        onBlur={(e) => commitIncomeField(i.id, 'amount', e.target.value)}
+                      />
+                    </div>
+                    <div className="field" style={{ marginBottom: 16 }}>
+                      <label>Month</label>
+                      <input
+                        type="month"
+                        value={incomeDrafts[i.id]?.month ?? ''}
+                        onChange={(e) => commitIncomeField(i.id, 'month', e.target.value)}
+                      />
+                    </div>
+                    <button
+                      className="mobile-delete-btn"
+                      onClick={() => { handleDeleteIncome(i.id, i.name); setEditingIncomeId(null); }}
+                    >
+                      <Trash2 size={16} /> Delete income
+                    </button>
+                  </div>
+                </>
+              );
+            })()}
           </div>
           )}
 
@@ -2130,6 +2219,33 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
             {recurringExpenses.length === 0 ? (
               <div className="empty">No loans, EMIs, or fixed monthly bills added yet.</div>
+            ) : isMobile ? (
+              <div className="mobile-txn-list">
+                {recurringExpenses.map((r) => {
+                  const catIdx = categories.findIndex((c) => c.id === r.category_id);
+                  const catColor = COLORS[(catIdx >= 0 ? catIdx : 0) % COLORS.length];
+                  const catName = categoryNameById[r.category_id] || 'Uncategorized';
+                  const title = (recurringDrafts[r.id]?.name || r.name || catName).trim();
+                  const freqLabel = FREQUENCIES.find((f) => f.value === (recurringDrafts[r.id]?.frequency ?? r.frequency))?.label || 'Monthly';
+                  return (
+                    <button
+                      key={r.id}
+                      type="button"
+                      className="mobile-txn-row"
+                      onClick={() => { setAddSheetOpen(false); setEditingRecurringId(r.id); }}
+                    >
+                      <span className="mobile-txn-icon" style={{ background: catColor }}>
+                        {title.charAt(0).toUpperCase()}
+                      </span>
+                      <span className="mobile-txn-mid">
+                        <span className="mobile-txn-title">{title}</span>
+                        <span className="mobile-txn-sub">{catName} &middot; {freqLabel}</span>
+                      </span>
+                      <span className="mobile-txn-amount">{fmt(r.amount)}</span>
+                    </button>
+                  );
+                })}
+              </div>
             ) : (
               <div className="table-scroll">
               <table className="responsive-table" style={{ marginTop: 14, fontSize: 12 }}>
@@ -2228,6 +2344,101 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 {fmt(recurringTotal)} in fixed expenses counted toward {monthLabel(currentMonth)}.
               </div>
             )}
+
+            {/* Mobile edit sheet for a tapped fixed-expense row -- same fields/handlers as desktop's inline row. */}
+            {isMobile && editingRecurringId && (() => {
+              const r = recurringExpenses.find((x) => x.id === editingRecurringId);
+              if (!r) return null;
+              return (
+                <>
+                  <div className="mobile-sheet-backdrop" onClick={() => setEditingRecurringId(null)} />
+                  <div className="mobile-add-sheet">
+                    <div className="mobile-sheet-handle">
+                      <span className="mobile-sheet-drag" />
+                      <button className="mobile-sheet-close" onClick={() => setEditingRecurringId(null)} aria-label="Close">
+                        <X size={18} />
+                      </button>
+                    </div>
+                    <h2 style={{ margin: '0 0 12px' }}>Edit fixed expense</h2>
+                    <div className="field" style={{ marginBottom: 10 }}>
+                      <label>Name</label>
+                      <input
+                        type="text"
+                        value={recurringDrafts[r.id]?.name ?? ''}
+                        onChange={(e) => updateRecurringDraftField(r.id, 'name', e.target.value)}
+                        onBlur={(e) => commitRecurringField(r.id, 'name', e.target.value)}
+                      />
+                    </div>
+                    <div className="field" style={{ marginBottom: 10 }}>
+                      <label>Category</label>
+                      <select
+                        value={recurringDrafts[r.id]?.categoryId ?? ''}
+                        onChange={(e) => commitRecurringField(r.id, 'categoryId', e.target.value)}
+                      >
+                        {categories.map((c) => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="field" style={{ marginBottom: 10 }}>
+                      <label>Amount / month</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={recurringDrafts[r.id]?.amount ?? ''}
+                        onChange={(e) => updateRecurringDraftField(r.id, 'amount', e.target.value)}
+                        onBlur={(e) => commitRecurringField(r.id, 'amount', e.target.value)}
+                      />
+                    </div>
+                    <div className="field" style={{ marginBottom: 10 }}>
+                      <label>Start date</label>
+                      <input
+                        type="date"
+                        value={recurringDrafts[r.id]?.startDate ?? ''}
+                        onChange={(e) => updateRecurringDraftField(r.id, 'startDate', e.target.value)}
+                        onBlur={(e) => commitRecurringField(r.id, 'startDate', e.target.value)}
+                      />
+                    </div>
+                    <div className="field" style={{ marginBottom: 10 }}>
+                      <label>End date (optional)</label>
+                      <input
+                        type="date"
+                        value={recurringDrafts[r.id]?.endDate ?? ''}
+                        onChange={(e) => updateRecurringDraftField(r.id, 'endDate', e.target.value)}
+                        onBlur={(e) => commitRecurringField(r.id, 'endDate', e.target.value)}
+                      />
+                    </div>
+                    <div className="field" style={{ marginBottom: 10 }}>
+                      <label>Repeats</label>
+                      <select
+                        value={recurringDrafts[r.id]?.frequency ?? 'monthly'}
+                        onChange={(e) => commitRecurringField(r.id, 'frequency', e.target.value)}
+                      >
+                        {FREQUENCIES.map((f) => (
+                          <option key={f.value} value={f.value}>{f.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="field" style={{ marginBottom: 16 }}>
+                      <label>Due date (optional, for reminders)</label>
+                      <input
+                        type="date"
+                        value={recurringDrafts[r.id]?.dueDate ?? ''}
+                        onChange={(e) => updateRecurringDraftField(r.id, 'dueDate', e.target.value)}
+                        onBlur={(e) => commitRecurringField(r.id, 'dueDate', e.target.value)}
+                      />
+                    </div>
+                    <button
+                      className="mobile-delete-btn"
+                      onClick={() => { handleDeleteRecurring(r.id, r.name); setEditingRecurringId(null); }}
+                    >
+                      <Trash2 size={16} /> Delete fixed expense
+                    </button>
+                  </div>
+                </>
+              );
+            })()}
           </div>
           )}
 
@@ -2275,6 +2486,29 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
             {savingsForMonth.length === 0 ? (
               <div className="empty">No savings added for {monthLabel(currentMonth)} yet.</div>
+            ) : isMobile ? (
+              <div className="mobile-txn-list">
+                {savingsForMonth.map((s) => {
+                  const title = (savingsDrafts[s.id]?.name || s.name || 'Savings').trim();
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      className="mobile-txn-row"
+                      onClick={() => { setAddSheetOpen(false); setEditingSavingId(s.id); }}
+                    >
+                      <span className="mobile-txn-icon" style={{ background: COLORS[1 % COLORS.length] }}>
+                        {title.charAt(0).toUpperCase()}
+                      </span>
+                      <span className="mobile-txn-mid">
+                        <span className="mobile-txn-title">{title}</span>
+                        <span className="mobile-txn-sub">{monthLabel(currentMonth)}</span>
+                      </span>
+                      <span className="mobile-txn-amount">{fmt(s.amount)}</span>
+                    </button>
+                  );
+                })}
+              </div>
             ) : (
               <div className="table-scroll">
               <table className="responsive-table" style={{ marginTop: 14, fontSize: 12 }}>
@@ -2327,6 +2561,60 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 {fmt(savingsTotal)} in planned savings for {monthLabel(currentMonth)}.
               </div>
             )}
+
+            {/* Mobile edit sheet for a tapped savings row -- same fields/handlers as desktop's inline row. */}
+            {isMobile && editingSavingId && (() => {
+              const s = savingsForMonth.find((x) => x.id === editingSavingId);
+              if (!s) return null;
+              return (
+                <>
+                  <div className="mobile-sheet-backdrop" onClick={() => setEditingSavingId(null)} />
+                  <div className="mobile-add-sheet">
+                    <div className="mobile-sheet-handle">
+                      <span className="mobile-sheet-drag" />
+                      <button className="mobile-sheet-close" onClick={() => setEditingSavingId(null)} aria-label="Close">
+                        <X size={18} />
+                      </button>
+                    </div>
+                    <h2 style={{ margin: '0 0 12px' }}>Edit savings</h2>
+                    <div className="field" style={{ marginBottom: 10 }}>
+                      <label>Name</label>
+                      <input
+                        type="text"
+                        value={savingsDrafts[s.id]?.name ?? ''}
+                        onChange={(e) => updateSavingDraftField(s.id, 'name', e.target.value)}
+                        onBlur={(e) => commitSavingField(s.id, 'name', e.target.value)}
+                      />
+                    </div>
+                    <div className="field" style={{ marginBottom: 10 }}>
+                      <label>Amount / month</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={savingsDrafts[s.id]?.amount ?? ''}
+                        onChange={(e) => updateSavingDraftField(s.id, 'amount', e.target.value)}
+                        onBlur={(e) => commitSavingField(s.id, 'amount', e.target.value)}
+                      />
+                    </div>
+                    <div className="field" style={{ marginBottom: 16 }}>
+                      <label>Month</label>
+                      <input
+                        type="month"
+                        value={savingsDrafts[s.id]?.month ?? ''}
+                        onChange={(e) => commitSavingField(s.id, 'month', e.target.value)}
+                      />
+                    </div>
+                    <button
+                      className="mobile-delete-btn"
+                      onClick={() => { handleDeleteSaving(s.id, s.name); setEditingSavingId(null); }}
+                    >
+                      <Trash2 size={16} /> Delete savings
+                    </button>
+                  </div>
+                </>
+              );
+            })()}
           </div>
           )}
 
@@ -2679,7 +2967,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <div>
                 <h2>Users</h2>
 
-                <div style={{ marginBottom: 18, padding: 12, border: '1px solid var(--border)', borderRadius: 8 }}>
+                <div className="my-details-box" style={{ marginBottom: 18, padding: 12, border: '1px solid var(--border)', borderRadius: 8 }}>
                   <div className="muted-small" style={{ fontWeight: 600, marginBottom: 8 }}>My details</div>
                   <div className="row">
                     <div className="field">
