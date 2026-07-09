@@ -9,6 +9,14 @@ import autoTable from 'jspdf-autotable';
 import { supabase } from '../supabaseClient';
 import AdminConsole from './AdminConsole.jsx';
 
+// Bump this with every meaningful change and shown in the top bar (see
+// .app-version below) -- since this app auto-updates in place (there's no
+// separate "installed app version" to check), this is the one visible way
+// to confirm your browser/home-screen icon is actually showing the latest
+// build rather than a stale cached copy. Format: YYYY-MM-DD.N, where N
+// resets to 1 on a new day and increments for same-day updates.
+const APP_VERSION = '2026-07-09.1';
+
 const COLORS = [
   '#f97316', '#0ea5e9', '#a855f7', '#22c55e', '#ef4444',
   '#eab308', '#14b8a6', '#ec4899', '#6366f1', '#84cc16',
@@ -163,6 +171,10 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   const [activePanel, setActivePanel] = useState(null);
   const panelRef = useRef(null);
   function togglePanel(name) {
+    // Closing the mobile add sheet whenever a different panel opens keeps
+    // only one "overlay" on screen at a time, so Report/Users/Settings
+    // never end up stacked underneath an already-open Add sheet.
+    setAddSheetOpen(false);
     setActivePanel((cur) => (cur === name ? null : name));
   }
 
@@ -175,16 +187,23 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   // around using the same underlying state.
   const topRef = useRef(null);
   const inputTabsSectionRef = useRef(null);
+  // On mobile, tapping "+" or "Add" opens the exact same Add
+  // expense/income/fixed/savings forms as a sliding bottom sheet instead of
+  // scrolling to them -- the standard native quick-add pattern. This reuses
+  // the identical form JSX and state that desktop already renders inline;
+  // only a CSS class (added below, mobile-breakpoint only) turns that same
+  // section into an overlay, so nothing about desktop's layout or behavior
+  // changes.
+  const [addSheetOpen, setAddSheetOpen] = useState(false);
   function goToOverview() {
     setActivePanel(null);
+    setAddSheetOpen(false);
     topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
   function goToAdd(tab) {
     setActivePanel(null);
     setInputTab(tab);
-    // Wait a tick for the panel to close/re-render before scrolling, so the
-    // target section is in its final position.
-    setTimeout(() => inputTabsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+    setAddSheetOpen(true);
   }
   useEffect(() => {
     if (activePanel && panelRef.current) {
@@ -1722,6 +1741,9 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           <div className="sub">Signed in as {session.user.email}{isOwner ? ' (owner)' : ''}</div>
         </div>
         <div className="action-row-teal">
+          <span className="app-version" title="This updates automatically -- if a change doesn't look right, reload the page.">
+            {APP_VERSION}
+          </span>
           <button className="btn-teal" onClick={() => togglePanel('help')}>
             {activePanel === 'help' ? 'Hide help' : 'Help'}
           </button>
@@ -1803,7 +1825,19 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       </div>
 
       <div className="content-grid">
-        <div ref={inputTabsSectionRef}>
+        <div ref={inputTabsSectionRef} className={addSheetOpen ? 'mobile-add-sheet' : undefined}>
+          {addSheetOpen && (
+            <div className="mobile-sheet-handle">
+              <span className="mobile-sheet-drag" />
+              <button
+                className="mobile-sheet-close"
+                onClick={() => setAddSheetOpen(false)}
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+          )}
           <div className="input-tabs">
             <button
               className={`btn small ${inputTab === 'expense' ? '' : 'secondary'}`}
@@ -2746,6 +2780,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <p><strong>Settings</strong> -- set your total monthly budget, currency, add/rename categories, and set optional per-category budget caps (you'll get a warning banner if you go over). Every field auto-saves as you edit -- there's no Save button to click.</p>
               <p><strong>Users</strong> -- see who's active in the household and who's been invited but hasn't joined yet, with full Name/Email/Phone/Location. Owners can invite new members (which also sends them a notification email), fill in or fix anyone's Name/Phone/Location, and edit their own details under "My details" -- handy for accounts created before these fields existed. The Admin console (if you have access) is separate and never visible to other household members.</p>
               <p>All figures use your household's chosen currency, set in Settings. Your data is confidential and private to your household -- it's never shared with anyone outside it.</p>
+              <p>The small <strong>{APP_VERSION}</strong> badge next to the Help button shows which build you're on. The app updates itself automatically -- you'll never need to manually update anything -- but if something looks off, reload the page and check that the number matches the latest you were told about.</p>
             </div>
           </div>
           )}
@@ -2971,6 +3006,10 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       <div className="app-footer">
         Your data is confidential and private to this household. It is never shared with anyone outside it.
       </div>
+
+      {addSheetOpen && (
+        <div className="mobile-sheet-backdrop" onClick={() => setAddSheetOpen(false)} />
+      )}
 
       {/* Mobile-only bottom navigation + floating add button (hidden on
           desktop via CSS, see .mobile-bottom-nav / .mobile-fab in

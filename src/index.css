@@ -69,6 +69,11 @@ button, input, select, textarea { font-family: inherit; }
   white-space: nowrap;
 }
 .btn-teal:hover { opacity: .88; }
+.app-version {
+  align-self: center; font-size: 10.5px; font-weight: 700; color: var(--muted);
+  background: var(--bg); border: 1px solid var(--border); border-radius: 999px;
+  padding: 3px 9px; white-space: nowrap;
+}
 h1 { font-size: 22px; margin: 0 0 4px 0; }
 .sub { color: var(--muted); font-size: 13px; }
 .muted-small { color: var(--muted); font-size: 12px; }
@@ -311,5 +316,37 @@ td.amount { font-weight: 600; text-align: right; }
     width: 52px; height: 52px; border-radius: 50%; z-index: 41;
     background: var(--accent); color: #fff; border: none; font-size: 28px; font-weight: 300;
     box-shadow: 0 4px 12px rgba(13, 148, 136, .4); cursor: pointer;
+  }
+
+  /* Mobile "Add" bottom sheet -- turns the exact same input-tabs + form
+     section that desktop shows inline into a sliding overlay instead,
+     triggered by the "+" FAB or bottom nav "Add" button (see goToAdd() /
+     addSheetOpen in Dashboard.jsx). Nothing about the underlying form
+     markup, validation, or auto-save changes -- only its position on
+     screen does. */
+  .mobile-sheet-backdrop {
+    position: fixed; inset: 0; background: rgba(15, 42, 46, .45); z-index: 44;
+  }
+  .mobile-add-sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 45;
+    max-height: 82vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    background: var(--card); border-radius: 18px 18px 0 0;
+    padding: 4px 16px calc(16px + env(safe-area-inset-bottom));
+    box-shadow: 0 -8px 24px rgba(15, 42, 46, .18);
+    animation: mobile-sheet-up .22s ease-out;
+  }
+  .mobile-sheet-handle {
+    display: flex; align-items: center; justify-content: center;
+    padding: 8px 0 10px; margin: 0 -16px 4px; position: sticky; top: 0;
+    background: var(--card);
+  }
+  .mobile-sheet-drag { width: 36px; height: 4px; border-radius: 2px; background: var(--border); }
+  .mobile-sheet-close {
+    position: absolute; right: 6px; top: 2px; background: none; border: none; font-size: 20px;
+    line-height: 1; color: var(--muted); padding: 6px 8px; cursor: pointer;
+  }
+  @keyframes mobile-sheet-up {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
   }
 }
