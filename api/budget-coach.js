@@ -40,7 +40,7 @@ Currency: ${currency || ''}
 Category budget caps: ${JSON.stringify(categoryBudgetCaps || [])}
 Monthly history (oldest first): ${JSON.stringify(months)}
 
-You are suggestions-only -- you cannot change any setting yourself, and must never phrase a suggestion as if it has already been applied (never say "I've raised..." or "I've set..."). Write 1-2 short sentences of overall observation, then a blank line, then 3-5 specific suggestions as separate lines starting with a dash. Only state a number if it's directly calculable from the data given -- otherwise phrase the suggestion qualitatively (e.g. "consider raising the cap" rather than inventing a number). Plain text only, no markdown formatting, no headers. Keep the whole thing under 160 words.`;
+You are suggestions-only -- you cannot change any setting yourself, and must never phrase a suggestion as if it has already been applied (never say "I've raised..." or "I've set..."). Write 1-2 short sentences of overall observation, then a blank line, then 3-5 specific suggestions as separate lines starting with a dash. Only state a number if it's directly calculable from the data given -- otherwise phrase the suggestion qualitatively (e.g. "consider raising the cap" rather than inventing a number). Do not imply a causal or leftover relationship between two figures (e.g. "expenses of X leave Y in savings") unless Y is the literal, directly computed result of subtracting one given figure from another -- savingsTotal is the amount set aside, not automatically what's left over after expenses. Plain text only, no markdown formatting, no headers. Keep the whole thing under 160 words.`;
 
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
