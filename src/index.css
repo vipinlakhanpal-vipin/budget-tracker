@@ -667,24 +667,26 @@ td.amount { font-weight: 600; text-align: right; }
   }
   .mobile-delete-btn:active { background: #fadbd8; }
 
-  /* AI feature #4's floating chat bubble mirrors the "+" FAB's vertical
-     offset (calc(78px + safe-area)) so it clears the fixed bottom nav bar,
-     but sits on the LEFT instead of the right so the two floating buttons
-     never compete for the same corner -- see the .chat-fab base rule below
-     for the desktop-only bottom:16px position this overrides. */
-  .chat-fab { bottom: calc(78px + env(safe-area-inset-bottom)); }
+  /* AI feature #4's floating chat bubble shares the RIGHT side with the "+"
+     FAB (per explicit request to move it there), so instead of the two
+     competing for the same spot it's stacked directly above the FAB --
+     bottom offset = the FAB's own offset (78px + safe-area) plus the FAB's
+     54px height plus a 12px gap. See the .chat-fab base rule below for the
+     desktop-only bottom-right position this overrides. */
+  .chat-fab { right: 16px; bottom: calc(144px + env(safe-area-inset-bottom)); }
   .chat-window {
     left: 8px; right: 8px; width: auto;
-    bottom: calc(140px + env(safe-area-inset-bottom));
-    max-height: 58vh;
+    bottom: calc(206px + env(safe-area-inset-bottom));
+    max-height: 50vh;
   }
 }
 
 /* AI feature #4: floating chat bubble + its popup window. Desktop-default
-   position here; the @media block above overrides both for mobile so the
-   bubble clears the fixed bottom nav bar instead of hiding behind it. */
+   position here (bottom-right, mirroring where the mobile "+" FAB lives);
+   the @media block above overrides both for mobile so the bubble stacks
+   above the FAB instead of overlapping it or hiding behind the bottom nav. */
 .chat-fab {
-  position: fixed; left: 16px; bottom: 16px; z-index: 42;
+  position: fixed; right: 16px; bottom: 16px; z-index: 42;
   width: 54px; height: 54px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   background: var(--accent2); color: #fff; border: none;
@@ -693,7 +695,7 @@ td.amount { font-weight: 600; text-align: right; }
 }
 .chat-fab:active { transform: scale(.92); }
 .chat-window {
-  position: fixed; left: 16px; bottom: 82px; z-index: 43;
+  position: fixed; right: 16px; bottom: 82px; z-index: 43;
   width: 340px; max-width: calc(100vw - 32px); height: 440px; max-height: 65vh;
   background: var(--card); border: 1px solid var(--border); border-radius: 16px;
   box-shadow: 0 10px 30px rgba(15, 42, 46, .18);

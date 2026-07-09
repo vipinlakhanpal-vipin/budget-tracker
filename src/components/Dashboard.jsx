@@ -1004,6 +1004,26 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     };
   }
 
+  // AI feature #4 needed a fix shortly after shipping: it could only see
+  // category-level MONTHLY TOTALS (via computeMonthSnapshot), never the
+  // individual expense rows themselves -- so it had no way to answer a
+  // question like "what did I spend at Carrefour" or "show me my taxi
+  // rides", since a specific description isn't part of a category sum.
+  // This returns the actual one-off expense rows (date, description,
+  // category, amount) for one "YYYY-MM" month, capped defensively so a
+  // very high-transaction-volume household can't blow up the request size.
+  function rawExpensesForMonth(key) {
+    return expenses
+      .filter((e) => e.expense_date.slice(0, 7) === key)
+      .slice(0, 200)
+      .map((e) => ({
+        date: e.expense_date,
+        description: e.description || '',
+        category: categoryNameById[e.category_id] || 'Uncategorized',
+        amount: Number(e.amount),
+      }));
+  }
+
   function recentMonthSnapshots(count) {
     const out = [];
     for (let i = count - 1; i >= 0; i--) {
@@ -1022,6 +1042,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     setChatLoading(true);
     try {
       const { data: { session: authSession } } = await supabase.auth.getSession();
+      const prevMonthDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
       const context = {
         currency: CURRENT_CURRENCY,
         totalBudget,
@@ -1031,6 +1052,11 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           .map((r) => ({ name: r.name, category: categoryNameById[r.category_id], amount: r.amount, frequency: r.frequency, dueDate: r.due_date || null })),
         savingsGoalsThisMonth: savingsForMonth.map((s) => ({ name: s.name, amount: s.amount })),
         recentMonths: recentMonthSnapshots(3),
+        // Individual expense rows (not just category totals) for the
+        // current and previous month, so questions about a specific
+        // merchant or transaction description can actually be answered.
+        transactionsThisMonth: rawExpensesForMonth(monthKey(currentMonth)),
+        transactionsPreviousMonth: rawExpensesForMonth(monthKey(prevMonthDate)),
       };
       const res = await fetch('/api/chat-assistant', {
         method: 'POST',
@@ -4075,12 +4101,12 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       </nav>
 
       {/* AI feature #4: a floating chat bubble available from anywhere in
-          the app, not tied to any tab/panel. Deliberately placed bottom-LEFT
-          (mirroring the "+" FAB, which owns bottom-right) and lifted to the
-          same height as that FAB on mobile so it never sits underneath the
-          fixed bottom nav bar -- see .chat-fab in index.css for the exact
-          overlap-avoidance reasoning, learned from an earlier real overlap
-          bug with the version badge. */}
+          the app, not tied to any tab/panel. Sits bottom-right on desktop;
+          on mobile it stacks directly ABOVE the "+" FAB (same corner, not a
+          different one) so the two never overlap each other or the fixed
+          bottom nav bar -- see .chat-fab in index.css for the exact
+          stacking math, learned from an earlier real overlap bug with the
+          version badge. */}
       <button
         className="chat-fab"
         onClick={() => setChatOpen((o) => !o)}

@@ -45,7 +45,13 @@ Category budget caps: ${JSON.stringify(ctx.categoryBudgetCaps || [])}
 Fixed/recurring bills: ${JSON.stringify(ctx.fixedExpenses || [])}
 This month's savings goals: ${JSON.stringify(ctx.savingsGoalsThisMonth || [])}
 Recent months (most recent last -- the last entry is the month currently being viewed), each with income, total expenses, savings, spend broken down by category, any category that went over its own cap that month, and remainingVsBudget (see above):
-${JSON.stringify(ctx.recentMonths || [])}`;
+${JSON.stringify(ctx.recentMonths || [])}
+
+Individual one-off expense transactions for the currently viewed month (date, description, category, amount) -- use this list, not just the category totals above, to answer anything about a specific purchase, merchant, or description:
+${JSON.stringify(ctx.transactionsThisMonth || [])}
+
+Individual one-off expense transactions for the previous month, same fields, for month-to-month comparisons at the transaction level:
+${JSON.stringify(ctx.transactionsPreviousMonth || [])}`;
 
     const trimmedHistory = Array.isArray(history) ? history.slice(-MAX_HISTORY_TURNS) : [];
     const messages = [
