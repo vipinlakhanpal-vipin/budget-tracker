@@ -265,6 +265,10 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
    Start date, End date, etc.) -- previously small and muted-gray, which made
    them hard to read at a glance, especially on mobile. */
 .field label { font-size: 12.5px; font-weight: 800; color: var(--text); }
+/* Flags the one field that Claude actually acts on, right where the eye
+   already is -- so the connection to typing a Description first is visible
+   before anyone has to discover it by accident. */
+.ai-powered-tag { font-size: 10px; font-weight: 700; color: #9aa8ab; text-transform: none; margin-left: 4px; }
 .field input, .field select {
   padding: 9px 11px; border: 1.5px solid var(--border); border-radius: 9px; font-size: 14px; background: #fff;
   color: var(--text); transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;

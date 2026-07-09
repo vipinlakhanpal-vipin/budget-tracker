@@ -1980,15 +1980,6 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 <label>Date</label>
                 <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
               </div>
-              <div className="field">
-                <label>Category</label>
-                <select value={form.categoryId} onChange={(e) => { setForm({ ...form, categoryId: e.target.value }); setAiCategoryHint(''); }}>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-                {aiCategoryHint && <div className="ai-hint">{aiCategoryHint}</div>}
-              </div>
               <div className="field" style={{ flex: 1.4 }}>
                 <label>Description</label>
                 <input
@@ -1998,6 +1989,15 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                   onBlur={(e) => suggestCategoryFromDescription(e.target.value)}
                 />
+              </div>
+              <div className="field">
+                <label>Category <span className="ai-powered-tag">AI powered</span></label>
+                <select value={form.categoryId} onChange={(e) => { setForm({ ...form, categoryId: e.target.value }); setAiCategoryHint(''); }}>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+                {aiCategoryHint && <div className="ai-hint">{aiCategoryHint}</div>}
               </div>
               <div className="field">
                 <label>Amount</label>
