@@ -19,7 +19,7 @@ import {
 // to confirm your browser/home-screen icon is actually showing the latest
 // build rather than a stale cached copy. Format: YYYY-MM-DD.vN, where N
 // resets to 1 on a new day and increments for same-day updates.
-const APP_VERSION = '2026-07-09.v5';
+const APP_VERSION = '2026-07-09.v6';
 
 const COLORS = [
   '#f97316', '#0ea5e9', '#a855f7', '#22c55e', '#ef4444',
@@ -179,6 +179,15 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   const [totalBudget, setTotalBudget] = useState(0);
   const [currency, setCurrency] = useState('AED');
   const [currencyDraft, setCurrencyDraft] = useState('AED');
+  // Self-service household rename (owner-only) -- previously the name
+  // could only be set once at creation, or changed by the superadmin via
+  // Admin Console. Synced from the `household` prop whenever it changes
+  // (e.g. after commitHouseholdName() triggers onHouseholdChange() to
+  // re-fetch it), same pattern as totalBudgetDraft/currencyDraft above.
+  const [householdNameDraft, setHouseholdNameDraft] = useState(household.name || '');
+  useEffect(() => {
+    setHouseholdNameDraft(household.name || '');
+  }, [household.name]);
   const [chartType, setChartType] = useState('pie');
   const [loading, setLoading] = useState(true);
   // Exactly one of these panels (Budget settings / Users / Admin console / Help)
@@ -811,6 +820,25 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       return;
     }
     loadAll();
+  }
+
+  async function commitHouseholdName(value) {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      setHouseholdNameDraft(household.name || '');
+      return;
+    }
+    if (trimmed === household.name) return;
+    const { error } = await supabase
+      .from('households')
+      .update({ name: trimmed })
+      .eq('id', householdId);
+    if (error) {
+      alert('Could not rename household: ' + error.message);
+      setHouseholdNameDraft(household.name || '');
+      return;
+    }
+    onHouseholdChange();
   }
 
   async function commitCategoryBudget(id, value) {
@@ -3384,6 +3412,21 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   <AdminConsole embedded onClose={() => setSettingsSubTab('app')} />
                 ) : (
                 <>
+                <div className="field" style={{ marginBottom: 12, maxWidth: 340 }}>
+                  <label>Household name</label>
+                  {isOwner ? (
+                    <input
+                      type="text"
+                      value={householdNameDraft}
+                      onChange={(e) => setHouseholdNameDraft(e.target.value)}
+                      onBlur={(e) => commitHouseholdName(e.target.value)}
+                    />
+                  ) : (
+                    <div className="muted-small" style={{ padding: '9px 0' }}>
+                      {household.name || 'Hearth'} <span style={{ opacity: .75 }}>(only the owner can rename)</span>
+                    </div>
+                  )}
+                </div>
                 <div className="row" style={{ marginBottom: 12 }}>
                   <div className="field">
                     <label>Total monthly budget</label>
