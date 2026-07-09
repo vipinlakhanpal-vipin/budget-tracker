@@ -1844,28 +1844,30 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
   return (
     <div className="wrap">
-      <span className="corner-version-badge" title="This updates automatically -- if a change doesn't look right, reload the page.">
-        {formatVersionBadge()}
-      </span>
       <div className="top-bar" ref={topRef}>
         <div>
           <h1>{household.name || 'Hearth'}</h1>
           <div className="sub">Signed in as {session.user.email}{isOwner ? ' (owner)' : ''}</div>
         </div>
-        <div className="action-row-teal">
-          <button className="btn-teal" onClick={() => togglePanel('help')}>
-            {activePanel === 'help' ? 'Hide help' : 'Help'}
-          </button>
-          <button className="btn-teal" onClick={() => togglePanel('report')}>
-            {activePanel === 'report' ? 'Hide report' : 'Report'}
-          </button>
-          <button className="btn-teal" onClick={() => togglePanel('settings')}>
-            {activePanel === 'settings' ? 'Hide settings' : 'Settings'}
-          </button>
-          <button className="btn-teal" onClick={() => togglePanel('members')}>
-            {activePanel === 'members' ? 'Hide users' : 'Users'}
-          </button>
-          <button className="btn-teal" onClick={handleSignOut}>Sign out</button>
+        <div className="top-right-group">
+          <span className="corner-version-badge" title="This updates automatically -- if a change doesn't look right, reload the page.">
+            {formatVersionBadge()}
+          </span>
+          <div className="action-row-teal">
+            <button className="btn-teal" onClick={() => togglePanel('help')}>
+              {activePanel === 'help' ? 'Hide help' : 'Help'}
+            </button>
+            <button className="btn-teal" onClick={() => togglePanel('report')}>
+              {activePanel === 'report' ? 'Hide report' : 'Report'}
+            </button>
+            <button className="btn-teal" onClick={() => togglePanel('settings')}>
+              {activePanel === 'settings' ? 'Hide settings' : 'Settings'}
+            </button>
+            <button className="btn-teal" onClick={() => togglePanel('members')}>
+              {activePanel === 'members' ? 'Hide users' : 'Users'}
+            </button>
+            <button className="btn-teal" onClick={handleSignOut}>Sign out</button>
+          </div>
         </div>
       </div>
 

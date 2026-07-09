@@ -199,15 +199,17 @@ button, input, select, textarea { font-family: inherit; }
   background: transparent; color: var(--accent); border: 1.5px solid var(--accent);
 }
 .btn-teal.secondary:hover { background: var(--accent-light); opacity: 1; }
-/* Pinned to the actual top-right corner of the viewport (not just the top
-   bar row) so it reads as a standalone build stamp, similar to the splash
-   screen's own version line -- both pull from the same version.js so they
-   never disagree. */
+/* Stacked above the action buttons, both right-aligned, as one column at
+   the top-right of the top bar -- this is what actually keeps the badge
+   from ever overlapping the teal buttons: it takes its own row in normal
+   layout flow instead of floating independently over them. Pulls from the
+   same version.js as the splash screen's version line so the two never
+   disagree. */
+.top-right-group { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
 .corner-version-badge {
-  position: fixed; top: max(10px, env(safe-area-inset-top)); right: 12px; z-index: 500;
   font-size: 10.5px; font-weight: 700; color: var(--muted);
-  background: var(--card); border: 1px solid var(--border); border-radius: 999px;
-  padding: 4px 10px; white-space: nowrap; box-shadow: 0 2px 8px rgba(15, 42, 46, .08);
+  background: var(--bg); border: 1px solid var(--border); border-radius: 999px;
+  padding: 3px 10px; white-space: nowrap;
 }
 h1 { font-size: 22px; margin: 0 0 4px 0; }
 .sub { color: var(--muted); font-size: 13px; }
@@ -409,6 +411,7 @@ td.amount { font-weight: 600; text-align: right; }
   .wrap { padding: 14px; }
   .top-bar { flex-direction: column; align-items: flex-start; gap: 10px; }
   .top-bar .btn.secondary.small { align-self: flex-start; }
+  .top-right-group { width: 100%; }
   .action-row-teal { width: 100%; }
   .btn-teal { flex: 1 1 auto; text-align: center; }
   h1 { font-size: 19px; }
