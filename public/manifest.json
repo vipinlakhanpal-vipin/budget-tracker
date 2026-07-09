@@ -1,6 +1,6 @@
 {
-  "name": "Household Budget Tracker",
-  "short_name": "Budget Tracker",
+  "name": "Hearth -- Household Budget Tracker",
+  "short_name": "Hearth",
   "description": "Track shared household income, expenses, fixed bills, and savings, with charts and PDF reports.",
   "start_url": "/",
   "scope": "/",

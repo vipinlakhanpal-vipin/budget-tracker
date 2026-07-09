@@ -24,7 +24,7 @@ export default async function handler(req, res) {
   try {
     await sendMail({
       to,
-      subject: subject || 'Your Household Budget Tracker report',
+      subject: subject || 'Your Hearth budget report',
       text: `Attached is your budget report${rangeLabel ? ` for ${rangeLabel}` : ''}, requested by ${user.email}.\n\nThis report is confidential -- please don't forward it to anyone outside your household.`,
       attachments: [
         {

@@ -29,14 +29,38 @@ button, input, select, textarea { font-family: inherit; }
    smoothly on its own; App.jsx also unmounts it on the same timer so it
    never lingers as an invisible-but-still-there click-blocker. */
 .splash-screen {
-  position: fixed; inset: 0; z-index: 999999;
+  position: fixed; inset: 0; z-index: 999999; overflow: hidden;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   background: linear-gradient(160deg, #14b8a6, #0d9488 55%, #0b5e56);
   pointer-events: none;
   animation: splash-fade-out .5s ease forwards;
-  animation-delay: 1.5s;
+  animation-delay: 3.5s;
+}
+/* Two rows of finance/planning icons (wallet, piggy bank, receipt,
+   calculator, etc.) continuously scrolling in opposite directions above
+   and below the main mark -- the "rolling across" motion the launch screen
+   asked for, without pulling in any image assets. Each track is the icon
+   list duplicated twice and scrolled exactly -50%, so the loop point is
+   invisible. */
+.splash-marquee-row { position: absolute; left: 0; width: 100%; overflow: hidden; opacity: .55; }
+.splash-marquee-row-1 { top: 14%; }
+.splash-marquee-row-2 { bottom: 14%; }
+.splash-marquee-track {
+  display: flex; width: max-content; gap: 34px;
+  animation: splash-marquee-left 9s linear infinite;
+}
+.splash-marquee-track-reverse { animation: splash-marquee-right 11s linear infinite; }
+.splash-marquee-icon { color: #ffffff; display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+@keyframes splash-marquee-left {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes splash-marquee-right {
+  from { transform: translateX(-50%); }
+  to { transform: translateX(0); }
 }
 .splash-center {
+  position: relative; z-index: 2;
   display: flex; flex-direction: column; align-items: center; gap: 14px;
   animation: splash-pop .55s cubic-bezier(.34, 1.56, .64, 1) both;
 }
@@ -202,6 +226,21 @@ input[type="date"] {
 /* Bold, right-aligned amounts read more like a receipt/ledger and are
    easier to compare at a glance than left-aligned plain numbers. */
 .field input[type="number"] { font-weight: 700; text-align: right; }
+
+/* Currency prefix shown inside every amount field (Add forms, edit sheets,
+   inline table cells, Settings budgets) so it's always clear which
+   currency you're typing in, without having to check Settings separately.
+   The prefix is an absolutely-positioned sibling rather than input
+   placeholder text, since placeholder text disappears the moment you
+   start typing. */
+.amount-field-wrap { position: relative; display: flex; align-items: center; width: 100%; }
+.amount-field-wrap .currency-prefix {
+  position: absolute; left: 9px; font-size: 12px; font-weight: 800; color: var(--muted);
+  pointer-events: none; white-space: nowrap;
+}
+.amount-field-wrap input[type="number"] { padding-left: 38px !important; }
+.amount-field-wrap.tight .currency-prefix { left: 6px; font-size: 10.5px; }
+.amount-field-wrap.tight input[type="number"] { padding-left: 28px !important; }
 .btn {
   background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 9px 16px;
   font-size: 14px; font-weight: 600; cursor: pointer;
@@ -306,6 +345,8 @@ td.amount { font-weight: 600; text-align: right; }
 .cat-budget-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; }
 .cat-budget-row span { flex: 1; }
 .cat-budget-row input { width: 90px; padding: 5px 8px; border: 1px solid var(--border); border-radius: 6px; }
+.cat-budget-row .amount-field-wrap { flex: 0 0 auto; width: 100px; }
+.cat-budget-row .amount-field-wrap input { width: 100%; }
 
 @media (max-width: 640px) {
   .wrap { padding: 14px; }
@@ -387,7 +428,6 @@ td.amount { font-weight: 600; text-align: right; }
     width: 100% !important; max-width: 100%;
     font-size: 16px; padding: 9px 10px; text-align: left;
   }
-  table.responsive-table td input[type="number"] { font-weight: 700; }
   /* The row's delete "x" button has no data-label (it's not a data field) --
      pin it to the card's top-right corner as a clear tap target instead of
      letting it sit as an awkward extra row. */

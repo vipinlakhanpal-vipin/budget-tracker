@@ -67,7 +67,7 @@ export default async function handler(req, res) {
       await sendMail({
         to: recipients.join(','),
         subject: `Reminder: ${bill.name} is due ${whenText}`,
-        text: `${bill.name} (amount ${bill.amount}) is due ${whenText}, on ${bill.due_date}.\n\nThis is an automated reminder from your Household Budget Tracker. You'll keep getting this daily until the due date.`,
+        text: `${bill.name} (amount ${bill.amount}) is due ${whenText}, on ${bill.due_date}.\n\nThis is an automated reminder from Hearth. You'll keep getting this daily until the due date.`,
       });
       sent++;
     } catch (e) {

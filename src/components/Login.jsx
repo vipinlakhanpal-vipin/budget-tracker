@@ -106,7 +106,7 @@ export default function Login() {
   return (
     <div className="center-screen">
       <div className="login-card">
-        <h1>Household Budget Tracker</h1>
+        <h1>Hearth</h1>
 
         <div className="auth-tabs">
           <button

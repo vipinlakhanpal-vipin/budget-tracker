@@ -19,7 +19,7 @@ import {
 // to confirm your browser/home-screen icon is actually showing the latest
 // build rather than a stale cached copy. Format: YYYY-MM-DD.vN, where N
 // resets to 1 on a new day and increments for same-day updates.
-const APP_VERSION = '2026-07-09.v4';
+const APP_VERSION = '2026-07-09.v5';
 
 const COLORS = [
   '#f97316', '#0ea5e9', '#a855f7', '#22c55e', '#ef4444',
@@ -28,6 +28,11 @@ const COLORS = [
 ];
 const RELATIONS = ['Self', 'Spouse', 'Partner', 'Child', 'Parent', 'Sibling', 'Roommate', 'Other'];
 const CURRENCIES = ['AED', 'USD', 'GBP', 'EUR', 'INR', 'SAR', 'PKR'];
+// Shown as a prefix inside every amount field so what you're typing is
+// unambiguous at a glance -- codes without one universally-recognized
+// glyph (AED/SAR/PKR) just repeat the code itself, matching how fmt()
+// already labels totals elsewhere in the app.
+const CURRENCY_SYMBOLS = { AED: 'AED', USD: '$', GBP: '£', EUR: '€', INR: '₹', SAR: 'SAR', PKR: 'PKR' };
 
 const FREQUENCIES = [
   { value: 'monthly', label: 'Monthly' },
@@ -129,6 +134,13 @@ let CURRENT_CURRENCY = 'AED';
 function fmt(n) {
   const v = Number(n) || 0;
   return CURRENT_CURRENCY + ' ' + v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// The little prefix shown inside every amount input (Add forms, edit
+// sheets, and the inline-editable tables) so the currency is always
+// visible right where you're typing, not just in the household's Settings.
+function currencySymbol() {
+  return CURRENCY_SYMBOLS[CURRENT_CURRENCY] || CURRENT_CURRENCY;
 }
 
 function monthKey(d) {
@@ -1146,7 +1158,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       doc.setTextColor(255, 255, 255);
       doc.setFont(undefined, 'bold');
       doc.setFontSize(14);
-      doc.text(household.name || 'Household Budget Tracker', M, 11);
+      doc.text(household.name || 'Hearth', M, 11);
       doc.setFont(undefined, 'normal');
       doc.setFontSize(8.5);
       doc.text(`Budget Report -- ${rangeLabel}`, M, 18);
@@ -1675,7 +1687,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     // shown as its own boxed callout at the close of the report (in addition
     // to the shorter confidentiality line already on every page's footer).
     const disclaimerText =
-      "Data & Privacy: The figures in this report are drawn directly from the data your household has entered into the Budget Tracker. This data is private to your household -- it is not visible to, or shared with, anyone outside your household's account, and it is not sold or provided to third parties. Once downloaded or emailed, this report becomes a standalone file outside the app, so please share it only with people you intend to see your household's financial information.";
+      "Data & Privacy: The figures in this report are drawn directly from the data your household has entered into Hearth. This data is private to your household -- it is not visible to, or shared with, anyone outside your household's account, and it is not sold or provided to third parties. Once downloaded or emailed, this report becomes a standalone file outside the app, so please share it only with people you intend to see your household's financial information.";
     const disclaimerLines = doc.splitTextToSize(disclaimerText, pageWidth - 2 * M - 12);
     const disclaimerHeight = disclaimerLines.length * 4.2 + 14;
     if (y + disclaimerHeight > 262) { doc.addPage(); y = drawHeader('Recommendations'); }
@@ -1780,7 +1792,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     <div className="wrap">
       <div className="top-bar" ref={topRef}>
         <div>
-          <h1>{household.name || 'Household Budget Tracker'}</h1>
+          <h1>{household.name || 'Hearth'}</h1>
           <div className="sub">Signed in as {session.user.email}{isOwner ? ' (owner)' : ''}</div>
         </div>
         <div className="action-row-teal">
@@ -1931,14 +1943,17 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               </div>
               <div className="field">
                 <label>Amount</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  value={form.amount}
-                  onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                />
+                <div className="amount-field-wrap">
+                  <span className="currency-prefix">{currencySymbol()}</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    value={form.amount}
+                    onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                  />
+                </div>
               </div>
             </div>
             <div style={{ marginTop: 12 }}>
@@ -1975,14 +1990,17 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               </div>
               <div className="field">
                 <label>Amount / month</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  value={newIncome.amount}
-                  onChange={(e) => setNewIncome({ ...newIncome, amount: e.target.value })}
-                />
+                <div className="amount-field-wrap">
+                  <span className="currency-prefix">{currencySymbol()}</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    value={newIncome.amount}
+                    onChange={(e) => setNewIncome({ ...newIncome, amount: e.target.value })}
+                  />
+                </div>
               </div>
               <div className="field">
                 <label>Month</label>
@@ -2050,15 +2068,18 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       </td>
                       <td className="muted-small" data-label="Member">{i.member_email}</td>
                       <td data-label="Amount">
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          style={{ fontSize: 12 }}
-                          value={incomeDrafts[i.id]?.amount ?? ''}
-                          onChange={(e) => updateIncomeDraftField(i.id, 'amount', e.target.value)}
-                          onBlur={(e) => commitIncomeField(i.id, 'amount', e.target.value)}
-                        />
+                        <div className="amount-field-wrap tight">
+                          <span className="currency-prefix">{currencySymbol()}</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            style={{ fontSize: 12 }}
+                            value={incomeDrafts[i.id]?.amount ?? ''}
+                            onChange={(e) => updateIncomeDraftField(i.id, 'amount', e.target.value)}
+                            onBlur={(e) => commitIncomeField(i.id, 'amount', e.target.value)}
+                          />
+                        </div>
                       </td>
                       <td data-label="Month">
                         <input
@@ -2107,14 +2128,17 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                     </div>
                     <div className="field" style={{ marginBottom: 10 }}>
                       <label>Amount</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={incomeDrafts[i.id]?.amount ?? ''}
-                        onChange={(e) => updateIncomeDraftField(i.id, 'amount', e.target.value)}
-                        onBlur={(e) => commitIncomeField(i.id, 'amount', e.target.value)}
-                      />
+                      <div className="amount-field-wrap">
+                        <span className="currency-prefix">{currencySymbol()}</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={incomeDrafts[i.id]?.amount ?? ''}
+                          onChange={(e) => updateIncomeDraftField(i.id, 'amount', e.target.value)}
+                          onBlur={(e) => commitIncomeField(i.id, 'amount', e.target.value)}
+                        />
+                      </div>
                     </div>
                     <div className="field" style={{ marginBottom: 16 }}>
                       <label>Month</label>
@@ -2168,14 +2192,17 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               </div>
               <div className="field">
                 <label>Amount / month</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  value={newRecurring.amount}
-                  onChange={(e) => setNewRecurring({ ...newRecurring, amount: e.target.value })}
-                />
+                <div className="amount-field-wrap">
+                  <span className="currency-prefix">{currencySymbol()}</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    value={newRecurring.amount}
+                    onChange={(e) => setNewRecurring({ ...newRecurring, amount: e.target.value })}
+                  />
+                </div>
               </div>
               <div className="field">
                 <label>Start date</label>
@@ -2282,15 +2309,18 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         </select>
                       </td>
                       <td data-label="Amount">
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          style={{ width: 80, fontSize: 12 }}
-                          value={recurringDrafts[r.id]?.amount ?? ''}
-                          onChange={(e) => updateRecurringDraftField(r.id, 'amount', e.target.value)}
-                          onBlur={(e) => commitRecurringField(r.id, 'amount', e.target.value)}
-                        />
+                        <div className="amount-field-wrap tight">
+                          <span className="currency-prefix">{currencySymbol()}</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            style={{ width: 80, fontSize: 12 }}
+                            value={recurringDrafts[r.id]?.amount ?? ''}
+                            onChange={(e) => updateRecurringDraftField(r.id, 'amount', e.target.value)}
+                            onBlur={(e) => commitRecurringField(r.id, 'amount', e.target.value)}
+                          />
+                        </div>
                       </td>
                       <td data-label="Start">
                         <input
@@ -2383,14 +2413,17 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                     </div>
                     <div className="field" style={{ marginBottom: 10 }}>
                       <label>Amount / month</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={recurringDrafts[r.id]?.amount ?? ''}
-                        onChange={(e) => updateRecurringDraftField(r.id, 'amount', e.target.value)}
-                        onBlur={(e) => commitRecurringField(r.id, 'amount', e.target.value)}
-                      />
+                      <div className="amount-field-wrap">
+                        <span className="currency-prefix">{currencySymbol()}</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={recurringDrafts[r.id]?.amount ?? ''}
+                          onChange={(e) => updateRecurringDraftField(r.id, 'amount', e.target.value)}
+                          onBlur={(e) => commitRecurringField(r.id, 'amount', e.target.value)}
+                        />
+                      </div>
                     </div>
                     <div className="field" style={{ marginBottom: 10 }}>
                       <label>Start date</label>
@@ -2459,14 +2492,17 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               </div>
               <div className="field">
                 <label>Amount / month</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  value={newSaving.amount}
-                  onChange={(e) => setNewSaving({ ...newSaving, amount: e.target.value })}
-                />
+                <div className="amount-field-wrap">
+                  <span className="currency-prefix">{currencySymbol()}</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    value={newSaving.amount}
+                    onChange={(e) => setNewSaving({ ...newSaving, amount: e.target.value })}
+                  />
+                </div>
               </div>
               <div className="field">
                 <label>Month</label>
@@ -2532,15 +2568,18 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         />
                       </td>
                       <td data-label="Amount">
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          style={{ width: 80, fontSize: 12 }}
-                          value={savingsDrafts[s.id]?.amount ?? ''}
-                          onChange={(e) => updateSavingDraftField(s.id, 'amount', e.target.value)}
-                          onBlur={(e) => commitSavingField(s.id, 'amount', e.target.value)}
-                        />
+                        <div className="amount-field-wrap tight">
+                          <span className="currency-prefix">{currencySymbol()}</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            style={{ width: 80, fontSize: 12 }}
+                            value={savingsDrafts[s.id]?.amount ?? ''}
+                            onChange={(e) => updateSavingDraftField(s.id, 'amount', e.target.value)}
+                            onBlur={(e) => commitSavingField(s.id, 'amount', e.target.value)}
+                          />
+                        </div>
                       </td>
                       <td data-label="Month">
                         <input
@@ -2589,14 +2628,17 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                     </div>
                     <div className="field" style={{ marginBottom: 10 }}>
                       <label>Amount / month</label>
-                      <input
+                      <div className="amount-field-wrap">
+                        <span className="currency-prefix">{currencySymbol()}</span>
+                        <input
                         type="number"
                         step="0.01"
                         min="0"
                         value={savingsDrafts[s.id]?.amount ?? ''}
                         onChange={(e) => updateSavingDraftField(s.id, 'amount', e.target.value)}
                         onBlur={(e) => commitSavingField(s.id, 'amount', e.target.value)}
-                      />
+                        />
+                      </div>
                     </div>
                     <div className="field" style={{ marginBottom: 16 }}>
                       <label>Month</label>
@@ -2699,15 +2741,18 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         />
                       </td>
                       <td data-label="Amount">
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          style={{ width: 75, fontSize: 12 }}
-                          value={expenseDrafts[e.id]?.amount ?? ''}
-                          onChange={(ev) => updateExpenseDraftField(e.id, 'amount', ev.target.value)}
-                          onBlur={(ev) => commitExpenseField(e.id, 'amount', ev.target.value)}
-                        />
+                        <div className="amount-field-wrap tight">
+                          <span className="currency-prefix">{currencySymbol()}</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            style={{ width: 75, fontSize: 12 }}
+                            value={expenseDrafts[e.id]?.amount ?? ''}
+                            onChange={(ev) => updateExpenseDraftField(e.id, 'amount', ev.target.value)}
+                            onBlur={(ev) => commitExpenseField(e.id, 'amount', ev.target.value)}
+                          />
+                        </div>
                       </td>
                       <td data-label="By" className="muted-small">{e.created_by_email?.split('@')[0]}</td>
                       <td><button className="del" onClick={() => handleDeleteExpense(e.id)}>x</button></td>
@@ -2773,6 +2818,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   </div>
                   <div className="field" style={{ marginBottom: 16 }}>
                     <label>Amount</label>
+                    <div className="amount-field-wrap">
+                    <span className="currency-prefix">{currencySymbol()}</span>
                     <input
                       type="number"
                       step="0.01"
@@ -2781,6 +2828,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       onChange={(ev) => updateExpenseDraftField(e.id, 'amount', ev.target.value)}
                       onBlur={(ev) => commitExpenseField(e.id, 'amount', ev.target.value)}
                     />
+                    </div>
                   </div>
                   <button
                     className="mobile-delete-btn"
@@ -3339,14 +3387,17 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 <div className="row" style={{ marginBottom: 12 }}>
                   <div className="field">
                     <label>Total monthly budget</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={totalBudgetDraft}
-                      onChange={(e) => setTotalBudgetDraft(e.target.value)}
-                      onBlur={(e) => commitTotalBudget(e.target.value)}
-                    />
+                    <div className="amount-field-wrap">
+                      <span className="currency-prefix">{currencySymbol()}</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={totalBudgetDraft}
+                        onChange={(e) => setTotalBudgetDraft(e.target.value)}
+                        onBlur={(e) => commitTotalBudget(e.target.value)}
+                      />
+                    </div>
                   </div>
                   <div className="field">
                     <label>Currency</label>
@@ -3397,17 +3448,20 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   {categories.map((c) => (
                     <div className="cat-budget-row" key={c.id}>
                       <span>{c.name}</span>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="0.00"
-                        value={categoryBudgetDrafts[c.id] ?? ''}
-                        onChange={(e) =>
-                          setCategoryBudgetDrafts({ ...categoryBudgetDrafts, [c.id]: e.target.value })
-                        }
-                        onBlur={(e) => commitCategoryBudget(c.id, e.target.value)}
-                      />
+                      <div className="amount-field-wrap tight">
+                        <span className="currency-prefix">{currencySymbol()}</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="0.00"
+                          value={categoryBudgetDrafts[c.id] ?? ''}
+                          onChange={(e) =>
+                            setCategoryBudgetDrafts({ ...categoryBudgetDrafts, [c.id]: e.target.value })
+                          }
+                          onBlur={(e) => commitCategoryBudget(c.id, e.target.value)}
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>

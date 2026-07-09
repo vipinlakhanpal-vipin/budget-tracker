@@ -34,7 +34,7 @@ function getTransporter() {
 export async function sendMail({ to, subject, text, html, attachments }) {
   const t = getTransporter();
   return t.sendMail({
-    from: `"Household Budget Tracker" <${process.env.GMAIL_USER}>`,
+    from: `"Hearth" <${process.env.GMAIL_USER}>`,
     to,
     subject,
     text,

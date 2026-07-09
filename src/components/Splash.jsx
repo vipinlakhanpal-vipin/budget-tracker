@@ -1,11 +1,29 @@
-// Launch splash screen -- shown for a couple of seconds every time the app
-// starts (both a fresh browser load and opening the installed PWA/home
-// screen icon), then fades out on its own. Purely a first-impression /
-// brand moment: it doesn't gate anything, the real app underneath is
-// already mounting and ready the instant the fade finishes.
+import { Wallet, PiggyBank, TrendingUp, Receipt, Calculator, Landmark, Coins, ShieldCheck } from 'lucide-react';
+
+// Launch splash screen -- shown for ~4 seconds every time the app starts
+// (both a fresh browser load and opening the installed PWA/home screen
+// icon), then fades out on its own. Purely a first-impression / brand
+// moment: it doesn't gate anything, the real app underneath is already
+// mounting and ready while this plays.
+const MARQUEE_ICONS = [Wallet, PiggyBank, TrendingUp, Receipt, Calculator, Landmark, Coins, ShieldCheck];
+
 export default function Splash() {
+  // Rendered twice back-to-back so the CSS marquee (translateX 0 -> -50%)
+  // loops seamlessly instead of visibly jumping/resetting.
+  const track = [...MARQUEE_ICONS, ...MARQUEE_ICONS];
+
   return (
     <div className="splash-screen" aria-hidden="true">
+      <div className="splash-marquee-row splash-marquee-row-1">
+        <div className="splash-marquee-track">
+          {track.map((Icon, i) => (
+            <span className="splash-marquee-icon" key={`a-${i}`}>
+              <Icon size={30} strokeWidth={1.8} />
+            </span>
+          ))}
+        </div>
+      </div>
+
       <div className="splash-center">
         <div className="splash-icon-wrap">
           <div className="splash-icon">
@@ -27,9 +45,20 @@ export default function Splash() {
             </svg>
           </div>
         </div>
-        <div className="splash-title">Household Budget Tracker</div>
+        <div className="splash-title">Hearth</div>
         <div className="splash-tagline">Track together. Spend smarter.</div>
       </div>
+
+      <div className="splash-marquee-row splash-marquee-row-2">
+        <div className="splash-marquee-track splash-marquee-track-reverse">
+          {track.map((Icon, i) => (
+            <span className="splash-marquee-icon" key={`b-${i}`}>
+              <Icon size={26} strokeWidth={1.8} />
+            </span>
+          ))}
+        </div>
+      </div>
+
       <div className="splash-credit">Conceptualized and created by &ndash;Lakhanpal</div>
     </div>
   );

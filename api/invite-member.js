@@ -29,8 +29,8 @@ export default async function handler(req, res) {
   try {
     await sendMail({
       to,
-      subject: `You're invited to join "${householdName || 'a household'}" on Household Budget Tracker`,
-      text: `${user.email} has invited you to join their household "${householdName || ''}" on Household Budget Tracker.\n\nTo join, go to ${SITE_URL} and sign up (or sign in) using this exact email address (${to}) -- you'll be added to their household automatically.\n\nThis invite is private to your household and is never shared with anyone outside it.`,
+      subject: `You're invited to join "${householdName || 'a household'}" on Hearth`,
+      text: `${user.email} has invited you to join their household "${householdName || ''}" on Hearth.\n\nTo join, go to ${SITE_URL} and sign up (or sign in) using this exact email address (${to}) -- you'll be added to their household automatically.\n\nThis invite is private to your household and is never shared with anyone outside it.`,
     });
   } catch (e) {
     return res.status(e.status || 500).json({ error: e.message });

@@ -20,7 +20,7 @@ export default function App() {
   // resolution keeps running in the background while it's up.
   const [showSplash, setShowSplash] = useState(true);
   useEffect(() => {
-    const t = setTimeout(() => setShowSplash(false), 2000);
+    const t = setTimeout(() => setShowSplash(false), 4000);
     return () => clearTimeout(t);
   }, []);
 
