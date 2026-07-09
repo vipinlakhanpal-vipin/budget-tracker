@@ -2324,13 +2324,14 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 )}
               </>
             ) : chartType === 'bar' ? (
-              // Shrunk considerably from the original version -- thinner bars
-              // (7px) and less vertical space per category (26px vs. the
-              // original 40px) so the chart takes up noticeably less room,
-              // with a scrollable cap once there are enough categories that
-              // it would otherwise grow very tall.
-              <div style={{ maxHeight: 380, overflowY: pieData.length > 13 ? 'auto' : 'visible' }}>
-                <ResponsiveContainer width="100%" height={Math.max(160, pieData.length * 26)}>
+              // Thinner bars (7px) than the original version so the chart
+              // stays compact per category, but given more vertical room to
+              // grow overall (maxHeight 520 vs. the earlier 380, and more
+              // height per row) so more categories are visible without
+              // scrolling -- only once the list gets genuinely long does the
+              // scrollable cap kick in.
+              <div style={{ maxHeight: 520, overflowY: pieData.length > 17 ? 'auto' : 'visible' }}>
+                <ResponsiveContainer width="100%" height={Math.max(180, pieData.length * 30)}>
                   <BarChart data={pieData} layout="vertical" margin={{ top: 5, right: 55, left: 10, bottom: 5 }} barCategoryGap="30%">
                     <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                     <XAxis type="number" tick={{ fontSize: 8.5 }} hide />
@@ -2342,7 +2343,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       tickFormatter={(name) => (name.length > 13 ? name.slice(0, 13) + '…' : name)}
                     />
                     <Tooltip formatter={(v) => fmt(v)} />
-                    <Bar dataKey="value" barSize={7} radius={[0, 3, 3, 0]} isAnimationActive={false}>
+                    <Bar dataKey="value" barSize={9} radius={[0, 3, 3, 0]} isAnimationActive={false}>
                       {pieData.map((_, i) => (
                         <Cell key={i} fill={COLORS[i % COLORS.length]} />
                       ))}
