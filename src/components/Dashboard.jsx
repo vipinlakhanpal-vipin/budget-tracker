@@ -11,8 +11,21 @@ import AdminConsole from './AdminConsole.jsx';
 import { formatVersionBadge } from '../version.js';
 import {
   Home, Plus, FileText, Users as UsersIcon, Settings as SettingsIcon,
-  Pencil, Trash2, X, ChevronLeft, ChevronRight, Camera, MessageCircle,
+  Pencil, Trash2, X, ChevronLeft, ChevronRight, Camera, MessageCircle, Sparkles,
 } from 'lucide-react';
+
+// Small reusable "AI powered" pill -- a magic-wand sparkle + label used next
+// to every AI feature (auto-categorize, receipt scan, AI Insights, Budget
+// Coach, chat assistant) so they all read as visually distinct from regular
+// app chrome, consistently, wherever they appear.
+function AiTag({ style }) {
+  return (
+    <span className="ai-powered-tag" style={style}>
+      <Sparkles size={11} className="ai-tag-sparkle" strokeWidth={2.25} />
+      AI powered
+    </span>
+  );
+}
 
 const COLORS = [
   '#f97316', '#0ea5e9', '#a855f7', '#22c55e', '#ef4444',
@@ -33,6 +46,17 @@ const FREQUENCIES = [
   { value: 'quarterly', label: 'Quarterly' },
   { value: 'half_yearly', label: 'Half-yearly' },
   { value: 'yearly', label: 'Once a year' },
+];
+
+// How an expense was paid. Bank name only matters (and only shows) for the
+// two card options -- Cash has nothing to pick.
+const PAYMENT_SOURCES = ['Cash', 'Credit Card', 'Debit Card'];
+// Common UAE retail banks, since this household is based in Dubai -- "Other"
+// covers anything not listed rather than blocking entry.
+const BANKS = [
+  'Emirates NBD', 'ADCB', 'FAB (First Abu Dhabi Bank)', 'Dubai Islamic Bank',
+  'Mashreq', 'ADIB', 'RAKBANK', 'CBD (Commercial Bank of Dubai)', 'HSBC UAE',
+  'Standard Chartered UAE', 'Citibank UAE', 'Other',
 ];
 const FREQUENCY_MONTHS = { monthly: 1, alternate: 2, quarterly: 3, half_yearly: 6, yearly: 12 };
 
@@ -283,6 +307,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     categoryId: '',
     description: '',
     amount: '',
+    paymentSource: 'Cash',
+    paymentBank: '',
   });
   // AI feature #1 (auto-categorization): a small hint shown next to the
   // Category field right after the AI picks one for you, so it's clear the
@@ -352,6 +378,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     endDate: '',
     frequency: 'monthly',
     dueDate: '',
+    paymentSource: 'Cash',
+    paymentBank: '',
   });
   const [recurringDrafts, setRecurringDrafts] = useState({});
 
@@ -551,7 +579,10 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     setExpenses(exps || []);
     const eDrafts = {};
     (exps || []).forEach((e) => {
-      eDrafts[e.id] = { date: e.expense_date, categoryId: e.category_id, description: e.description || '', amount: String(e.amount) };
+      eDrafts[e.id] = {
+        date: e.expense_date, categoryId: e.category_id, description: e.description || '', amount: String(e.amount),
+        paymentSource: e.payment_source || 'Cash', paymentBank: e.payment_bank || '',
+      };
     });
     setExpenseDrafts(eDrafts);
     setRecurringExpenses(recur || []);
@@ -585,6 +616,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
         endDate: r.end_date || '',
         frequency: r.frequency || 'monthly',
         dueDate: r.due_date || '',
+        paymentSource: r.payment_source || 'Cash',
+        paymentBank: r.payment_bank || '',
       };
     });
     setRecurringDrafts(rDrafts);
@@ -652,6 +685,27 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     categories.forEach((c) => (m[c.id] = c.name));
     return m;
   }, [categories]);
+
+  // Maps a household member's login email to their friendly first name (set
+  // under Users -> My details), so the "By" column reads "Vipin"/"Annie"
+  // instead of a raw email-derived string like "vipinlakhanpal". Falls back
+  // to the email's local part if that member hasn't set a name yet.
+  const nameByEmail = useMemo(() => {
+    const m = {};
+    members.forEach((mm) => {
+      if (mm.email) m[mm.email.toLowerCase()] = (mm.name || '').trim();
+    });
+    return m;
+  }, [members]);
+
+  function displayNameForEmail(email) {
+    if (!email) return '';
+    const name = nameByEmail[email.toLowerCase()];
+    // First name only ("Vipin", "Annie") -- keeps the "By" column compact,
+    // matching how it read before (a single short word) rather than a full name.
+    if (name) return name.split(' ')[0];
+    return email.split('@')[0];
+  }
 
   const byCategory = useMemo(() => {
     const m = {};
@@ -762,6 +816,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       category_id: form.categoryId,
       description: form.description.trim(),
       amount,
+      payment_source: form.paymentSource || null,
+      payment_bank: form.paymentSource === 'Cash' ? null : (form.paymentBank || null),
       created_by: session.user.id,
       created_by_email: session.user.email,
     });
@@ -1130,6 +1186,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
         category_id: merged.categoryId,
         description: (merged.description || '').trim(),
         amount,
+        payment_source: merged.paymentSource || null,
+        payment_bank: merged.paymentSource === 'Cash' ? null : (merged.paymentBank || null),
       })
       .eq('id', id);
     if (error) {
@@ -1253,6 +1311,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       end_date: newRecurring.endDate || null,
       frequency: newRecurring.frequency,
       due_date: newRecurring.dueDate || null,
+      payment_source: newRecurring.paymentSource || null,
+      payment_bank: newRecurring.paymentSource === 'Cash' ? null : (newRecurring.paymentBank || null),
       created_by: session.user.id,
     });
     if (error) {
@@ -1286,6 +1346,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
         end_date: merged.endDate || null,
         frequency: merged.frequency || 'monthly',
         due_date: merged.dueDate || null,
+        payment_source: merged.paymentSource || null,
+        payment_bank: merged.paymentSource === 'Cash' ? null : (merged.paymentBank || null),
       })
       .eq('id', id);
     if (error) alert('Could not update: ' + error.message);
@@ -2347,7 +2409,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 />
               </div>
               <div className="field">
-                <label>Category <span className="ai-powered-tag">AI powered</span></label>
+                <label>Category <AiTag /></label>
                 <select value={form.categoryId} onChange={(e) => { setForm({ ...form, categoryId: e.target.value }); setAiCategoryHint(''); }}>
                   {categories.map((c) => (
                     <option key={c.id} value={c.id}>{c.name}</option>
@@ -2370,6 +2432,36 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 </div>
               </div>
             </div>
+            {/* Payment source sits on its own row, below the main fields --
+                keeping it out of the first row avoids cramming a 5th/6th
+                field into a row already tight on width (the exact pattern
+                that caused the earlier Amount/Start-date overlap bug in
+                Fixed Expenses). The bank picker only renders once a card
+                option is chosen, so Cash payers never see an irrelevant field. */}
+            <div className="row" style={{ marginTop: 10 }}>
+              <div className="field">
+                <label>Payment Source</label>
+                <select
+                  value={form.paymentSource}
+                  onChange={(e) => setForm({ ...form, paymentSource: e.target.value, paymentBank: e.target.value === 'Cash' ? '' : form.paymentBank })}
+                >
+                  {PAYMENT_SOURCES.map((p) => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+              </div>
+              {form.paymentSource !== 'Cash' && (
+                <div className="field">
+                  <label>Bank</label>
+                  <select value={form.paymentBank} onChange={(e) => setForm({ ...form, paymentBank: e.target.value })}>
+                    <option value="">Select bank</option>
+                    {BANKS.map((b) => (
+                      <option key={b} value={b}>{b}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
             <div style={{ marginTop: 12 }}>
               <button className="btn" type="submit">Add</button>
             </div>
@@ -2391,7 +2483,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               >
                 <Camera size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
                 {scanLoading ? 'Reading receipt...' : 'Scan a receipt'}
-                <span className="ai-powered-tag">AI powered</span>
+                <AiTag />
               </button>
               <div className="muted-small" style={{ marginTop: 6 }}>
                 Upload a photo of a receipt, or a sheet/screenshot listing several expenses -- review what Claude finds before anything is added.
@@ -2729,6 +2821,34 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 />
               </div>
             </div>
+            {/* Own row, same reasoning as Add-an-expense above -- this form
+                already has 7 fields wrapping across lines on narrower
+                screens, so a payment source/bank pair goes on a fresh row
+                rather than squeezing into the already-crowded one. */}
+            <div className="row" style={{ marginTop: 10 }}>
+              <div className="field">
+                <label>Payment Source</label>
+                <select
+                  value={newRecurring.paymentSource}
+                  onChange={(e) => setNewRecurring({ ...newRecurring, paymentSource: e.target.value, paymentBank: e.target.value === 'Cash' ? '' : newRecurring.paymentBank })}
+                >
+                  {PAYMENT_SOURCES.map((p) => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+              </div>
+              {newRecurring.paymentSource !== 'Cash' && (
+                <div className="field">
+                  <label>Bank</label>
+                  <select value={newRecurring.paymentBank} onChange={(e) => setNewRecurring({ ...newRecurring, paymentBank: e.target.value })}>
+                    <option value="">Select bank</option>
+                    {BANKS.map((b) => (
+                      <option key={b} value={b}>{b}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
             <div style={{ marginTop: 12 }}>
               <button className="btn" type="submit">Add</button>
             </div>
@@ -2767,12 +2887,12 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <div className="table-scroll">
               <table className="responsive-table" style={{ marginTop: 14, fontSize: 12 }}>
                 <colgroup>
-                  <col style={{ width: '16%' }} /><col style={{ width: '13%' }} /><col style={{ width: '10%' }} />
-                  <col style={{ width: '13%' }} /><col style={{ width: '13%' }} /><col style={{ width: '14%' }} />
-                  <col style={{ width: '13%' }} /><col style={{ width: '8%' }} />
+                  <col style={{ width: '14%' }} /><col style={{ width: '10%' }} /><col style={{ width: '9%' }} />
+                  <col style={{ width: '10%' }} /><col style={{ width: '10%' }} /><col style={{ width: '11%' }} />
+                  <col style={{ width: '10%' }} /><col style={{ width: '12%' }} /><col style={{ width: '7%' }} />
                 </colgroup>
                 <thead>
-                  <tr><th>Name</th><th>Category</th><th>Amount</th><th>Start</th><th>End</th><th>Repeats</th><th>Due date</th><th></th></tr>
+                  <tr><th>Name</th><th>Category</th><th>Amount</th><th>Start</th><th>End</th><th>Repeats</th><th>Due date</th><th>Payment</th><th></th></tr>
                 </thead>
                 <tbody>
                   {recurringExpenses.map((r) => (
@@ -2848,6 +2968,29 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           onChange={(e) => updateRecurringDraftField(r.id, 'dueDate', e.target.value)}
                           onBlur={(e) => commitRecurringField(r.id, 'dueDate', e.target.value)}
                         />
+                      </td>
+                      <td data-label="Payment">
+                        <select
+                          style={{ fontSize: 11, width: 92 }}
+                          value={recurringDrafts[r.id]?.paymentSource ?? 'Cash'}
+                          onChange={(e) => commitRecurringField(r.id, 'paymentSource', e.target.value)}
+                        >
+                          {PAYMENT_SOURCES.map((p) => (
+                            <option key={p} value={p}>{p}</option>
+                          ))}
+                        </select>
+                        {(recurringDrafts[r.id]?.paymentSource ?? 'Cash') !== 'Cash' && (
+                          <select
+                            style={{ fontSize: 11, width: 92, marginTop: 4 }}
+                            value={recurringDrafts[r.id]?.paymentBank ?? ''}
+                            onChange={(e) => commitRecurringField(r.id, 'paymentBank', e.target.value)}
+                          >
+                            <option value="">Bank</option>
+                            {BANKS.map((b) => (
+                              <option key={b} value={b}>{b}</option>
+                            ))}
+                          </select>
+                        )}
                       </td>
                       <td><button className="del" onClick={() => handleDeleteRecurring(r.id, r.name)} title="Delete"><Trash2 size={14} /></button></td>
                     </tr>
@@ -2943,7 +3086,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         ))}
                       </select>
                     </div>
-                    <div className="field" style={{ marginBottom: 16 }}>
+                    <div className="field" style={{ marginBottom: 10 }}>
                       <label>Due date (optional, for reminders)</label>
                       <input
                         type="date"
@@ -2952,6 +3095,31 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         onBlur={(e) => commitRecurringField(r.id, 'dueDate', e.target.value)}
                       />
                     </div>
+                    <div className="field" style={{ marginBottom: 10 }}>
+                      <label>Payment Source</label>
+                      <select
+                        value={recurringDrafts[r.id]?.paymentSource ?? 'Cash'}
+                        onChange={(e) => commitRecurringField(r.id, 'paymentSource', e.target.value)}
+                      >
+                        {PAYMENT_SOURCES.map((p) => (
+                          <option key={p} value={p}>{p}</option>
+                        ))}
+                      </select>
+                    </div>
+                    {(recurringDrafts[r.id]?.paymentSource ?? 'Cash') !== 'Cash' && (
+                      <div className="field" style={{ marginBottom: 16 }}>
+                        <label>Bank</label>
+                        <select
+                          value={recurringDrafts[r.id]?.paymentBank ?? ''}
+                          onChange={(e) => commitRecurringField(r.id, 'paymentBank', e.target.value)}
+                        >
+                          <option value="">Select bank</option>
+                          {BANKS.map((b) => (
+                            <option key={b} value={b}>{b}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                     <button
                       className="mobile-delete-btn"
                       onClick={() => { handleDeleteRecurring(r.id, r.name); setEditingRecurringId(null); }}
@@ -3191,11 +3359,12 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <div className="table-scroll">
               <table className="responsive-table" style={{ fontSize: 12 }}>
                 <colgroup>
-                  <col style={{ width: '15%' }} /><col style={{ width: '18%' }} /><col style={{ width: '30%' }} />
-                  <col style={{ width: '14%' }} /><col style={{ width: '15%' }} /><col style={{ width: '8%' }} />
+                  <col style={{ width: '12%' }} /><col style={{ width: '13%' }} /><col style={{ width: '22%' }} />
+                  <col style={{ width: '10%' }} /><col style={{ width: '11%' }} /><col style={{ width: '12%' }} />
+                  <col style={{ width: '7%' }} />
                 </colgroup>
                 <thead>
-                  <tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th><th>By</th><th></th></tr>
+                  <tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th><th>By</th><th>Payment</th><th></th></tr>
                 </thead>
                 <tbody>
                   {monthExpenses.map((e) => (
@@ -3243,7 +3412,30 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           />
                         </div>
                       </td>
-                      <td data-label="By" className="muted-small">{e.created_by_email?.split('@')[0]}</td>
+                      <td data-label="By" className="muted-small">{displayNameForEmail(e.created_by_email)}</td>
+                      <td data-label="Payment">
+                        <select
+                          style={{ fontSize: 11, width: 92 }}
+                          value={expenseDrafts[e.id]?.paymentSource ?? 'Cash'}
+                          onChange={(ev) => commitExpenseField(e.id, 'paymentSource', ev.target.value)}
+                        >
+                          {PAYMENT_SOURCES.map((p) => (
+                            <option key={p} value={p}>{p}</option>
+                          ))}
+                        </select>
+                        {(expenseDrafts[e.id]?.paymentSource ?? 'Cash') !== 'Cash' && (
+                          <select
+                            style={{ fontSize: 11, width: 92, marginTop: 4 }}
+                            value={expenseDrafts[e.id]?.paymentBank ?? ''}
+                            onChange={(ev) => commitExpenseField(e.id, 'paymentBank', ev.target.value)}
+                          >
+                            <option value="">Bank</option>
+                            {BANKS.map((b) => (
+                              <option key={b} value={b}>{b}</option>
+                            ))}
+                          </select>
+                        )}
+                      </td>
                       <td><button className="del" onClick={() => handleDeleteExpense(e.id)} title="Delete"><Trash2 size={14} /></button></td>
                     </tr>
                   ))}
@@ -3305,7 +3497,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       onBlur={(ev) => commitExpenseField(e.id, 'description', ev.target.value)}
                     />
                   </div>
-                  <div className="field" style={{ marginBottom: 16 }}>
+                  <div className="field" style={{ marginBottom: 10 }}>
                     <label>Amount</label>
                     <div className="amount-field-wrap">
                     <span className="currency-prefix">{currencySymbol()}</span>
@@ -3319,6 +3511,31 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                     />
                     </div>
                   </div>
+                  <div className="field" style={{ marginBottom: 10 }}>
+                    <label>Payment Source</label>
+                    <select
+                      value={expenseDrafts[e.id]?.paymentSource ?? 'Cash'}
+                      onChange={(ev) => commitExpenseField(e.id, 'paymentSource', ev.target.value)}
+                    >
+                      {PAYMENT_SOURCES.map((p) => (
+                        <option key={p} value={p}>{p}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {(expenseDrafts[e.id]?.paymentSource ?? 'Cash') !== 'Cash' && (
+                    <div className="field" style={{ marginBottom: 16 }}>
+                      <label>Bank</label>
+                      <select
+                        value={expenseDrafts[e.id]?.paymentBank ?? ''}
+                        onChange={(ev) => commitExpenseField(e.id, 'paymentBank', ev.target.value)}
+                      >
+                        <option value="">Select bank</option>
+                        {BANKS.map((b) => (
+                          <option key={b} value={b}>{b}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   <button
                     className="mobile-delete-btn"
                     onClick={() => {
@@ -3503,7 +3720,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           <div className="panel" style={{ marginTop: 16 }}>
             <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
               <h2 style={{ margin: 0 }}>
-                AI Insights <span className="ai-powered-tag">AI powered</span>
+                AI Insights <AiTag />
               </h2>
               <button
                 className="btn small secondary"
@@ -3754,7 +3971,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           <div className="panel" ref={panelRef}>
             <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
               <h2 style={{ margin: 0 }}>
-                Budget Coach <span className="ai-powered-tag">AI powered</span>
+                Budget Coach <AiTag />
               </h2>
               <button className="btn small secondary" onClick={generateBudgetCoach} disabled={coachLoading}>
                 {coachLoading ? 'Analyzing...' : coachResult ? 'Re-analyze' : 'Analyze trends'}
@@ -4102,16 +4319,21 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
       {/* AI feature #4: a floating chat bubble available from anywhere in
           the app, not tied to any tab/panel. Sits bottom-right on desktop;
-          on mobile it stacks directly ABOVE the "+" FAB (same corner, not a
-          different one) so the two never overlap each other or the fixed
-          bottom nav bar -- see .chat-fab in index.css for the exact
-          stacking math, learned from an earlier real overlap bug with the
-          version badge. */}
+          on mobile it moves to the bottom-LEFT (same height as the "+" FAB)
+          instead of stacking above it, after real-device feedback that
+          sharing the right corner with the FAB + bottom nav's "Settings"
+          button read as crowded -- see .chat-fab in index.css. */}
+      {!chatOpen && (
+        <span className="chat-fab-badge">
+          <Sparkles size={11} className="ai-tag-sparkle" strokeWidth={2.25} />
+          AI powered
+        </span>
+      )}
       <button
         className="chat-fab"
         onClick={() => setChatOpen((o) => !o)}
-        aria-label={chatOpen ? 'Close chat' : 'Ask about your budget'}
-        title={chatOpen ? 'Close chat' : 'Ask about your budget'}
+        aria-label={chatOpen ? 'Close chat' : 'Ask about your budget (AI powered)'}
+        title={chatOpen ? 'Close chat' : 'Ask about your budget (AI powered)'}
       >
         {chatOpen ? <X size={22} /> : <MessageCircle size={22} />}
       </button>
@@ -4119,7 +4341,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       {chatOpen && (
         <div className="chat-window">
           <div className="chat-header">
-            <span>Ask about your budget <span className="ai-powered-tag">AI powered</span></span>
+            <span>Ask about your budget <AiTag /></span>
             <button onClick={() => setChatOpen(false)} aria-label="Close chat"><X size={16} /></button>
           </div>
           <div className="chat-messages" ref={chatMessagesRef}>

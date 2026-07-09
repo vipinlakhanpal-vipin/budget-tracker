@@ -268,7 +268,27 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
 /* Flags the one field that Claude actually acts on, right where the eye
    already is -- so the connection to typing a Description first is visible
    before anyone has to discover it by accident. */
-.ai-powered-tag { font-size: 10px; font-weight: 700; color: #9aa8ab; text-transform: none; margin-left: 4px; }
+/* A small gradient pill + sparkling magic-wand icon, reused via <AiTag />
+   wherever an AI feature is labeled (Category suggestion, receipt scan, AI
+   Insights, Budget Coach, chat). Replaces the old plain-gray text label so
+   AI-powered features read as visually distinct at a glance, not just a
+   muted afterthought. */
+.ai-powered-tag {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 10px; font-weight: 800; letter-spacing: .1px; text-transform: none;
+  margin-left: 4px; padding: 2px 7px 2px 5px; border-radius: 20px;
+  color: #fff; background: linear-gradient(135deg, #a855f7, #6366f1);
+  box-shadow: 0 1px 4px rgba(99, 102, 241, .35);
+  vertical-align: middle;
+}
+.ai-tag-sparkle {
+  flex: 0 0 auto; color: #fde68a;
+  animation: ai-sparkle-twinkle 2.2s ease-in-out infinite;
+}
+@keyframes ai-sparkle-twinkle {
+  0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  50% { transform: scale(1.18) rotate(-8deg); opacity: .8; }
+}
 .field input, .field select {
   padding: 9px 11px; border: 1.5px solid var(--border); border-radius: 9px; font-size: 14px; background: #fff;
   color: var(--text); transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
@@ -315,6 +335,13 @@ input[type="date"] {
 .amount-field-wrap input[type="number"] { width: 100%; min-width: 0; padding-left: 38px !important; }
 .amount-field-wrap.tight .currency-prefix { left: 6px; font-size: 10.5px; }
 .amount-field-wrap.tight input[type="number"] { padding-left: 28px !important; }
+
+/* All monetary/numeric values right-aligned app-wide (Amount fields, Monthly
+   budget, per-category caps, Income/Savings amounts) -- standard
+   spreadsheet/ledger convention, easier to scan and compare down a column.
+   The currency-prefix span stays pinned to the left via its own absolute
+   positioning above, so this only affects the digits themselves. */
+input[type="number"] { text-align: right; }
 
 /* AI feature #3 (receipt scanning) -- the "Scan a receipt" trigger sits
    below the Add-an-expense form as a secondary, opt-in action rather than
@@ -667,16 +694,22 @@ td.amount { font-weight: 600; text-align: right; }
   }
   .mobile-delete-btn:active { background: #fadbd8; }
 
-  /* AI feature #4's floating chat bubble shares the RIGHT side with the "+"
-     FAB (per explicit request to move it there), so instead of the two
-     competing for the same spot it's stacked directly above the FAB --
-     bottom offset = the FAB's own offset (78px + safe-area) plus the FAB's
-     54px height plus a 12px gap. See the .chat-fab base rule below for the
-     desktop-only bottom-right position this overrides. */
-  .chat-fab { right: 16px; bottom: calc(144px + env(safe-area-inset-bottom)); }
+  /* Stacking the chat bubble directly above the "+" FAB (both on the right)
+     turned out too tight in practice -- on real phones it read as crowded
+     against both the FAB and the bottom nav's rightmost "Settings" button,
+     which all share that same corner. Rather than fine-tune pixel math
+     again (this is the second overlap bug in this exact spot), the chat
+     bubble moves to the LEFT on mobile only, at the same height as the "+"
+     FAB -- a completely separate corner from the FAB and nav, so there's no
+     shared space to crowd regardless of exact nav/FAB rendered height on
+     any given device. Desktop keeps the bottom-right position from the
+     .chat-fab base rule below (there's no mobile bottom nav to conflict
+     with there). */
+  .chat-fab { left: 16px; right: auto; bottom: calc(78px + env(safe-area-inset-bottom)); }
+  .chat-fab-badge { left: 14px; right: auto; bottom: calc(134px + env(safe-area-inset-bottom)); }
   .chat-window {
     left: 8px; right: 8px; width: auto;
-    bottom: calc(206px + env(safe-area-inset-bottom));
+    bottom: calc(140px + env(safe-area-inset-bottom));
     max-height: 50vh;
   }
 }
@@ -694,6 +727,20 @@ td.amount { font-weight: 600; text-align: right; }
   transition: transform .12s ease;
 }
 .chat-fab:active { transform: scale(.92); }
+/* Small "AI powered" pill that hovers just above/left of the closed chat
+   bubble so it's clear the assistant is AI-driven before the user even
+   opens it -- hidden once the chat window is open (the header already
+   carries its own ai-powered-tag then). Positioned relative to the same
+   fixed corner as .chat-fab, so it inherits the mobile override below. */
+.chat-fab-badge {
+  position: fixed; right: 14px; bottom: 72px; z-index: 42;
+  display: inline-flex; align-items: center; gap: 3px;
+  color: #fff; background: linear-gradient(135deg, #a855f7, #6366f1);
+  font-size: 10px; font-weight: 800; letter-spacing: .2px;
+  padding: 3px 9px 3px 6px; border-radius: 20px;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, .4);
+  pointer-events: none; white-space: nowrap;
+}
 .chat-window {
   position: fixed; right: 16px; bottom: 82px; z-index: 43;
   width: 340px; max-width: calc(100vw - 32px); height: 440px; max-height: 65vh;
