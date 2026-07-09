@@ -666,4 +666,56 @@ td.amount { font-weight: 600; text-align: right; }
     cursor: pointer;
   }
   .mobile-delete-btn:active { background: #fadbd8; }
+
+  /* AI feature #4's floating chat bubble mirrors the "+" FAB's vertical
+     offset (calc(78px + safe-area)) so it clears the fixed bottom nav bar,
+     but sits on the LEFT instead of the right so the two floating buttons
+     never compete for the same corner -- see the .chat-fab base rule below
+     for the desktop-only bottom:16px position this overrides. */
+  .chat-fab { bottom: calc(78px + env(safe-area-inset-bottom)); }
+  .chat-window {
+    left: 8px; right: 8px; width: auto;
+    bottom: calc(140px + env(safe-area-inset-bottom));
+    max-height: 58vh;
+  }
 }
+
+/* AI feature #4: floating chat bubble + its popup window. Desktop-default
+   position here; the @media block above overrides both for mobile so the
+   bubble clears the fixed bottom nav bar instead of hiding behind it. */
+.chat-fab {
+  position: fixed; left: 16px; bottom: 16px; z-index: 42;
+  width: 54px; height: 54px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--accent2); color: #fff; border: none;
+  box-shadow: 0 4px 14px rgba(14, 165, 233, .45); cursor: pointer;
+  transition: transform .12s ease;
+}
+.chat-fab:active { transform: scale(.92); }
+.chat-window {
+  position: fixed; left: 16px; bottom: 82px; z-index: 43;
+  width: 340px; max-width: calc(100vw - 32px); height: 440px; max-height: 65vh;
+  background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(15, 42, 46, .18);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.chat-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px; border-bottom: 1px solid var(--border);
+  font-weight: 800; font-size: 13.5px; background: var(--accent2-light);
+}
+.chat-header button { background: none; border: none; cursor: pointer; color: var(--muted); display: flex; }
+.chat-messages { flex: 1; overflow-y: auto; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.chat-empty { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+.chat-bubble {
+  max-width: 82%; padding: 8px 12px; border-radius: 14px; font-size: 13px; line-height: 1.45;
+  white-space: pre-line;
+}
+.chat-bubble.user { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
+.chat-bubble.assistant { align-self: flex-start; background: var(--bg); color: var(--text); border-bottom-left-radius: 4px; }
+.chat-bubble.chat-typing { font-style: italic; color: var(--muted); background: var(--bg); }
+.chat-input-row { display: flex; gap: 8px; padding: 10px; border-top: 1px solid var(--border); }
+.chat-input-row input {
+  flex: 1; padding: 8px 10px; border: 1.5px solid var(--border); border-radius: 20px; font-size: 13px;
+}
+.chat-input-row input:focus { outline: none; border-color: var(--accent2); }

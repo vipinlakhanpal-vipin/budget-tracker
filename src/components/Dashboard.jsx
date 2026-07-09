@@ -11,7 +11,7 @@ import AdminConsole from './AdminConsole.jsx';
 import { formatVersionBadge } from '../version.js';
 import {
   Home, Plus, FileText, Users as UsersIcon, Settings as SettingsIcon,
-  Pencil, Trash2, X, ChevronLeft, ChevronRight, Camera,
+  Pencil, Trash2, X, ChevronLeft, ChevronRight, Camera, MessageCircle,
 } from 'lucide-react';
 
 const COLORS = [
@@ -310,6 +310,35 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   const [scanLoading, setScanLoading] = useState(false);
   const [scanError, setScanError] = useState('');
   const [scanResults, setScanResults] = useState([]); // [{ include, date, description, amount, categoryId }]
+
+  // AI feature #4 (chat assistant): a floating Q&A bubble, available from
+  // anywhere in the app (not tied to a specific tab/panel), that answers
+  // questions using this household's own data -- spending by category,
+  // budget status, recent-month comparisons. Conversation history lives only
+  // in memory for this session; each request re-sends a fresh snapshot of
+  // the household's numbers rather than trying to keep data "inside" a
+  // saved conversation, so answers can't go stale mid-chat.
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]); // [{ role: 'user'|'assistant', content }]
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
+  const chatMessagesRef = useRef(null);
+  useEffect(() => {
+    if (chatMessagesRef.current) {
+      chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight;
+    }
+  }, [chatMessages, chatLoading]);
+
+  // AI feature #5 (Budget Coach): unlike the monthly digest (#2), which
+  // summarizes just the currently viewed month, this looks across the last
+  // 6 months for trends -- a category over its cap for several months
+  // running, spending creeping up or down, whether planned savings still
+  // look realistic. Suggestions-only, per explicit choice -- it never
+  // writes to Settings itself, so nothing changes unless the user goes and
+  // changes it themselves.
+  const [coachLoading, setCoachLoading] = useState(false);
+  const [coachError, setCoachError] = useState(false);
+  const [coachResult, setCoachResult] = useState('');
   const [newCategoryName, setNewCategoryName] = useState('');
   const [categoryNameDrafts, setCategoryNameDrafts] = useState({});
   const [categoryBudgetDrafts, setCategoryBudgetDrafts] = useState({});
@@ -929,6 +958,115 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     setScanResults([]);
     setScanError('');
     loadAll();
+  }
+
+  // Shared by AI feature #4 (chat) and #5 (Budget Coach): a snapshot of one
+  // "YYYY-MM" month's actuals, computed the same way the dashboard's own
+  // current-month figures are (recurringOccursInMonth, exact-month-match for
+  // income/savings) so multi-month numbers handed to either endpoint always
+  // agree with what the app itself shows for that month.
+  function computeMonthSnapshot(key) {
+    const mExp = expenses.filter((e) => e.expense_date.slice(0, 7) === key);
+    const mRecur = recurringExpenses.filter((r) => recurringOccursInMonth(r, key));
+    const mIncome = incomes.filter((i) => i.active && i.start_date.slice(0, 7) === key);
+    const mSavings = savingsGoals.filter((s) => s.active && s.start_date.slice(0, 7) === key);
+    const catTotals = {};
+    mExp.forEach((e) => {
+      const n = categoryNameById[e.category_id] || 'Uncategorized';
+      catTotals[n] = (catTotals[n] || 0) + Number(e.amount);
+    });
+    mRecur.forEach((r) => {
+      const n = categoryNameById[r.category_id] || 'Uncategorized';
+      catTotals[n] = (catTotals[n] || 0) + Number(r.amount);
+    });
+    const overBudget = categories
+      .filter((c) => c.monthly_budget > 0 && (catTotals[c.name] || 0) > c.monthly_budget)
+      .map((c) => c.name);
+    const d = new Date(key + '-01T00:00:00');
+    return {
+      monthLabel: monthLabel(d),
+      income: mIncome.reduce((s, i) => s + Number(i.amount), 0),
+      expensesTotal: mExp.reduce((s, e) => s + Number(e.amount), 0) + mRecur.reduce((s, r) => s + Number(r.amount), 0),
+      savingsTotal: mSavings.reduce((s, g) => s + Number(g.amount), 0),
+      categoryTotals: catTotals,
+      overBudgetCategories: overBudget,
+    };
+  }
+
+  function recentMonthSnapshots(count) {
+    const out = [];
+    for (let i = count - 1; i >= 0; i--) {
+      const d = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - i, 1);
+      out.push(computeMonthSnapshot(monthKey(d)));
+    }
+    return out;
+  }
+
+  async function sendChatMessage() {
+    const text = chatInput.trim();
+    if (!text || chatLoading) return;
+    const newHistory = [...chatMessages, { role: 'user', content: text }];
+    setChatMessages(newHistory);
+    setChatInput('');
+    setChatLoading(true);
+    try {
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const context = {
+        currency: CURRENT_CURRENCY,
+        totalBudget,
+        categoryBudgetCaps: categories.map((c) => ({ name: c.name, monthlyCap: c.monthly_budget || null })),
+        fixedExpenses: recurringExpenses
+          .filter((r) => r.active)
+          .map((r) => ({ name: r.name, category: categoryNameById[r.category_id], amount: r.amount, frequency: r.frequency, dueDate: r.due_date || null })),
+        savingsGoalsThisMonth: savingsForMonth.map((s) => ({ name: s.name, amount: s.amount })),
+        recentMonths: recentMonthSnapshots(3),
+      };
+      const res = await fetch('/api/chat-assistant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authSession?.access_token}` },
+        body: JSON.stringify({ message: text, history: newHistory.slice(0, -1).slice(-10), context }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.reply) {
+        setChatMessages((prev) => [...prev, { role: 'assistant', content: "Sorry, I couldn't answer that just now -- try again in a moment." }]);
+        return;
+      }
+      setChatMessages((prev) => [...prev, { role: 'assistant', content: json.reply }]);
+    } catch {
+      setChatMessages((prev) => [...prev, { role: 'assistant', content: "Sorry, I couldn't answer that just now -- try again in a moment." }]);
+    } finally {
+      setChatLoading(false);
+    }
+  }
+
+  async function generateBudgetCoach() {
+    setCoachLoading(true);
+    setCoachError(false);
+    try {
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const context = {
+        currency: CURRENT_CURRENCY,
+        categoryBudgetCaps: categories.map((c) => ({ name: c.name, monthlyCap: c.monthly_budget || null })),
+        months: recentMonthSnapshots(6),
+      };
+      const res = await fetch('/api/budget-coach', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authSession?.access_token}` },
+        body: JSON.stringify(context),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.advice) {
+        setCoachError(true);
+        setCoachResult('');
+        return;
+      }
+      setCoachResult(json.advice);
+    } catch {
+      setCoachError(true);
+      setCoachResult('');
+    } finally {
+      setCoachLoading(false);
+    }
   }
 
   async function handleDeleteExpense(id) {
@@ -2037,6 +2175,9 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             </button>
             <button className="btn-teal" onClick={() => togglePanel('report')}>
               {activePanel === 'report' ? 'Hide report' : 'Report'}
+            </button>
+            <button className="btn-teal" onClick={() => togglePanel('coach')}>
+              {activePanel === 'coach' ? 'Hide coach' : 'Coach'}
             </button>
             <button className="btn-teal" onClick={() => togglePanel('settings')}>
               {activePanel === 'settings' ? 'Hide settings' : 'Settings'}
@@ -3572,6 +3713,31 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           </div>
           )}
 
+          {activePanel === 'coach' && (
+          <div className="panel" ref={panelRef}>
+            <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+              <h2 style={{ margin: 0 }}>
+                Budget Coach <span className="ai-powered-tag">AI powered</span>
+              </h2>
+              <button className="btn small secondary" onClick={generateBudgetCoach} disabled={coachLoading}>
+                {coachLoading ? 'Analyzing...' : coachResult ? 'Re-analyze' : 'Analyze trends'}
+              </button>
+            </div>
+            <div className="muted-small" style={{ marginBottom: 10 }}>
+              Looks across the last 6 months (not just the one you're viewing) for patterns -- categories that stay over budget, spending trending up or down, whether your savings goal still looks realistic. Suggestions only -- nothing here changes your Settings automatically.
+            </div>
+            {coachResult ? (
+              <div className="muted-small" style={{ lineHeight: 1.6, whiteSpace: 'pre-line', color: 'var(--text)' }}>
+                {coachResult}
+              </div>
+            ) : coachError ? (
+              <div className="muted-small">Couldn't analyze trends right now -- try again in a moment.</div>
+            ) : (
+              <div className="empty">Tap "Analyze trends" to get a coaching read on your last 6 months.</div>
+            )}
+          </div>
+          )}
+
           {activePanel === 'help' && (
           <div className="panel" ref={panelRef}>
             <h2>How to use this app</h2>
@@ -3584,6 +3750,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <p><strong>Expenses this month</strong> is always visible below the tabs so you can see what's been logged without switching tabs. It also auto-saves.</p>
               <p><strong>Spending by category</strong> chart -- toggle between Pie, Bar, Pareto, and Treemap. The Pie groups smaller categories into "Other" to stay readable; Bar and Treemap show every category individually. The totals cards above show your combined income, combined expenses (split into Regular, Fixed, and Savings), and what's left of your budget and income after all three are accounted for.</p>
               <p><strong>AI Insights</strong> -- tap Generate below the chart for a short AI-written summary of the month you're viewing (spending patterns, whether you're over budget, and a couple of concrete suggestions). It only runs when you tap the button -- never automatically -- and Refresh regenerates it if your numbers have changed.</p>
+              <p><strong>Budget Coach</strong> -- unlike AI Insights (one month at a time), Coach looks across your last 6 months for patterns: a category that keeps going over budget, spending trending up or down, or a savings goal that no longer looks realistic. It only ever writes out suggestions -- it never changes your Settings for you.</p>
+              <p><strong>Chat</strong> -- the round chat bubble in the corner answers questions about your household's own numbers ("how much did I spend on Dining Out this month?", "am I over budget?"). It can only see the data already in the app -- nothing outside it.</p>
               <p><strong>Report</strong> -- generate a PDF for any date range, then view it on screen, download it, or email it. Each topic gets its own page -- Income, Expenses, Fixed Expenses, Savings, Spend Analysis (Pareto chart), and Recommendations -- except the Category Breakdown bar chart and the Summary table, which share one page by default and only split onto two once the chart itself grows long enough to need the room. Every table also auto-shrinks its text to try to fit on one page first, and only flows onto a second page if the list is too long even at a readable size. The last page closes with a data & privacy note.</p>
               <p><strong>Settings</strong> -- set your total monthly budget, currency, add/rename categories, and set optional per-category budget caps (you'll get a warning banner if you go over). Every field auto-saves as you edit -- there's no Save button to click.</p>
               <p><strong>Users</strong> -- see who's active in the household and who's been invited but hasn't joined yet, with full Name/Email/Phone/Location. Owners can invite new members (which also sends them a notification email), fill in or fix anyone's Name/Phone/Location, and edit their own details under "My details" -- handy for accounts created before these fields existed. The Admin console (if you have access) is separate and never visible to other household members.</p>
@@ -3894,6 +4062,55 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           <span>Settings</span>
         </button>
       </nav>
+
+      {/* AI feature #4: a floating chat bubble available from anywhere in
+          the app, not tied to any tab/panel. Deliberately placed bottom-LEFT
+          (mirroring the "+" FAB, which owns bottom-right) and lifted to the
+          same height as that FAB on mobile so it never sits underneath the
+          fixed bottom nav bar -- see .chat-fab in index.css for the exact
+          overlap-avoidance reasoning, learned from an earlier real overlap
+          bug with the version badge. */}
+      <button
+        className="chat-fab"
+        onClick={() => setChatOpen((o) => !o)}
+        aria-label={chatOpen ? 'Close chat' : 'Ask about your budget'}
+        title={chatOpen ? 'Close chat' : 'Ask about your budget'}
+      >
+        {chatOpen ? <X size={22} /> : <MessageCircle size={22} />}
+      </button>
+
+      {chatOpen && (
+        <div className="chat-window">
+          <div className="chat-header">
+            <span>Ask about your budget <span className="ai-powered-tag">AI powered</span></span>
+            <button onClick={() => setChatOpen(false)} aria-label="Close chat"><X size={16} /></button>
+          </div>
+          <div className="chat-messages" ref={chatMessagesRef}>
+            {chatMessages.length === 0 && (
+              <div className="chat-empty">
+                Ask things like "how much did I spend on dining this month?" or "am I over budget?" -- I can only see the numbers already in your household's data, nothing outside it.
+              </div>
+            )}
+            {chatMessages.map((m, i) => (
+              <div key={i} className={`chat-bubble ${m.role}`}>{m.content}</div>
+            ))}
+            {chatLoading && <div className="chat-bubble assistant chat-typing">Thinking...</div>}
+          </div>
+          <form
+            className="chat-input-row"
+            onSubmit={(e) => { e.preventDefault(); sendChatMessage(); }}
+          >
+            <input
+              type="text"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              placeholder="Ask a question..."
+              disabled={chatLoading}
+            />
+            <button type="submit" className="btn small" disabled={chatLoading || !chatInput.trim()}>Send</button>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
