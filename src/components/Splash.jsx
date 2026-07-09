@@ -5,6 +5,8 @@
 // chart, with a big held-up coin and confetti -- rather than a piggy bank
 // or scrolling icon rows. Purely cosmetic: it doesn't gate anything, the
 // real app underneath is already mounting while it plays.
+import { formatVersionBadge } from '../version.js';
+
 export default function Splash() {
   return (
     <div className="splash-screen" aria-hidden="true">
@@ -104,6 +106,7 @@ export default function Splash() {
 
         <div className="splash-title">Hearth</div>
         <div className="splash-tagline">Track together. Spend smarter.</div>
+        <div className="splash-version">{formatVersionBadge()}</div>
       </div>
 
       <div className="splash-credit">Conceptualized and created by &ndash;Lakhanpal</div>

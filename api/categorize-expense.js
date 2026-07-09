@@ -10,7 +10,7 @@
 // break the Add Expense form, it should just silently not suggest anything.
 import { requireUser } from './admin/_auth.js';
 
-const MODEL = 'claude-3-5-haiku-20241022';
+const MODEL = 'claude-haiku-4-5-20251001';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });

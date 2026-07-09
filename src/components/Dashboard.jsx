@@ -8,18 +8,11 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { supabase } from '../supabaseClient';
 import AdminConsole from './AdminConsole.jsx';
+import { formatVersionBadge } from '../version.js';
 import {
   Home, Plus, FileText, Users as UsersIcon, Settings as SettingsIcon,
   Pencil, Trash2, X, ChevronLeft, ChevronRight,
 } from 'lucide-react';
-
-// Bump this with every meaningful change and shown in the top bar (see
-// .app-version below) -- since this app auto-updates in place (there's no
-// separate "installed app version" to check), this is the one visible way
-// to confirm your browser/home-screen icon is actually showing the latest
-// build rather than a stale cached copy. Format: YYYY-MM-DD.vN, where N
-// resets to 1 on a new day and increments for same-day updates.
-const APP_VERSION = '2026-07-09.v6';
 
 const COLORS = [
   '#f97316', '#0ea5e9', '#a855f7', '#22c55e', '#ef4444',
@@ -1851,15 +1844,15 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
   return (
     <div className="wrap">
+      <span className="corner-version-badge" title="This updates automatically -- if a change doesn't look right, reload the page.">
+        {formatVersionBadge()}
+      </span>
       <div className="top-bar" ref={topRef}>
         <div>
           <h1>{household.name || 'Hearth'}</h1>
           <div className="sub">Signed in as {session.user.email}{isOwner ? ' (owner)' : ''}</div>
         </div>
         <div className="action-row-teal">
-          <span className="app-version" title="This updates automatically -- if a change doesn't look right, reload the page.">
-            {APP_VERSION}
-          </span>
           <button className="btn-teal" onClick={() => togglePanel('help')}>
             {activePanel === 'help' ? 'Hide help' : 'Help'}
           </button>
@@ -2152,7 +2145,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           onChange={(e) => commitIncomeField(i.id, 'month', e.target.value)}
                         />
                       </td>
-                      <td><button className="del" onClick={() => handleDeleteIncome(i.id, i.name)}>x</button></td>
+                      <td><button className="del" onClick={() => handleDeleteIncome(i.id, i.name)} title="Delete"><Trash2 size={14} /></button></td>
                     </tr>
                   ))}
                 </tbody>
@@ -2423,7 +2416,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           onBlur={(e) => commitRecurringField(r.id, 'dueDate', e.target.value)}
                         />
                       </td>
-                      <td><button className="del" onClick={() => handleDeleteRecurring(r.id, r.name)}>x</button></td>
+                      <td><button className="del" onClick={() => handleDeleteRecurring(r.id, r.name)} title="Delete"><Trash2 size={14} /></button></td>
                     </tr>
                   ))}
                 </tbody>
@@ -2652,7 +2645,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           onChange={(e) => commitSavingField(s.id, 'month', e.target.value)}
                         />
                       </td>
-                      <td><button className="del" onClick={() => handleDeleteSaving(s.id, s.name)}>x</button></td>
+                      <td><button className="del" onClick={() => handleDeleteSaving(s.id, s.name)} title="Delete"><Trash2 size={14} /></button></td>
                     </tr>
                   ))}
                 </tbody>
@@ -2818,7 +2811,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         </div>
                       </td>
                       <td data-label="By" className="muted-small">{e.created_by_email?.split('@')[0]}</td>
-                      <td><button className="del" onClick={() => handleDeleteExpense(e.id)}>x</button></td>
+                      <td><button className="del" onClick={() => handleDeleteExpense(e.id)} title="Delete"><Trash2 size={14} /></button></td>
                     </tr>
                   ))}
                 </tbody>
@@ -3285,7 +3278,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         {pendingInvites.map((inv) => (
                           <div className="cat-chip" key={inv.id}>
                             {inv.email}
-                            <button onClick={() => handleCancelInvite(inv.id)} title="Cancel invite">x</button>
+                            <button onClick={() => handleCancelInvite(inv.id)} title="Cancel invite"><Trash2 size={12} /></button>
                           </div>
                         ))}
                       </div>
@@ -3310,7 +3303,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <p><strong>Settings</strong> -- set your total monthly budget, currency, add/rename categories, and set optional per-category budget caps (you'll get a warning banner if you go over). Every field auto-saves as you edit -- there's no Save button to click.</p>
               <p><strong>Users</strong> -- see who's active in the household and who's been invited but hasn't joined yet, with full Name/Email/Phone/Location. Owners can invite new members (which also sends them a notification email), fill in or fix anyone's Name/Phone/Location, and edit their own details under "My details" -- handy for accounts created before these fields existed. The Admin console (if you have access) is separate and never visible to other household members.</p>
               <p>All figures use your household's chosen currency, set in Settings. Your data is confidential and private to your household -- it's never shared with anyone outside it.</p>
-              <p>The small <strong>{APP_VERSION}</strong> badge next to the Help button shows which build you're on. The app updates itself automatically -- you'll never need to manually update anything -- but if something looks off, reload the page and check that the number matches the latest you were told about.</p>
+              <p>The small <strong>{formatVersionBadge()}</strong> badge in the top-right corner shows which build you're on. The app updates itself automatically -- you'll never need to manually update anything -- but if something looks off, reload the page and check that it matches the latest you were told about.</p>
             </div>
           </div>
           )}
@@ -3516,7 +3509,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           fontSize: 12, width: Math.max(50, (categoryNameDrafts[c.id]?.length || c.name.length) * 7),
                         }}
                       />
-                      <button onClick={() => handleRemoveCategory(c.id, c.name)}>x</button>
+                      <button onClick={() => handleRemoveCategory(c.id, c.name)} title="Remove category"><Trash2 size={12} /></button>
                     </div>
                   ))}
                 </div>

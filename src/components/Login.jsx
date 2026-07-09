@@ -56,6 +56,21 @@ export default function Login() {
       setErrorMsg(error.message);
       return;
     }
+    // Supabase deliberately does NOT return an error when you "sign up"
+    // with an email that already has an account -- that's an anti-enumeration
+    // measure, not a bug. Instead it comes back looking like a normal
+    // success (no error, data.user populated) but with an empty
+    // identities array and no session. Without this check, someone who
+    // forgot their password and tries "Sign up" again (instead of "Forgot
+    // password?") would see a "check your email" message that never leads
+    // anywhere, then get "Invalid login credentials" when they try to sign
+    // in with the new password they just typed -- because that password
+    // was never actually saved anywhere.
+    if (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+      setStatus('idle');
+      setErrorMsg('An account with this email already exists. Try "Sign in" instead, or use "Forgot password?" below if you don\'t remember it.');
+      return;
+    }
     // If email confirmations are turned on in Supabase, there's no session
     // yet -- the user has to click the link in their inbox first. If
     // confirmations are off, `data.session` comes back populated and
@@ -212,6 +227,16 @@ export default function Login() {
                   {status === 'sending' ? 'Creating account...' : 'Sign up'}
                 </button>
               </form>
+            )}
+            {errorMsg.includes('already exists') && (
+              <button
+                type="button"
+                className="link-btn"
+                onClick={() => switchMode('forgot')}
+                style={{ marginTop: 10 }}
+              >
+                Forgot password?
+              </button>
             )}
           </>
         )}
