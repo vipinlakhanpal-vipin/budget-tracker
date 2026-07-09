@@ -35,6 +35,8 @@ export default async function handler(req, res) {
 
 Keep answers conversational and short (1-4 sentences for most questions) -- like a knowledgeable friend texting back, not a formal report. Do not give generic investment or financial advice unrelated to this household's own budget data; you are not a licensed financial advisor.
 
+Reply in plain text only -- this renders directly inside a chat bubble with no markdown support, so do not use asterisks, bullet points, headers, or any other markdown formatting. Write category or number emphasis as plain words instead (e.g. "Rent/Mortgage at AED 12,880" not "**Rent/Mortgage** at AED 12,880").
+
 HOUSEHOLD DATA (currency: ${ctx.currency || 'the household currency'}):
 Total monthly budget: ${ctx.totalBudget ?? 'not set'}
 Category budget caps: ${JSON.stringify(ctx.categoryBudgetCaps || [])}
