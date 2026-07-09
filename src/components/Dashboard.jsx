@@ -234,10 +234,19 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   // rebuilding the PDF twice.
   const [reportFrom, setReportFrom] = useState(() => monthKey(new Date()) + '-01');
   const [reportTo, setReportTo] = useState(() => new Date().toISOString().slice(0, 10));
-  const [reportDoc, setReportDoc] = useState(null); // { blob, dataUri, filename, rangeLabel }
+  const [reportDoc, setReportDoc] = useState(null); // { blob, dataUri, previewUrl, filename, rangeLabel }
   const [reportEmail, setReportEmail] = useState('');
   const [reportStatus, setReportStatus] = useState('');
   const [reportPreviewOpen, setReportPreviewOpen] = useState(false);
+  // Tracks the current blob: URL used for the on-screen preview so it can be
+  // revoked (freeing memory) whenever a new one is generated or the
+  // component unmounts.
+  const reportPreviewUrlRef = useRef(null);
+  useEffect(() => {
+    return () => {
+      if (reportPreviewUrlRef.current) URL.revokeObjectURL(reportPreviewUrlRef.current);
+    };
+  }, []);
 
   // Keep the "Add income" form's default Month field in sync with whichever
   // month the dashboard is currently showing, so adding income while viewing
@@ -1583,7 +1592,17 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     }
     const { doc, filename, rangeLabel } = buildReportPdf(reportFrom, reportTo);
     const dataUri = doc.output('datauristring');
-    setReportDoc({ dataUri, filename, rangeLabel });
+    // The on-screen preview uses a blob: URL (rather than the data: URI used
+    // for email) with a "#zoom=150" PDF-open-parameter suffix -- browsers
+    // reliably honor this zoom fragment for blob: URLs, which is what
+    // actually makes the embedded page render larger in the iframe. Without
+    // it, the built-in PDF viewer defaults to "fit page to width", which on
+    // a wide screen scales the whole page down and made the text look small
+    // even though the PDF's own font sizes are fine for print/download.
+    if (reportPreviewUrlRef.current) URL.revokeObjectURL(reportPreviewUrlRef.current);
+    const blobUrl = URL.createObjectURL(doc.output('blob'));
+    reportPreviewUrlRef.current = blobUrl;
+    setReportDoc({ dataUri, previewUrl: `${blobUrl}#zoom=150`, filename, rangeLabel });
     setReportStatus('');
     setReportPreviewOpen(true);
   }
@@ -2765,10 +2784,10 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                     </div>
                     <iframe
                       title="Budget report preview"
-                      src={reportDoc.dataUri}
+                      src={reportDoc.previewUrl}
                       style={{
                         width: '100%',
-                        height: 'min(80vh, 900px)',
+                        height: 'min(85vh, 1000px)',
                         border: 'none',
                         display: 'block',
                         background: '#525659',
