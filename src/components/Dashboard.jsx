@@ -11,7 +11,7 @@ import AdminConsole from './AdminConsole.jsx';
 import { formatVersionBadge } from '../version.js';
 import {
   Home, Plus, FileText, Users as UsersIcon, Settings as SettingsIcon,
-  Pencil, Trash2, X, ChevronLeft, ChevronRight,
+  Pencil, Trash2, X, ChevronLeft, ChevronRight, Camera,
 } from 'lucide-react';
 
 const COLORS = [
@@ -300,6 +300,16 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   const [aiDigestLoading, setAiDigestLoading] = useState(false);
   const [aiDigestError, setAiDigestError] = useState(false);
   const [aiDigestMonthKey, setAiDigestMonthKey] = useState(null);
+  // AI feature #3 (receipt scanning): upload a photo of a receipt, or a
+  // sheet/screenshot listing several expenses, and let Claude read it
+  // instead of typing each line by hand. Nothing is saved to the database
+  // until the user reviews and confirms the extracted rows below -- OCR/
+  // vision can misread a date, merchant name, or amount, especially on a
+  // blurry photo, so this is a staging area rather than a direct insert.
+  const scanFileInputRef = useRef(null);
+  const [scanLoading, setScanLoading] = useState(false);
+  const [scanError, setScanError] = useState('');
+  const [scanResults, setScanResults] = useState([]); // [{ include, date, description, amount, categoryId }]
   const [newCategoryName, setNewCategoryName] = useState('');
   const [categoryNameDrafts, setCategoryNameDrafts] = useState({});
   const [categoryBudgetDrafts, setCategoryBudgetDrafts] = useState({});
@@ -815,6 +825,110 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     } finally {
       setAiDigestLoading(false);
     }
+  }
+
+  // AI feature #3 helper: shrink and re-encode the uploaded image client-side
+  // before it ever leaves the browser. Phone camera photos are routinely
+  // 3-4000px and several MB, which risks Vercel's serverless request-body
+  // limit and Anthropic's own per-image size guidance -- capping the long
+  // edge to 1600px and re-encoding as JPEG keeps the payload small and the
+  // request reliable without any visible quality loss for reading text.
+  function readFileAsResizedBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('Could not read file'));
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = () => reject(new Error('Could not read image'));
+        img.onload = () => {
+          const maxDim = 1600;
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim) {
+            const scale = maxDim / Math.max(width, height);
+            width = Math.round(width * scale);
+            height = Math.round(height * scale);
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.85).split(',')[1]);
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function handleScanFileChange(e) {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // lets the same file be re-picked later if needed
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setScanError('Please choose an image file (photo or screenshot of the receipt).');
+      return;
+    }
+    setScanLoading(true);
+    setScanError('');
+    setScanResults([]);
+    try {
+      const base64 = await readFileAsResizedBase64(file);
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const res = await fetch('/api/scan-receipt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authSession?.access_token}` },
+        body: JSON.stringify({ imageBase64: base64, categoryNames: categories.map((c) => c.name) }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.items || json.items.length === 0) {
+        setScanError("Couldn't find any expenses in that image -- try a clearer photo, or enter it manually below.");
+        return;
+      }
+      const rows = json.items.map((item) => {
+        const match = categories.find((c) => c.name.toLowerCase() === (item.categoryName || '').toLowerCase());
+        return {
+          include: true,
+          date: item.date || new Date().toISOString().slice(0, 10),
+          description: item.description || '',
+          amount: item.amount ? String(item.amount) : '',
+          categoryId: match ? match.id : (categories[0]?.id || ''),
+        };
+      });
+      setScanResults(rows);
+    } catch {
+      setScanError("Couldn't read that image -- try again, or enter it manually below.");
+    } finally {
+      setScanLoading(false);
+    }
+  }
+
+  function updateScanRow(i, field, value) {
+    setScanResults((prev) => prev.map((r, idx) => (idx === i ? { ...r, [field]: value } : r)));
+  }
+
+  async function commitScanResults() {
+    const toAdd = scanResults.filter((r) => r.include && r.categoryId && Number(r.amount) > 0 && r.date);
+    if (toAdd.length === 0) {
+      alert('Select at least one item with a category and a valid amount.');
+      return;
+    }
+    const rows = toAdd.map((r) => ({
+      household_id: householdId,
+      expense_date: r.date,
+      category_id: r.categoryId,
+      description: r.description.trim(),
+      amount: Number(r.amount),
+      created_by: session.user.id,
+      created_by_email: session.user.email,
+    }));
+    const { error } = await supabase.from('expenses').insert(rows);
+    if (error) {
+      alert('Could not save scanned expenses: ' + error.message);
+      return;
+    }
+    setScanResults([]);
+    setScanError('');
+    loadAll();
   }
 
   async function handleDeleteExpense(id) {
@@ -2082,6 +2196,81 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <button className="btn" type="submit">Add</button>
             </div>
             </form>
+
+            <div className="scan-receipt-block">
+              <input
+                type="file"
+                accept="image/*"
+                ref={scanFileInputRef}
+                style={{ display: 'none' }}
+                onChange={handleScanFileChange}
+              />
+              <button
+                type="button"
+                className="btn small secondary"
+                onClick={() => scanFileInputRef.current?.click()}
+                disabled={scanLoading}
+              >
+                <Camera size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
+                {scanLoading ? 'Reading receipt...' : 'Scan a receipt'}
+                <span className="ai-powered-tag">AI powered</span>
+              </button>
+              <div className="muted-small" style={{ marginTop: 6 }}>
+                Upload a photo of a receipt, or a sheet/screenshot listing several expenses -- review what Claude finds before anything is added.
+              </div>
+              {scanError && <div className="scan-error">{scanError}</div>}
+            </div>
+
+            {scanResults.length > 0 && (
+              <div className="scan-review-list">
+                <div className="muted-small" style={{ fontWeight: 700, marginBottom: 8 }}>
+                  Review before adding -- edit anything that looks wrong, untick what you don't want:
+                </div>
+                {scanResults.map((row, i) => (
+                  <div className="scan-review-row" key={i}>
+                    <input
+                      type="checkbox"
+                      checked={row.include}
+                      onChange={(e) => updateScanRow(i, 'include', e.target.checked)}
+                    />
+                    <input
+                      type="date"
+                      value={row.date}
+                      onChange={(e) => updateScanRow(i, 'date', e.target.value)}
+                    />
+                    <input
+                      type="text"
+                      value={row.description}
+                      placeholder="Description"
+                      onChange={(e) => updateScanRow(i, 'description', e.target.value)}
+                    />
+                    <select value={row.categoryId} onChange={(e) => updateScanRow(i, 'categoryId', e.target.value)}>
+                      {categories.map((c) => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                    <div className="amount-field-wrap tight">
+                      <span className="currency-prefix">{currencySymbol()}</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={row.amount}
+                        onChange={(e) => updateScanRow(i, 'amount', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                ))}
+                <div className="row" style={{ marginTop: 4 }}>
+                  <button type="button" className="btn" onClick={commitScanResults}>
+                    Add {scanResults.filter((r) => r.include).length} expense{scanResults.filter((r) => r.include).length === 1 ? '' : 's'}
+                  </button>
+                  <button type="button" className="btn secondary" onClick={() => { setScanResults([]); setScanError(''); }}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
           )}
 
@@ -3388,6 +3577,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             <h2>How to use this app</h2>
             <div className="muted-small" style={{ lineHeight: 1.6 }}>
               <p><strong>Add an expense</strong> -- log one-off spending (groceries, dining, shopping). Pick the date, category, a short description, and the amount, then Add. It appears under "Expenses this month" and is always editable there -- just type into a field and it saves.</p>
+              <p><strong>Scan a receipt</strong> -- below the Add-an-expense form, upload a photo of a receipt (or a screenshot/sheet listing several expenses) and Claude will read it for you. You'll see an editable review list first -- fix anything that looks wrong, untick what you don't want, then add only what you confirm. Nothing is saved automatically.</p>
               <p><strong>Income</strong> -- add each income source per month (e.g. Salary). Income does NOT roll over automatically -- since pay can change month to month (deductions, advances, etc.), add a fresh row each month with that month's actual amount, or edit an existing row's Month field forward. Every field auto-saves.</p>
               <p><strong>Fixed Expenses</strong> -- for recurring bills, loans, EMIs, and rent. Set a Start date, an optional End date, and how often it repeats (Monthly, Alternate month, Quarterly, Half-yearly, Once a year). Every field auto-saves as you edit -- there's no Save button to click. Set a Due date to get an in-app reminder starting 3 days before it's due, and an email reminder if it's set up.</p>
               <p><strong>Savings</strong> -- set how much you'd like to set aside for the month, e.g. "Emergency fund" or "Investment". Works exactly like Income: entered fresh per month with no auto-rollover, since the amount you're able to save can change month to month -- add a new row each month, or edit an existing row's Month field forward. Since money you set aside is no longer available to spend, it's treated the same as an expense: it's counted in "Spent so far" and "Combined expenses", and subtracted in "Remaining" and "Net", in addition to getting its own page in the PDF report so you can see planned savings build up over time.</p>

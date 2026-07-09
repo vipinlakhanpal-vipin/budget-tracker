@@ -315,6 +315,31 @@ input[type="date"] {
 .amount-field-wrap input[type="number"] { width: 100%; min-width: 0; padding-left: 38px !important; }
 .amount-field-wrap.tight .currency-prefix { left: 6px; font-size: 10.5px; }
 .amount-field-wrap.tight input[type="number"] { padding-left: 28px !important; }
+
+/* AI feature #3 (receipt scanning) -- the "Scan a receipt" trigger sits
+   below the Add-an-expense form as a secondary, opt-in action rather than
+   competing with the manual form for attention. The review list below it
+   only ever appears after a scan returns results, and every row stays
+   fully editable (nothing is a read-only label) since OCR/vision output is
+   a best guess, not a guarantee. */
+.scan-receipt-block { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+.scan-error { margin-top: 6px; font-size: 12.5px; color: #b91c1c; }
+.scan-review-list { margin-top: 14px; }
+.scan-review-row {
+  display: flex; gap: 8px; align-items: center; margin-bottom: 8px;
+}
+.scan-review-row input[type="checkbox"] { flex: 0 0 auto; width: 16px; height: 16px; }
+.scan-review-row input[type="date"] { flex: 0 0 128px; }
+.scan-review-row input[type="text"] { flex: 1.4; }
+.scan-review-row select { flex: 1; }
+.scan-review-row .amount-field-wrap { flex: 0 0 110px; }
+@media (max-width: 640px) {
+  .scan-review-row { flex-wrap: wrap; }
+  .scan-review-row input[type="date"] { flex: 1 1 45%; }
+  .scan-review-row input[type="text"] { flex: 1 1 100%; order: 3; }
+  .scan-review-row select { flex: 1 1 45%; }
+  .scan-review-row .amount-field-wrap { flex: 1 1 100%; order: 4; }
+}
 .btn {
   background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 9px 16px;
   font-size: 14px; font-weight: 600; cursor: pointer;
