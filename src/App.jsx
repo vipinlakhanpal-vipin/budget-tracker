@@ -4,6 +4,7 @@ import Login from './components/Login.jsx';
 import CreateHousehold from './components/CreateHousehold.jsx';
 import Dashboard from './components/Dashboard.jsx';
 import AdminConsole from './components/AdminConsole.jsx';
+import Splash from './components/Splash.jsx';
 
 const ADMIN_EMAIL = 'vipinlakhanpal@gmail.com';
 
@@ -13,6 +14,15 @@ export default function App() {
   const [household, setHousehold] = useState(null);
   const [householdChecked, setHouseholdChecked] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
+  // Shown on every app start (fresh load or opening the installed PWA) for
+  // a couple of seconds as a branded first impression, then removed. It's
+  // purely cosmetic and doesn't block anything underneath -- auth/session
+  // resolution keeps running in the background while it's up.
+  const [showSplash, setShowSplash] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setShowSplash(false), 2000);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -101,42 +111,54 @@ export default function App() {
     setHouseholdChecked(true);
   }
 
+  let mainContent;
+
   if (loading || (session && !householdChecked)) {
-    return <div className="center-screen">Loading...</div>;
+    mainContent = <div className="center-screen">Loading...</div>;
+  } else if (!session) {
+    mainContent = <Login />;
+  } else {
+    const isAdmin = session.user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+
+    if (isAdmin && showAdmin) {
+      mainContent = <AdminConsole onClose={() => setShowAdmin(false)} />;
+    } else if (!household) {
+      mainContent = (
+        <>
+          {isAdmin && (
+            <button
+              className="btn secondary small"
+              style={{ position: 'fixed', top: 12, right: 12, zIndex: 1000 }}
+              onClick={() => setShowAdmin(true)}
+            >
+              Admin console
+            </button>
+          )}
+          <CreateHousehold session={session} onCreated={resolveHousehold} />
+        </>
+      );
+    } else {
+      mainContent = (
+        <Dashboard
+          session={session}
+          household={household}
+          onHouseholdChange={resolveHousehold}
+          isAdmin={isAdmin}
+          onOpenAdmin={() => setShowAdmin(true)}
+        />
+      );
+    }
   }
 
-  if (!session) return <Login />;
-
-  const isAdmin = session.user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
-
-  if (isAdmin && showAdmin) {
-    return <AdminConsole onClose={() => setShowAdmin(false)} />;
-  }
-
-  if (!household) {
-    return (
-      <>
-        {isAdmin && (
-          <button
-            className="btn secondary small"
-            style={{ position: 'fixed', top: 12, right: 12, zIndex: 1000 }}
-            onClick={() => setShowAdmin(true)}
-          >
-            Admin console
-          </button>
-        )}
-        <CreateHousehold session={session} onCreated={resolveHousehold} />
-      </>
-    );
-  }
-
+  // The splash sits on top of whatever mainContent already is (Loading /
+  // Login / Dashboard, etc.) as a fixed full-screen overlay -- auth and
+  // household resolution keep running underneath it the whole time, so by
+  // the time it fades out the real screen is already the right one instead
+  // of flashing "Loading..." first.
   return (
-    <Dashboard
-      session={session}
-      household={household}
-      onHouseholdChange={resolveHousehold}
-      isAdmin={isAdmin}
-      onOpenAdmin={() => setShowAdmin(true)}
-    />
+    <>
+      {mainContent}
+      {showSplash && <Splash />}
+    </>
   );
 }

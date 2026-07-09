@@ -23,6 +23,52 @@ button, input, select, textarea { font-family: inherit; }
 .center-screen {
   min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
 }
+
+/* Launch splash -- full-screen brand moment shown for ~2s on every app
+   start (see App.jsx). Fades itself out via animation so it disappears
+   smoothly on its own; App.jsx also unmounts it on the same timer so it
+   never lingers as an invisible-but-still-there click-blocker. */
+.splash-screen {
+  position: fixed; inset: 0; z-index: 999999;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: linear-gradient(160deg, #14b8a6, #0d9488 55%, #0b5e56);
+  pointer-events: none;
+  animation: splash-fade-out .5s ease forwards;
+  animation-delay: 1.5s;
+}
+.splash-center {
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+  animation: splash-pop .55s cubic-bezier(.34, 1.56, .64, 1) both;
+}
+.splash-icon-wrap { position: relative; display: flex; align-items: center; justify-content: center; }
+.splash-icon-wrap::before {
+  content: ''; position: absolute; inset: -16px; border-radius: 30px;
+  background: rgba(255, 255, 255, .16);
+  animation: splash-pulse 1.7s ease-out infinite;
+}
+.splash-icon { width: 92px; height: 92px; filter: drop-shadow(0 10px 22px rgba(0, 0, 0, .22)); position: relative; }
+.splash-icon svg { width: 100%; height: 100%; display: block; }
+.splash-title {
+  color: #ffffff; font-size: 20px; font-weight: 800; letter-spacing: .01em; text-align: center;
+}
+.splash-tagline { color: rgba(255, 255, 255, .85); font-size: 13px; font-weight: 600; }
+.splash-credit {
+  position: absolute; bottom: max(24px, env(safe-area-inset-bottom));
+  color: rgba(255, 255, 255, .78); font-size: 12px; font-weight: 700; letter-spacing: .02em;
+  animation: splash-pop .6s ease .15s both;
+}
+@keyframes splash-pop {
+  from { opacity: 0; transform: scale(.82) translateY(6px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes splash-pulse {
+  0% { transform: scale(.85); opacity: .55; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+@keyframes splash-fade-out {
+  from { opacity: 1; visibility: visible; }
+  to { opacity: 0; visibility: hidden; }
+}
 .login-card {
   background: var(--card); border: 1px solid var(--border); border-radius: 12px;
   padding: 32px; max-width: 380px; width: 100%; text-align: center;
@@ -69,6 +115,14 @@ button, input, select, textarea { font-family: inherit; }
   white-space: nowrap;
 }
 .btn-teal:hover { opacity: .88; }
+/* Outline variant for the "which sub-section" toggle inside Settings (App
+   Settings / Admin Console) -- same teal family as the top action row so it
+   reads as the same button language, but the inactive choice needs to look
+   visibly "not selected" rather than two identical solid buttons. */
+.btn-teal.secondary {
+  background: transparent; color: var(--accent); border: 1.5px solid var(--accent);
+}
+.btn-teal.secondary:hover { background: var(--accent-light); opacity: 1; }
 .app-version {
   align-self: center; font-size: 10.5px; font-weight: 700; color: var(--muted);
   background: var(--bg); border: 1px solid var(--border); border-radius: 999px;
@@ -91,6 +145,26 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
 .card .v { font-size: 24px; font-weight: 700; margin-top: 4px; }
 .card.over .v { color: var(--danger); }
 .card.ok .v { color: var(--ok); }
+
+/* Give the 6 top summary cards their own distinct, appealing color identity
+   (a soft tinted background + matching label color) instead of 6 identical
+   white boxes -- makes the dashboard read at a glance ("green = money in,
+   amber = spending, etc.") instead of everything blending together. The
+   .over/.ok classes above still win on the *value* text color when a card
+   needs to flag over-budget/under-budget, since those rules come later and
+   target the same .v element with equal specificity order. */
+.card-budget { background: linear-gradient(160deg, #eef2ff, #ffffff); border-color: #c7d2fe; }
+.card-budget .k { color: #6366f1; }
+.card-spent { background: linear-gradient(160deg, #fff7ed, #ffffff); border-color: #fed7aa; }
+.card-spent .k { color: #ea580c; }
+.card-remaining { background: linear-gradient(160deg, #f0fdfa, #ffffff); border-color: #99f6e4; }
+.card-remaining .k { color: #0d9488; }
+.card-income { background: linear-gradient(160deg, #ecfdf5, #ffffff); border-color: #a7f3d0; }
+.card-income .k { color: #059669; }
+.card-expenses { background: linear-gradient(160deg, #fef2f2, #ffffff); border-color: #fecaca; }
+.card-expenses .k { color: #e11d48; }
+.card-net { background: linear-gradient(160deg, #eff6ff, #ffffff); border-color: #bfdbfe; }
+.card-net .k { color: #0284c7; }
 
 .warning {
   background: var(--danger-bg); border: 1px solid #fecaca; color: var(--danger);
@@ -138,7 +212,11 @@ input[type="date"] {
 
 .content-grid { display: grid; grid-template-columns: minmax(0, 2.1fr) minmax(320px, 1fr); gap: 24px; }
 @media (max-width: 1150px) { .content-grid { grid-template-columns: 1fr; } }
-@media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
+/* Tablet-width only (641-800px) -- stack to a single column since 3 cards
+   is still a bit tight at that width. Phones get their own 3-column rule
+   below (inside the 640px block) instead of stacking, per the "6 cell
+   dashboard" redesign -- see that block for why. */
+@media (max-width: 800px) and (min-width: 641px) { .grid { grid-template-columns: 1fr; } }
 
 .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
@@ -238,8 +316,19 @@ td.amount { font-weight: 600; text-align: right; }
   h1 { font-size: 19px; }
   .month-nav { gap: 8px; margin: 12px 0 16px; }
   .month-nav .label { min-width: 0; flex: 1; font-size: 14px; }
-  .card { padding: 12px; }
-  .card .v { font-size: 19px; }
+  /* The "6 cell dashboard" -- instead of 6 full-width cards stacked one
+     below the other (a long scroll of near-identical rows), phones get the
+     same 3-across x 2-row grid as desktop, just with smaller type/padding
+     so three cards comfortably share the width. Secondary breakdown lines
+     (e.g. "Expenses X + Savings Y") are hidden at this size since there
+     isn't room to show them without wrapping awkwardly -- the big number +
+     label is the point of a glanceable summary tile; tapping into the
+     relevant panel below still gives the full breakdown. */
+  .grid { grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+  .card { padding: 10px 6px; text-align: center; border-radius: 10px; }
+  .card .k { font-size: 9.5px; line-height: 1.25; }
+  .card .v { font-size: 15px; margin-top: 3px; }
+  .card .muted-small { display: none; }
   .panel { padding: 14px; }
   .row { gap: 8px; }
   .field { min-width: 100%; }

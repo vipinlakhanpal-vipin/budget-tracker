@@ -17,9 +17,9 @@ import {
 // .app-version below) -- since this app auto-updates in place (there's no
 // separate "installed app version" to check), this is the one visible way
 // to confirm your browser/home-screen icon is actually showing the latest
-// build rather than a stale cached copy. Format: YYYY-MM-DD.N, where N
+// build rather than a stale cached copy. Format: YYYY-MM-DD.vN, where N
 // resets to 1 on a new day and increments for same-day updates.
-const APP_VERSION = '2026-07-09.3';
+const APP_VERSION = '2026-07-09.v4';
 
 const COLORS = [
   '#f97316', '#0ea5e9', '#a855f7', '#22c55e', '#ef4444',
@@ -174,6 +174,12 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   // and opening one auto-scrolls its title into view.
   const [activePanel, setActivePanel] = useState(null);
   const panelRef = useRef(null);
+  // Which sub-section shows inside the Settings panel -- App Settings
+  // (budget/currency/categories) or, for the admin user only, the Admin
+  // Console. Previously Admin Console was its own separate top-bar button
+  // and panel; folding it into Settings as a sub-toggle instead reduces the
+  // top bar to fewer buttons and groups "app configuration" together.
+  const [settingsSubTab, setSettingsSubTab] = useState('app');
   function togglePanel(name) {
     // Closing the mobile add sheet whenever a different panel opens keeps
     // only one "overlay" on screen at a time, so Report/Users/Settings
@@ -1790,11 +1796,6 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           <button className="btn-teal" onClick={() => togglePanel('settings')}>
             {activePanel === 'settings' ? 'Hide settings' : 'Settings'}
           </button>
-          {isAdmin && (
-            <button className="btn-teal" onClick={() => togglePanel('admin')}>
-              {activePanel === 'admin' ? 'Hide admin console' : 'Admin console'}
-            </button>
-          )}
           <button className="btn-teal" onClick={() => togglePanel('members')}>
             {activePanel === 'members' ? 'Hide users' : 'Users'}
           </button>
@@ -1822,8 +1823,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       )}
 
       <div className="grid">
-        <div className="card"><div className="k">Monthly Budget</div><div className="v">{fmt(totalBudget)}</div></div>
-        <div className={`card ${totalBudget > 0 && combinedOutflow > totalBudget ? 'over' : ''}`}>
+        <div className="card card-budget"><div className="k">Monthly Budget</div><div className="v">{fmt(totalBudget)}</div></div>
+        <div className={`card card-spent ${totalBudget > 0 && combinedOutflow > totalBudget ? 'over' : ''}`}>
           <div className="k">Spent so far</div><div className="v">{fmt(combinedOutflow)}</div>
           {savingsTotal > 0 && (
             <div className="muted-small" style={{ marginTop: 4 }}>
@@ -1831,7 +1832,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             </div>
           )}
         </div>
-        <div className={`card ${totalBudget > 0 && remaining < 0 ? 'over' : totalBudget > 0 && remaining >= 0 ? 'ok' : ''}`}>
+        <div className={`card card-remaining ${totalBudget > 0 && remaining < 0 ? 'over' : totalBudget > 0 && remaining >= 0 ? 'ok' : ''}`}>
           <div className="k">Remaining</div>
           {totalBudget > 0 ? (
             <>
@@ -1848,15 +1849,15 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       </div>
 
       <div className="grid">
-        <div className="card ok"><div className="k">Combined income</div><div className="v">{fmt(totalIncome)}</div></div>
-        <div className="card">
+        <div className="card card-income ok"><div className="k">Combined income</div><div className="v">{fmt(totalIncome)}</div></div>
+        <div className="card card-expenses">
           <div className="k">Combined expenses</div>
           <div className="v">{fmt(combinedOutflow)}</div>
           <div className="muted-small" style={{ marginTop: 4 }}>
             Regular {fmt(oneOffTotal)} + Fixed {fmt(recurringTotal)}{savingsTotal > 0 ? ` + Savings ${fmt(savingsTotal)}` : ''}
           </div>
         </div>
-        <div className={`card ${netCombined < 0 ? 'over' : 'ok'}`}>
+        <div className={`card card-net ${netCombined < 0 ? 'over' : 'ok'}`}>
           <div className="k">Net (income - expenses - savings)</div><div className="v">{fmt(netCombined)}</div>
         </div>
       </div>
@@ -3310,16 +3311,31 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           </div>
           )}
 
-          {activePanel === 'admin' && isAdmin && (
-          <div className="panel" ref={panelRef}>
-            <AdminConsole embedded onClose={() => setActivePanel(null)} />
-          </div>
-          )}
-
           {activePanel === 'settings' && (
           <div className="panel" ref={panelRef}>
               <div>
                 <h2>Settings</h2>
+                <div className="row" style={{ gap: 8, marginBottom: 16 }}>
+                  <button
+                    className={`btn-teal ${settingsSubTab === 'app' ? '' : 'secondary'}`}
+                    onClick={() => setSettingsSubTab('app')}
+                  >
+                    App Settings
+                  </button>
+                  {isAdmin && (
+                    <button
+                      className={`btn-teal ${settingsSubTab === 'admin' ? '' : 'secondary'}`}
+                      onClick={() => setSettingsSubTab('admin')}
+                    >
+                      Admin Console
+                    </button>
+                  )}
+                </div>
+
+                {settingsSubTab === 'admin' && isAdmin ? (
+                  <AdminConsole embedded onClose={() => setSettingsSubTab('app')} />
+                ) : (
+                <>
                 <div className="row" style={{ marginBottom: 12 }}>
                   <div className="field">
                     <label>Total monthly budget</label>
@@ -3414,6 +3430,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       );
                     })}
                   </div>
+                )}
+                </>
                 )}
               </div>
           </div>
