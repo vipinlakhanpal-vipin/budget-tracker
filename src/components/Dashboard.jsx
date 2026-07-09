@@ -1050,8 +1050,14 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     // Repeated on every page: a slim teal header band with the household
     // name + a per-page "chapter" label (e.g. "01 / Overview"), so each
     // page reads like a section of one cohesively designed report rather
-    // than a plain stapled-together printout.
-    function drawHeader(pageNum, sectionLabel) {
+    // than a plain stapled-together printout. The page number is read
+    // straight off the document (doc.internal.getNumberOfPages()) instead
+    // of being passed in and hardcoded at each call site -- that matters now
+    // that the Category Breakdown chart and Summary can land on either one
+    // shared page or two separate pages depending on how many expense
+    // categories there are, which shifts every page number after it.
+    function drawHeader(sectionLabel) {
+      const pageNum = doc.internal.getNumberOfPages();
       doc.setFillColor(accentR, accentG, accentB);
       doc.rect(0, 0, pageWidth, 26, 'F');
       doc.setTextColor(255, 255, 255);
@@ -1089,28 +1095,42 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       margin: { left: M, right: M },
     };
 
-    // Font size and cell padding shrink a little as a table's row count
-    // grows, giving longer lists (e.g. a busy month of Expenses) a better
-    // chance of fitting their one dedicated page -- but readability comes
-    // first, so the floor here stays well above tiny/illegible sizes. A
-    // genuinely long list is allowed to spill onto a second page rather
-    // than being shrunk down to text nobody can actually read on screen,
-    // in print, or on a phone.
-    function compactTableStyles(rowCount) {
-      if (rowCount > 45) return { fontSize: 7.5, cellPadding: 1.4 };
-      if (rowCount > 32) return { fontSize: 8, cellPadding: 1.8 };
-      if (rowCount > 22) return { fontSize: 8.5, cellPadding: 2.2 };
-      if (rowCount > 14) return { fontSize: 9, cellPadding: 2.6 };
-      return { fontSize: 9.5, cellPadding: 3 };
+    // Automatically solves for the largest font size/cell padding that still
+    // lets this table's rows fit within the space actually left on the page
+    // (from startY down to bottomLimit). If the row count is small, that
+    // works out to the roomy default size. If it's large enough that even
+    // the readability floor (7pt) wouldn't fit everything on one page, the
+    // floor size is used anyway and the table is simply left to flow onto a
+    // second page (autoTable does this automatically) -- shrinking further
+    // than 7pt would make the text illegible on screen, in print, and
+    // especially on a phone, so that's the one thing this won't sacrifice.
+    function autoFitTableStyles(rowCount, startY, bottomLimit = 272) {
+      const maxFont = 9.5, minFont = 7;
+      const maxPad = 3, minPad = 1;
+      const extraRows = 2; // header + footer row, approximated as normal rows
+      const rowHeight = (fontSize, cellPadding) => fontSize * 0.3528 + 2 * cellPadding + 1;
+      const maxRowHeight = rowHeight(maxFont, maxPad);
+      const minRowHeight = rowHeight(minFont, minPad);
+      const availableHeight = Math.max(bottomLimit - startY, minRowHeight);
+      const targetRowHeight = availableHeight / Math.max(rowCount + extraRows, 1);
+      if (targetRowHeight >= maxRowHeight) return { fontSize: maxFont, cellPadding: maxPad };
+      if (targetRowHeight <= minRowHeight) return { fontSize: minFont, cellPadding: minPad };
+      const t = (targetRowHeight - minRowHeight) / (maxRowHeight - minRowHeight);
+      return {
+        fontSize: Math.round((minFont + t * (maxFont - minFont)) * 10) / 10,
+        cellPadding: Math.round((minPad + t * (maxPad - minPad)) * 10) / 10,
+      };
     }
 
-    // ---------- Page 1: Category Breakdown -- bar chart only ----------
-    // The bar chart now gets a page to itself, and its row height/gap and
-    // label font size shrink as the category count grows -- so it always
-    // fits on this one page no matter how many expense categories get added
-    // over time, instead of competing for space with the summary table
-    // (which used to share this page) or overflowing off the bottom.
-    let y = drawHeader(1, 'Category Breakdown');
+    // ---------- Category Breakdown -- bar chart, plus Summary if it fits ----------
+    // The bar chart and the Summary table share one page by default (there's
+    // usually plenty of room below a chart of a normal household's category
+    // list). Once the chart itself runs long enough to fill most of the
+    // page -- more categories than usual -- Summary automatically moves to
+    // its own fresh page instead of being squeezed in underneath or
+    // overlapping the footer. Either way, every section after this one still
+    // gets its own dedicated page.
+    let y = drawHeader('Category Breakdown');
 
     drawEyebrow('Spending Breakdown', y);
     y += 7;
@@ -1150,7 +1170,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
         // an extreme number of categories exists (well beyond a typical
         // household's list), spill onto a fresh page instead of drawing
         // past the bottom margin.
-        if (y > 268) { doc.addPage(); y = drawHeader(1, 'Category Breakdown'); }
+        if (y > 268) { doc.addPage(); y = drawHeader('Category Breakdown'); }
         const barWidth = Math.max(1, (val / maxVal) * barMaxWidth);
         const [r, g, b] = hexToRgb(COLORS[i % COLORS.length]);
         doc.setFillColor(245, 246, 248);
@@ -1169,9 +1189,19 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       });
     }
 
-    // ---------- Page 2: Summary -- "At A Glance" totals ----------
-    doc.addPage();
-    y = drawHeader(2, 'Summary');
+    // ---------- Summary -- "At A Glance" totals ----------
+    // The Summary table needs roughly 90mm (eyebrow + title + its 6 rows).
+    // If that doesn't comfortably fit below wherever the bar chart ended,
+    // give Summary its own fresh page instead of squeezing it in or letting
+    // it run into the footer; otherwise it continues right below the chart
+    // on the same page.
+    const SUMMARY_BLOCK_HEIGHT = 90;
+    if (y + SUMMARY_BLOCK_HEIGHT > 262) {
+      doc.addPage();
+      y = drawHeader('Summary');
+    } else {
+      y += 12;
+    }
 
     drawEyebrow('At A Glance', y);
     y += 7;
@@ -1205,13 +1235,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       },
     });
 
-    // ---------- Page 3: Income ----------
-    // Income and Expenses each now get their own dedicated page (previously
+    // ---------- Income ----------
+    // Income and Expenses each get their own dedicated page (previously
     // they shared one page, which -- combined with the bar chart on page 1
     // already showing per-category expense totals -- made it look like
     // expenses were being shown twice across two pages).
     doc.addPage();
-    y = drawHeader(3, 'Income');
+    y = drawHeader('Income');
 
     drawEyebrow('Money In', y);
     y += 7;
@@ -1222,7 +1252,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     y += 4;
     autoTable(doc, {
       ...tableDefaults,
-      styles: { ...tableDefaults.styles, ...compactTableStyles(rangeIncomes.length) },
+      styles: { ...tableDefaults.styles, ...autoFitTableStyles(rangeIncomes.length, y) },
       startY: y,
       head: [['Month', 'Source', 'Amount']],
       body: rangeIncomes.map((i) => [i.start_date.slice(0, 7), i.name, fmt(i.amount)]),
@@ -1231,9 +1261,9 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       footStyles: { fillColor: [226, 240, 250], textColor: [15, 42, 46], fontStyle: 'bold' },
     });
 
-    // ---------- Page 4: Expenses ----------
+    // ---------- Expenses ----------
     doc.addPage();
-    y = drawHeader(4, 'Expenses');
+    y = drawHeader('Expenses');
 
     drawEyebrow('Money Out', y);
     y += 7;
@@ -1244,7 +1274,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     y += 4;
     autoTable(doc, {
       ...tableDefaults,
-      styles: { ...tableDefaults.styles, ...compactTableStyles(rangeExpenses.length) },
+      styles: { ...tableDefaults.styles, ...autoFitTableStyles(rangeExpenses.length, y) },
       startY: y,
       head: [['Date', 'Category', 'Description', 'Amount']],
       body: rangeExpenses.map((e) => [fmtDate(e.expense_date), categoryNameById[e.category_id] || 'Uncategorized', e.description || '', fmt(e.amount)]),
@@ -1253,9 +1283,9 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       footStyles: { fillColor: [253, 237, 224], textColor: [15, 42, 46], fontStyle: 'bold' },
     });
 
-    // ---------- Page 5: Fixed Expenses ----------
+    // ---------- Fixed Expenses ----------
     doc.addPage();
-    y = drawHeader(5, 'Fixed Expenses');
+    y = drawHeader('Fixed Expenses');
 
     drawEyebrow('Recurring Bills', y);
     y += 7;
@@ -1272,7 +1302,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     } else {
       autoTable(doc, {
         ...tableDefaults,
-        styles: { ...tableDefaults.styles, ...compactTableStyles(rangeRecurringOccurrences.length) },
+        styles: { ...tableDefaults.styles, ...autoFitTableStyles(rangeRecurringOccurrences.length, y) },
         startY: y,
         head: [['Name', 'Category', 'Frequency', 'Month Due', 'Amount']],
         body: rangeRecurringOccurrences
@@ -1290,13 +1320,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       });
     }
 
-    // ---------- Page 6: Savings -- month-wise, with a total ----------
+    // ---------- Savings -- month-wise, with a total ----------
     // Mirrors the Fixed Expenses page above but for planned savings: one row
     // per month a savings goal is active within the selected range, plus a
     // running total, so the household can see how much they've committed to
     // (or actually set aside) across the whole period at a glance.
     doc.addPage();
-    y = drawHeader(6, 'Savings');
+    y = drawHeader('Savings');
 
     drawEyebrow('Money Set Aside', y);
     y += 7;
@@ -1314,7 +1344,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     } else {
       autoTable(doc, {
         ...tableDefaults,
-        styles: { ...tableDefaults.styles, ...compactTableStyles(rangeSavingsOccurrences.length) },
+        styles: { ...tableDefaults.styles, ...autoFitTableStyles(rangeSavingsOccurrences.length, y) },
         startY: y,
         head: [['Month', 'Savings Goal', 'Amount']],
         body: rangeSavingsOccurrences
@@ -1330,7 +1360,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     // A quick month-by-month summary total makes it easy to see at a glance
     // how savings build up across the range, not just the grand total.
     if (rangeMonths.length > 1 && rangeSavingsOccurrences.length > 0) {
-      if (y > 250) { doc.addPage(); y = drawHeader(6, 'Savings'); }
+      if (y > 250) { doc.addPage(); y = drawHeader('Savings'); }
       drawEyebrow('Month By Month', y);
       y += 7;
       doc.setFontSize(13);
@@ -1344,7 +1374,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       });
       autoTable(doc, {
         ...tableDefaults,
-        styles: { ...tableDefaults.styles, ...compactTableStyles(rangeMonths.length) },
+        styles: { ...tableDefaults.styles, ...autoFitTableStyles(rangeMonths.length, y) },
         startY: y,
         head: [['Month', 'Total Saved']],
         body: rangeMonths.map((mKey) => [mKey, fmt(perMonth[mKey] || 0)]),
@@ -1355,14 +1385,15 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       });
     }
 
-    // ---------- Page 7: Spend Analysis -- Pareto chart + suggestions ----------
-    // A dedicated closing page: the same category totals as the page 1 bar
-    // chart, but sorted and annotated with a running cumulative-% so it's
-    // obvious which categories are the "vital few" driving most of the
-    // spend (the 80/20 rule), plus a short set of data-driven suggestions
-    // on where to focus efforts to bring spending under control.
+    // ---------- Spend Analysis -- Pareto chart (own dedicated page) ----------
+    // The same category totals as the Category Breakdown bar chart, but
+    // sorted and annotated with a running cumulative-% so it's obvious which
+    // categories are the "vital few" driving most of the spend (the 80/20
+    // rule). Recommendations get their own page right after this one, rather
+    // than sharing this page, so both the chart and the write-up each get
+    // room to breathe.
     doc.addPage();
-    y = drawHeader(7, 'Spend Analysis');
+    y = drawHeader('Spend Analysis');
 
     drawEyebrow('80/20 Breakdown', y);
     y += 7;
@@ -1438,7 +1469,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
         // Same extreme-case safeguard as the page 1 bar chart: once shrinking
         // hits its readable floor, spill onto a fresh page rather than
         // drawing past the bottom margin.
-        if (y > 262) { doc.addPage(); y = drawHeader(7, 'Spend Analysis'); }
+        if (y > 262) { doc.addPage(); y = drawHeader('Spend Analysis'); }
         const isVitalFew = r.cumPct <= 80 || i === 0;
         const barWidth = Math.max(1, (r.val / maxVal) * barMaxWidth);
         const [vr, vg, vb] = hexToRgb('#0d9488');
@@ -1465,7 +1496,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       // chart above, so the reader doesn't have to add up each bar by hand.
       // Checked against remaining space first so it can never land on top of
       // the page footer.
-      if (y > 262) { doc.addPage(); y = drawHeader(7, 'Spend Analysis'); }
+      if (y > 262) { doc.addPage(); y = drawHeader('Spend Analysis'); }
       doc.setDrawColor(220, 224, 228);
       doc.line(barX, y, cumX, y);
       y += 6;
@@ -1477,7 +1508,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       doc.setFont(undefined, 'normal');
       y += 10;
 
-      if (y > 262) { doc.addPage(); y = drawHeader(7, 'Spend Analysis'); }
+      if (y > 262) { doc.addPage(); y = drawHeader('Spend Analysis'); }
       doc.setFontSize(8);
       doc.setTextColor(120);
       const vitalFewLabel = vitalFewNames.length > 1
@@ -1492,8 +1523,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       y += vitalFewLines.length * 5 + 9;
     }
 
-    // ---------- Suggestions -- generated from this report's own numbers ----------
-    if (y > 255) { doc.addPage(); y = drawHeader(7, 'Spend Analysis'); }
+    // ---------- Recommendations -- own dedicated page ----------
+    // Generated from this report's own numbers. Always starts on a fresh
+    // page rather than sharing the Pareto chart's page, so both get room to
+    // breathe and every section of the report keeps to its own page.
+    doc.addPage();
+    y = drawHeader('Recommendations');
+
     drawEyebrow('Recommendations', y);
     y += 7;
     doc.setFontSize(13);
@@ -1540,7 +1576,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     }
 
     suggestions.forEach((s) => {
-      if (y > 260) { doc.addPage(); y = drawHeader(7, 'Spend Analysis'); }
+      if (y > 260) { doc.addPage(); y = drawHeader('Recommendations'); }
       doc.setFillColor(accentR, accentG, accentB);
       doc.circle(M + 1.2, y - 1.5, 1.2, 'F');
       doc.setFontSize(9.5);
@@ -1559,7 +1595,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       "Data & Privacy: The figures in this report are drawn directly from the data your household has entered into the Budget Tracker. This data is private to your household -- it is not visible to, or shared with, anyone outside your household's account, and it is not sold or provided to third parties. Once downloaded or emailed, this report becomes a standalone file outside the app, so please share it only with people you intend to see your household's financial information.";
     const disclaimerLines = doc.splitTextToSize(disclaimerText, pageWidth - 2 * M - 12);
     const disclaimerHeight = disclaimerLines.length * 4.2 + 14;
-    if (y + disclaimerHeight > 262) { doc.addPage(); y = drawHeader(7, 'Spend Analysis'); }
+    if (y + disclaimerHeight > 262) { doc.addPage(); y = drawHeader('Recommendations'); }
     y += 6;
     doc.setDrawColor(230, 234, 238);
     doc.setFillColor(248, 250, 251);
@@ -2685,7 +2721,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <p><strong>Savings</strong> -- set how much you'd like to set aside for the month, e.g. "Emergency fund" or "Investment". Works exactly like Income: entered fresh per month with no auto-rollover, since the amount you're able to save can change month to month -- add a new row each month, or edit an existing row's Month field forward. Since money you set aside is no longer available to spend, it's treated the same as an expense: it's counted in "Spent so far" and "Combined expenses", and subtracted in "Remaining" and "Net", in addition to getting its own page in the PDF report so you can see planned savings build up over time.</p>
               <p><strong>Expenses this month</strong> is always visible below the tabs so you can see what's been logged without switching tabs. It also auto-saves.</p>
               <p><strong>Spending by category</strong> chart -- toggle between Pie, Bar, Pareto, and Treemap. The Pie groups smaller categories into "Other" to stay readable; Bar and Treemap show every category individually. The totals cards above show your combined income, combined expenses (split into Regular, Fixed, and Savings), and what's left of your budget and income after all three are accounted for.</p>
-              <p><strong>Report</strong> -- generate a PDF for any date range, then view it on screen, download it, or email it. It has 7 pages, one focused topic per page: (1) Category Breakdown -- a bar chart of spending by category, sized to always fit on one page as you add more expenses; (2) Summary -- income, expenses, savings, and net (income minus expenses and savings); (3) Income -- full itemized list with a total; (4) Expenses -- full itemized list with a total; (5) Fixed Expenses -- every recurring bill occurrence in the range, with a total; (6) Savings -- your savings goals by month, with a total; (7) Spend Analysis -- a Pareto chart (with a total row) showing which categories drive 80% of your spending, plus a few data-driven suggestions on where to cut back, and a data & privacy note at the end.</p>
+              <p><strong>Report</strong> -- generate a PDF for any date range, then view it on screen, download it, or email it. Each topic gets its own page -- Income, Expenses, Fixed Expenses, Savings, Spend Analysis (Pareto chart), and Recommendations -- except the Category Breakdown bar chart and the Summary table, which share one page by default and only split onto two once the chart itself grows long enough to need the room. Every table also auto-shrinks its text to try to fit on one page first, and only flows onto a second page if the list is too long even at a readable size. The last page closes with a data & privacy note.</p>
               <p><strong>Settings</strong> -- set your total monthly budget, currency, add/rename categories, and set optional per-category budget caps (you'll get a warning banner if you go over). Every field auto-saves as you edit -- there's no Save button to click.</p>
               <p><strong>Users</strong> -- see who's active in the household and who's been invited but hasn't joined yet, with full Name/Email/Phone/Location. Owners can invite new members (which also sends them a notification email), fill in or fix anyone's Name/Phone/Location, and edit their own details under "My details" -- handy for accounts created before these fields existed. The Admin console (if you have access) is separate and never visible to other household members.</p>
               <p>All figures use your household's chosen currency, set in Settings. Your data is confidential and private to your household -- it's never shared with anyone outside it.</p>
@@ -2697,7 +2733,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           <div className="panel" ref={panelRef}>
             <h2>Report</h2>
             <div className="muted-small" style={{ marginBottom: 12 }}>
-              Generate a 7-page PDF (Category Breakdown, Summary, Income, Expenses, Fixed Expenses, Savings, and a Pareto spend analysis with suggestions and a data & privacy note) for a date range, then view it on screen, download it, or email it to any address.
+              Generate a PDF for a date range, then view it on screen, download it, or email it. Category Breakdown and Summary share a page unless the chart runs long; Income, Expenses, Fixed Expenses, Savings, Spend Analysis, and Recommendations each get their own dedicated page. Tables auto-shrink to try to fit one page before flowing onto a second.
             </div>
             <div className="row" style={{ marginBottom: 12 }}>
               <div className="field">
