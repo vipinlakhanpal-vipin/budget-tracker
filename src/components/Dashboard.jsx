@@ -2910,8 +2910,15 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 below (rather than inline at flex-end) so it never overlaps
                 a wrapped field. */}
             <form onSubmit={handleAddRecurring}>
+            {/* Every field below now gets an explicit width sized to what it
+                actually needs to hold (rather than the default equal-flex
+                split, which squeezed the Category dropdown too narrow to
+                show longer names like "Movies/Entertainment" and made the
+                row wrap unevenly) -- this is what keeps the row's spacing
+                and wrapping predictable/balanced instead of shifting around
+                based on which fields happen to land on line 2. */}
             <div className="row">
-              <div className="field" style={{ flex: 1.4 }}>
+              <div className="field" style={{ flex: '1.2 1 180px', minWidth: 160 }}>
                 <label>Name</label>
                 <input
                   type="text"
@@ -2920,7 +2927,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   onChange={(e) => setNewRecurring({ ...newRecurring, name: e.target.value })}
                 />
               </div>
-              <div className="field">
+              <div className="field" style={{ flex: '1.3 1 190px', minWidth: 170 }}>
                 <label>Category</label>
                 <select
                   value={newRecurring.categoryId}
@@ -2945,7 +2952,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   />
                 </div>
               </div>
-              <div className="field">
+              <div className="field" style={{ flex: '0 1 150px', minWidth: 140 }}>
                 <label>Start date</label>
                 <input
                   type="date"
@@ -2953,7 +2960,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   onChange={(e) => setNewRecurring({ ...newRecurring, startDate: e.target.value })}
                 />
               </div>
-              <div className="field">
+              <div className="field" style={{ flex: '0 1 150px', minWidth: 140 }}>
                 <label>End date (optional)</label>
                 <input
                   type="date"
@@ -2961,7 +2968,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   onChange={(e) => setNewRecurring({ ...newRecurring, endDate: e.target.value })}
                 />
               </div>
-              <div className="field">
+              <div className="field" style={{ flex: '0 1 165px', minWidth: 150 }}>
                 <label>Repeats</label>
                 <select
                   value={newRecurring.frequency}
@@ -2972,7 +2979,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   ))}
                 </select>
               </div>
-              <div className="field">
+              <div className="field" style={{ flex: '0 1 190px', minWidth: 170 }}>
                 <label>Due date (optional, for reminders)</label>
                 <input
                   type="date"
@@ -3047,9 +3054,9 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <div className="table-scroll">
               <table className="responsive-table" style={{ marginTop: 14, fontSize: 11 }}>
                 <colgroup>
-                  <col style={{ width: '11%' }} /><col style={{ width: '19%' }} /><col style={{ width: '9%' }} />
-                  <col style={{ width: '11%' }} /><col style={{ width: '11%' }} /><col style={{ width: '8%' }} />
-                  <col style={{ width: '11%' }} /><col style={{ width: '15%' }} /><col style={{ width: '5%' }} />
+                  <col style={{ width: '10%' }} /><col style={{ width: '19%' }} /><col style={{ width: '9%' }} />
+                  <col style={{ width: '11%' }} /><col style={{ width: '11%' }} /><col style={{ width: '13%' }} />
+                  <col style={{ width: '11%' }} /><col style={{ width: '11%' }} /><col style={{ width: '5%' }} />
                 </colgroup>
                 <thead>
                   <tr><th>Name</th><th>Category</th><th>Amount</th><th>Start</th><th>End</th><th>Repeats</th><th>Due date</th><th>Payment</th><th></th></tr>
