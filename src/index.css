@@ -844,12 +844,18 @@ td.amount { font-weight: 600; text-align: right; }
      one line, that centered position lands roughly on the gap between the
      two text lines, which reads as "sitting a bit high" relative to the sub
      line underneath. Top-aligning the row instead, with a matching
-     line-height on the title, puts the amount's text directly level with
-     the title's -- description and amount pair up on the same visual line,
-     with the sub-detail line simply continuing below both, unaffected. */
+     line-height on the title, puts the amount's BOX directly level with
+     the title's box. On top of that, the AED Dirham glyph is a custom SVG
+     (DirhamGlyph) with an asymmetric viewBox, drawn a little high inside its
+     own box -- so even with matching box tops, the visible glyph+number
+     still read as sitting slightly above the title text's own ink. This
+     small relative nudge shifts the rendered amount down those couple of
+     pixels so it visually lines up with the title, not just box-model-lines
+     up with it. */
   .mobile-txn-amount {
     flex: 0 0 auto; font-weight: 800; font-size: 15px; color: var(--text);
     padding-left: 4px; line-height: 1.35;
+    position: relative; top: 2px;
   }
   .mobile-delete-btn {
     display: flex; align-items: center; justify-content: center; gap: 8px;
