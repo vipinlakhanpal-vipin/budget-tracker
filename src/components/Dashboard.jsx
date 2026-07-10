@@ -2999,12 +2999,9 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   onChange={(e) => setNewRecurring({ ...newRecurring, dueDate: e.target.value })}
                 />
               </div>
-            </div>
-            {/* Own row, same reasoning as Add-an-expense above -- this form
-                already has 7 fields wrapping across lines on narrower
-                screens, so a payment source/bank pair goes on a fresh row
-                rather than squeezing into the already-crowded one. */}
-            <div className="row" style={{ marginTop: 10 }}>
+              {/* Payment Source sits right next to Due date in this same row now
+                  (previously it was pushed onto its own separate row below, which
+                  made it look disconnected/unaligned from the rest of the form). */}
               <div className="field" style={{ flex: '0 1 150px', minWidth: 130 }}>
                 <label>Payment Source</label>
                 <select
@@ -3074,9 +3071,9 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   it needs; if that adds up to more than the panel's visible
                   width, .table-scroll's horizontal scroll handles the rest
                   (same technique already used for .users-table). */}
-              <table className="responsive-table" style={{ marginTop: 14, fontSize: 11, minWidth: 930 }}>
+              <table className="responsive-table" style={{ marginTop: 14, fontSize: 11, minWidth: 965 }}>
                 <colgroup>
-                  <col style={{ width: '160px' }} /><col style={{ width: '160px' }} /><col style={{ width: '75px' }} />
+                  <col style={{ width: '160px' }} /><col style={{ width: '160px' }} /><col style={{ width: '110px' }} />
                   <col style={{ width: '95px' }} /><col style={{ width: '95px' }} /><col style={{ width: '115px' }} />
                   <col style={{ width: '95px' }} /><col style={{ width: '95px' }} /><col style={{ width: '40px' }} />
                 </colgroup>
