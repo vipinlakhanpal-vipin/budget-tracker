@@ -336,7 +336,7 @@ input[type="date"] {
    justify-content: flex-end pushes the prefix+input pair together to the
    right edge of the field, matching how a receipt/ledger lines up
    currency figures. */
-.amount-field-wrap { display: flex; align-items: center; justify-content: flex-end; gap: 4px; width: 100%; }
+.amount-field-wrap { display: flex; align-items: center; justify-content: flex-end; gap: 2px; width: 100%; }
 .amount-field-wrap .currency-prefix {
   flex: 0 0 auto; display: inline-flex; align-items: center;
   font-size: 12px; font-weight: 800; color: var(--muted); white-space: nowrap;
@@ -353,6 +353,14 @@ input[type="date"] {
 .amount-field-wrap input[type="number"] { flex: 0 1 auto; min-width: 0; width: 92px; max-width: 100%; }
 .amount-field-wrap.tight .currency-prefix { font-size: 10.5px; }
 .amount-field-wrap.tight input[type="number"] { width: 72px; }
+
+/* Read-only currency figures (dashboard cards, mobile transaction amounts,
+   budget-cap progress) -- glues the symbol straight onto the number with
+   no gap at all, the same "$4,500" convention as the editable amount
+   fields above, instead of the old "AED 4,500.00" (currency code + space)
+   text format. */
+.amt-tight { display: inline-flex; align-items: center; gap: 0; white-space: nowrap; }
+.amt-tight svg { flex: 0 0 auto; }
 
 /* All monetary/numeric values right-aligned app-wide (Amount fields, Monthly
    budget, per-category caps, Income/Savings amounts) -- standard
@@ -405,6 +413,11 @@ table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: f
 th, td { text-align: left; padding: 7px 4px; border-bottom: 1px solid var(--border); overflow: hidden; }
 th { color: var(--text); font-weight: 800; font-size: 12px; text-transform: uppercase; }
 td.amount { font-weight: 600; text-align: right; }
+/* A little extra breathing room between Amount and Payment (they used to
+   sit right on top of each other with only the default 4px cell padding
+   on each side) -- the Payment-to-By gap already reads fine since the
+   Payment select's own width leaves room before the next column starts. */
+td[data-label="Payment"] { padding-left: 14px; }
 .del { cursor: pointer; color: var(--muted); border: none; background: none; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; padding: 4px; border-radius: 6px; }
 .del:hover { color: var(--danger); background: var(--danger-bg); }
 

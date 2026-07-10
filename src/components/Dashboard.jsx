@@ -187,6 +187,24 @@ function CurrencyPrefix() {
   return currencySymbol();
 }
 
+// Read-only currency display used everywhere a figure is just shown (not
+// edited) -- dashboard summary cards, mobile transaction amounts, budget-cap
+// progress, etc. Glues the symbol straight onto the number with no space,
+// same "$4,500" convention the editable amount fields already use, instead
+// of the old "AED 4,500.00" (code + space) text format. A leading minus
+// sign (for negative/over-budget figures) is pulled out in front of the
+// symbol -- "-AED50" reads oddly, "-Đ50" reads the way "-$50" would.
+function Amt({ value }) {
+  const v = Number(value) || 0;
+  const neg = v < 0;
+  const numStr = Math.abs(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return (
+    <span className="amt-tight">
+      {neg ? '-' : ''}<CurrencyPrefix />{numStr}
+    </span>
+  );
+}
+
 function monthKey(d) {
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
 }
@@ -2345,12 +2363,12 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       )}
 
       <div className="grid">
-        <div className="card card-budget"><div className="k">Monthly Budget</div><div className="v">{fmt(totalBudget)}</div></div>
+        <div className="card card-budget"><div className="k">Monthly Budget</div><div className="v"><Amt value={totalBudget} /></div></div>
         <div className={`card card-spent ${totalBudget > 0 && combinedOutflow > totalBudget ? 'over' : ''}`}>
-          <div className="k">Spent so far</div><div className="v">{fmt(combinedOutflow)}</div>
+          <div className="k">Spent so far</div><div className="v"><Amt value={combinedOutflow} /></div>
           {savingsTotal > 0 && (
             <div className="muted-small" style={{ marginTop: 4 }}>
-              Expenses {fmt(total)} + Savings {fmt(savingsTotal)}
+              Expenses <Amt value={total} /> + Savings <Amt value={savingsTotal} />
             </div>
           )}
         </div>
@@ -2358,7 +2376,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           <div className="k">Remaining</div>
           {totalBudget > 0 ? (
             <>
-              <div className="v">{fmt(remaining)}</div>
+              <div className="v"><Amt value={remaining} /></div>
               <div className="muted-small" style={{ marginTop: 4 }}>After expenses and savings</div>
             </>
           ) : (
@@ -2371,16 +2389,16 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       </div>
 
       <div className="grid">
-        <div className="card card-income ok"><div className="k">Combined income</div><div className="v">{fmt(totalIncome)}</div></div>
+        <div className="card card-income ok"><div className="k">Combined income</div><div className="v"><Amt value={totalIncome} /></div></div>
         <div className="card card-expenses">
           <div className="k">Combined expenses</div>
-          <div className="v">{fmt(combinedOutflow)}</div>
+          <div className="v"><Amt value={combinedOutflow} /></div>
           <div className="muted-small" style={{ marginTop: 4 }}>
-            Regular {fmt(oneOffTotal)} + Fixed {fmt(recurringTotal)}{savingsTotal > 0 ? ` + Savings ${fmt(savingsTotal)}` : ''}
+            Regular <Amt value={oneOffTotal} /> + Fixed <Amt value={recurringTotal} />{savingsTotal > 0 ? <> + Savings <Amt value={savingsTotal} /></> : ''}
           </div>
         </div>
         <div className={`card card-net ${netCombined < 0 ? 'over' : 'ok'}`}>
-          <div className="k">Net (income - expenses - savings)</div><div className="v">{fmt(netCombined)}</div>
+          <div className="k">Net (income - expenses - savings)</div><div className="v"><Amt value={netCombined} /></div>
         </div>
       </div>
 
@@ -2656,7 +2674,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         <span className="mobile-txn-title">{title}</span>
                         <span className="mobile-txn-sub">{i.member_email}</span>
                       </span>
-                      <span className="mobile-txn-amount">{fmt(i.amount)}</span>
+                      <span className="mobile-txn-amount"><Amt value={i.amount} /></span>
                     </button>
                   );
                 })}
@@ -2715,7 +2733,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             )}
             {incomeForMonth.length > 0 && (
               <div className="muted-small" style={{ marginTop: 10 }}>
-                Changes save automatically. {fmt(totalIncome)} in combined income counted toward {monthLabel(currentMonth)}.
+                Changes save automatically. <Amt value={totalIncome} /> in combined income counted toward {monthLabel(currentMonth)}.
               </div>
             )}
 
@@ -2914,7 +2932,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         <span className="mobile-txn-title">{title}</span>
                         <span className="mobile-txn-sub">{catName} &middot; {freqLabel}</span>
                       </span>
-                      <span className="mobile-txn-amount">{fmt(r.amount)}</span>
+                      <span className="mobile-txn-amount"><Amt value={r.amount} /></span>
                     </button>
                   );
                 })}
@@ -2924,8 +2942,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <table className="responsive-table" style={{ marginTop: 14, fontSize: 12 }}>
                 <colgroup>
                   <col style={{ width: '14%' }} /><col style={{ width: '10%' }} /><col style={{ width: '9%' }} />
-                  <col style={{ width: '10%' }} /><col style={{ width: '10%' }} /><col style={{ width: '11%' }} />
-                  <col style={{ width: '10%' }} /><col style={{ width: '12%' }} /><col style={{ width: '7%' }} />
+                  <col style={{ width: '9%' }} /><col style={{ width: '9%' }} /><col style={{ width: '9%' }} />
+                  <col style={{ width: '10%' }} /><col style={{ width: '16%' }} /><col style={{ width: '7%' }} />
                 </colgroup>
                 <thead>
                   <tr><th>Name</th><th>Category</th><th>Amount</th><th>Start</th><th>End</th><th>Repeats</th><th>Due date</th><th>Payment</th><th></th></tr>
@@ -3007,7 +3025,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       </td>
                       <td data-label="Payment">
                         <select
-                          style={{ fontSize: 11, width: 92 }}
+                          style={{ fontSize: 11, width: 110 }}
                           value={recurringDrafts[r.id]?.paymentSource ?? 'Cash'}
                           onChange={(e) => commitRecurringField(r.id, 'paymentSource', e.target.value)}
                         >
@@ -3017,7 +3035,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         </select>
                         {(recurringDrafts[r.id]?.paymentSource ?? 'Cash') !== 'Cash' && (
                           <select
-                            style={{ fontSize: 11, width: 92, marginTop: 4 }}
+                            style={{ fontSize: 11, width: 110, marginTop: 4 }}
                             value={recurringDrafts[r.id]?.paymentBank ?? ''}
                             onChange={(e) => commitRecurringField(r.id, 'paymentBank', e.target.value)}
                           >
@@ -3040,7 +3058,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             </div>
             {recurringForMonth.length > 0 && (
               <div className="muted-small" style={{ marginTop: 10 }}>
-                {fmt(recurringTotal)} in fixed expenses counted toward {monthLabel(currentMonth)}.
+                <Amt value={recurringTotal} /> in fixed expenses counted toward {monthLabel(currentMonth)}.
               </div>
             )}
 
@@ -3234,7 +3252,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         <span className="mobile-txn-title">{title}</span>
                         <span className="mobile-txn-sub">{monthLabel(currentMonth)}</span>
                       </span>
-                      <span className="mobile-txn-amount">{fmt(s.amount)}</span>
+                      <span className="mobile-txn-amount"><Amt value={s.amount} /></span>
                     </button>
                   );
                 })}
@@ -3291,7 +3309,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             )}
             {savingsForMonth.length > 0 && (
               <div className="muted-small" style={{ marginTop: 10 }}>
-                {fmt(savingsTotal)} in planned savings for {monthLabel(currentMonth)}.
+                <Amt value={savingsTotal} /> in planned savings for {monthLabel(currentMonth)}.
               </div>
             )}
 
@@ -3386,7 +3404,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         <span className="mobile-txn-title">{title}</span>
                         <span className="mobile-txn-sub">{catName} &middot; {fmtDate(e.expense_date)}</span>
                       </span>
-                      <span className="mobile-txn-amount">{fmt(e.amount)}</span>
+                      <span className="mobile-txn-amount"><Amt value={e.amount} /></span>
                     </button>
                   );
                 })}
@@ -3395,8 +3413,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <div className="table-scroll">
               <table className="responsive-table" style={{ fontSize: 12 }}>
                 <colgroup>
-                  <col style={{ width: '12%' }} /><col style={{ width: '13%' }} /><col style={{ width: '22%' }} />
-                  <col style={{ width: '10%' }} /><col style={{ width: '12%' }} /><col style={{ width: '11%' }} />
+                  <col style={{ width: '12%' }} /><col style={{ width: '11%' }} /><col style={{ width: '20%' }} />
+                  <col style={{ width: '10%' }} /><col style={{ width: '16%' }} /><col style={{ width: '11%' }} />
                   <col style={{ width: '7%' }} />
                 </colgroup>
                 <thead>
@@ -3450,7 +3468,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       </td>
                       <td data-label="Payment">
                         <select
-                          style={{ fontSize: 11, width: 92 }}
+                          style={{ fontSize: 11, width: 110 }}
                           value={expenseDrafts[e.id]?.paymentSource ?? 'Cash'}
                           onChange={(ev) => commitExpenseField(e.id, 'paymentSource', ev.target.value)}
                         >
@@ -3460,7 +3478,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         </select>
                         {(expenseDrafts[e.id]?.paymentSource ?? 'Cash') !== 'Cash' && (
                           <select
-                            style={{ fontSize: 11, width: 92, marginTop: 4 }}
+                            style={{ fontSize: 11, width: 110, marginTop: 4 }}
                             value={expenseDrafts[e.id]?.paymentBank ?? ''}
                             onChange={(ev) => commitExpenseField(e.id, 'paymentBank', ev.target.value)}
                           >
@@ -3481,7 +3499,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             )}
             {monthExpenses.length > 0 && (
               <div className="muted-small" style={{ marginTop: 8 }}>
-                Changes save automatically. {fmt(oneOffTotal)} in regular (one-off) expenses counted toward {monthLabel(currentMonth)}.
+                Changes save automatically. <Amt value={oneOffTotal} /> in regular (one-off) expenses counted toward {monthLabel(currentMonth)}.
               </div>
             )}
           </div>
@@ -3594,7 +3612,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               higher (it used to keep its own toggle inside the panel,
               which pushed the panel's actual top down past where the
               left column's panel starts). */}
-          <div className="input-tabs" style={{ justifyContent: 'flex-end' }}>
+          <div className="input-tabs">
             <button
               className={`btn small ${chartType === 'pie' ? '' : 'secondary'}`}
               onClick={() => setChartType('pie')}
@@ -4296,7 +4314,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         <div className="cat-budget-row" key={c.id}>
                           <span>{c.name}</span>
                           <span className={over ? 'muted-small' : 'muted-small'} style={{ color: over ? 'var(--danger)' : 'var(--ok)', fontWeight: 600 }}>
-                            {fmt(spent)} / {fmt(c.monthly_budget)}
+                            <Amt value={spent} /> / <Amt value={c.monthly_budget} />
                           </span>
                         </div>
                       );
