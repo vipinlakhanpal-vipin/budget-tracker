@@ -487,14 +487,19 @@ input[type="number"] { text-align: right; }
 .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
 table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
-/* Every row's Payment cell now always reserves space for its optional Bank
-   select (rendered but visibility:hidden when not needed -- see Dashboard.jsx),
-   so every row in every table is already the same height regardless of
-   content. With row height uniform, center-aligning every cell's content
-   (rather than pinning to the top) is what makes the whole grid actually
-   look symmetrical, instead of every field sitting flush against the top
-   border with empty space below. */
-th, td { text-align: left; vertical-align: middle; padding: 7px 4px; border-bottom: 1px solid var(--border); overflow: hidden; }
+/* Payment cells stack TWO selects (source + an always-reserved bank select,
+   hidden via visibility when not needed -- see Dashboard.jsx) to keep every
+   row the same height. That two-item stack is taller than every other
+   cell's single input, so vertical-align:middle (which centers each cell's
+   content as a whole block) centered the *pair* -- pushing the visible top
+   select noticeably higher than the single-line inputs in Category/Amount/
+   Start/etc, which centered their much-shorter single line lower down.
+   Pinning every cell to the top with the SAME top padding instead makes
+   every column's actual input start at the exact same pixel offset from the
+   row's top edge, regardless of how many hidden/reserved elements sit below
+   it -- this is what genuinely lines every cell up on one row, rather than
+   each cell centering independently around content of a different height. */
+th, td { text-align: left; vertical-align: top; padding: 11px 4px 7px; border-bottom: 1px solid var(--border); overflow: hidden; }
 th { color: var(--text); font-weight: 800; font-size: 12px; text-transform: uppercase; }
 td.amount { font-weight: 600; text-align: right; }
 /* The extra left padding this used to have (to add breathing room after
