@@ -3047,9 +3047,9 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <div className="table-scroll">
               <table className="responsive-table" style={{ marginTop: 14, fontSize: 11 }}>
                 <colgroup>
-                  <col style={{ width: '12%' }} /><col style={{ width: '21%' }} /><col style={{ width: '9%' }} />
-                  <col style={{ width: '9%' }} /><col style={{ width: '9%' }} /><col style={{ width: '8%' }} />
-                  <col style={{ width: '9%' }} /><col style={{ width: '17%' }} /><col style={{ width: '6%' }} />
+                  <col style={{ width: '11%' }} /><col style={{ width: '19%' }} /><col style={{ width: '9%' }} />
+                  <col style={{ width: '11%' }} /><col style={{ width: '11%' }} /><col style={{ width: '8%' }} />
+                  <col style={{ width: '11%' }} /><col style={{ width: '15%' }} /><col style={{ width: '5%' }} />
                 </colgroup>
                 <thead>
                   <tr><th>Name</th><th>Category</th><th>Amount</th><th>Start</th><th>End</th><th>Repeats</th><th>Due date</th><th>Payment</th><th></th></tr>
