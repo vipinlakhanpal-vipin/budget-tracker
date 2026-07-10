@@ -44,6 +44,7 @@ Total monthly budget: ${ctx.totalBudget ?? 'not set'}
 Category budget caps: ${JSON.stringify(ctx.categoryBudgetCaps || [])}
 Fixed/recurring bills: ${JSON.stringify(ctx.fixedExpenses || [])}
 This month's savings goals: ${JSON.stringify(ctx.savingsGoalsThisMonth || [])}
+This month's individual income sources (source name, household member, amount) -- use this, not just the "income" total inside recentMonths, for any question naming a specific income source or asking "where does our income come from": ${JSON.stringify(ctx.incomeThisMonth || [])}
 Recent months (most recent last -- the last entry is the month currently being viewed), each with income, total expenses, savings, spend broken down by category, any category that went over its own cap that month, and remainingVsBudget (see above):
 ${JSON.stringify(ctx.recentMonths || [])}
 

@@ -1250,6 +1250,12 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           .filter((r) => r.active)
           .map((r) => ({ name: r.name, category: categoryNameById[r.category_id], amount: r.amount, frequency: r.frequency, dueDate: r.due_date || null })),
         savingsGoalsThisMonth: savingsForMonth.map((s) => ({ name: s.name, amount: s.amount })),
+        // Individual income line items (not just the combined monthly total
+        // already inside recentMonths) -- without this the assistant could
+        // say what total income was but not name a single income source,
+        // which read as "it can't see the Income tab at all" even though
+        // the total itself was correct.
+        incomeThisMonth: incomeForMonth.map((i) => ({ source: i.name, member: i.member_email, amount: i.amount })),
         recentMonths: recentMonthSnapshots(3),
         // Individual expense rows (not just category totals) for the
         // current and previous month, so questions about a specific
