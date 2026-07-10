@@ -3071,11 +3071,11 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   it needs; if that adds up to more than the panel's visible
                   width, .table-scroll's horizontal scroll handles the rest
                   (same technique already used for .users-table). */}
-              <table className="responsive-table" style={{ marginTop: 14, fontSize: 11, minWidth: 965 }}>
+              <table className="responsive-table" style={{ marginTop: 14, fontSize: 11, minWidth: 985 }}>
                 <colgroup>
                   <col style={{ width: '160px' }} /><col style={{ width: '160px' }} /><col style={{ width: '110px' }} />
                   <col style={{ width: '95px' }} /><col style={{ width: '95px' }} /><col style={{ width: '115px' }} />
-                  <col style={{ width: '95px' }} /><col style={{ width: '95px' }} /><col style={{ width: '40px' }} />
+                  <col style={{ width: '105px' }} /><col style={{ width: '105px' }} /><col style={{ width: '40px' }} />
                 </colgroup>
                 <thead>
                   <tr><th>Name</th><th>Category</th><th>Amount</th><th>Start</th><th>End</th><th>Repeats</th><th>Due date</th><th>Payment</th><th></th></tr>

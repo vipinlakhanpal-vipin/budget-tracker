@@ -576,6 +576,27 @@ td.amount { font-weight: 600; text-align: right; }
   font-size: 11px;
 }
 
+/* On narrower screens, wide fixed-column tables (e.g. Fixed Expenses) exceed
+   the visible panel width and .table-scroll's horizontal scroll kicks in --
+   without this, the trailing delete-icon column just scrolls out of view
+   with everything else, so users on those narrower screens can lose access
+   to delete entirely unless they think to scroll all the way right. Pinning
+   this last column (and its header, so the two stay lined up while
+   scrolling) to the right edge of the scroll area keeps delete always
+   reachable regardless of scroll position or screen width. */
+@media (min-width: 721px) {
+  .table-scroll table td:has(button.del),
+  .table-scroll table th:last-child:empty {
+    position: sticky;
+    right: 0;
+    background: var(--card);
+    z-index: 2;
+  }
+  .table-scroll table td:has(button.del) {
+    box-shadow: -6px 0 6px -6px rgba(15, 42, 46, .25);
+  }
+}
+
 .cat-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .cat-chip {
   display: flex; align-items: center; gap: 6px; background: var(--accent2-light); color: var(--accent2);
