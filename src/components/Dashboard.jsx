@@ -55,8 +55,14 @@ const PAYMENT_SOURCES = ['Cash', 'Credit Card', 'Debit Card'];
 // a salary loan EMI) are deducted straight from the paycheck rather than
 // paid via cash or a card, so they don't fit either existing bucket. Only
 // offered on the Fixed Expenses forms/table, not one-off expenses.
-const RECURRING_PAYMENT_SOURCES = [...PAYMENT_SOURCES, 'Salary'];
-const CARD_PAYMENT_SOURCES = ['Credit Card', 'Debit Card'];
+// "Bank" is its own option (distinct from Credit/Debit Card) for fixed
+// bills that are debited straight from a bank account -- a car loan EMI,
+// for instance -- rather than paid via a card. It still needs a bank name
+// picked, same as the two card options, so it's included in
+// CARD_PAYMENT_SOURCES below (which really means "needs a bank picker"
+// at this point, not strictly "is a card").
+const RECURRING_PAYMENT_SOURCES = [...PAYMENT_SOURCES, 'Bank', 'Salary'];
+const CARD_PAYMENT_SOURCES = ['Credit Card', 'Debit Card', 'Bank'];
 // Free-tier household size cap: the owner plus this many additional people
 // (active members + pending invites combined).
 const MAX_ADDITIONAL_USERS = 2;
