@@ -2833,6 +2833,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                             step="0.01"
                             min="0"
                             style={{ fontSize: 11 }}
+                            size={Math.max(2, String(incomeDrafts[i.id]?.amount ?? '').length)}
                             value={incomeDrafts[i.id]?.amount ?? ''}
                             onChange={(e) => updateIncomeDraftField(i.id, 'amount', e.target.value)}
                             onBlur={(e) => commitIncomeField(i.id, 'amount', e.target.value)}
@@ -3115,7 +3116,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                             type="number"
                             step="0.01"
                             min="0"
-                            style={{ width: '100%', minWidth: 0, fontSize: 11 }}
+                            style={{ fontSize: 11 }}
+                            size={Math.max(2, String(recurringDrafts[r.id]?.amount ?? '').length)}
                             value={recurringDrafts[r.id]?.amount ?? ''}
                             onChange={(e) => updateRecurringDraftField(r.id, 'amount', e.target.value)}
                             onBlur={(e) => commitRecurringField(r.id, 'amount', e.target.value)}
@@ -3429,7 +3431,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                             type="number"
                             step="0.01"
                             min="0"
-                            style={{ width: '100%', minWidth: 0, fontSize: 11 }}
+                            style={{ fontSize: 11 }}
+                            size={Math.max(2, String(savingsDrafts[s.id]?.amount ?? '').length)}
                             value={savingsDrafts[s.id]?.amount ?? ''}
                             onChange={(e) => updateSavingDraftField(s.id, 'amount', e.target.value)}
                             onBlur={(e) => commitSavingField(s.id, 'amount', e.target.value)}
@@ -3603,7 +3606,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                             type="number"
                             step="0.01"
                             min="0"
-                            style={{ width: '100%', minWidth: 0, fontSize: 11 }}
+                            style={{ fontSize: 11 }}
+                            size={Math.max(2, String(expenseDrafts[e.id]?.amount ?? '').length)}
                             value={expenseDrafts[e.id]?.amount ?? ''}
                             onChange={(ev) => updateExpenseDraftField(e.id, 'amount', ev.target.value)}
                             onBlur={(ev) => commitExpenseField(e.id, 'amount', ev.target.value)}

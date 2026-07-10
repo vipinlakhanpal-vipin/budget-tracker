@@ -615,15 +615,31 @@ td.amount { font-weight: 600; text-align: right; }
    so any value shorter than the column's worst-case width just sat flush
    against the LEFT edge with visible empty space to its right -- read as
    "not right-aligned" compared to every other numeric figure in the app.
-   Giving the whole block a fixed, modest width and pushing it to the
-   column's right edge with margin-left:auto keeps the symbol snug against
-   its own digits (unchanged) while making the figure itself sit flush
-   right, matching how amounts are aligned everywhere else. max-width:100%
-   keeps this safe on any column narrower than 76px. */
+   A first attempt gave the whole block a FIXED 76px width and pushed that
+   box to the column's right edge with margin-left:auto -- but the box's
+   own text stayed left-aligned inside it (required so the symbol stays
+   snug against the first digit), so the box's edge lined up while the
+   actual visible digits still drifted left for shorter numbers -- e.g.
+   "450" sat well left of "1645"'s last digit even though both boxes'
+   invisible right edges matched. Verified live: every box's right edge
+   was identical, but the rendered numbers were not.
+   The real fix: stop giving the box a fixed width at all -- let it
+   shrink-wrap to its own content via the input's "size" attribute (set in
+   JSX from the value's own character count), so the box is always exactly
+   as wide as its digits. margin-left:auto then pushes that snug,
+   content-sized box flush to the column's right edge, so every row's
+   LAST DIGIT lands at the same x position regardless of how many digits
+   it has -- true right alignment, not just a fixed invisible box. */
 .table-scroll table td .amount-field-wrap.tight {
-  width: 76px;
+  display: inline-flex;
+  align-items: center;
+  width: auto;
   max-width: 100%;
   margin-left: auto;
+}
+.table-scroll table td .amount-field-wrap.tight input[type="number"] {
+  width: auto !important;
+  flex: 0 1 auto;
 }
 
 /* On narrower screens, wide fixed-column tables (e.g. Fixed Expenses) exceed
