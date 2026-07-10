@@ -186,7 +186,11 @@ function currencySymbol() {
 // proportioned correctly at any size).
 function DirhamGlyph({ size = '1em' }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" style={{ flex: '0 0 auto' }}>
+    // viewBox tightly wraps just the drawn D + two lines (the old 0 0 16 16
+    // box left a wide margin of empty space to the right/below the glyph,
+    // which read as a built-in gap before the number even started -- a "$"
+    // never has that dead space, so this crops it out the same way.
+    <svg width={size} height={size} viewBox="0 3 10 11" fill="none" style={{ flex: '0 0 auto' }}>
       <text x="1" y="12.5" fontSize="12" fontWeight="800" fontFamily="Arial, sans-serif" fill="currentColor">D</text>
       <line x1="0.5" y1="5.4" x2="9.5" y2="5.4" stroke="currentColor" strokeWidth="1.3" />
       <line x1="0.5" y1="8.6" x2="9.5" y2="8.6" stroke="currentColor" strokeWidth="1.3" />

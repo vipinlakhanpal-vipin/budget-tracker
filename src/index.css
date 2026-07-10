@@ -397,7 +397,7 @@ input[type="date"] {
    justify-content: flex-end pushes the prefix+input pair together to the
    right edge of the field, matching how a receipt/ledger lines up
    currency figures. */
-.amount-field-wrap { display: flex; align-items: center; justify-content: flex-end; gap: 2px; width: 100%; }
+.amount-field-wrap { display: flex; align-items: center; justify-content: flex-end; gap: 0; width: 100%; }
 .amount-field-wrap .currency-prefix {
   flex: 0 0 auto; display: inline-flex; align-items: center;
   font-size: 12px; font-weight: 800; color: var(--muted); white-space: nowrap;
