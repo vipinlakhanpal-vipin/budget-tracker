@@ -135,31 +135,37 @@ export default function Splash() {
             <circle cx="2" cy="2" r="1.3" fill="#ffffff" fillOpacity=".5" />
           </pattern>
         </defs>
-        {/* North America */}
-        <path d="M60 70 Q160 40 260 65 Q320 90 300 140 Q280 190 220 205 Q160 215 110 180 Q55 140 60 70 Z" fill="url(#mapDots)" stroke="#ffffff" strokeOpacity=".18" strokeWidth="1.5" />
-        {/* South America */}
-        <path d="M270 235 Q330 220 350 270 Q365 330 335 385 Q310 425 285 400 Q265 350 270 290 Z" fill="url(#mapDots)" stroke="#ffffff" strokeOpacity=".18" strokeWidth="1.5" />
-        {/* Europe */}
-        <path d="M470 65 Q540 50 600 70 Q615 100 590 130 Q540 150 495 135 Q465 105 470 65 Z" fill="url(#mapDots)" stroke="#ffffff" strokeOpacity=".18" strokeWidth="1.5" />
-        {/* Africa */}
-        <path d="M470 150 Q560 140 610 175 Q625 230 605 290 Q580 350 530 345 Q480 320 465 250 Q455 195 470 150 Z" fill="url(#mapDots)" stroke="#ffffff" strokeOpacity=".18" strokeWidth="1.5" />
-        {/* Asia */}
-        <path d="M615 55 Q740 40 890 75 Q930 110 900 160 Q850 210 760 200 Q680 190 630 150 Q600 100 615 55 Z" fill="url(#mapDots)" stroke="#ffffff" strokeOpacity=".18" strokeWidth="1.5" />
-        {/* Australia */}
-        <path d="M815 300 Q890 285 925 315 Q935 350 900 370 Q850 380 820 355 Q805 325 815 300 Z" fill="url(#mapDots)" stroke="#ffffff" strokeOpacity=".18" strokeWidth="1.5" />
+        <g className="worldmap-continents">
+          {/* North America */}
+          <path d="M60 70 Q160 40 260 65 Q320 90 300 140 Q280 190 220 205 Q160 215 110 180 Q55 140 60 70 Z" fill="url(#mapDots)" stroke="#ffffff" strokeOpacity=".18" strokeWidth="1.5" />
+          {/* South America */}
+          <path d="M270 235 Q330 220 350 270 Q365 330 335 385 Q310 425 285 400 Q265 350 270 290 Z" fill="url(#mapDots)" stroke="#ffffff" strokeOpacity=".18" strokeWidth="1.5" />
+          {/* Europe */}
+          <path d="M470 65 Q540 50 600 70 Q615 100 590 130 Q540 150 495 135 Q465 105 470 65 Z" fill="url(#mapDots)" stroke="#ffffff" strokeOpacity=".18" strokeWidth="1.5" />
+          {/* Africa */}
+          <path d="M470 150 Q560 140 610 175 Q625 230 605 290 Q580 350 530 345 Q480 320 465 250 Q455 195 470 150 Z" fill="url(#mapDots)" stroke="#ffffff" strokeOpacity=".18" strokeWidth="1.5" />
+          {/* Asia */}
+          <path d="M615 55 Q740 40 890 75 Q930 110 900 160 Q850 210 760 200 Q680 190 630 150 Q600 100 615 55 Z" fill="url(#mapDots)" stroke="#ffffff" strokeOpacity=".18" strokeWidth="1.5" />
+          {/* Australia */}
+          <path d="M815 300 Q890 285 925 315 Q935 350 900 370 Q850 380 820 355 Q805 325 815 300 Z" fill="url(#mapDots)" stroke="#ffffff" strokeOpacity=".18" strokeWidth="1.5" />
+        </g>
 
         {/* Location dot -- only rendered once the IP lookup resolves. A
             calm two-layer pulse (expanding ring + steady core) instead of
             a static pin, so it reads as "live" rather than decorative
             clutter, plus a small label so it's clear what it's pointing
-            at rather than an unexplained dot on a map. */}
+            at rather than an unexplained dot on a map. Kept at its own
+            higher opacity (see .geo-marker/.geo-label in CSS) so it reads
+            as a deliberate highlight against the much fainter continents,
+            rather than fading in at the same low opacity as the map
+            texture around it. */}
         {geo && (
           <g className="geo-marker" transform={`translate(${geo.x} ${geo.y})`}>
-            <circle className="geo-ping" r="6" fill="none" stroke="#ffe27a" strokeWidth="2" />
-            <circle r="4" fill="#ffe27a" stroke="#8a5a04" strokeWidth="1" />
+            <circle className="geo-ping" r="5" fill="none" stroke="#ffe27a" strokeWidth="1.6" />
+            <circle r="3.2" fill="#ffe27a" stroke="#8a5a04" strokeWidth="1" />
             <text
               x="0"
-              y={geo.y > 420 ? -14 : 20}
+              y={geo.y > 420 ? -11 : 16}
               textAnchor="middle"
               className="geo-label"
             >

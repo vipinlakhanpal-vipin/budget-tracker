@@ -53,8 +53,14 @@ button, input, select, textarea { font-family: inherit; }
    behind the orbs/dust so it reads as texture, not a competing subject. */
 .splash-worldmap {
   position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-  width: 130vmax; height: 65vmax; opacity: .3; z-index: 0;
+  width: 130vmax; height: 65vmax; z-index: 0;
 }
+/* Continents stay faint/textural -- background detail, not the subject.
+   The location marker below is deliberately kept OUT of this dimmed
+   group and given its own much higher opacity so it reads as a clear,
+   intentional highlight ("this is YOUR Hearth") rather than blending into
+   the map texture at the same low strength. */
+.worldmap-continents { opacity: .3; }
 .geo-marker circle:not(.geo-ping) { filter: drop-shadow(0 0 4px rgba(255, 226, 122, .9)); }
 .geo-ping { transform-box: fill-box; transform-origin: center; animation: geo-ping-out 2.2s ease-out infinite; }
 @keyframes geo-ping-out {
@@ -62,8 +68,9 @@ button, input, select, textarea { font-family: inherit; }
   75%, 100% { transform: scale(2.6); opacity: 0; }
 }
 .geo-label {
-  fill: #ffffff; font-size: 20px; font-weight: 800; font-family: 'Nunito', sans-serif;
-  paint-order: stroke; stroke: #063d37; stroke-width: 5px; stroke-linejoin: round;
+  fill: #ffffff; font-size: 11px; font-weight: 800; font-family: 'Nunito', sans-serif;
+  paint-order: stroke; stroke: #063d37; stroke-width: 3px; stroke-linejoin: round;
+  opacity: .92;
 }
 /* Small twinkling points scattered across the background -- turns the
    glow into a lively "night sky" rather than an empty gradient. Pure CSS,
