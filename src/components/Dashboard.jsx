@@ -2984,9 +2984,9 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <div className="table-scroll">
               <table className="responsive-table" style={{ marginTop: 14, fontSize: 12 }}>
                 <colgroup>
-                  <col style={{ width: '14%' }} /><col style={{ width: '13%' }} /><col style={{ width: '9%' }} />
-                  <col style={{ width: '8%' }} /><col style={{ width: '8%' }} /><col style={{ width: '8%' }} />
-                  <col style={{ width: '10%' }} /><col style={{ width: '16%' }} /><col style={{ width: '7%' }} />
+                  <col style={{ width: '13%' }} /><col style={{ width: '19%' }} /><col style={{ width: '8%' }} />
+                  <col style={{ width: '9%' }} /><col style={{ width: '9%' }} /><col style={{ width: '8%' }} />
+                  <col style={{ width: '9%' }} /><col style={{ width: '14%' }} /><col style={{ width: '6%' }} />
                 </colgroup>
                 <thead>
                   <tr><th>Name</th><th>Category</th><th>Amount</th><th>Start</th><th>End</th><th>Repeats</th><th>Due date</th><th>Payment</th><th></th></tr>
@@ -2997,7 +2997,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       <td data-label="Name">
                         <input
                           type="text"
-                          style={{ width: 110, fontSize: 12 }}
+                          style={{ width: '100%', minWidth: 0, fontSize: 12 }}
                           value={recurringDrafts[r.id]?.name ?? ''}
                           onChange={(e) => updateRecurringDraftField(r.id, 'name', e.target.value)}
                           onBlur={(e) => commitRecurringField(r.id, 'name', e.target.value)}
@@ -3021,7 +3021,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                             type="number"
                             step="0.01"
                             min="0"
-                            style={{ width: 80, fontSize: 12 }}
+                            style={{ width: '100%', minWidth: 0, fontSize: 12 }}
                             value={recurringDrafts[r.id]?.amount ?? ''}
                             onChange={(e) => updateRecurringDraftField(r.id, 'amount', e.target.value)}
                             onBlur={(e) => commitRecurringField(r.id, 'amount', e.target.value)}
@@ -3031,7 +3031,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       <td data-label="Start">
                         <input
                           type="date"
-                          style={{ width: 130, fontSize: 11 }}
+                          style={{ width: '100%', minWidth: 0, fontSize: 10.5 }}
                           value={recurringDrafts[r.id]?.startDate ?? ''}
                           onChange={(e) => updateRecurringDraftField(r.id, 'startDate', e.target.value)}
                           onBlur={(e) => commitRecurringField(r.id, 'startDate', e.target.value)}
@@ -3040,7 +3040,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       <td data-label="End">
                         <input
                           type="date"
-                          style={{ width: 130, fontSize: 11 }}
+                          style={{ width: '100%', minWidth: 0, fontSize: 10.5 }}
                           value={recurringDrafts[r.id]?.endDate ?? ''}
                           onChange={(e) => updateRecurringDraftField(r.id, 'endDate', e.target.value)}
                           onBlur={(e) => commitRecurringField(r.id, 'endDate', e.target.value)}
@@ -3048,7 +3048,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       </td>
                       <td data-label="Repeats">
                         <select
-                          style={{ fontSize: 12 }}
+                          style={{ fontSize: 12, width: '100%' }}
                           value={recurringDrafts[r.id]?.frequency ?? 'monthly'}
                           onChange={(e) => commitRecurringField(r.id, 'frequency', e.target.value)}
                         >
@@ -3060,7 +3060,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       <td data-label="Due date">
                         <input
                           type="date"
-                          style={{ width: 130, fontSize: 11 }}
+                          style={{ width: '100%', minWidth: 0, fontSize: 10.5 }}
                           value={recurringDrafts[r.id]?.dueDate ?? ''}
                           onChange={(e) => updateRecurringDraftField(r.id, 'dueDate', e.target.value)}
                           onBlur={(e) => commitRecurringField(r.id, 'dueDate', e.target.value)}
@@ -3068,7 +3068,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       </td>
                       <td data-label="Payment">
                         <select
-                          style={{ fontSize: 11, width: 110 }}
+                          style={{ fontSize: 11, width: '100%', minWidth: 0 }}
                           value={recurringDrafts[r.id]?.paymentSource ?? 'Cash'}
                           onChange={(e) => commitRecurringField(r.id, 'paymentSource', e.target.value)}
                         >
@@ -3078,7 +3078,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         </select>
                         {CARD_PAYMENT_SOURCES.includes(recurringDrafts[r.id]?.paymentSource ?? 'Cash') && (
                           <select
-                            style={{ fontSize: 11, width: 110, marginTop: 4 }}
+                            style={{ fontSize: 11, width: '100%', minWidth: 0, marginTop: 4 }}
                             value={recurringDrafts[r.id]?.paymentBank ?? ''}
                             onChange={(e) => commitRecurringField(r.id, 'paymentBank', e.target.value)}
                           >
@@ -3089,7 +3089,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           </select>
                         )}
                       </td>
-                      <td><button className="del" onClick={() => handleDeleteRecurring(r.id, r.name)} title="Delete"><Trash2 size={14} /></button></td>
+                      <td style={{ verticalAlign: 'top', paddingTop: 10 }}><button className="del" onClick={() => handleDeleteRecurring(r.id, r.name)} title="Delete"><Trash2 size={14} /></button></td>
                     </tr>
                   ))}
                 </tbody>
@@ -3456,9 +3456,9 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <div className="table-scroll">
               <table className="responsive-table" style={{ fontSize: 12 }}>
                 <colgroup>
-                  <col style={{ width: '12%' }} /><col style={{ width: '10%' }} /><col style={{ width: '21%' }} />
-                  <col style={{ width: '10%' }} /><col style={{ width: '20%' }} /><col style={{ width: '7%' }} />
-                  <col style={{ width: '7%' }} />
+                  <col style={{ width: '11%' }} /><col style={{ width: '15%' }} /><col style={{ width: '18%' }} />
+                  <col style={{ width: '10%' }} /><col style={{ width: '18%' }} /><col style={{ width: '7%' }} />
+                  <col style={{ width: '6%' }} />
                 </colgroup>
                 <thead>
                   <tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th><th>Payment</th><th style={{ textAlign: 'center' }}>By</th><th></th></tr>
@@ -3469,7 +3469,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       <td data-label="Date">
                         <input
                           type="date"
-                          style={{ width: 120, fontSize: 11 }}
+                          style={{ width: '100%', minWidth: 0, fontSize: 10.5 }}
                           value={expenseDrafts[e.id]?.date ?? ''}
                           onChange={(ev) => updateExpenseDraftField(e.id, 'date', ev.target.value)}
                           onBlur={(ev) => commitExpenseField(e.id, 'date', ev.target.value)}
@@ -3477,7 +3477,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       </td>
                       <td data-label="Category">
                         <select
-                          style={{ fontSize: 12 }}
+                          style={{ fontSize: 12, width: '100%' }}
                           value={expenseDrafts[e.id]?.categoryId ?? ''}
                           onChange={(ev) => commitExpenseField(e.id, 'categoryId', ev.target.value)}
                         >
@@ -3502,7 +3502,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                             type="number"
                             step="0.01"
                             min="0"
-                            style={{ width: 75, fontSize: 12 }}
+                            style={{ width: '100%', minWidth: 0, fontSize: 12 }}
                             value={expenseDrafts[e.id]?.amount ?? ''}
                             onChange={(ev) => updateExpenseDraftField(e.id, 'amount', ev.target.value)}
                             onBlur={(ev) => commitExpenseField(e.id, 'amount', ev.target.value)}
@@ -3511,7 +3511,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       </td>
                       <td data-label="Payment">
                         <select
-                          style={{ fontSize: 11, width: 110 }}
+                          style={{ fontSize: 11, width: '100%', minWidth: 0 }}
                           value={expenseDrafts[e.id]?.paymentSource ?? 'Cash'}
                           onChange={(ev) => commitExpenseField(e.id, 'paymentSource', ev.target.value)}
                         >
@@ -3521,7 +3521,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         </select>
                         {(expenseDrafts[e.id]?.paymentSource ?? 'Cash') !== 'Cash' && (
                           <select
-                            style={{ fontSize: 11, width: 110, marginTop: 4 }}
+                            style={{ fontSize: 11, width: '100%', minWidth: 0, marginTop: 4 }}
                             value={expenseDrafts[e.id]?.paymentBank ?? ''}
                             onChange={(ev) => commitExpenseField(e.id, 'paymentBank', ev.target.value)}
                           >
@@ -3533,7 +3533,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         )}
                       </td>
                       <td data-label="By" className="muted-small" style={{ textAlign: 'center' }}>{displayNameForEmail(e.created_by_email)}</td>
-                      <td><button className="del" onClick={() => handleDeleteExpense(e.id)} title="Delete"><Trash2 size={14} /></button></td>
+                      <td style={{ paddingTop: 10 }}><button className="del" onClick={() => handleDeleteExpense(e.id)} title="Delete"><Trash2 size={14} /></button></td>
                     </tr>
                   ))}
                 </tbody>

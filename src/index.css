@@ -471,7 +471,13 @@ input[type="number"] { text-align: right; }
 .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
 table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
-th, td { text-align: left; padding: 7px 4px; border-bottom: 1px solid var(--border); overflow: hidden; }
+/* vertical-align: top matters once a row's Payment cell grows to two
+   stacked selects (source + bank) -- without it, every other cell in that
+   same row re-centers itself in the now-taller row, so inputs visibly
+   drift up/down row to row depending on whether that row happens to need
+   a bank picker. Top-aligning keeps every cell's content pinned to the
+   same baseline regardless of how tall any one cell in the row gets. */
+th, td { text-align: left; vertical-align: top; padding: 7px 4px; border-bottom: 1px solid var(--border); overflow: hidden; }
 th { color: var(--text); font-weight: 800; font-size: 12px; text-transform: uppercase; }
 td.amount { font-weight: 600; text-align: right; }
 /* A little extra breathing room between Amount and Payment (they used to
