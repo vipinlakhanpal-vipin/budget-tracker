@@ -420,6 +420,69 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const chatMessagesRef = useRef(null);
+  // Draggable chat bubble: null means "use the default bottom-right/bottom-left
+  // CSS corner", {x,y} means "the user dragged it, pin it exactly here" --
+  // restored from localStorage so the chosen spot survives a reload. Kept as
+  // viewport pixel coordinates (position: fixed left/top) rather than
+  // right/bottom so the drag math (which only ever knows the pointer's
+  // clientX/clientY) doesn't have to convert back and forth.
+  const [chatFabPos, setChatFabPos] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('hearth-chat-fab-pos') || 'null');
+      return saved && typeof saved.x === 'number' && typeof saved.y === 'number' ? saved : null;
+    } catch {
+      return null;
+    }
+  });
+  const chatFabWrapRef = useRef(null);
+  const chatFabDragRef = useRef({ dragging: false, moved: false, startX: 0, startY: 0, origX: 0, origY: 0 });
+  // A short drag (a few px of finger/mouse jitter) should still count as a
+  // tap that opens the chat -- only a real drag (past this threshold)
+  // should reposition the bubble and suppress the click that would
+  // otherwise follow pointerup.
+  const FAB_DRAG_THRESHOLD = 6;
+  const handleChatFabPointerDown = (e) => {
+    const rect = chatFabWrapRef.current.getBoundingClientRect();
+    chatFabDragRef.current = {
+      dragging: true, moved: false,
+      startX: e.clientX, startY: e.clientY,
+      origX: rect.left, origY: rect.top,
+    };
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  };
+  const handleChatFabPointerMove = (e) => {
+    const d = chatFabDragRef.current;
+    if (!d.dragging) return;
+    const dx = e.clientX - d.startX;
+    const dy = e.clientY - d.startY;
+    if (!d.moved && Math.hypot(dx, dy) < FAB_DRAG_THRESHOLD) return;
+    d.moved = true;
+    const wrap = chatFabWrapRef.current;
+    const w = wrap ? wrap.offsetWidth : 60;
+    const h = wrap ? wrap.offsetHeight : 90;
+    const x = Math.min(Math.max(8, d.origX + dx), window.innerWidth - w - 8);
+    const y = Math.min(Math.max(8, d.origY + dy), window.innerHeight - h - 8);
+    setChatFabPos({ x, y });
+  };
+  const handleChatFabPointerUp = () => {
+    const d = chatFabDragRef.current;
+    if (d.moved) {
+      setChatFabPos((pos) => {
+        if (pos) localStorage.setItem('hearth-chat-fab-pos', JSON.stringify(pos));
+        return pos;
+      });
+    }
+    chatFabDragRef.current.dragging = false;
+  };
+  const handleChatFabClick = () => {
+    // Suppress the click that fires right after a drag's pointerup -- only
+    // toggle the chat window open/closed when this was a plain tap.
+    if (chatFabDragRef.current.moved) {
+      chatFabDragRef.current.moved = false;
+      return;
+    }
+    setChatOpen((o) => !o);
+  };
   useEffect(() => {
     if (chatMessagesRef.current) {
       chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight;
@@ -4446,32 +4509,44 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
         </button>
       </nav>
 
-      {/* AI feature #4: a floating chat bubble available from anywhere in
-          the app, not tied to any tab/panel. Sits bottom-right on desktop;
-          on mobile it moves to the bottom-LEFT (same height as the "+" FAB)
-          instead of stacking above it, after real-device feedback that
-          sharing the right corner with the FAB + bottom nav's "Settings"
-          button read as crowded -- see .chat-fab in index.css. */}
-      {!chatOpen && (
-        <span className="chat-fab-badge">
-          {/* "Chat BoT" line makes clear up front that this is an AI
-              assistant and not a plain contact/support chat button --
-              sits directly above the existing "AI powered" line. */}
-          <span className="chat-fab-badge-title">Chat BoT</span>
-          <span className="chat-fab-badge-sub">
-            <Sparkles size={11} className="ai-tag-sparkle" strokeWidth={2.25} />
-            AI powered
-          </span>
-        </span>
-      )}
-      <button
-        className="chat-fab"
-        onClick={() => setChatOpen((o) => !o)}
-        aria-label={chatOpen ? 'Close chat' : 'Ask about your budget (AI powered)'}
-        title={chatOpen ? 'Close chat' : 'Ask about your budget (AI powered)'}
+      {/* AI feature #4: a floating, draggable chat bubble available from
+          anywhere in the app, not tied to any tab/panel. Defaults to
+          bottom-right on desktop / bottom-left on mobile (see
+          .chat-fab-wrapper in index.css); press-and-drag anywhere on
+          screen repositions it, and the spot is remembered (localStorage)
+          for next time. A plain tap still opens the chat -- only a real
+          drag (past a small pixel threshold) moves the bubble instead. */}
+      <div
+        ref={chatFabWrapRef}
+        className="chat-fab-wrapper"
+        style={chatFabPos ? { left: chatFabPos.x, top: chatFabPos.y, right: 'auto', bottom: 'auto' } : undefined}
       >
-        {chatOpen ? <X size={22} /> : <MessageCircle size={22} />}
-      </button>
+        <button
+          className="chat-fab"
+          onPointerDown={handleChatFabPointerDown}
+          onPointerMove={handleChatFabPointerMove}
+          onPointerUp={handleChatFabPointerUp}
+          onClick={handleChatFabClick}
+          aria-label={chatOpen ? 'Close chat' : 'Ask about your budget (AI powered). Press and drag to move.'}
+          title={chatOpen ? 'Close chat' : 'Ask about your budget (AI powered). Press and drag to move.'}
+        >
+          {chatOpen ? <X size={18} /> : <MessageCircle size={18} />}
+        </button>
+        {!chatOpen && (
+          <span className="chat-fab-badge">
+            {/* "Chat BoT" line makes clear up front that this is an AI
+                assistant and not a plain contact/support chat button --
+                sits directly above the existing "AI powered" line. Order
+                swapped vs. the button above: this caption should sit
+                BELOW the bubble icon, closer to the screen edge. */}
+            <span className="chat-fab-badge-title">Chat BoT</span>
+            <span className="chat-fab-badge-sub">
+              <Sparkles size={11} className="ai-tag-sparkle" strokeWidth={2.25} />
+              AI powered
+            </span>
+          </span>
+        )}
+      </div>
 
       {chatOpen && (
         <div className="chat-window">

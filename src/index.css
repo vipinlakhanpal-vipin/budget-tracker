@@ -405,8 +405,14 @@ input[type="date"] {
   z-index: 1; pointer-events: none;
   font-size: 12px; font-weight: 800; color: var(--muted); white-space: nowrap;
 }
+/* text-align: left here (overriding the app-wide right-align default on
+   number inputs) is what actually makes the digits sit flush against the
+   symbol, "$4500"-style, regardless of how many digits are typed -- with
+   text-align: right the digits stay pinned to the far-right edge of the
+   box while the symbol stays pinned to the left, opening up a growing gap
+   between them for any value that doesn't happen to fill the whole box. */
 .amount-field-wrap input[type="number"] {
-  width: 100%; padding-left: 26px;
+  width: 100%; padding-left: 26px; text-align: left;
 }
 /* A fixed, modest width (rather than stretching to fill the field) is what
    keeps the input snug instead of leaving a big gap after the digits.
@@ -812,8 +818,7 @@ td[data-label="Payment"] { padding-left: 14px; }
      any given device. Desktop keeps the bottom-right position from the
      .chat-fab base rule below (there's no mobile bottom nav to conflict
      with there). */
-  .chat-fab { left: 16px; right: auto; bottom: calc(100px + env(safe-area-inset-bottom)); }
-  .chat-fab-badge { left: 14px; right: auto; align-items: flex-start; bottom: calc(72px + env(safe-area-inset-bottom)); }
+  .chat-fab-wrapper { left: 16px; right: auto; align-items: flex-start; bottom: calc(100px + env(safe-area-inset-bottom)); }
   .chat-window {
     left: 8px; right: 8px; width: auto;
     bottom: calc(162px + env(safe-area-inset-bottom));
@@ -821,27 +826,36 @@ td[data-label="Payment"] { padding-left: 14px; }
   }
 }
 
-/* AI feature #4: floating chat bubble + its popup window. Desktop-default
-   position here (bottom-right, mirroring where the mobile "+" FAB lives);
-   the @media block above overrides both for mobile so the bubble stacks
-   above the FAB instead of overlapping it or hiding behind the bottom nav. */
-.chat-fab {
+/* AI feature #4: floating, draggable chat bubble + its popup window.
+   .chat-fab-wrapper is the single positioned element -- it holds both the
+   round button and the caption beneath it, so dragging the wrapper moves
+   both together as one unit instead of two separately-fixed pieces that
+   could drift apart. Desktop-default position here (bottom-right,
+   mirroring where the mobile "+" FAB lives); the @media block above
+   overrides it for mobile so the bubble stacks above the FAB instead of
+   overlapping it or hiding behind the bottom nav. When the user drags it,
+   Dashboard.jsx sets inline left/top (and right/bottom:auto) which simply
+   overrides these defaults. */
+.chat-fab-wrapper {
   position: fixed; right: 16px; bottom: 40px; z-index: 42;
-  width: 54px; height: 54px; border-radius: 50%;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 4px;
+  touch-action: none;
+}
+.chat-fab {
+  width: 44px; height: 44px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   background: var(--accent2); color: #fff; border: none;
-  box-shadow: 0 4px 14px rgba(14, 165, 233, .45); cursor: pointer;
-  transition: transform .12s ease;
+  box-shadow: 0 4px 14px rgba(14, 165, 233, .45); cursor: grab;
+  transition: transform .12s ease; touch-action: none;
 }
-.chat-fab:active { transform: scale(.92); }
-/* Small "AI powered" caption that sits just below the closed chat bubble
-   (the bubble itself was raised to make room for it) so it's clear the
-   assistant is AI-driven before the user even opens it -- hidden once the
-   chat window is open (the header already carries its own ai-powered-tag
-   then). Positioned relative to the same fixed corner as .chat-fab, so it
-   inherits the mobile override below. */
+.chat-fab:active { transform: scale(.92); cursor: grabbing; }
+/* Small "AI powered" caption that sits just below the closed chat bubble so
+   it's clear the assistant is AI-driven before the user even opens it --
+   hidden once the chat window is open (the header already carries its own
+   ai-powered-tag then). No longer separately positioned -- it's just a
+   normal flex child stacked under the button inside .chat-fab-wrapper now,
+   so it always travels with the bubble. */
 .chat-fab-badge {
-  position: fixed; right: 12px; bottom: 10px; z-index: 42;
   display: flex; flex-direction: column; align-items: flex-end; gap: 1px;
   /* No background/pill, per explicit preference -- plain teal text, with a
      soft light shadow standing in for a background so it stays readable
