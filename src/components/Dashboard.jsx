@@ -2475,7 +2475,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 Fixed Expenses). The bank picker only renders once a card
                 option is chosen, so Cash payers never see an irrelevant field. */}
             <div className="row" style={{ marginTop: 10 }}>
-              <div className="field">
+              <div className="field" style={{ flex: '0 1 150px', minWidth: 130 }}>
                 <label>Payment Source</label>
                 <select
                   value={form.paymentSource}
@@ -2487,7 +2487,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 </select>
               </div>
               {form.paymentSource !== 'Cash' && (
-                <div className="field">
+                <div className="field" style={{ flex: '0 1 190px', minWidth: 150 }}>
                   <label>Bank</label>
                   <select value={form.paymentBank} onChange={(e) => setForm({ ...form, paymentBank: e.target.value })}>
                     <option value="">Select bank</option>
@@ -2862,7 +2862,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 screens, so a payment source/bank pair goes on a fresh row
                 rather than squeezing into the already-crowded one. */}
             <div className="row" style={{ marginTop: 10 }}>
-              <div className="field">
+              <div className="field" style={{ flex: '0 1 150px', minWidth: 130 }}>
                 <label>Payment Source</label>
                 <select
                   value={newRecurring.paymentSource}
@@ -2874,7 +2874,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 </select>
               </div>
               {newRecurring.paymentSource !== 'Cash' && (
-                <div className="field">
+                <div className="field" style={{ flex: '0 1 190px', minWidth: 150 }}>
                   <label>Bank</label>
                   <select value={newRecurring.paymentBank} onChange={(e) => setNewRecurring({ ...newRecurring, paymentBank: e.target.value })}>
                     <option value="">Select bank</option>
@@ -3396,11 +3396,11 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <table className="responsive-table" style={{ fontSize: 12 }}>
                 <colgroup>
                   <col style={{ width: '12%' }} /><col style={{ width: '13%' }} /><col style={{ width: '22%' }} />
-                  <col style={{ width: '10%' }} /><col style={{ width: '11%' }} /><col style={{ width: '12%' }} />
+                  <col style={{ width: '10%' }} /><col style={{ width: '12%' }} /><col style={{ width: '11%' }} />
                   <col style={{ width: '7%' }} />
                 </colgroup>
                 <thead>
-                  <tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th><th style={{ textAlign: 'center' }}>By</th><th>Payment</th><th></th></tr>
+                  <tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th><th>Payment</th><th style={{ textAlign: 'center' }}>By</th><th></th></tr>
                 </thead>
                 <tbody>
                   {monthExpenses.map((e) => (
@@ -3448,7 +3448,6 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           />
                         </div>
                       </td>
-                      <td data-label="By" className="muted-small" style={{ textAlign: 'center' }}>{displayNameForEmail(e.created_by_email)}</td>
                       <td data-label="Payment">
                         <select
                           style={{ fontSize: 11, width: 92 }}
@@ -3472,6 +3471,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           </select>
                         )}
                       </td>
+                      <td data-label="By" className="muted-small" style={{ textAlign: 'center' }}>{displayNameForEmail(e.created_by_email)}</td>
                       <td><button className="del" onClick={() => handleDeleteExpense(e.id)} title="Delete"><Trash2 size={14} /></button></td>
                     </tr>
                   ))}
@@ -3588,36 +3588,40 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
         </div>
 
         <div>
+          {/* Same row/height as the left column's Add-expense/Income/Fixed
+              Expenses/Savings tabs, so the two white panels below line up
+              at the same top edge instead of the chart card floating
+              higher (it used to keep its own toggle inside the panel,
+              which pushed the panel's actual top down past where the
+              left column's panel starts). */}
+          <div className="input-tabs" style={{ justifyContent: 'flex-end' }}>
+            <button
+              className={`btn small ${chartType === 'pie' ? '' : 'secondary'}`}
+              onClick={() => setChartType('pie')}
+            >
+              Pie
+            </button>
+            <button
+              className={`btn small ${chartType === 'bar' ? '' : 'secondary'}`}
+              onClick={() => setChartType('bar')}
+            >
+              Bar
+            </button>
+            <button
+              className={`btn small ${chartType === 'pareto' ? '' : 'secondary'}`}
+              onClick={() => setChartType('pareto')}
+            >
+              Pareto
+            </button>
+            <button
+              className={`btn small ${chartType === 'treemap' ? '' : 'secondary'}`}
+              onClick={() => setChartType('treemap')}
+            >
+              Treemap
+            </button>
+          </div>
           <div className="panel">
-            <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-              <h2 style={{ margin: 0 }}>Spending by category</h2>
-              <div style={{ display: 'flex', gap: 6 }}>
-                <button
-                  className={`btn small ${chartType === 'pie' ? '' : 'secondary'}`}
-                  onClick={() => setChartType('pie')}
-                >
-                  Pie
-                </button>
-                <button
-                  className={`btn small ${chartType === 'bar' ? '' : 'secondary'}`}
-                  onClick={() => setChartType('bar')}
-                >
-                  Bar
-                </button>
-                <button
-                  className={`btn small ${chartType === 'pareto' ? '' : 'secondary'}`}
-                  onClick={() => setChartType('pareto')}
-                >
-                  Pareto
-                </button>
-                <button
-                  className={`btn small ${chartType === 'treemap' ? '' : 'secondary'}`}
-                  onClick={() => setChartType('treemap')}
-                >
-                  Treemap
-                </button>
-              </div>
-            </div>
+            <h2 style={{ margin: '0 0 4px' }}>Spending by category</h2>
             {pieData.length === 0 ? (
               <div className="empty">Add an expense to see the breakdown.</div>
             ) : chartType === 'pie' ? (

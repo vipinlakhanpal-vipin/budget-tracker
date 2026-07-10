@@ -116,12 +116,13 @@ button, input, select, textarea { font-family: inherit; }
    one flips to a white pill with teal text -- keeps the same theme color
    as the accent everywhere else while still standing out against the
    gradient behind it. */
+/* No pill/background here either -- but the splash background is itself
+   teal, so plain teal text (like every other AI tag) would disappear into
+   it. White keeps it legible while still matching the same "no badge
+   shape" look everywhere else. */
 .splash-ai-tag {
   display: inline-flex; align-items: center; gap: 4px;
-  color: var(--accent); background: #ffffff;
-  font-size: 10.5px; font-weight: 800; letter-spacing: .2px;
-  padding: 3px 10px 3px 8px; border-radius: 20px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, .18);
+  color: #ffffff; font-size: 10.5px; font-weight: 800; letter-spacing: .2px;
   animation: splash-pop .5s ease .3s both;
 }
 .splash-ai-tag svg { animation: ai-sparkle-twinkle 2.2s ease-in-out infinite; }
@@ -295,8 +296,7 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
 .ai-powered-tag {
   display: inline-flex; align-items: center; gap: 3px;
   font-size: 10px; font-weight: 800; letter-spacing: .1px; text-transform: none;
-  margin-left: 4px; padding: 2px 7px 2px 5px; border-radius: 20px;
-  color: var(--accent); background: var(--accent-light);
+  margin-left: 4px; color: var(--accent);
   vertical-align: middle;
 }
 .ai-tag-sparkle {
@@ -721,11 +721,11 @@ td.amount { font-weight: 600; text-align: right; }
      any given device. Desktop keeps the bottom-right position from the
      .chat-fab base rule below (there's no mobile bottom nav to conflict
      with there). */
-  .chat-fab { left: 16px; right: auto; bottom: calc(78px + env(safe-area-inset-bottom)); }
-  .chat-fab-badge { left: 14px; right: auto; bottom: calc(134px + env(safe-area-inset-bottom)); }
+  .chat-fab { left: 16px; right: auto; bottom: calc(100px + env(safe-area-inset-bottom)); }
+  .chat-fab-badge { left: 14px; right: auto; bottom: calc(78px + env(safe-area-inset-bottom)); }
   .chat-window {
     left: 8px; right: 8px; width: auto;
-    bottom: calc(140px + env(safe-area-inset-bottom));
+    bottom: calc(162px + env(safe-area-inset-bottom));
     max-height: 50vh;
   }
 }
@@ -735,7 +735,7 @@ td.amount { font-weight: 600; text-align: right; }
    the @media block above overrides both for mobile so the bubble stacks
    above the FAB instead of overlapping it or hiding behind the bottom nav. */
 .chat-fab {
-  position: fixed; right: 16px; bottom: 16px; z-index: 42;
+  position: fixed; right: 16px; bottom: 40px; z-index: 42;
   width: 54px; height: 54px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   background: var(--accent2); color: #fff; border: none;
@@ -743,26 +743,25 @@ td.amount { font-weight: 600; text-align: right; }
   transition: transform .12s ease;
 }
 .chat-fab:active { transform: scale(.92); }
-/* Small "AI powered" pill that hovers just above/left of the closed chat
-   bubble so it's clear the assistant is AI-driven before the user even
-   opens it -- hidden once the chat window is open (the header already
-   carries its own ai-powered-tag then). Positioned relative to the same
-   fixed corner as .chat-fab, so it inherits the mobile override below. */
+/* Small "AI powered" caption that sits just below the closed chat bubble
+   (the bubble itself was raised to make room for it) so it's clear the
+   assistant is AI-driven before the user even opens it -- hidden once the
+   chat window is open (the header already carries its own ai-powered-tag
+   then). Positioned relative to the same fixed corner as .chat-fab, so it
+   inherits the mobile override below. */
 .chat-fab-badge {
-  position: fixed; right: 14px; bottom: 72px; z-index: 42;
+  position: fixed; right: 12px; bottom: 10px; z-index: 42;
   display: inline-flex; align-items: center; gap: 3px;
-  /* Solid (not light-tinted) teal here, unlike the inline .ai-powered-tag --
-     this badge floats over whatever content is scrolled underneath it, so
-     it needs its own reliable contrast rather than depending on a light
-     card background always being behind it. */
-  color: #fff; background: var(--accent);
+  /* No background/pill, per explicit preference -- plain teal text, with a
+     soft light shadow standing in for a background so it stays readable
+     over whatever's scrolled underneath (it floats over the whole page). */
+  color: var(--accent); background: none;
   font-size: 10px; font-weight: 800; letter-spacing: .2px;
-  padding: 3px 9px 3px 6px; border-radius: 20px;
-  box-shadow: 0 2px 8px rgba(13, 148, 136, .45);
+  text-shadow: 0 1px 3px rgba(255, 255, 255, .9), 0 0 8px rgba(255, 255, 255, .7);
   pointer-events: none; white-space: nowrap;
 }
 .chat-window {
-  position: fixed; right: 16px; bottom: 82px; z-index: 43;
+  position: fixed; right: 16px; bottom: 106px; z-index: 43;
   width: 340px; max-width: calc(100vw - 32px); height: 440px; max-height: 65vh;
   background: var(--card); border: 1px solid var(--border); border-radius: 16px;
   box-shadow: 0 10px 30px rgba(15, 42, 46, .18);
