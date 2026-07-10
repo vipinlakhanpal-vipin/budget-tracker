@@ -371,6 +371,7 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
 .field input, .field select {
   padding: 9px 11px; border: 1.5px solid var(--border); border-radius: 9px; font-size: 14px; background: #fff;
   color: var(--text); transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+  height: 40px;
 }
 /* Clear, friendly focus + hover states -- previously an input looked
    identical whether idle, hovered, or actively focused, which made data
@@ -381,10 +382,19 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
 }
 .field input::placeholder { color: var(--muted); opacity: .75; }
 .field input:disabled, .field select:disabled { background: var(--bg); color: var(--muted); cursor: not-allowed; }
+/* Date inputs previously got smaller padding/font than every other .field
+   input/select (to save horizontal space), which quietly made them ~5px
+   shorter than a select sitting in the same row (e.g. Due date next to
+   Payment Source in Fixed Expenses) -- with the row's flex bottom-aligned,
+   that height gap made the *shorter* one's top sit lower and the taller
+   select's top stick up above it, reported as the select "going upward".
+   Forcing the same fixed height here (box-sizing:border-box already global)
+   guarantees every field in a row starts and ends at the same pixel
+   regardless of its own font-size/padding. */
 input[type="date"] {
-  font-size: 12px; min-width: 122px; padding: 8px 6px;
+  font-size: 12px; min-width: 122px; padding: 8px 6px; height: 40px;
 }
-.field input[type="date"] { min-width: 130px; }
+.field input[type="date"] { min-width: 130px; height: 40px; }
 /* Bold, right-aligned amounts read more like a receipt/ledger and are
    easier to compare at a glance than left-aligned plain numbers. */
 .field input[type="number"] { font-weight: 700; text-align: right; }
@@ -476,7 +486,13 @@ input[type="number"] { text-align: right; }
 .btn.secondary { background: transparent; color: var(--accent2); border: 1px solid var(--accent2); }
 .btn.small { padding: 5px 10px; font-size: 12px; }
 
-.content-grid { display: grid; grid-template-columns: minmax(0, 2.1fr) minmax(320px, 1fr); gap: 24px; }
+/* Widened from 2.1fr to 2.6fr -- the data-entry tables (Fixed Expenses
+   especially, with 9 columns of Name/Category/Amount/dates/Repeats/Payment)
+   need more raw width than the chart panel does, and this was the single
+   biggest source of the Fixed Expenses table needing a horizontal scroll on
+   typical laptop-width windows. The chart panel keeps its own 320px floor
+   so it never gets uncomfortably narrow. */
+.content-grid { display: grid; grid-template-columns: minmax(0, 2.6fr) minmax(320px, 1fr); gap: 24px; }
 @media (max-width: 1150px) { .content-grid { grid-template-columns: 1fr; } }
 /* Tablet-width only (641-800px) -- stack to a single column since 3 cards
    is still a bit tight at that width. Phones get their own 3-column rule
@@ -799,7 +815,7 @@ td.amount { font-weight: 600; text-align: right; }
     display: flex; flex-direction: column; gap: 2px;
   }
   .mobile-txn-row {
-    display: flex; align-items: center; gap: 12px;
+    display: flex; align-items: flex-start; gap: 12px;
     width: 100%; text-align: left; background: var(--card);
     border: none; border-bottom: 1px solid var(--border);
     padding: 12px 4px; cursor: pointer; font-family: inherit;
@@ -816,16 +832,24 @@ td.amount { font-weight: 600; text-align: right; }
     flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px;
   }
   .mobile-txn-title {
-    font-weight: 700; font-size: 14.5px; color: var(--text);
+    font-weight: 700; font-size: 14.5px; color: var(--text); line-height: 1.35;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .mobile-txn-sub {
     font-size: 12.5px; color: var(--muted);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
+  /* Was align-items:center on the row, which vertically centers the amount
+     against the FULL two-line title+sub block -- since the amount is only
+     one line, that centered position lands roughly on the gap between the
+     two text lines, which reads as "sitting a bit high" relative to the sub
+     line underneath. Top-aligning the row instead, with a matching
+     line-height on the title, puts the amount's text directly level with
+     the title's -- description and amount pair up on the same visual line,
+     with the sub-detail line simply continuing below both, unaffected. */
   .mobile-txn-amount {
     flex: 0 0 auto; font-weight: 800; font-size: 15px; color: var(--text);
-    padding-left: 4px;
+    padding-left: 4px; line-height: 1.35;
   }
   .mobile-delete-btn {
     display: flex; align-items: center; justify-content: center; gap: 8px;
