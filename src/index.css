@@ -392,43 +392,34 @@ input[type="date"] {
 /* Currency prefix shown inside every amount field (Add forms, edit sheets,
    inline table cells, Settings budgets) so it's always clear which
    currency you're typing in, without having to check Settings separately.
-   Symbol and value are laid out as one right-aligned group (not the
-   symbol pinned to the far left with the digits off at the far right) --
-   justify-content: flex-end pushes the prefix+input pair together to the
-   right edge of the field, matching how a receipt/ledger lines up
-   currency figures. */
-.amount-field-wrap { display: flex; align-items: center; justify-content: flex-end; gap: 0; width: 100%; }
-.amount-field-wrap .currency-prefix {
-  flex: 0 0 auto; display: inline-flex; align-items: center;
-  font-size: 12px; font-weight: 800; color: var(--muted); white-space: nowrap;
-}
-/* Top-level Add forms (Add expense/Income/Fixed Expenses/Savings) only --
+   Every amount field -- top-level Add forms AND table rows/mobile edit
+   sheets (the .tight variant) alike -- follows the same single convention:
    the symbol sits printed inside the input's own bordered box (left edge,
-   vertically centered) rather than as a separate element beside it, the
-   same convention as a "$" printed inside a bank app's amount field. The
-   .tight variant (table rows / mobile edit sheets, where the input is
-   already only 72-92px) keeps the older side-by-side layout since there's
-   no room to spare for inset padding at that size. */
-.amount-field-wrap:not(.tight) { position: relative; }
-.amount-field-wrap:not(.tight) .currency-prefix {
+   vertically centered) rather than as a separate element beside it, same
+   as a "$" printed inside a bank app's amount field. .tight just uses a
+   smaller inset + smaller symbol, sized for the narrower table cells and
+   11px table font. */
+.amount-field-wrap { position: relative; width: 100%; }
+.amount-field-wrap .currency-prefix {
   position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
   z-index: 1; pointer-events: none;
+  font-size: 12px; font-weight: 800; color: var(--muted); white-space: nowrap;
 }
-.amount-field-wrap:not(.tight) input[type="number"] {
+.amount-field-wrap input[type="number"] {
   width: 100%; padding-left: 26px;
 }
 /* A fixed, modest width (rather than stretching to fill the field) is what
-   keeps the input snug against the prefix instead of leaving a big gap
-   between the symbol and the digits. Table cells override this with their
-   own inline width (e.g. 75-92px); this is just the fallback for the
-   top-level Add/edit forms, which don't set one. min-width: 0 still
-   matters -- without it a bare <input type="number"> refuses to shrink
-   below its browser-default intrinsic size (~170px+) even inside a
-   constrained flex parent, which is exactly what caused the old
-   Amount/Start-date overlap bug in Fixed Expenses. */
-.amount-field-wrap input[type="number"] { flex: 0 1 auto; min-width: 0; width: 92px; max-width: 100%; }
-.amount-field-wrap.tight .currency-prefix { font-size: 10.5px; }
-.amount-field-wrap.tight input[type="number"] { width: 72px; }
+   keeps the input snug instead of leaving a big gap after the digits.
+   Table cells override this with their own inline width (100%, driven by
+   the colgroup); this is just the fallback for the top-level Add/edit
+   forms, which don't set one. min-width: 0 still matters -- without it a
+   bare <input type="number"> refuses to shrink below its browser-default
+   intrinsic size (~170px+) even inside a constrained flex parent, which is
+   exactly what caused the old Amount/Start-date overlap bug in Fixed
+   Expenses. */
+.amount-field-wrap:not(.tight) input[type="number"] { flex: 0 1 auto; min-width: 0; width: 92px; max-width: 100%; }
+.amount-field-wrap.tight .currency-prefix { left: 4px; font-size: 10.5px; }
+.amount-field-wrap.tight input[type="number"] { padding-left: 15px; }
 
 /* Read-only currency figures (dashboard cards, mobile transaction amounts,
    budget-cap progress) -- glues the symbol straight onto the number with
@@ -490,13 +481,14 @@ input[type="number"] { text-align: right; }
 .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
 table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
-/* vertical-align: top matters once a row's Payment cell grows to two
-   stacked selects (source + bank) -- without it, every other cell in that
-   same row re-centers itself in the now-taller row, so inputs visibly
-   drift up/down row to row depending on whether that row happens to need
-   a bank picker. Top-aligning keeps every cell's content pinned to the
-   same baseline regardless of how tall any one cell in the row gets. */
-th, td { text-align: left; vertical-align: top; padding: 7px 4px; border-bottom: 1px solid var(--border); overflow: hidden; }
+/* Every row's Payment cell now always reserves space for its optional Bank
+   select (rendered but visibility:hidden when not needed -- see Dashboard.jsx),
+   so every row in every table is already the same height regardless of
+   content. With row height uniform, center-aligning every cell's content
+   (rather than pinning to the top) is what makes the whole grid actually
+   look symmetrical, instead of every field sitting flush against the top
+   border with empty space below. */
+th, td { text-align: left; vertical-align: middle; padding: 7px 4px; border-bottom: 1px solid var(--border); overflow: hidden; }
 th { color: var(--text); font-weight: 800; font-size: 12px; text-transform: uppercase; }
 td.amount { font-weight: 600; text-align: right; }
 /* A little extra breathing room between Amount and Payment (they used to
