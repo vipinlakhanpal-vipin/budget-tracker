@@ -2524,12 +2524,6 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           )}
           <div className="input-tabs">
             <button
-              className={`btn small ${inputTab === 'expense' ? '' : 'secondary'}`}
-              onClick={() => setInputTab('expense')}
-            >
-              Add an expense
-            </button>
-            <button
               className={`btn small ${inputTab === 'income' ? '' : 'secondary'}`}
               onClick={() => setInputTab('income')}
             >
@@ -2540,6 +2534,12 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               onClick={() => setInputTab('fixed')}
             >
               Fixed Expenses
+            </button>
+            <button
+              className={`btn small ${inputTab === 'expense' ? '' : 'secondary'}`}
+              onClick={() => setInputTab('expense')}
+            >
+              Add an expense
             </button>
             <button
               className={`btn small ${inputTab === 'savings' ? '' : 'secondary'}`}
