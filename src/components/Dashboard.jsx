@@ -1220,6 +1220,12 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
         description: e.description || '',
         category: categoryNameById[e.category_id] || 'Uncategorized',
         amount: Number(e.amount),
+        // Payment method wasn't being sent at all -- so a question like
+        // "what did I spend on my FAB credit card" had no way to be
+        // answered correctly; the assistant could only see date/category/
+        // amount/description, never which card or account paid for it.
+        paymentSource: e.payment_source || 'Cash',
+        paymentBank: e.payment_bank || null,
       }));
   }
 
@@ -3058,11 +3064,21 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               </div>
             ) : (
               <div className="table-scroll">
-              <table className="responsive-table" style={{ marginTop: 14, fontSize: 11 }}>
+              {/* Switched from percentage columns to fixed pixel widths (with
+                  min-width on the table itself) after repeatedly having to
+                  steal a percentage point from one column to fix another --
+                  every column here is already at the smallest width its own
+                  content needs, so there was no more percentage slack left
+                  to give Name more room without re-clipping something we'd
+                  just fixed. Fixed px widths give every column exactly what
+                  it needs; if that adds up to more than the panel's visible
+                  width, .table-scroll's horizontal scroll handles the rest
+                  (same technique already used for .users-table). */}
+              <table className="responsive-table" style={{ marginTop: 14, fontSize: 11, minWidth: 930 }}>
                 <colgroup>
-                  <col style={{ width: '10%' }} /><col style={{ width: '19%' }} /><col style={{ width: '9%' }} />
-                  <col style={{ width: '11%' }} /><col style={{ width: '11%' }} /><col style={{ width: '13%' }} />
-                  <col style={{ width: '11%' }} /><col style={{ width: '11%' }} /><col style={{ width: '5%' }} />
+                  <col style={{ width: '160px' }} /><col style={{ width: '160px' }} /><col style={{ width: '75px' }} />
+                  <col style={{ width: '95px' }} /><col style={{ width: '95px' }} /><col style={{ width: '115px' }} />
+                  <col style={{ width: '95px' }} /><col style={{ width: '95px' }} /><col style={{ width: '40px' }} />
                 </colgroup>
                 <thead>
                   <tr><th>Name</th><th>Category</th><th>Amount</th><th>Start</th><th>End</th><th>Repeats</th><th>Due date</th><th>Payment</th><th></th></tr>

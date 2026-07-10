@@ -48,7 +48,7 @@ This month's individual income sources (source name, household member, amount) -
 Recent months (most recent last -- the last entry is the month currently being viewed), each with income, total expenses, savings, spend broken down by category, any category that went over its own cap that month, and remainingVsBudget (see above):
 ${JSON.stringify(ctx.recentMonths || [])}
 
-Individual one-off expense transactions for the currently viewed month (date, description, category, amount) -- use this list, not just the category totals above, to answer anything about a specific purchase, merchant, or description:
+Individual one-off expense transactions for the currently viewed month (date, description, category, amount, paymentSource, paymentBank) -- use this list, not just the category totals above, to answer anything about a specific purchase, merchant, description, or which card/account/cash paid for something. paymentSource is one of Cash, Credit Card, or Debit Card; paymentBank (when present) is the specific bank/card name -- e.g. a transaction with paymentSource "Credit Card" and paymentBank "FAB (First Abu Dhabi Bank)" was paid on that FAB credit card. When asked "what did I spend on my [bank] card", filter this list by paymentBank (and/or paymentSource), don't confuse it with a same-named entry in fixedExpenses (a fixed/recurring bill's own EMI payment is a different thing from one-off purchases charged to that same card):
 ${JSON.stringify(ctx.transactionsThisMonth || [])}
 
 Individual one-off expense transactions for the previous month, same fields, for month-to-month comparisons at the transaction level:

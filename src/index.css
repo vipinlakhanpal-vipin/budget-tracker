@@ -497,11 +497,13 @@ table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: f
 th, td { text-align: left; vertical-align: middle; padding: 7px 4px; border-bottom: 1px solid var(--border); overflow: hidden; }
 th { color: var(--text); font-weight: 800; font-size: 12px; text-transform: uppercase; }
 td.amount { font-weight: 600; text-align: right; }
-/* A little extra breathing room between Amount and Payment (they used to
-   sit right on top of each other with only the default 4px cell padding
-   on each side) -- the Payment-to-By gap already reads fine since the
-   Payment select's own width leaves room before the next column starts. */
-td[data-label="Payment"] { padding-left: 14px; }
+/* The extra left padding this used to have (to add breathing room after
+   Amount) made the Payment select's left edge sit ~10px to the right of
+   its own "Payment" header -- an obvious mismatch since every other
+   column's input lines up directly under its header. Column widths have
+   grown enough since this was added that the standard 4px padding already
+   gives Amount and Payment enough separation without needing the special
+   case, so this reverts Payment to the same padding as every other cell. */
 .del { cursor: pointer; color: var(--muted); border: none; background: none; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; padding: 4px; border-radius: 6px; }
 .del:hover { color: var(--danger); background: var(--danger-bg); }
 
