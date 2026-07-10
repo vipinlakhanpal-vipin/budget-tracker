@@ -76,9 +76,9 @@ button, input, select, textarea { font-family: inherit; }
   50% { opacity: .25; }
 }
 .geo-label {
-  fill: #ffffff; font-size: 13px; font-weight: 800; font-family: 'Nunito', sans-serif;
-  paint-order: stroke; stroke: #063d37; stroke-width: 3px; stroke-linejoin: round;
-  opacity: .95;
+  fill: #ffffff; font-size: 8px; font-weight: 700; font-family: 'Nunito', sans-serif;
+  paint-order: stroke; stroke: #063d37; stroke-width: 1.8px; stroke-linejoin: round;
+  opacity: .95; letter-spacing: .01em;
 }
 /* Small twinkling points scattered across the background -- turns the
    glow into a lively "night sky" rather than an empty gradient. Pure CSS,
