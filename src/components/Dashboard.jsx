@@ -160,6 +160,33 @@ function currencySymbol() {
   return CURRENCY_SYMBOLS[CURRENT_CURRENCY] || CURRENT_CURRENCY;
 }
 
+// The UAE's new official Dirham symbol (unveiled by the Central Bank in
+// March 2025 -- a Latin "D" crossed by two horizontal lines) has no Unicode
+// codepoint yet (assigned U+20C3, but not shipping in any font until
+// Unicode 18.0 lands, expected ~Sept 2026), so there's no font character to
+// just type. Drawing it as a tiny inline SVG (currentColor, sized to the
+// surrounding text) is the only faithful way to show the real symbol today
+// instead of falling back to the "AED" text abbreviation. Renders inside
+// the currency-prefix span everywhere an amount is entered/shown.
+function DirhamGlyph({ size = 12 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" style={{ flex: '0 0 auto' }}>
+      <text x="1" y="12.5" fontSize="12" fontWeight="800" fontFamily="Arial, sans-serif" fill="currentColor">D</text>
+      <line x1="0.5" y1="5.4" x2="9.5" y2="5.4" stroke="currentColor" strokeWidth="1.3" />
+      <line x1="0.5" y1="8.6" x2="9.5" y2="8.6" stroke="currentColor" strokeWidth="1.3" />
+    </svg>
+  );
+}
+
+// Prefix shown inside every amount field: the real Dirham glyph for AED
+// households, or the plain text symbol for any other currency (those all
+// already have a normal Unicode symbol -- $, £, €, ₹ -- so there's nothing
+// to substitute there).
+function CurrencyPrefix() {
+  if (CURRENT_CURRENCY === 'AED') return <DirhamGlyph />;
+  return currencySymbol();
+}
+
 function monthKey(d) {
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
 }
@@ -567,13 +594,22 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     if (isInitial) setLoading(true);
     const [{ data: cats }, { data: exps }, { data: settings }, { data: recur }, { data: mem }, { data: invites }, { data: inc }, { data: savings }] = await Promise.all([
       supabase.from('categories').select('*').eq('household_id', householdId).order('name'),
-      supabase.from('expenses').select('*').eq('household_id', householdId).order('expense_date', { ascending: false }),
+      // Secondary sort by id is required, not cosmetic -- Postgres doesn't
+      // guarantee a stable order for rows that tie on expense_date (very
+      // common; several expenses share the same day), so without a
+      // tiebreaker the row order could silently shuffle between fetches.
+      // That's exactly what made picking a Payment Source then a Bank feel
+      // broken: committing the Payment Source triggered a reload, ties
+      // re-sorted, and the row the user was mid-selection on jumped to a
+      // different position before they could pick the bank.
+      supabase.from('expenses').select('*').eq('household_id', householdId).order('expense_date', { ascending: false }).order('id', { ascending: false }),
       supabase.from('settings').select('*').eq('household_id', householdId).maybeSingle(),
-      supabase.from('recurring_expenses').select('*').eq('household_id', householdId).order('start_date'),
+      // Same tiebreaker reasoning as expenses above.
+      supabase.from('recurring_expenses').select('*').eq('household_id', householdId).order('start_date').order('id'),
       supabase.from('household_members').select('*').eq('household_id', householdId).order('joined_at'),
       supabase.from('household_invites').select('*').eq('household_id', householdId).eq('status', 'pending'),
-      supabase.from('incomes').select('*').eq('household_id', householdId).order('start_date'),
-      supabase.from('savings_goals').select('*').eq('household_id', householdId).order('start_date'),
+      supabase.from('incomes').select('*').eq('household_id', householdId).order('start_date').order('id'),
+      supabase.from('savings_goals').select('*').eq('household_id', householdId).order('start_date').order('id'),
     ]);
     setCategories(cats || []);
     setExpenses(exps || []);
@@ -2420,7 +2456,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <div className="field">
                 <label>Amount</label>
                 <div className="amount-field-wrap">
-                  <span className="currency-prefix">{currencySymbol()}</span>
+                  <span className="currency-prefix"><CurrencyPrefix /></span>
                   <input
                     type="number"
                     step="0.01"
@@ -2520,7 +2556,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       ))}
                     </select>
                     <div className="amount-field-wrap tight">
-                      <span className="currency-prefix">{currencySymbol()}</span>
+                      <span className="currency-prefix"><CurrencyPrefix /></span>
                       <input
                         type="number"
                         step="0.01"
@@ -2572,7 +2608,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <div className="field">
                 <label>Amount / month</label>
                 <div className="amount-field-wrap">
-                  <span className="currency-prefix">{currencySymbol()}</span>
+                  <span className="currency-prefix"><CurrencyPrefix /></span>
                   <input
                     type="number"
                     step="0.01"
@@ -2650,7 +2686,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       <td className="muted-small" data-label="Member">{i.member_email}</td>
                       <td data-label="Amount">
                         <div className="amount-field-wrap tight">
-                          <span className="currency-prefix">{currencySymbol()}</span>
+                          <span className="currency-prefix"><CurrencyPrefix /></span>
                           <input
                             type="number"
                             step="0.01"
@@ -2710,7 +2746,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                     <div className="field" style={{ marginBottom: 10 }}>
                       <label>Amount</label>
                       <div className="amount-field-wrap">
-                        <span className="currency-prefix">{currencySymbol()}</span>
+                        <span className="currency-prefix"><CurrencyPrefix /></span>
                         <input
                           type="number"
                           step="0.01"
@@ -2774,7 +2810,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <div className="field">
                 <label>Amount / month</label>
                 <div className="amount-field-wrap">
-                  <span className="currency-prefix">{currencySymbol()}</span>
+                  <span className="currency-prefix"><CurrencyPrefix /></span>
                   <input
                     type="number"
                     step="0.01"
@@ -2919,7 +2955,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       </td>
                       <td data-label="Amount">
                         <div className="amount-field-wrap tight">
-                          <span className="currency-prefix">{currencySymbol()}</span>
+                          <span className="currency-prefix"><CurrencyPrefix /></span>
                           <input
                             type="number"
                             step="0.01"
@@ -3046,7 +3082,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                     <div className="field" style={{ marginBottom: 10 }}>
                       <label>Amount / month</label>
                       <div className="amount-field-wrap">
-                        <span className="currency-prefix">{currencySymbol()}</span>
+                        <span className="currency-prefix"><CurrencyPrefix /></span>
                         <input
                           type="number"
                           step="0.01"
@@ -3150,7 +3186,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <div className="field">
                 <label>Amount / month</label>
                 <div className="amount-field-wrap">
-                  <span className="currency-prefix">{currencySymbol()}</span>
+                  <span className="currency-prefix"><CurrencyPrefix /></span>
                   <input
                     type="number"
                     step="0.01"
@@ -3226,7 +3262,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       </td>
                       <td data-label="Amount">
                         <div className="amount-field-wrap tight">
-                          <span className="currency-prefix">{currencySymbol()}</span>
+                          <span className="currency-prefix"><CurrencyPrefix /></span>
                           <input
                             type="number"
                             step="0.01"
@@ -3286,7 +3322,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                     <div className="field" style={{ marginBottom: 10 }}>
                       <label>Amount / month</label>
                       <div className="amount-field-wrap">
-                        <span className="currency-prefix">{currencySymbol()}</span>
+                        <span className="currency-prefix"><CurrencyPrefix /></span>
                         <input
                         type="number"
                         step="0.01"
@@ -3364,7 +3400,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   <col style={{ width: '7%' }} />
                 </colgroup>
                 <thead>
-                  <tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th><th>By</th><th>Payment</th><th></th></tr>
+                  <tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th><th style={{ textAlign: 'center' }}>By</th><th>Payment</th><th></th></tr>
                 </thead>
                 <tbody>
                   {monthExpenses.map((e) => (
@@ -3400,7 +3436,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       </td>
                       <td data-label="Amount">
                         <div className="amount-field-wrap tight">
-                          <span className="currency-prefix">{currencySymbol()}</span>
+                          <span className="currency-prefix"><CurrencyPrefix /></span>
                           <input
                             type="number"
                             step="0.01"
@@ -3412,7 +3448,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           />
                         </div>
                       </td>
-                      <td data-label="By" className="muted-small">{displayNameForEmail(e.created_by_email)}</td>
+                      <td data-label="By" className="muted-small" style={{ textAlign: 'center' }}>{displayNameForEmail(e.created_by_email)}</td>
                       <td data-label="Payment">
                         <select
                           style={{ fontSize: 11, width: 92 }}
@@ -3500,7 +3536,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   <div className="field" style={{ marginBottom: 10 }}>
                     <label>Amount</label>
                     <div className="amount-field-wrap">
-                    <span className="currency-prefix">{currencySymbol()}</span>
+                    <span className="currency-prefix"><CurrencyPrefix /></span>
                     <input
                       type="number"
                       step="0.01"
@@ -4166,7 +4202,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   <div className="field">
                     <label>Total monthly budget</label>
                     <div className="amount-field-wrap">
-                      <span className="currency-prefix">{currencySymbol()}</span>
+                      <span className="currency-prefix"><CurrencyPrefix /></span>
                       <input
                         type="number"
                         step="0.01"
@@ -4227,7 +4263,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                     <div className="cat-budget-row" key={c.id}>
                       <span>{c.name}</span>
                       <div className="amount-field-wrap tight">
-                        <span className="currency-prefix">{currencySymbol()}</span>
+                        <span className="currency-prefix"><CurrencyPrefix /></span>
                         <input
                           type="number"
                           step="0.01"
