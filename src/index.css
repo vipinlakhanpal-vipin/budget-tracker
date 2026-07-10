@@ -339,6 +339,38 @@ button, input, select, textarea { font-family: inherit; }
   background: transparent; color: var(--accent); border: 1.5px solid var(--accent);
 }
 .btn-teal.secondary:hover { background: var(--accent-light); opacity: 1; }
+
+/* Notification bell (replaces the old always-visible red "over budget" /
+   "bill due soon" banners) -- sits first in the top action row, just before
+   Help, so it reads as "check here" rather than shouting across the whole
+   page on every visit. The dropdown is absolutely positioned off the button
+   itself so it never pushes other top-bar content around when it opens. */
+.notif-bell-wrap { position: relative; }
+.notif-bell-btn {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  background: #fff; color: var(--accent); border: 1.5px solid var(--accent);
+  border-radius: 8px; width: 34px; height: 34px; padding: 0; cursor: pointer;
+}
+.notif-bell-btn:hover { background: var(--accent-light); }
+.notif-badge {
+  position: absolute; top: -6px; right: -6px; min-width: 16px; height: 16px;
+  padding: 0 4px; border-radius: 999px; background: var(--danger); color: #fff;
+  font-size: 10px; font-weight: 800; line-height: 16px; text-align: center;
+  border: 1.5px solid #fff;
+}
+.notif-dropdown {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 40;
+  width: 300px; max-width: min(80vw, 340px); max-height: 320px; overflow-y: auto;
+  background: #fff; border: 1px solid var(--border); border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.14); padding: 10px;
+}
+.notif-dropdown-title { font-size: 12px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; padding: 2px 6px 8px; }
+.notif-item {
+  font-size: 13px; font-weight: 600; color: var(--danger); background: var(--danger-bg);
+  border: 1px solid #fecaca; border-radius: 8px; padding: 8px 10px; margin-bottom: 6px;
+}
+.notif-item:last-child { margin-bottom: 0; }
+.notif-empty { font-size: 13px; color: var(--muted); padding: 10px 6px; text-align: center; }
 /* Stacked above the action buttons, both right-aligned, as one column at
    the top-right of the top bar -- this is what actually keeps the badge
    from ever overlapping the teal buttons: it takes its own row in normal

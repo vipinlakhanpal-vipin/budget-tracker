@@ -298,6 +298,42 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     setActivePanel((cur) => (cur === name ? null : name));
   }
 
+  // Bell icon (top bar, just before Help) replaces the old always-visible red
+  // "over budget" / "bill due soon" banners -- same underlying warnings, just
+  // tucked behind a click instead of shouting across the top of the page on
+  // every visit. Read/unread state is remembered per-household in
+  // localStorage (keyed by notification id, e.g. "over-cat-Credit Card EMI")
+  // so a notification only shows as unread once, even across reloads/logins,
+  // until its underlying condition actually changes (a new id shows up again).
+  const [notifOpen, setNotifOpen] = useState(false);
+  const notifSeenKey = `hearth-seen-notifs-${household.id}`;
+  const [seenNotifIds, setSeenNotifIds] = useState(() => {
+    try {
+      return new Set(JSON.parse(localStorage.getItem(notifSeenKey) || '[]'));
+    } catch {
+      return new Set();
+    }
+  });
+  const notifBellRef = useRef(null);
+  useEffect(() => {
+    if (!notifOpen) return;
+    function onDocClick(e) {
+      if (notifBellRef.current && !notifBellRef.current.contains(e.target)) setNotifOpen(false);
+    }
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [notifOpen]);
+  function markNotifsSeen(ids) {
+    setSeenNotifIds((cur) => {
+      const next = new Set(cur);
+      ids.forEach((id) => next.add(id));
+      try {
+        localStorage.setItem(notifSeenKey, JSON.stringify([...next]));
+      } catch {}
+      return next;
+    });
+  }
+
   // Mobile bottom navigation -- a fixed, thumb-reachable bar (shown only
   // below 640px via CSS) that jumps straight to the app's main destinations,
   // instead of making a phone user scroll back up to the top button rows
@@ -380,7 +416,15 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     amount: '',
     paymentSource: 'Cash',
     paymentBank: '',
+    notes: '',
   });
+  // Notes textarea starts collapsed (most expenses don't need a long
+  // description) -- the note icon just reveals it. The file itself isn't
+  // uploaded until the expense is actually saved, since the upload path
+  // needs the new row's own id (see uploadAttachment/handleAddExpense).
+  const [showExpenseNotes, setShowExpenseNotes] = useState(false);
+  const [expenseFile, setExpenseFile] = useState(null);
+  const expenseFileInputRef = useRef(null);
   // AI feature #1 (auto-categorization): a small hint shown next to the
   // Category field right after the AI picks one for you, so it's clear the
   // dropdown got auto-filled rather than silently changing. Purely
@@ -2418,13 +2462,33 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
   CURRENT_CURRENCY = currency;
 
-  const warnings = [];
+  // Notifications behind the bell icon -- same conditions that used to
+  // render as always-visible red banners across the top of the page
+  // (over total budget, over a specific category's budget, a bill due
+  // soon), just collected into one list with stable ids so read/unread
+  // status can be tracked per-notification instead of the whole page
+  // shouting the same warning on every visit.
+  const notifications = [];
   if (totalBudget > 0 && combinedOutflow > totalBudget) {
-    warnings.push(<>You&rsquo;re <Amt value={combinedOutflow - totalBudget} /> over your total monthly budget (including planned savings).</>);
+    notifications.push({
+      id: 'over-total',
+      text: <>You&rsquo;re <Amt value={combinedOutflow - totalBudget} /> over your total monthly budget (including planned savings).</>,
+    });
   }
-  if (overCategories.length) {
-    warnings.push(`Over budget in: ${overCategories.join(', ')}.`);
-  }
+  overCategories.forEach((name) => {
+    notifications.push({ id: `over-cat-${name}`, text: `Over budget in: ${name}.` });
+  });
+  dueReminders.forEach((r) => {
+    notifications.push({
+      id: `due-${r.id}`,
+      text: (
+        <>
+          <strong>{r.name}</strong> due {r.daysUntil === 0 ? 'today' : `in ${r.daysUntil} day${r.daysUntil > 1 ? 's' : ''}`} ({fmtDate(r.due_date)})
+        </>
+      ),
+    });
+  });
+  const unreadNotifCount = notifications.filter((n) => !seenNotifIds.has(n.id)).length;
 
   return (
     <div className="wrap">
@@ -2438,6 +2502,38 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             {formatVersionBadge()}
           </span>
           <div className="action-row-teal">
+            <div className="notif-bell-wrap" ref={notifBellRef}>
+              <button
+                type="button"
+                className="notif-bell-btn"
+                title="Notifications"
+                onClick={() => {
+                  const opening = !notifOpen;
+                  setNotifOpen(opening);
+                  if (opening && notifications.length) markNotifsSeen(notifications.map((n) => n.id));
+                }}
+              >
+                <svg viewBox="0 0 24 24" width="19" height="19" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 22a2.4 2.4 0 0 0 2.4-2.4h-4.8A2.4 2.4 0 0 0 12 22Z" fill="currentColor" />
+                  <path d="M19 16.2V11a7 7 0 1 0-14 0v5.2l-1.6 2.2c-.4.5 0 1.3.6 1.3h16c.6 0 1-.8.6-1.3L19 16.2Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+                </svg>
+                {unreadNotifCount > 0 && (
+                  <span className="notif-badge">{unreadNotifCount > 9 ? '9+' : unreadNotifCount}</span>
+                )}
+              </button>
+              {notifOpen && (
+                <div className="notif-dropdown">
+                  <div className="notif-dropdown-title">Notifications</div>
+                  {notifications.length === 0 ? (
+                    <div className="notif-empty">You&rsquo;re all caught up.</div>
+                  ) : (
+                    notifications.map((n) => (
+                      <div key={n.id} className="notif-item">{n.text}</div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
             <button className="btn-teal" onClick={() => togglePanel('help')}>
               {activePanel === 'help' ? 'Hide help' : 'Help'}
             </button>
@@ -2465,25 +2561,6 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
         <div className="label">{monthLabel(currentMonth)}</div>
         <button onClick={() => setCurrentMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))}>&rsaquo;</button>
       </div>
-
-      {warnings.length > 0 && (
-        <div className="warning show">
-          {warnings.map((w, i) => (
-            <span key={i}>{i > 0 ? ' ' : ''}{w}</span>
-          ))}
-        </div>
-      )}
-
-      {dueReminders.length > 0 && (
-        <div className="warning reminder">
-          {dueReminders.map((r, i) => (
-            <span key={r.id}>
-              {i > 0 && ' • '}
-              <strong>{r.name}</strong> due {r.daysUntil === 0 ? 'today' : `in ${r.daysUntil} day${r.daysUntil > 1 ? 's' : ''}`} ({fmtDate(r.due_date)})
-            </span>
-          ))}
-        </div>
-      )}
 
       <div className="grid">
         <div className="card card-budget"><div className="k">Monthly Budget</div><div className="v"><Amt value={totalBudget} /></div></div>
@@ -4232,7 +4309,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <p><strong>Budget Coach</strong> -- unlike AI Insights (one month at a time), Coach looks across your last 6 months for patterns: a category that keeps going over budget, spending trending up or down, or a savings goal that no longer looks realistic. It only ever writes out suggestions -- it never changes your Settings for you.</p>
               <p><strong>Chat BoT</strong> -- the round chat bubble in the corner (drag it anywhere on screen) answers questions about your household's own numbers across every tab -- Income, Fixed Expenses, Savings, one-off spending, and who's in the household -- and can also answer "how do I..." questions about the app itself and give suggestions when asked. It can only see the data already in the app -- nothing outside it.</p>
               <p><strong>Report</strong> -- generate a PDF for any date range, then view it on screen, download it, or email it. Each topic gets its own page -- Income, Expenses, Fixed Expenses, Savings, Spend Analysis (Pareto chart), and Recommendations -- except the Category Breakdown bar chart and the Summary table, which share one page by default and only split onto two once the chart itself grows long enough to need the room. Every table also auto-shrinks its text to try to fit on one page first, and only flows onto a second page if the list is too long even at a readable size. The last page closes with a data & privacy note.</p>
-              <p><strong>Settings</strong> -- set your total monthly budget, currency, add/rename categories, and set optional per-category budget caps (you'll get a warning banner if you go over). Every field auto-saves as you edit -- there's no Save button to click.</p>
+              <p><strong>Settings</strong> -- set your total monthly budget, currency, add/rename categories, and set optional per-category budget caps (you'll get a notification in the bell icon if you go over). Every field auto-saves as you edit -- there's no Save button to click.</p>
+              <p><strong>Notifications</strong> -- the bell icon next to Help (top-right) replaces the old always-on red banners. It shows a count of unread items -- over-total-budget, over a category's budget, or a bill due soon -- and opening it lists them and marks them read.</p>
               <p><strong>Users</strong> -- see who's active in the household and who's been invited but hasn't joined yet, with full Name/Email/Phone/Location. Owners can invite new members (which also sends them a notification email), fill in or fix anyone's Name/Phone/Location, and edit their own details under "My details" -- handy for accounts created before these fields existed. The Admin console (if you have access) is separate and never visible to other household members.</p>
               <p>All figures use your household's chosen currency, set in Settings. Your data is confidential and private to your household -- it's never shared with anyone outside it.</p>
               <p>The small <strong>{formatVersionBadge()}</strong> badge in the top-right corner shows which build you're on. The app updates itself automatically -- you'll never need to manually update anything -- but if something looks off, reload the page and check that it matches the latest you were told about.</p>
@@ -4472,7 +4550,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 {categories.some((c) => c.monthly_budget > 0) && (
                   <div style={{ marginTop: 18 }}>
                     <label className="muted-small">
-                      This month's spending vs. budget (shown here, and categories over budget also trigger the warning banner at the top)
+                      This month's spending vs. budget (shown here, and categories over budget also trigger a notification in the bell icon, top-right)
                     </label>
                     {categories.filter((c) => c.monthly_budget > 0).map((c) => {
                       const spent = byCategory[c.name] || 0;
