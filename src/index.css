@@ -744,7 +744,14 @@ td.amount { font-weight: 600; text-align: right; }
   max-width: 100%;
 }
 .table-scroll table td .amount-field-wrap.tight input[type="number"] {
-  width: calc(max(var(--amt-ch, 2), 2) * 1ch + 20px) !important;
+  /* +34px covers the currency symbol's own padding-left:15px inset plus
+     border/right-padding; 1.5ch per digit (rather than a plain 1ch) is a
+     deliberate safety margin -- a first pass at exactly 1ch + 20px came
+     up short and silently clipped the last digit off-screen (confirmed
+     live: "304" rendered as "30" with the box just barely too narrow),
+     since `ch` is based on the "0" glyph's advance width alone and this
+     font renders slightly wider than that in practice. */
+  width: calc(max(var(--amt-ch, 2), 2) * 1.5ch + 34px) !important;
   flex: 0 1 auto;
 }
 
