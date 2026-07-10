@@ -402,6 +402,21 @@ input[type="date"] {
   flex: 0 0 auto; display: inline-flex; align-items: center;
   font-size: 12px; font-weight: 800; color: var(--muted); white-space: nowrap;
 }
+/* Top-level Add forms (Add expense/Income/Fixed Expenses/Savings) only --
+   the symbol sits printed inside the input's own bordered box (left edge,
+   vertically centered) rather than as a separate element beside it, the
+   same convention as a "$" printed inside a bank app's amount field. The
+   .tight variant (table rows / mobile edit sheets, where the input is
+   already only 72-92px) keeps the older side-by-side layout since there's
+   no room to spare for inset padding at that size. */
+.amount-field-wrap:not(.tight) { position: relative; }
+.amount-field-wrap:not(.tight) .currency-prefix {
+  position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+  z-index: 1; pointer-events: none;
+}
+.amount-field-wrap:not(.tight) input[type="number"] {
+  width: 100%; padding-left: 26px;
+}
 /* A fixed, modest width (rather than stretching to fill the field) is what
    keeps the input snug against the prefix instead of leaving a big gap
    between the symbol and the digits. Table cells override this with their
@@ -420,7 +435,11 @@ input[type="date"] {
    no gap at all, the same "$4,500" convention as the editable amount
    fields above, instead of the old "AED 4,500.00" (currency code + space)
    text format. */
-.amt-tight { display: inline-flex; align-items: center; gap: 0; white-space: nowrap; }
+/* Bold everywhere it appears -- including inside lighter-weight footer
+   sentences ("Changes save automatically. <value> in combined income...")
+   so the actual figure still stands out from the surrounding muted text,
+   the same way the currency symbol itself is already bold. */
+.amt-tight { display: inline-flex; align-items: center; gap: 0; white-space: nowrap; font-weight: 800; }
 .amt-tight svg { flex: 0 0 auto; }
 
 /* All monetary/numeric values right-aligned app-wide (Amount fields, Monthly
@@ -802,7 +821,7 @@ td[data-label="Payment"] { padding-left: 14px; }
      .chat-fab base rule below (there's no mobile bottom nav to conflict
      with there). */
   .chat-fab { left: 16px; right: auto; bottom: calc(100px + env(safe-area-inset-bottom)); }
-  .chat-fab-badge { left: 14px; right: auto; bottom: calc(78px + env(safe-area-inset-bottom)); }
+  .chat-fab-badge { left: 14px; right: auto; align-items: flex-start; bottom: calc(72px + env(safe-area-inset-bottom)); }
   .chat-window {
     left: 8px; right: 8px; width: auto;
     bottom: calc(162px + env(safe-area-inset-bottom));
@@ -831,7 +850,7 @@ td[data-label="Payment"] { padding-left: 14px; }
    inherits the mobile override below. */
 .chat-fab-badge {
   position: fixed; right: 12px; bottom: 10px; z-index: 42;
-  display: inline-flex; align-items: center; gap: 3px;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 1px;
   /* No background/pill, per explicit preference -- plain teal text, with a
      soft light shadow standing in for a background so it stays readable
      over whatever's scrolled underneath (it floats over the whole page). */
@@ -840,6 +859,11 @@ td[data-label="Payment"] { padding-left: 14px; }
   text-shadow: 0 1px 3px rgba(255, 255, 255, .9), 0 0 8px rgba(255, 255, 255, .7);
   pointer-events: none; white-space: nowrap;
 }
+/* "Chat BoT" line -- sits above "AI powered" so it's immediately clear this
+   is an AI assistant, not a plain support/contact chat button. Slightly
+   larger than the caption beneath it so it reads as the primary label. */
+.chat-fab-badge-title { font-size: 11px; font-weight: 800; line-height: 1.15; }
+.chat-fab-badge-sub { display: inline-flex; align-items: center; gap: 3px; line-height: 1.15; }
 .chat-window {
   position: fixed; right: 16px; bottom: 106px; z-index: 43;
   width: 340px; max-width: calc(100vw - 32px); height: 440px; max-height: 65vh;

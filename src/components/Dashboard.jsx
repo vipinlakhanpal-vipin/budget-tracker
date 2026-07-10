@@ -4442,8 +4442,14 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           button read as crowded -- see .chat-fab in index.css. */}
       {!chatOpen && (
         <span className="chat-fab-badge">
-          <Sparkles size={11} className="ai-tag-sparkle" strokeWidth={2.25} />
-          AI powered
+          {/* "Chat BoT" line makes clear up front that this is an AI
+              assistant and not a plain contact/support chat button --
+              sits directly above the existing "AI powered" line. */}
+          <span className="chat-fab-badge-title">Chat BoT</span>
+          <span className="chat-fab-badge-sub">
+            <Sparkles size={11} className="ai-tag-sparkle" strokeWidth={2.25} />
+            AI powered
+          </span>
         </span>
       )}
       <button
