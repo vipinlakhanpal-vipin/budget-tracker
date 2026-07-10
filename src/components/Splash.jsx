@@ -1,4 +1,4 @@
-// Launch splash screen -- shown for ~4 seconds every time the app starts
+// Launch splash screen -- shown for 6 seconds every time the app starts
 // (both a fresh browser load and opening the installed PWA/home screen
 // icon), then fades out on its own. Built around the app's own name: a
 // literal hearth -- a warm flame glowing at the center of a roofline --
@@ -7,11 +7,168 @@
 // and AI "sparkle" stars drifting up so the whole scene feels alive
 // rather than a static logo. Purely cosmetic: it doesn't gate anything,
 // the real app underneath is already mounting while it plays.
+//
+// Three things layered on top of the original hearth scene:
+// 1. A stylized dotted world map sits behind everything -- an abstract,
+//    on-theme backdrop (not a literal geographic import) built from six
+//    soft continent blobs on a standard equirectangular grid, textured
+//    with a dot pattern instead of a flat fill so it reads as "map" at a
+//    glance without competing with the flame for attention.
+// 2. A pulsing location dot + "City, Country" label, placed on that same
+//    map using a real IP-based lookup (no permission prompt needed, unlike
+//    the browser's own geolocation API) -- a nice "this is YOUR Hearth"
+//    touch. Fails silently if the lookup is blocked/offline: the map still
+//    looks complete either way, there's just no dot.
+// 3. A slow ring of six feature chips (Income, Fixed Expenses, Add an
+//    expense, Savings, Chat BoT, Reports) orbiting the hearth -- a quick
+//    visual tour of what the app actually does while the brand moment
+//    plays, instead of a logo that says nothing about the product.
+import { useEffect, useState } from 'react';
 import { formatVersionBadge } from '../version.js';
 
+// Free, no-API-key IP geolocation lookup with CORS enabled for browser
+// fetches -- confirmed working live before wiring this in. Deliberately
+// not the browser's own navigator.geolocation: that pops a permission
+// prompt on every single app launch, which would be intrusive for a purely
+// decorative splash detail.
+const GEO_LOOKUP_URL = 'https://ipapi.co/json/';
+
+// Converts a real lat/lon into an x/y point on the map's own 1000x500
+// equirectangular grid (standard projection: longitude maps linearly to x,
+// latitude linearly to y). The six continent blobs below were placed on
+// this exact same grid, so a real city consistently lands in roughly the
+// right spot relative to them.
+function geoToMapXY(lat, lon) {
+  const x = ((lon + 180) / 360) * 1000;
+  const y = ((90 - lat) / 180) * 500;
+  return { x: Math.min(970, Math.max(30, x)), y: Math.min(470, Math.max(30, y)) };
+}
+
+const FEATURE_CHIPS = [
+  { label: 'Income', angle: 0 },
+  { label: 'Fixed Expenses', angle: 60 },
+  { label: 'Add an expense', angle: 120 },
+  { label: 'Savings', angle: 180 },
+  { label: 'Chat BoT', angle: 240 },
+  { label: 'Reports', angle: 300 },
+];
+
+// One small hand-drawn glyph per feature chip, kept in the same simple
+// line-art style as the coin/chart/wallet cast already floating around the
+// flame, rather than pulling in an icon library just for six tiny shapes.
+function FeatureIcon({ label }) {
+  switch (label) {
+    case 'Income':
+      return (
+        <svg width="13" height="13" viewBox="0 0 20 20" fill="none">
+          <path d="M4 16 L8 10 L12 13 L17 5" stroke="#0d9488" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M12 5 H17 V10" stroke="#0d9488" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+    case 'Fixed Expenses':
+      return (
+        <svg width="13" height="13" viewBox="0 0 20 20" fill="none">
+          <rect x="3" y="6" width="14" height="10" rx="2" stroke="#0d9488" strokeWidth="2" />
+          <path d="M3 9 H17" stroke="#0d9488" strokeWidth="2" />
+        </svg>
+      );
+    case 'Add an expense':
+      return (
+        <svg width="13" height="13" viewBox="0 0 20 20" fill="none">
+          <circle cx="10" cy="10" r="7.5" stroke="#0d9488" strokeWidth="2" />
+          <path d="M10 6 V14 M6 10 H14" stroke="#0d9488" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      );
+    case 'Savings':
+      return (
+        <svg width="13" height="13" viewBox="0 0 20 20" fill="none">
+          <path d="M4 11 Q4 6 10 6 Q16 6 16 11 Q16 15 10 15 Q6 15 4 12.5 Z" stroke="#0d9488" strokeWidth="2" />
+          <circle cx="12.5" cy="10" r="1" fill="#0d9488" />
+          <path d="M4 12 L2 13.5" stroke="#0d9488" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      );
+    case 'Chat BoT':
+      return (
+        <svg width="13" height="13" viewBox="0 0 20 20" fill="none">
+          <path d="M3 5 H17 V13 H9 L5 16 V13 H3 Z" stroke="#0d9488" strokeWidth="2" strokeLinejoin="round" />
+        </svg>
+      );
+    default:
+      return (
+        <svg width="13" height="13" viewBox="0 0 20 20" fill="none">
+          <path d="M4 16 V11 M9 16 V7 M14 16 V4" stroke="#0d9488" strokeWidth="2.2" strokeLinecap="round" />
+        </svg>
+      );
+  }
+}
+
 export default function Splash() {
+  const [geo, setGeo] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(GEO_LOOKUP_URL)
+      .then((r) => r.json())
+      .then((d) => {
+        if (cancelled || !d || d.error || typeof d.latitude !== 'number' || typeof d.longitude !== 'number') return;
+        const { x, y } = geoToMapXY(d.latitude, d.longitude);
+        const place = [d.city, d.country_name].filter(Boolean).join(', ');
+        if (place) setGeo({ place, x, y });
+      })
+      .catch(() => {
+        // Silent -- the map still looks complete with no dot, and this is
+        // a purely decorative detail, never worth surfacing an error for.
+      });
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <div className="splash-screen" aria-hidden="true">
+      {/* Stylized dotted world map -- six soft continent blobs on a shared
+          equirectangular grid (see geoToMapXY above), textured with a
+          repeating dot pattern instead of a flat fill so it reads as "map"
+          rather than random blobs, and toned to sit quietly behind the
+          hearth scene instead of competing with it. */}
+      <svg className="splash-worldmap" viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+        <defs>
+          <pattern id="mapDots" width="13" height="13" patternUnits="userSpaceOnUse">
+            <circle cx="2" cy="2" r="1.3" fill="#ffffff" fillOpacity=".5" />
+          </pattern>
+        </defs>
+        {/* North America */}
+        <path d="M60 70 Q160 40 260 65 Q320 90 300 140 Q280 190 220 205 Q160 215 110 180 Q55 140 60 70 Z" fill="url(#mapDots)" stroke="#ffffff" strokeOpacity=".18" strokeWidth="1.5" />
+        {/* South America */}
+        <path d="M270 235 Q330 220 350 270 Q365 330 335 385 Q310 425 285 400 Q265 350 270 290 Z" fill="url(#mapDots)" stroke="#ffffff" strokeOpacity=".18" strokeWidth="1.5" />
+        {/* Europe */}
+        <path d="M470 65 Q540 50 600 70 Q615 100 590 130 Q540 150 495 135 Q465 105 470 65 Z" fill="url(#mapDots)" stroke="#ffffff" strokeOpacity=".18" strokeWidth="1.5" />
+        {/* Africa */}
+        <path d="M470 150 Q560 140 610 175 Q625 230 605 290 Q580 350 530 345 Q480 320 465 250 Q455 195 470 150 Z" fill="url(#mapDots)" stroke="#ffffff" strokeOpacity=".18" strokeWidth="1.5" />
+        {/* Asia */}
+        <path d="M615 55 Q740 40 890 75 Q930 110 900 160 Q850 210 760 200 Q680 190 630 150 Q600 100 615 55 Z" fill="url(#mapDots)" stroke="#ffffff" strokeOpacity=".18" strokeWidth="1.5" />
+        {/* Australia */}
+        <path d="M815 300 Q890 285 925 315 Q935 350 900 370 Q850 380 820 355 Q805 325 815 300 Z" fill="url(#mapDots)" stroke="#ffffff" strokeOpacity=".18" strokeWidth="1.5" />
+
+        {/* Location dot -- only rendered once the IP lookup resolves. A
+            calm two-layer pulse (expanding ring + steady core) instead of
+            a static pin, so it reads as "live" rather than decorative
+            clutter, plus a small label so it's clear what it's pointing
+            at rather than an unexplained dot on a map. */}
+        {geo && (
+          <g className="geo-marker" transform={`translate(${geo.x} ${geo.y})`}>
+            <circle className="geo-ping" r="6" fill="none" stroke="#ffe27a" strokeWidth="2" />
+            <circle r="4" fill="#ffe27a" stroke="#8a5a04" strokeWidth="1" />
+            <text
+              x="0"
+              y={geo.y > 420 ? -14 : 20}
+              textAnchor="middle"
+              className="geo-label"
+            >
+              {geo.place}
+            </text>
+          </g>
+        )}
+      </svg>
+
       <div className="splash-orb splash-orb-1" />
       <div className="splash-orb splash-orb-2" />
       <div className="splash-orb splash-orb-3" />
@@ -25,6 +182,27 @@ export default function Splash() {
       <div className="splash-dust splash-dust-5" />
 
       <div className="splash-center">
+        <div className="splash-illustration-wrap">
+          {/* Slow ring of feature chips orbiting the hearth -- each chip's
+              own placement transform (rotate+translate+rotate-back) sets
+              its fixed point on the circle; the ring itself spins
+              continuously while each chip's inner content counter-spins at
+              the exact same rate so the label text stays upright and
+              readable the whole time instead of wheeling around with it. */}
+          <div className="feature-orbit">
+            {FEATURE_CHIPS.map((f) => (
+              <div
+                key={f.label}
+                className="feature-chip"
+                style={{ transform: `rotate(${f.angle}deg) translate(178px) rotate(${-f.angle}deg)` }}
+              >
+                <div className="feature-chip-inner">
+                  <FeatureIcon label={f.label} />
+                  <span>{f.label}</span>
+                </div>
+              </div>
+            ))}
+          </div>
         <div className="splash-illustration splash-illustration-hearth">
           <svg viewBox="0 0 380 300" xmlns="http://www.w3.org/2000/svg">
             <defs>
@@ -149,6 +327,7 @@ export default function Splash() {
               <circle cx="14" cy="-3" r="4" fill="#ffe27a" />
             </g>
           </svg>
+        </div>
         </div>
 
         <div className="splash-title">Hearth</div>

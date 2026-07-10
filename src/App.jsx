@@ -23,12 +23,16 @@ export default function App() {
   // moment and forces the ResetPassword screen before anything else shows.
   const [passwordRecovery, setPasswordRecovery] = useState(false);
   // Shown on every app start (fresh load or opening the installed PWA) for
-  // a couple of seconds as a branded first impression, then removed. It's
-  // purely cosmetic and doesn't block anything underneath -- auth/session
-  // resolution keeps running in the background while it's up.
+  // 6 seconds as a branded first impression, then removed. It's purely
+  // cosmetic and doesn't block anything underneath -- auth/session
+  // resolution keeps running in the background while it's up. Kept in sync
+  // with the CSS fade-out timing in .splash-screen (index.css) -- that
+  // animation-delay + duration must add up to the same 6000ms so the fade
+  // finishes exactly as this unmounts, instead of an abrupt cut or a
+  // lingering invisible overlay.
   const [showSplash, setShowSplash] = useState(true);
   useEffect(() => {
-    const t = setTimeout(() => setShowSplash(false), 4000);
+    const t = setTimeout(() => setShowSplash(false), 6000);
     return () => clearTimeout(t);
   }, []);
 

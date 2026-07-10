@@ -39,7 +39,31 @@ button, input, select, textarea { font-family: inherit; }
     radial-gradient(circle at 50% 38%, #22b8a8 0%, #109c8c 32%, #0b6b60 62%, #063d37 100%);
   pointer-events: none;
   animation: splash-fade-out .5s ease forwards;
-  animation-delay: 3.5s;
+  /* Splash is on screen for a full 6s (kept in sync with the setTimeout in
+     App.jsx) -- delay the fade until 5.5s so the .5s fade-out finishes
+     exactly as React unmounts it. */
+  animation-delay: 5.5s;
+}
+
+/* Stylized dotted world map -- a quiet full-bleed backdrop behind the
+   whole scene. Deliberately abstract/on-theme rather than a pixel-perfect
+   geographic import: six soft continent blobs share one equirectangular
+   grid with the location dot (see Splash.jsx geoToMapXY), so a real city
+   still lands in roughly the right relative spot. Kept low-opacity and
+   behind the orbs/dust so it reads as texture, not a competing subject. */
+.splash-worldmap {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 130vmax; height: 65vmax; opacity: .3; z-index: 0;
+}
+.geo-marker circle:not(.geo-ping) { filter: drop-shadow(0 0 4px rgba(255, 226, 122, .9)); }
+.geo-ping { transform-box: fill-box; transform-origin: center; animation: geo-ping-out 2.2s ease-out infinite; }
+@keyframes geo-ping-out {
+  0% { transform: scale(.6); opacity: .9; }
+  75%, 100% { transform: scale(2.6); opacity: 0; }
+}
+.geo-label {
+  fill: #ffffff; font-size: 20px; font-weight: 800; font-family: 'Nunito', sans-serif;
+  paint-order: stroke; stroke: #063d37; stroke-width: 5px; stroke-linejoin: round;
 }
 /* Small twinkling points scattered across the background -- turns the
    glow into a lively "night sky" rather than an empty gradient. Pure CSS,
@@ -79,6 +103,48 @@ button, input, select, textarea { font-family: inherit; }
 }
 .splash-illustration { width: 360px; max-width: 92vw; filter: drop-shadow(0 18px 30px rgba(0, 0, 0, .24)); }
 .splash-illustration svg { width: 100%; height: auto; display: block; }
+
+/* Wraps the hearth illustration + its orbiting feature ring so the ring is
+   sized/centered relative to the illustration specifically, not the whole
+   splash-center column (which also stacks the title/tagline/etc. below). */
+.splash-illustration-wrap { position: relative; display: flex; align-items: center; justify-content: center; }
+
+/* Six feature chips (Income, Fixed Expenses, Add an expense, Savings, Chat
+   BoT, Reports) slowly orbiting the hearth -- a quick visual tour of what
+   the app actually does, playing during the same brand moment a plain
+   logo would otherwise waste. Each chip's own transform
+   (rotate+translate+rotate-back) fixes its point on the ring; the ring
+   itself spins continuously via orbit-spin while every chip's inner
+   content runs the exact opposite spin (orbit-spin-reverse, same 26s
+   duration) so the icon+label stays upright and legible the whole time
+   instead of wheeling around with the ring. */
+.feature-orbit {
+  position: absolute; width: 400px; height: 400px; max-width: 108vw; max-height: 108vw;
+  animation: orbit-spin 26s linear infinite; pointer-events: none;
+}
+.feature-chip {
+  position: absolute; top: 50%; left: 50%; width: 0; height: 0;
+}
+.feature-chip-inner {
+  display: flex; align-items: center; gap: 5px;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, .92); border-radius: 999px;
+  padding: 5px 10px 5px 8px; white-space: nowrap;
+  font-size: 10.5px; font-weight: 800; color: #0f2a2e;
+  box-shadow: 0 4px 10px rgba(6, 61, 55, .28);
+  opacity: 0;
+  /* Two animations, deliberately on two DIFFERENT properties (opacity vs.
+     transform) rather than sharing one -- orbit-spin-reverse must own
+     "transform" for the chip's entire 6s life to keep cancelling the
+     ring's spin, so the entrance effect is opacity-only (chip-fade-in)
+     instead of reusing the app's usual scale/translateY splash-pop, which
+     would fight orbit-spin-reverse for the same transform property and
+     make one of the two effects silently stop working. */
+  animation: orbit-spin-reverse 26s linear infinite, chip-fade-in .5s ease .5s both;
+}
+@keyframes orbit-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes orbit-spin-reverse { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(-360deg); } }
+@keyframes chip-fade-in { from { opacity: 0; } to { opacity: 1; } }
 
 /* The roofline draws itself in like a single pen stroke as the splash
    opens -- stroke-dasharray/dashoffset animated from fully hidden to fully
