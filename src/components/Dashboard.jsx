@@ -51,6 +51,15 @@ const FREQUENCIES = [
 // How an expense was paid. Bank name only matters (and only shows) for the
 // two card options -- Cash has nothing to pick.
 const PAYMENT_SOURCES = ['Cash', 'Credit Card', 'Debit Card'];
+// Fixed/recurring expenses get a 4th option: some of them (health insurance,
+// a salary loan EMI) are deducted straight from the paycheck rather than
+// paid via cash or a card, so they don't fit either existing bucket. Only
+// offered on the Fixed Expenses forms/table, not one-off expenses.
+const RECURRING_PAYMENT_SOURCES = [...PAYMENT_SOURCES, 'Salary'];
+const CARD_PAYMENT_SOURCES = ['Credit Card', 'Debit Card'];
+// Free-tier household size cap: the owner plus this many additional people
+// (active members + pending invites combined).
+const MAX_ADDITIONAL_USERS = 2;
 // Common UAE retail banks, since this household is based in Dubai -- "Other"
 // covers anything not listed rather than blocking entry.
 const BANKS = [
@@ -168,7 +177,14 @@ function currencySymbol() {
 // surrounding text) is the only faithful way to show the real symbol today
 // instead of falling back to the "AED" text abbreviation. Renders inside
 // the currency-prefix span everywhere an amount is entered/shown.
-function DirhamGlyph({ size = 12 }) {
+// size defaults to "1em" rather than a fixed pixel value so the glyph
+// always scales with whatever font-size its surrounding text is using --
+// small next to a table figure, larger next to a big bold dashboard
+// number -- instead of staying visually tiny/mismatched against large
+// values (the em unit resolves against the <svg>'s own inherited
+// font-size, and the fixed viewBox keeps the D + double-line drawing
+// proportioned correctly at any size).
+function DirhamGlyph({ size = '1em' }) {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none" style={{ flex: '0 0 auto' }}>
       <text x="1" y="12.5" fontSize="12" fontWeight="800" fontFamily="Arial, sans-serif" fill="currentColor">D</text>
@@ -1366,7 +1382,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       frequency: newRecurring.frequency,
       due_date: newRecurring.dueDate || null,
       payment_source: newRecurring.paymentSource || null,
-      payment_bank: newRecurring.paymentSource === 'Cash' ? null : (newRecurring.paymentBank || null),
+      payment_bank: CARD_PAYMENT_SOURCES.includes(newRecurring.paymentSource) ? (newRecurring.paymentBank || null) : null,
       created_by: session.user.id,
     });
     if (error) {
@@ -1401,7 +1417,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
         frequency: merged.frequency || 'monthly',
         due_date: merged.dueDate || null,
         payment_source: merged.paymentSource || null,
-        payment_bank: merged.paymentSource === 'Cash' ? null : (merged.paymentBank || null),
+        payment_bank: CARD_PAYMENT_SOURCES.includes(merged.paymentSource) ? (merged.paymentBank || null) : null,
       })
       .eq('id', id);
     if (error) alert('Could not update: ' + error.message);
@@ -1487,6 +1503,15 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     e.preventDefault();
     const email = inviteEmail.trim();
     if (!email) return;
+    // Free-tier cap: owner + 2 additional people per household. Pending
+    // (not-yet-accepted) invites count toward the cap too -- otherwise an
+    // owner could stack up unlimited pending invites and get more than 2
+    // extra people the moment they all sign up.
+    const additionalCount = Math.max(0, members.length - 1) + pendingInvites.length;
+    if (additionalCount >= MAX_ADDITIONAL_USERS) {
+      setInviteStatus('limit-reached');
+      return;
+    }
     setInviteStatus('sending');
     const { data: existing } = await supabase
       .from('household_invites')
@@ -2305,7 +2330,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
   const warnings = [];
   if (totalBudget > 0 && combinedOutflow > totalBudget) {
-    warnings.push(`You're ${fmt(combinedOutflow - totalBudget)} over your total monthly budget (including planned savings).`);
+    warnings.push(<>You&rsquo;re <Amt value={combinedOutflow - totalBudget} /> over your total monthly budget (including planned savings).</>);
   }
   if (overCategories.length) {
     warnings.push(`Over budget in: ${overCategories.join(', ')}.`);
@@ -2335,9 +2360,11 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             <button className="btn-teal" onClick={() => togglePanel('settings')}>
               {activePanel === 'settings' ? 'Hide settings' : 'Settings'}
             </button>
-            <button className="btn-teal" onClick={() => togglePanel('members')}>
-              {activePanel === 'members' ? 'Hide users' : 'Users'}
-            </button>
+            {isOwner && (
+              <button className="btn-teal" onClick={() => togglePanel('members')}>
+                {activePanel === 'members' ? 'Hide users' : 'Users'}
+              </button>
+            )}
             <button className="btn-teal" onClick={handleSignOut}>Sign out</button>
           </div>
         </div>
@@ -2349,7 +2376,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
         <button onClick={() => setCurrentMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))}>&rsaquo;</button>
       </div>
 
-      {warnings.length > 0 && <div className="warning show">{warnings.join(' ')}</div>}
+      {warnings.length > 0 && (
+        <div className="warning show">
+          {warnings.map((w, i) => (
+            <span key={i}>{i > 0 ? ' ' : ''}{w}</span>
+          ))}
+        </div>
+      )}
 
       {dueReminders.length > 0 && (
         <div className="warning reminder">
@@ -2884,14 +2917,14 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 <label>Payment Source</label>
                 <select
                   value={newRecurring.paymentSource}
-                  onChange={(e) => setNewRecurring({ ...newRecurring, paymentSource: e.target.value, paymentBank: e.target.value === 'Cash' ? '' : newRecurring.paymentBank })}
+                  onChange={(e) => setNewRecurring({ ...newRecurring, paymentSource: e.target.value, paymentBank: CARD_PAYMENT_SOURCES.includes(e.target.value) ? newRecurring.paymentBank : '' })}
                 >
-                  {PAYMENT_SOURCES.map((p) => (
+                  {RECURRING_PAYMENT_SOURCES.map((p) => (
                     <option key={p} value={p}>{p}</option>
                   ))}
                 </select>
               </div>
-              {newRecurring.paymentSource !== 'Cash' && (
+              {CARD_PAYMENT_SOURCES.includes(newRecurring.paymentSource) && (
                 <div className="field" style={{ flex: '0 1 190px', minWidth: 150 }}>
                   <label>Bank</label>
                   <select value={newRecurring.paymentBank} onChange={(e) => setNewRecurring({ ...newRecurring, paymentBank: e.target.value })}>
@@ -2941,8 +2974,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <div className="table-scroll">
               <table className="responsive-table" style={{ marginTop: 14, fontSize: 12 }}>
                 <colgroup>
-                  <col style={{ width: '14%' }} /><col style={{ width: '10%' }} /><col style={{ width: '9%' }} />
-                  <col style={{ width: '9%' }} /><col style={{ width: '9%' }} /><col style={{ width: '9%' }} />
+                  <col style={{ width: '14%' }} /><col style={{ width: '13%' }} /><col style={{ width: '9%' }} />
+                  <col style={{ width: '8%' }} /><col style={{ width: '8%' }} /><col style={{ width: '8%' }} />
                   <col style={{ width: '10%' }} /><col style={{ width: '16%' }} /><col style={{ width: '7%' }} />
                 </colgroup>
                 <thead>
@@ -2962,7 +2995,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       </td>
                       <td data-label="Category">
                         <select
-                          style={{ fontSize: 12 }}
+                          style={{ fontSize: 12, width: '100%' }}
                           value={recurringDrafts[r.id]?.categoryId ?? ''}
                           onChange={(e) => commitRecurringField(r.id, 'categoryId', e.target.value)}
                         >
@@ -3029,11 +3062,11 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           value={recurringDrafts[r.id]?.paymentSource ?? 'Cash'}
                           onChange={(e) => commitRecurringField(r.id, 'paymentSource', e.target.value)}
                         >
-                          {PAYMENT_SOURCES.map((p) => (
+                          {RECURRING_PAYMENT_SOURCES.map((p) => (
                             <option key={p} value={p}>{p}</option>
                           ))}
                         </select>
-                        {(recurringDrafts[r.id]?.paymentSource ?? 'Cash') !== 'Cash' && (
+                        {CARD_PAYMENT_SOURCES.includes(recurringDrafts[r.id]?.paymentSource ?? 'Cash') && (
                           <select
                             style={{ fontSize: 11, width: 110, marginTop: 4 }}
                             value={recurringDrafts[r.id]?.paymentBank ?? ''}
@@ -3155,12 +3188,12 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         value={recurringDrafts[r.id]?.paymentSource ?? 'Cash'}
                         onChange={(e) => commitRecurringField(r.id, 'paymentSource', e.target.value)}
                       >
-                        {PAYMENT_SOURCES.map((p) => (
+                        {RECURRING_PAYMENT_SOURCES.map((p) => (
                           <option key={p} value={p}>{p}</option>
                         ))}
                       </select>
                     </div>
-                    {(recurringDrafts[r.id]?.paymentSource ?? 'Cash') !== 'Cash' && (
+                    {CARD_PAYMENT_SOURCES.includes(recurringDrafts[r.id]?.paymentSource ?? 'Cash') && (
                       <div className="field" style={{ marginBottom: 16 }}>
                         <label>Bank</label>
                         <select
@@ -3413,8 +3446,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <div className="table-scroll">
               <table className="responsive-table" style={{ fontSize: 12 }}>
                 <colgroup>
-                  <col style={{ width: '12%' }} /><col style={{ width: '10%' }} /><col style={{ width: '24%' }} />
-                  <col style={{ width: '10%' }} /><col style={{ width: '16%' }} /><col style={{ width: '8%' }} />
+                  <col style={{ width: '12%' }} /><col style={{ width: '10%' }} /><col style={{ width: '21%' }} />
+                  <col style={{ width: '10%' }} /><col style={{ width: '20%' }} /><col style={{ width: '7%' }} />
                   <col style={{ width: '7%' }} />
                 </colgroup>
                 <thead>
@@ -3979,6 +4012,18 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                     <div className="muted-small" style={{ marginTop: 20, marginBottom: 4, fontWeight: 600 }}>
                       Invite someone new
                     </div>
+                    {Math.max(0, members.length - 1) + pendingInvites.length >= MAX_ADDITIONAL_USERS ? (
+                      <div
+                        className="muted-small"
+                        style={{
+                          marginTop: 4, padding: '12px 14px', borderRadius: 10,
+                          background: 'var(--accent-light)', border: '1px solid var(--border)', color: 'var(--text)',
+                        }}
+                      >
+                        <strong>Free plan limit reached</strong> -- this household already has the owner plus {MAX_ADDITIONAL_USERS} more people (active + pending). Remove a pending invite or an existing member to invite someone else, or upgrade for more seats.
+                      </div>
+                    ) : (
+                    <>
                     <form className="row" onSubmit={handleSendInvite}>
                       <input
                         type="email"
@@ -3996,8 +4041,10 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       <button className="btn secondary small" type="submit">Invite</button>
                     </form>
                     <div className="muted-small" style={{ marginTop: 6 }}>
-                      They'll land in this household automatically the moment they sign up (or sign in) with this exact email address -- an invite notification email is also sent to let them know, once you've set up email sending (see Settings/Vercel setup).
+                      They'll land in this household automatically the moment they sign up (or sign in) with this exact email address -- an invite notification email is also sent to let them know, once you've set up email sending (see Settings/Vercel setup). Free plan: owner + {MAX_ADDITIONAL_USERS} more people.
                     </div>
+                    </>
+                    )}
                     {inviteStatus === 'sending' && (
                       <div className="muted-small" style={{ marginTop: 6 }}>Sending...</div>
                     )}
@@ -4365,10 +4412,12 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           <FileText size={20} strokeWidth={2.2} />
           <span>Report</span>
         </button>
-        <button className={activePanel === 'members' ? 'active' : ''} onClick={() => togglePanel('members')}>
-          <UsersIcon size={20} strokeWidth={2.2} />
-          <span>Users</span>
-        </button>
+        {isOwner && (
+          <button className={activePanel === 'members' ? 'active' : ''} onClick={() => togglePanel('members')}>
+            <UsersIcon size={20} strokeWidth={2.2} />
+            <span>Users</span>
+          </button>
+        )}
         <button className={activePanel === 'settings' ? 'active' : ''} onClick={() => togglePanel('settings')}>
           <SettingsIcon size={20} strokeWidth={2.2} />
           <span>Settings</span>

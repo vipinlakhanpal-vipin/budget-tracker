@@ -151,6 +151,20 @@ button, input, select, textarea { font-family: inherit; }
   0%, 100% { transform: translateY(0) rotate(0deg); }
   50% { transform: translateY(-7px) rotate(4deg); }
 }
+/* The coin's own continuous "flip" -- squashing to near-zero width at the
+   midpoint mimics a coin turning edge-on, a genuine spin rather than a
+   flat icon just bobbing in place. A brief diagonal shine flashes right
+   as it turns face-on again for a bit of shimmer/premium polish. */
+.coin-spin { transform-box: fill-box; transform-origin: center; animation: coin-flip 3.2s ease-in-out infinite; }
+@keyframes coin-flip {
+  0%, 100% { transform: scaleX(1); }
+  50% { transform: scaleX(.12); }
+}
+.coin-shine { transform-box: fill-box; transform-origin: center; opacity: 0; animation: coin-shine-sweep 3.2s ease-in-out infinite; }
+@keyframes coin-shine-sweep {
+  0%, 38%, 62%, 100% { opacity: 0; }
+  50% { opacity: .9; }
+}
 .splash-title {
   color: #ffffff; font-size: 26px; font-weight: 800; letter-spacing: .01em; text-align: center;
   text-shadow: 0 2px 18px rgba(255, 255, 255, .35);

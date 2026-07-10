@@ -113,12 +113,22 @@ export default function Splash() {
               <path d="M0 -6 L1.5 -1.5 L6 0 L1.5 1.5 L0 6 L-1.5 1.5 L-6 0 L-1.5 -1.5 Z" fill="#ffffff" transform="translate(190 60)" />
             </g>
 
-            {/* Left of the hearth: a coin gently bobbing and turning -- a
-                simple, universally-readable "money" motif to keep the
-                scene about budgeting, not just fire. */}
+            {/* Left of the hearth: a spinning Dirham coin -- the app's own
+                real currency glyph (the same "D + two lines" mark used
+                throughout the app) minted onto a coin, rather than a
+                generic/mismatched "$", so the motif is actually Hearth's
+                own money, not a stock icon. A slow scaleX "flip" plus a
+                diagonal shine sweep gives it a genuine coin-spin feel
+                instead of just sitting there. */}
             <g className="splash-float splash-float-coin">
-              <circle r="22" fill="url(#coinFace)" stroke="#c88a06" strokeWidth="2" transform="translate(50 168)" />
-              <text x="50" y="176" fontSize="22" fontWeight="800" fontFamily="Arial, sans-serif" fill="#8a5a04" textAnchor="middle">$</text>
+              <g className="coin-spin" transform="translate(50 168)">
+                <circle r="23" fill="url(#coinFace)" stroke="#c88a06" strokeWidth="2" />
+                <circle r="17" fill="none" stroke="#c88a06" strokeOpacity=".55" strokeWidth="1.4" />
+                <text x="-2" y="7" fontSize="19" fontWeight="800" fontFamily="Arial, sans-serif" fill="#8a5a04" textAnchor="middle">D</text>
+                <line x1="-10" y1="-2.6" x2="7" y2="-2.6" stroke="#8a5a04" strokeWidth="2" />
+                <line x1="-10" y1="2.6" x2="7" y2="2.6" stroke="#8a5a04" strokeWidth="2" />
+                <path className="coin-shine" d="M-23 -6 A23 23 0 0 1 -2 -22" stroke="#fff8e1" strokeOpacity=".8" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+              </g>
             </g>
 
             {/* Right of the hearth: a small rising trend line with bars --
