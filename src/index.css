@@ -446,7 +446,20 @@ input[type="date"] {
    sentences ("Changes save automatically. <value> in combined income...")
    so the actual figure still stands out from the surrounding muted text,
    the same way the currency symbol itself is already bold. */
-.amt-tight { display: inline-flex; align-items: center; gap: 0; white-space: nowrap; font-weight: 800; }
+/* Root-cause fix for "amount sits above its surrounding text" (reported in
+   the over-budget warning banner, mobile transaction cards, and anywhere
+   else a figure is inline with plain text): .amt-tight is inline-flex so the
+   Dirham glyph + number sit with zero gap, but browsers don't compute a real
+   text baseline for a flex container with align-items:center -- they fall
+   back to using the box's own BOTTOM edge as its "baseline" for lining up
+   with surrounding text, which pushes the whole box (and everything inside
+   it) up by roughly its own height. Verified live (measuring this span's
+   rect against a plain sibling text node's rect): default vertical-align
+   (baseline) was consistently ~2-3px too high; vertical-align: text-bottom
+   landed at an exact 0px difference. This single rule fixes every place
+   amt-tight is used inline with text, so the old per-component nudge on
+   .mobile-txn-amount is no longer needed and has been removed. */
+.amt-tight { display: inline-flex; align-items: center; gap: 0; white-space: nowrap; font-weight: 800; vertical-align: text-bottom; }
 .amt-tight svg { flex: 0 0 auto; }
 
 /* All monetary/numeric values right-aligned app-wide (Amount fields, Monthly
@@ -845,17 +858,13 @@ td.amount { font-weight: 600; text-align: right; }
      two text lines, which reads as "sitting a bit high" relative to the sub
      line underneath. Top-aligning the row instead, with a matching
      line-height on the title, puts the amount's BOX directly level with
-     the title's box. On top of that, the AED Dirham glyph is a custom SVG
-     (DirhamGlyph) with an asymmetric viewBox, drawn a little high inside its
-     own box -- so even with matching box tops, the visible glyph+number
-     still read as sitting slightly above the title text's own ink. This
-     small relative nudge shifts the rendered amount down those couple of
-     pixels so it visually lines up with the title, not just box-model-lines
-     up with it. */
+     the title's box. (The remaining few px of visible misalignment turned
+     out to be a separate, app-wide issue in .amt-tight itself -- fixed once,
+     at the source, via vertical-align: text-bottom on that class -- so no
+     per-component nudge is needed here anymore.) */
   .mobile-txn-amount {
     flex: 0 0 auto; font-weight: 800; font-size: 15px; color: var(--text);
     padding-left: 4px; line-height: 1.35;
-    position: relative; top: 2px;
   }
   .mobile-delete-btn {
     display: flex; align-items: center; justify-content: center; gap: 8px;
