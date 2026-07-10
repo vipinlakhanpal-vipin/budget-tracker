@@ -1,10 +1,11 @@
 // Launch splash screen -- shown for ~4 seconds every time the app starts
 // (both a fresh browser load and opening the installed PWA/home screen
 // icon), then fades out on its own. A bigger, bolder illustrated scene --
-// a person celebrating a savings win next to a rising budget/spending bar
-// chart, with a big held-up coin and confetti -- rather than a piggy bank
-// or scrolling icon rows. Purely cosmetic: it doesn't gate anything, the
-// real app underneath is already mounting while it plays.
+// a woman celebrating a savings win next to a rising budget/spending bar
+// chart, with a big held-up coin, confetti, and a few AI "sparkle" accents
+// tying the moment to the app's AI-powered features -- rather than a piggy
+// bank or scrolling icon rows. Purely cosmetic: it doesn't gate anything,
+// the real app underneath is already mounting while it plays.
 import { formatVersionBadge } from '../version.js';
 
 export default function Splash() {
@@ -21,6 +22,10 @@ export default function Splash() {
               <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0" stopColor="#ffd9b3" />
                 <stop offset="1" stopColor="#f3b785" />
+              </linearGradient>
+              <linearGradient id="hairGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stopColor="#5a3d2b" />
+                <stop offset="1" stopColor="#2e1e15" />
               </linearGradient>
               <linearGradient id="shirt" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0" stopColor="#5eead4" />
@@ -60,9 +65,14 @@ export default function Splash() {
               <path d="M116 142 L131 142 L131 157" stroke="#ffffff" strokeWidth="5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
             </g>
 
-            {/* the person -- simple flat-illustration figure celebrating,
-                one arm raised holding up a big coin */}
+            {/* the person -- a woman celebrating, one arm raised holding up
+                a big coin. Long hair swept into a side ponytail, earrings,
+                and lashes read clearly feminine at this simplified
+                flat-illustration scale. */}
             <g className="splash-person">
+              {/* ponytail, drawn behind the body so it reads as trailing
+                  from the head down her back */}
+              <path d="M256 132 Q276 150 270 190 Q266 214 248 224 Q262 196 258 168 Q256 148 244 136 Z" fill="url(#hairGrad)" />
               {/* legs */}
               <rect x="206" y="255" width="20" height="47" rx="9" fill="url(#pants)" />
               <rect x="238" y="255" width="20" height="47" rx="9" fill="url(#pants)" />
@@ -78,11 +88,22 @@ export default function Splash() {
               </g>
               {/* head */}
               <circle cx="230" cy="155" r="28" fill="url(#skin)" />
-              {/* hair */}
-              <path d="M202 148 Q204 116 231 114 Q259 114 261 143 Q253 130 240 132 Q244 122 237 116 Q224 118 216 128 Q206 132 202 148 Z" fill="#3b2b26" />
+              {/* hair -- longer, swept to one side with a side-swept fringe
+                  and a small strand tucked behind the ear, plus a hair tie
+                  where the ponytail gathers */}
+              <path d="M200 150 Q200 114 230 112 Q262 112 264 145 Q258 128 246 124 Q252 116 242 112 Q226 110 214 122 Q200 128 200 150 Z" fill="url(#hairGrad)" />
+              <path d="M203 145 Q199 168 208 184 Q202 166 208 148 Z" fill="url(#hairGrad)" />
+              <circle cx="252" cy="138" r="5" fill="#5a3d2b" />
+              {/* earring */}
+              <circle cx="256" cy="168" r="2.6" fill="#ffe27a" />
               {/* face */}
               <circle cx="220" cy="154" r="3" fill="#20232a" />
               <circle cx="240" cy="154" r="3" fill="#20232a" />
+              {/* lashes */}
+              <path d="M215 150 L211 147.5" stroke="#20232a" strokeWidth="1.6" strokeLinecap="round" />
+              <path d="M218 149 L215 146" stroke="#20232a" strokeWidth="1.6" strokeLinecap="round" />
+              <path d="M245 150 L249 147.5" stroke="#20232a" strokeWidth="1.6" strokeLinecap="round" />
+              <path d="M242 149 L245 146" stroke="#20232a" strokeWidth="1.6" strokeLinecap="round" />
               <path d="M217 166 Q230 176 243 166" stroke="#20232a" strokeWidth="2.6" fill="none" strokeLinecap="round" />
               <ellipse cx="212" cy="163" rx="5.5" ry="3.4" fill="#ff9b9b" opacity="0.55" />
               <ellipse cx="248" cy="163" rx="5.5" ry="3.4" fill="#ff9b9b" opacity="0.55" />
@@ -101,10 +122,31 @@ export default function Splash() {
             <g className="confetti confetti-4"><rect width="8" height="13" rx="2.5" fill="#f6b93b" transform="translate(330 190) rotate(30)" /></g>
             <g className="confetti confetti-5"><circle r="5" fill="#ffffff" transform="translate(32 210)" /></g>
             <g className="confetti confetti-6"><rect width="8" height="12" rx="2.5" fill="#99f6e4" transform="translate(150 250) rotate(-10)" /></g>
+
+            {/* AI sparkle accents -- small twinkling 4-point stars in the
+                same purple/indigo used for every "AI powered" tag
+                elsewhere in the app, so the splash visually foreshadows
+                that this is an AI-assisted budget tracker before the
+                dashboard even loads. */}
+            <g className="splash-sparkle splash-sparkle-1">
+              <path d="M0 -10 L2.4 -2.4 L10 0 L2.4 2.4 L0 10 L-2.4 2.4 L-10 0 L-2.4 -2.4 Z" fill="#c4b5fd" transform="translate(120 76)" />
+            </g>
+            <g className="splash-sparkle splash-sparkle-2">
+              <path d="M0 -7 L1.7 -1.7 L7 0 L1.7 1.7 L0 7 L-1.7 1.7 L-7 0 L-1.7 -1.7 Z" fill="#a855f7" transform="translate(322 100)" />
+            </g>
+            <g className="splash-sparkle splash-sparkle-3">
+              <path d="M0 -6 L1.5 -1.5 L6 0 L1.5 1.5 L0 6 L-1.5 1.5 L-6 0 L-1.5 -1.5 Z" fill="#ffffff" transform="translate(178 100)" />
+            </g>
           </svg>
         </div>
 
         <div className="splash-title">Hearth</div>
+        <div className="splash-ai-tag">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8" />
+          </svg>
+          AI-powered budgeting
+        </div>
         <div className="splash-tagline">Track together. Spend smarter.</div>
         <div className="splash-version">{formatVersionBadge()}</div>
       </div>
