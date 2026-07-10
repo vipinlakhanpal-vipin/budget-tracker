@@ -610,6 +610,22 @@ td.amount { font-weight: 600; text-align: right; }
   font-size: 11px;
 }
 
+/* Amount cells were stretching their "$4,500"-style symbol+number block to
+   fill the entire column width (inherited from the width:100% rule above),
+   so any value shorter than the column's worst-case width just sat flush
+   against the LEFT edge with visible empty space to its right -- read as
+   "not right-aligned" compared to every other numeric figure in the app.
+   Giving the whole block a fixed, modest width and pushing it to the
+   column's right edge with margin-left:auto keeps the symbol snug against
+   its own digits (unchanged) while making the figure itself sit flush
+   right, matching how amounts are aligned everywhere else. max-width:100%
+   keeps this safe on any column narrower than 76px. */
+.table-scroll table td .amount-field-wrap.tight {
+  width: 76px;
+  max-width: 100%;
+  margin-left: auto;
+}
+
 /* On narrower screens, wide fixed-column tables (e.g. Fixed Expenses) exceed
    the visible panel width and .table-scroll's horizontal scroll kicks in --
    without this, the trailing delete-icon column just scrolls out of view

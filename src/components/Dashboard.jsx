@@ -3416,7 +3416,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       <td data-label="Name">
                         <input
                           type="text"
-                          style={{ width: 110, fontSize: 11 }}
+                          style={{ width: '100%', minWidth: 0, fontSize: 11 }}
                           value={savingsDrafts[s.id]?.name ?? ''}
                           onChange={(e) => updateSavingDraftField(s.id, 'name', e.target.value)}
                           onBlur={(e) => commitSavingField(s.id, 'name', e.target.value)}
@@ -3429,7 +3429,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                             type="number"
                             step="0.01"
                             min="0"
-                            style={{ width: 80, fontSize: 11 }}
+                            style={{ width: '100%', minWidth: 0, fontSize: 11 }}
                             value={savingsDrafts[s.id]?.amount ?? ''}
                             onChange={(e) => updateSavingDraftField(s.id, 'amount', e.target.value)}
                             onBlur={(e) => commitSavingField(s.id, 'amount', e.target.value)}
@@ -4226,7 +4226,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <p><strong>Spending by category</strong> chart -- toggle between Pie, Bar, Pareto, and Treemap. The Pie groups smaller categories into "Other" to stay readable; Bar and Treemap show every category individually. The totals cards above show your combined income, combined expenses (split into Regular, Fixed, and Savings), and what's left of your budget and income after all three are accounted for.</p>
               <p><strong>AI Insights</strong> -- tap Generate below the chart for a short AI-written summary of the month you're viewing (spending patterns, whether you're over budget, and a couple of concrete suggestions). It only runs when you tap the button -- never automatically -- and Refresh regenerates it if your numbers have changed.</p>
               <p><strong>Budget Coach</strong> -- unlike AI Insights (one month at a time), Coach looks across your last 6 months for patterns: a category that keeps going over budget, spending trending up or down, or a savings goal that no longer looks realistic. It only ever writes out suggestions -- it never changes your Settings for you.</p>
-              <p><strong>Chat</strong> -- the round chat bubble in the corner answers questions about your household's own numbers ("how much did I spend on Dining Out this month?", "am I over budget?"). It can only see the data already in the app -- nothing outside it.</p>
+              <p><strong>Chat BoT</strong> -- the round chat bubble in the corner (drag it anywhere on screen) answers questions about your household's own numbers across every tab -- Income, Fixed Expenses, Savings, one-off spending, and who's in the household -- and can also answer "how do I..." questions about the app itself and give suggestions when asked. It can only see the data already in the app -- nothing outside it.</p>
               <p><strong>Report</strong> -- generate a PDF for any date range, then view it on screen, download it, or email it. Each topic gets its own page -- Income, Expenses, Fixed Expenses, Savings, Spend Analysis (Pareto chart), and Recommendations -- except the Category Breakdown bar chart and the Summary table, which share one page by default and only split onto two once the chart itself grows long enough to need the room. Every table also auto-shrinks its text to try to fit on one page first, and only flows onto a second page if the list is too long even at a readable size. The last page closes with a data & privacy note.</p>
               <p><strong>Settings</strong> -- set your total monthly budget, currency, add/rename categories, and set optional per-category budget caps (you'll get a warning banner if you go over). Every field auto-saves as you edit -- there's no Save button to click.</p>
               <p><strong>Users</strong> -- see who's active in the household and who's been invited but hasn't joined yet, with full Name/Email/Phone/Location. Owners can invite new members (which also sends them a notification email), fill in or fix anyone's Name/Phone/Location, and edit their own details under "My details" -- handy for accounts created before these fields existed. The Admin console (if you have access) is separate and never visible to other household members.</p>
