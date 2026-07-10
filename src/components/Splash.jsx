@@ -9,16 +9,18 @@
 // the real app underneath is already mounting while it plays.
 //
 // Three things layered on top of the original hearth scene:
-// 1. A stylized dotted world map sits behind everything -- an abstract,
-//    on-theme backdrop (not a literal geographic import) built from six
-//    soft continent blobs on a standard equirectangular grid, textured
-//    with a dot pattern instead of a flat fill so it reads as "map" at a
-//    glance without competing with the flame for attention.
-// 2. A pulsing location dot + "City, Country" label, placed on that same
-//    map using a real IP-based lookup (no permission prompt needed, unlike
-//    the browser's own geolocation API) -- a nice "this is YOUR Hearth"
-//    touch. Fails silently if the lookup is blocked/offline: the map still
-//    looks complete either way, there's just no dot.
+// 1. A dotted world map sits behind everything -- built from real lat/lon
+//    landmass regions (not smooth abstract blobs) so it actually reads as
+//    a world map at a glance: Scandinavia's peninsula, Florida, the Horn
+//    of Africa, India's taper, Patagonia's taper, etc. are all their own
+//    distinct dot-filled region rather than one soft continent-shaped
+//    outline, which is what made the first version look like plain blobs
+//    instead of a map.
+// 2. A red, blinking location dot + "City, Country" label, placed on that
+//    same map using a real IP-based lookup (no permission prompt needed,
+//    unlike the browser's own geolocation API) -- a nice "this is YOUR
+//    Hearth" touch. Fails silently if the lookup is blocked/offline: the
+//    map still looks complete either way, there's just no dot.
 // 3. A slow ring of six feature chips (Income, Fixed Expenses, Add an
 //    expense, Savings, Chat BoT, Reports) orbiting the hearth -- a quick
 //    visual tour of what the app actually does while the brand moment
@@ -35,72 +37,81 @@ const GEO_LOOKUP_URL = 'https://ipapi.co/json/';
 
 // Converts a real lat/lon into an x/y point on the map's own 1000x500
 // equirectangular grid (standard projection: longitude maps linearly to x,
-// latitude linearly to y). The six continent blobs below were placed on
-// this exact same grid, so a real city consistently lands in roughly the
-// right spot relative to them.
+// latitude linearly to y). Every land region below (and the geolocation
+// dot) is placed on this exact same grid, so a real city consistently
+// lands in the right spot relative to the actual landmass around it.
 function geoToMapXY(lat, lon) {
   const x = ((lon + 180) / 360) * 1000;
   const y = ((90 - lat) / 180) * 500;
   return { x: Math.min(970, Math.max(30, x)), y: Math.min(470, Math.max(30, y)) };
 }
 
-const FEATURE_CHIPS = [
-  { label: 'Income', angle: 0 },
-  { label: 'Fixed Expenses', angle: 60 },
-  { label: 'Add an expense', angle: 120 },
-  { label: 'Savings', angle: 180 },
-  { label: 'Chat BoT', angle: 240 },
-  { label: 'Reports', angle: 300 },
-];
-
-// One small hand-drawn glyph per feature chip, kept in the same simple
-// line-art style as the coin/chart/wallet cast already floating around the
-// flame, rather than pulling in an icon library just for six tiny shapes.
-function FeatureIcon({ label }) {
-  switch (label) {
-    case 'Income':
-      return (
-        <svg width="13" height="13" viewBox="0 0 20 20" fill="none">
-          <path d="M4 16 L8 10 L12 13 L17 5" stroke="#0d9488" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M12 5 H17 V10" stroke="#0d9488" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      );
-    case 'Fixed Expenses':
-      return (
-        <svg width="13" height="13" viewBox="0 0 20 20" fill="none">
-          <rect x="3" y="6" width="14" height="10" rx="2" stroke="#0d9488" strokeWidth="2" />
-          <path d="M3 9 H17" stroke="#0d9488" strokeWidth="2" />
-        </svg>
-      );
-    case 'Add an expense':
-      return (
-        <svg width="13" height="13" viewBox="0 0 20 20" fill="none">
-          <circle cx="10" cy="10" r="7.5" stroke="#0d9488" strokeWidth="2" />
-          <path d="M10 6 V14 M6 10 H14" stroke="#0d9488" strokeWidth="2" strokeLinecap="round" />
-        </svg>
-      );
-    case 'Savings':
-      return (
-        <svg width="13" height="13" viewBox="0 0 20 20" fill="none">
-          <path d="M4 11 Q4 6 10 6 Q16 6 16 11 Q16 15 10 15 Q6 15 4 12.5 Z" stroke="#0d9488" strokeWidth="2" />
-          <circle cx="12.5" cy="10" r="1" fill="#0d9488" />
-          <path d="M4 12 L2 13.5" stroke="#0d9488" strokeWidth="2" strokeLinecap="round" />
-        </svg>
-      );
-    case 'Chat BoT':
-      return (
-        <svg width="13" height="13" viewBox="0 0 20 20" fill="none">
-          <path d="M3 5 H17 V13 H9 L5 16 V13 H3 Z" stroke="#0d9488" strokeWidth="2" strokeLinejoin="round" />
-        </svg>
-      );
-    default:
-      return (
-        <svg width="13" height="13" viewBox="0 0 20 20" fill="none">
-          <path d="M4 16 V11 M9 16 V7 M14 16 V4" stroke="#0d9488" strokeWidth="2.2" strokeLinecap="round" />
-        </svg>
-      );
+// Fills a real lat/lon rectangle with an evenly-spaced grid of dots,
+// converted to the map's x/y grid via geoToMapXY. Composing a couple dozen
+// of these (one per real sub-region -- Alaska, mainland Canada, Florida,
+// Scandinavia, the Horn of Africa, India, etc., each its own accurately
+// sized/positioned rectangle) produces a recognizable world map out of
+// simple rectangles, since the actual relative sizes/positions/notches
+// come from real geography rather than one smoothed-out outline per
+// continent.
+function fillRegion(latMin, latMax, lonMin, lonMax, stepDeg = 4) {
+  const pts = [];
+  for (let lat = latMin; lat <= latMax; lat += stepDeg) {
+    for (let lon = lonMin; lon <= lonMax; lon += stepDeg) {
+      pts.push(geoToMapXY(lat, lon));
+    }
   }
+  return pts;
 }
+
+// One rectangle per real sub-region of each continent -- deliberately
+// broken into many small, correctly-shaped/positioned pieces (Florida
+// separate from the rest of the US, Baja California separate from
+// mainland Mexico, three narrowing bands down through Argentina/Patagonia,
+// three narrowing bands down through the Arabian peninsula, etc.) rather
+// than one bounding box per continent, since those distinguishing notches
+// and tapers are what actually makes the result read as "a world map"
+// instead of a handful of blobs.
+const WORLD_DOTS = [
+  ...fillRegion(55, 71, -168, -141), // Alaska
+  ...fillRegion(42, 70, -141, -52), // Canada
+  ...fillRegion(25, 49, -125, -95), // USA (west/central)
+  ...fillRegion(25, 45, -95, -67), // USA (east)
+  ...fillRegion(25, 31, -87, -80), // Florida
+  ...fillRegion(15, 32, -117, -87), // Mexico
+  ...fillRegion(22, 32, -115, -110), // Baja California
+  ...fillRegion(7, 18, -92, -77), // Central America
+  ...fillRegion(0, 12, -79, -60), // Colombia / Venezuela
+  ...fillRegion(-20, 5, -74, -35), // Brazil
+  ...fillRegion(-18, 0, -81, -69), // Peru / Bolivia
+  ...fillRegion(-35, -22, -70, -58), // N. Argentina / Chile
+  ...fillRegion(-45, -35, -72, -62), // Mid Argentina / Chile
+  ...fillRegion(-55, -45, -74, -66), // Patagonia (tapers to a point)
+  ...fillRegion(55, 71, 5, 30), // Scandinavia
+  ...fillRegion(43, 55, -10, 30), // Western / Central Europe
+  ...fillRegion(36, 44, -9, 3), // Iberia
+  ...fillRegion(37, 46, 7, 18), // Italy
+  ...fillRegion(50, 59, -10, 2), // Britain / Ireland
+  ...fillRegion(15, 37, -17, 35), // North Africa
+  ...fillRegion(-5, 15, -17, 25), // West / Central Africa
+  ...fillRegion(0, 12, 35, 51), // Horn of Africa
+  ...fillRegion(-35, 0, 12, 40), // East / Southern Africa
+  ...fillRegion(-25, -12, 43, 50), // Madagascar
+  ...fillRegion(24, 32, 35, 60), // Arabian Peninsula (north)
+  ...fillRegion(12, 24, 42, 54), // Arabian Peninsula (tapers south)
+  ...fillRegion(36, 42, 26, 45), // Turkey
+  ...fillRegion(45, 75, 45, 140), // Russia / Central Asia
+  ...fillRegion(22, 30, 68, 88), // India (north, wide)
+  ...fillRegion(15, 22, 70, 85), // India (mid)
+  ...fillRegion(6, 15, 74, 80), // India (tapers to a point)
+  ...fillRegion(20, 50, 75, 135), // China / East Asia
+  ...fillRegion(0, 22, 92, 110), // Southeast Asia
+  ...fillRegion(30, 45, 130, 145), // Japan
+  ...fillRegion(-10, 8, 95, 140), // Indonesia / Philippines
+  ...fillRegion(-39, -10, 113, 154), // Australia
+  ...fillRegion(-43, -40, 144, 148), // Tasmania
+  ...fillRegion(-47, -34, 166, 179), // New Zealand
+];
 
 export default function Splash() {
   const [geo, setGeo] = useState(null);
@@ -124,45 +135,31 @@ export default function Splash() {
 
   return (
     <div className="splash-screen" aria-hidden="true">
-      {/* Stylized dotted world map -- six soft continent blobs on a shared
-          equirectangular grid (see geoToMapXY above), textured with a
-          repeating dot pattern instead of a flat fill so it reads as "map"
-          rather than random blobs, and toned to sit quietly behind the
-          hearth scene instead of competing with it. */}
+      {/* Dotted world map built from real lat/lon land regions (WORLD_DOTS
+          above) -- each continent is many correctly-sized/positioned
+          rectangles rather than one smoothed outline, so distinguishing
+          features (Florida, Scandinavia, the Horn of Africa, India's and
+          Patagonia's tapers, etc.) actually show up and the whole thing
+          reads as a real world map rather than abstract blobs. Kept quiet
+          behind the hearth scene via .worldmap-continents' low opacity. */}
       <svg className="splash-worldmap" viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
-        <defs>
-          <pattern id="mapDots" width="13" height="13" patternUnits="userSpaceOnUse">
-            <circle cx="2" cy="2" r="1.3" fill="#ffffff" fillOpacity=".5" />
-          </pattern>
-        </defs>
         <g className="worldmap-continents">
-          {/* North America */}
-          <path d="M60 70 Q160 40 260 65 Q320 90 300 140 Q280 190 220 205 Q160 215 110 180 Q55 140 60 70 Z" fill="url(#mapDots)" stroke="#ffffff" strokeOpacity=".18" strokeWidth="1.5" />
-          {/* South America */}
-          <path d="M270 235 Q330 220 350 270 Q365 330 335 385 Q310 425 285 400 Q265 350 270 290 Z" fill="url(#mapDots)" stroke="#ffffff" strokeOpacity=".18" strokeWidth="1.5" />
-          {/* Europe */}
-          <path d="M470 65 Q540 50 600 70 Q615 100 590 130 Q540 150 495 135 Q465 105 470 65 Z" fill="url(#mapDots)" stroke="#ffffff" strokeOpacity=".18" strokeWidth="1.5" />
-          {/* Africa */}
-          <path d="M470 150 Q560 140 610 175 Q625 230 605 290 Q580 350 530 345 Q480 320 465 250 Q455 195 470 150 Z" fill="url(#mapDots)" stroke="#ffffff" strokeOpacity=".18" strokeWidth="1.5" />
-          {/* Asia */}
-          <path d="M615 55 Q740 40 890 75 Q930 110 900 160 Q850 210 760 200 Q680 190 630 150 Q600 100 615 55 Z" fill="url(#mapDots)" stroke="#ffffff" strokeOpacity=".18" strokeWidth="1.5" />
-          {/* Australia */}
-          <path d="M815 300 Q890 285 925 315 Q935 350 900 370 Q850 380 820 355 Q805 325 815 300 Z" fill="url(#mapDots)" stroke="#ffffff" strokeOpacity=".18" strokeWidth="1.5" />
+          {WORLD_DOTS.map((p, i) => (
+            <circle key={i} cx={p.x} cy={p.y} r="2.1" fill="#ffffff" />
+          ))}
         </g>
 
-        {/* Location dot -- only rendered once the IP lookup resolves. A
-            calm two-layer pulse (expanding ring + steady core) instead of
-            a static pin, so it reads as "live" rather than decorative
-            clutter, plus a small label so it's clear what it's pointing
-            at rather than an unexplained dot on a map. Kept at its own
-            higher opacity (see .geo-marker/.geo-label in CSS) so it reads
-            as a deliberate highlight against the much fainter continents,
-            rather than fading in at the same low opacity as the map
-            texture around it. */}
+        {/* Location dot -- only rendered once the IP lookup resolves. Red
+            and genuinely blinking (opacity animation, see .geo-dot-core in
+            CSS) rather than a static pin, so it reads as "this is where
+            you are, live" -- plus a small label so it's clear what it's
+            pointing at rather than an unexplained dot on a map. Kept at
+            its own much higher opacity than the faint continent dots (see
+            .geo-marker in CSS) so it's an unmistakable highlight. */}
         {geo && (
           <g className="geo-marker" transform={`translate(${geo.x} ${geo.y})`}>
-            <circle className="geo-ping" r="5" fill="none" stroke="#ffe27a" strokeWidth="1.6" />
-            <circle r="3.2" fill="#ffe27a" stroke="#8a5a04" strokeWidth="1" />
+            <circle className="geo-ping" r="5" fill="none" stroke="#ef4444" strokeWidth="1.6" />
+            <circle className="geo-dot-core" r="3.4" fill="#ef4444" stroke="#7f1d1d" strokeWidth="1" />
             <text
               x="0"
               y={geo.y > 420 ? -11 : 16}
@@ -189,26 +186,6 @@ export default function Splash() {
 
       <div className="splash-center">
         <div className="splash-illustration-wrap">
-          {/* Slow ring of feature chips orbiting the hearth -- each chip's
-              own placement transform (rotate+translate+rotate-back) sets
-              its fixed point on the circle; the ring itself spins
-              continuously while each chip's inner content counter-spins at
-              the exact same rate so the label text stays upright and
-              readable the whole time instead of wheeling around with it. */}
-          <div className="feature-orbit">
-            {FEATURE_CHIPS.map((f) => (
-              <div
-                key={f.label}
-                className="feature-chip"
-                style={{ transform: `rotate(${f.angle}deg) translate(178px) rotate(${-f.angle}deg)` }}
-              >
-                <div className="feature-chip-inner">
-                  <FeatureIcon label={f.label} />
-                  <span>{f.label}</span>
-                </div>
-              </div>
-            ))}
-          </div>
         <div className="splash-illustration splash-illustration-hearth">
           <svg viewBox="0 0 380 300" xmlns="http://www.w3.org/2000/svg">
             <defs>
@@ -243,6 +220,14 @@ export default function Splash() {
               <linearGradient id="walletBody" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0" stopColor="#1bcbb4" />
                 <stop offset="1" stopColor="#0d9488" />
+              </linearGradient>
+              <linearGradient id="piggyBody" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stopColor="#f9a8d4" />
+                <stop offset="1" stopColor="#ec4899" />
+              </linearGradient>
+              <linearGradient id="receiptBody" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stopColor="#ffffff" />
+                <stop offset="1" stopColor="#e7f6f4" />
               </linearGradient>
             </defs>
 
@@ -331,6 +316,35 @@ export default function Splash() {
               <rect x="-24" y="-15" width="48" height="32" rx="7" fill="url(#walletBody)" stroke="#0a4f48" strokeWidth="1.5" />
               <path d="M-24 -3 H24" stroke="#0a4f48" strokeOpacity=".4" strokeWidth="1.5" />
               <circle cx="14" cy="-3" r="4" fill="#ffe27a" />
+            </g>
+
+            {/* Lower-right, mirroring the wallet: a piggy bank for the
+                Savings side of the app, with its own small coin dropping
+                into the slot on a loop -- the literal "putting money
+                aside" motif, not just a generic icon. */}
+            <g className="splash-float splash-float-piggy" transform="translate(314 246)">
+              <ellipse cx="0" cy="4" rx="26" ry="17" fill="url(#piggyBody)" stroke="#9d174d" strokeWidth="1.5" />
+              <circle cx="20" cy="-6" r="7" fill="url(#piggyBody)" stroke="#9d174d" strokeWidth="1.5" />
+              <path d="M24 -10 L29 -15 L26 -6 Z" fill="url(#piggyBody)" stroke="#9d174d" strokeWidth="1.2" strokeLinejoin="round" />
+              <circle cx="22" cy="-7" r="1.3" fill="#5b1235" />
+              <ellipse cx="27" cy="-3" rx="3" ry="2" fill="#f472b6" stroke="#9d174d" strokeWidth="1" />
+              <circle cx="26" cy="-3.5" r=".5" fill="#5b1235" />
+              <circle cx="28" cy="-3.5" r=".5" fill="#5b1235" />
+              <path d="M-24 6 Q-29 12 -22 15" stroke="#9d174d" strokeWidth="2" fill="none" strokeLinecap="round" />
+              <rect x="-15" y="18" width="4" height="8" rx="1.5" fill="#9d174d" />
+              <rect x="9" y="18" width="4" height="8" rx="1.5" fill="#9d174d" />
+              <rect x="-5" y="-14" width="10" height="3" rx="1.5" fill="#7a1140" />
+              <circle className="piggy-coin-drop" cx="0" cy="-24" r="4.5" fill="url(#coinFace)" stroke="#c88a06" strokeWidth="1" />
+            </g>
+
+            {/* Upper-left: a small receipt with a teal checkmark badge --
+                "an expense, logged" -- the zigzag bottom edge is what reads
+                as "receipt" at a glance rather than a generic card/paper. */}
+            <g className="splash-float splash-float-receipt" transform="translate(82 92) rotate(-8)">
+              <path d="M-16 -22 H16 V20 L11 24 L5 20 L0 24 L-5 20 L-11 24 L-16 20 Z" fill="url(#receiptBody)" stroke="#0a4f48" strokeOpacity=".5" strokeWidth="1.3" />
+              <path d="M-10 -14 H10 M-10 -8 H10 M-10 -2 H4" stroke="#0d9488" strokeOpacity=".55" strokeWidth="2" strokeLinecap="round" />
+              <circle cx="8" cy="8" r="7" fill="#0d9488" />
+              <path d="M5 8 L7 10.5 L11 5.5" stroke="#ffffff" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
             </g>
           </svg>
         </div>
