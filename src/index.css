@@ -706,30 +706,45 @@ td.amount { font-weight: 600; text-align: right; }
    so any value shorter than the column's worst-case width just sat flush
    against the LEFT edge with visible empty space to its right -- read as
    "not right-aligned" compared to every other numeric figure in the app.
-   A first attempt gave the whole block a FIXED 76px width and pushed that
-   box to the column's right edge with margin-left:auto -- but the box's
-   own text stayed left-aligned inside it (required so the symbol stays
-   snug against the first digit), so the box's edge lined up while the
-   actual visible digits still drifted left for shorter numbers -- e.g.
-   "450" sat well left of "1645"'s last digit even though both boxes'
-   invisible right edges matched. Verified live: every box's right edge
-   was identical, but the rendered numbers were not.
-   The real fix: stop giving the box a fixed width at all -- let it
-   shrink-wrap to its own content via the input's "size" attribute (set in
-   JSX from the value's own character count), so the box is always exactly
-   as wide as its digits. margin-left:auto then pushes that snug,
-   content-sized box flush to the column's right edge, so every row's
-   LAST DIGIT lands at the same x position regardless of how many digits
-   it has -- true right alignment, not just a fixed invisible box. */
+   This went through two failed fixes before the actual root cause was
+   found, both confirmed live via getComputedStyle rather than assumed:
+   1. A fixed 76px box pushed right via margin-left:auto -- the box's own
+      text stayed left-aligned inside it (required so the symbol stays
+      snug against the first digit), so the box's edge lined up but the
+      visible digits still drifted left for shorter numbers.
+   2. A shrink-to-content box (width driven by the input's "size" HTML
+      attribute, set in JSX from the value's character count) pushed right
+      via margin-left:auto on the wrap. This looked right in theory but
+      still didn't work, for two compounding reasons: (a) Chrome silently
+      ignores the "size" attribute on <input type="number"> entirely --
+      confirmed by setting size from 1 to 20 on a bare, unstyled number
+      input and seeing zero width change -- so the box was actually still
+      a fixed width regardless of digit count; and (b) margin-left:auto
+      only absorbs leftover space on BLOCK-level boxes, but the wrap is
+      display:inline-flex (inline-level, needed to avoid stretching) --
+      auto margins compute to 0 on inline-level boxes, confirmed via
+      getComputedStyle showing marginLeft: "0px" despite the rule.
+   The actual fix has two independent parts:
+   1. Right-align via the containing <td> instead of margin-left:auto --
+      every amount cell's td holds nothing but this one wrap, so this is
+      safe and precise, and ordinary text-align works correctly on
+      inline-level children regardless of block/inline (unlike auto
+      margins), which is exactly the alignment mechanism that was missing.
+   2. Size the input from a --amt-ch custom property (set inline from
+      JSX, from the value's own character count) using the CSS `ch` unit,
+      instead of the broken "size" HTML attribute -- this is a completely
+      different, actually-functional mechanism for the same intent. */
+.table-scroll table td:has(.amount-field-wrap.tight) {
+  text-align: right;
+}
 .table-scroll table td .amount-field-wrap.tight {
   display: inline-flex;
   align-items: center;
   width: auto;
   max-width: 100%;
-  margin-left: auto;
 }
 .table-scroll table td .amount-field-wrap.tight input[type="number"] {
-  width: auto !important;
+  width: calc(max(var(--amt-ch, 2), 2) * 1ch + 20px) !important;
   flex: 0 1 auto;
 }
 
