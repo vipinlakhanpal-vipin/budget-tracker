@@ -31,10 +31,32 @@ button, input, select, textarea { font-family: inherit; }
 .splash-screen {
   position: fixed; inset: 0; z-index: 999999; overflow: hidden;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  background: linear-gradient(160deg, #1bcbb4, #0d9488 55%, #0a4f48);
+  /* A radial glow centered where the flame sits (rather than a flat
+     top-to-bottom linear fade) keeps the middle of the screen bright and
+     warm -- the old linear version faded to a dark, muted teal across
+     the whole frame, which read as gloomy instead of premium. */
+  background:
+    radial-gradient(circle at 50% 38%, #22b8a8 0%, #109c8c 32%, #0b6b60 62%, #063d37 100%);
   pointer-events: none;
   animation: splash-fade-out .5s ease forwards;
   animation-delay: 3.5s;
+}
+/* Small twinkling points scattered across the background -- turns the
+   glow into a lively "night sky" rather than an empty gradient. Pure CSS,
+   staggered delays/durations so they don't blink in lockstep. */
+.splash-dust {
+  position: absolute; width: 4px; height: 4px; border-radius: 50%;
+  background: #ffffff; opacity: 0;
+  animation: splash-dust-twinkle 3.4s ease-in-out infinite;
+}
+.splash-dust-1 { top: 18%; left: 22%; animation-delay: .2s; }
+.splash-dust-2 { top: 68%; left: 16%; width: 3px; height: 3px; animation-delay: 1.1s; }
+.splash-dust-3 { top: 24%; right: 20%; animation-delay: 1.8s; }
+.splash-dust-4 { top: 78%; right: 26%; width: 3px; height: 3px; animation-delay: .7s; }
+.splash-dust-5 { top: 46%; left: 8%; width: 3px; height: 3px; animation-delay: 2.4s; }
+@keyframes splash-dust-twinkle {
+  0%, 100% { opacity: 0; transform: scale(.6); }
+  50% { opacity: .8; transform: scale(1.3); }
 }
 /* Soft, slowly-drifting blurred light -- the thing that makes a flat
    gradient background feel alive/premium instead of static. Three orbs at
@@ -55,7 +77,7 @@ button, input, select, textarea { font-family: inherit; }
   display: flex; flex-direction: column; align-items: center; gap: 6px;
   animation: splash-pop .6s cubic-bezier(.34, 1.56, .64, 1) both;
 }
-.splash-illustration { width: 310px; max-width: 84vw; filter: drop-shadow(0 18px 30px rgba(0, 0, 0, .24)); }
+.splash-illustration { width: 360px; max-width: 92vw; filter: drop-shadow(0 18px 30px rgba(0, 0, 0, .24)); }
 .splash-illustration svg { width: 100%; height: auto; display: block; }
 
 /* The roofline draws itself in like a single pen stroke as the splash
@@ -103,6 +125,31 @@ button, input, select, textarea { font-family: inherit; }
   0% { opacity: 0; transform: translateY(0) scale(.6); }
   15% { opacity: 1; }
   100% { opacity: 0; transform: translateY(-70px) scale(1.1); }
+}
+
+/* The coin/chart/wallet cast orbiting the hearth -- each pops in shortly
+   after the flame ignites, then settles into its own slow, independent
+   bob so the trio doesn't move in unison (which would look mechanical).
+   transform-box: fill-box keeps each element rotating/bobbing around its
+   own center rather than the SVG's (0,0) origin. */
+.splash-float {
+  opacity: 0; transform-box: fill-box; transform-origin: center;
+  animation: splash-float-pop-in .45s ease forwards;
+}
+.splash-float-coin { animation-name: splash-float-pop-in, splash-float-bob; animation-delay: .8s, 1.25s; animation-duration: .45s, 3.6s; animation-timing-function: ease, ease-in-out; animation-iteration-count: 1, infinite; animation-fill-mode: forwards, none; }
+.splash-float-chart { animation-name: splash-float-pop-in, splash-float-bob-alt; animation-delay: 1s, 1.45s; animation-duration: .45s, 4.2s; animation-timing-function: ease, ease-in-out; animation-iteration-count: 1, infinite; animation-fill-mode: forwards, none; }
+.splash-float-wallet { animation-name: splash-float-pop-in, splash-float-bob; animation-delay: 1.15s, 1.6s; animation-duration: .45s, 3.9s; animation-timing-function: ease, ease-in-out; animation-iteration-count: 1, infinite; animation-fill-mode: forwards, none; }
+@keyframes splash-float-pop-in {
+  from { opacity: 0; transform: scale(.4); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes splash-float-bob {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-9px) rotate(-6deg); }
+}
+@keyframes splash-float-bob-alt {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-7px) rotate(4deg); }
 }
 .splash-title {
   color: #ffffff; font-size: 26px; font-weight: 800; letter-spacing: .01em; text-align: center;

@@ -2471,7 +2471,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 </select>
                 {aiCategoryHint && <div className="ai-hint">{aiCategoryHint}</div>}
               </div>
-              <div className="field">
+              <div className="field" style={{ flex: '0 1 140px', minWidth: 120 }}>
                 <label>Amount</label>
                 <div className="amount-field-wrap">
                   <span className="currency-prefix"><CurrencyPrefix /></span>
@@ -2623,7 +2623,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   ))}
                 </select>
               </div>
-              <div className="field">
+              <div className="field" style={{ flex: '0 1 150px', minWidth: 130 }}>
                 <label>Amount / month</label>
                 <div className="amount-field-wrap">
                   <span className="currency-prefix"><CurrencyPrefix /></span>
@@ -2825,7 +2825,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   ))}
                 </select>
               </div>
-              <div className="field">
+              <div className="field" style={{ flex: '0 1 150px', minWidth: 130 }}>
                 <label>Amount / month</label>
                 <div className="amount-field-wrap">
                   <span className="currency-prefix"><CurrencyPrefix /></span>
@@ -3201,7 +3201,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   onChange={(e) => setNewSaving({ ...newSaving, name: e.target.value })}
                 />
               </div>
-              <div className="field">
+              <div className="field" style={{ flex: '0 1 150px', minWidth: 130 }}>
                 <label>Amount / month</label>
                 <div className="amount-field-wrap">
                   <span className="currency-prefix"><CurrencyPrefix /></span>
@@ -3413,8 +3413,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <div className="table-scroll">
               <table className="responsive-table" style={{ fontSize: 12 }}>
                 <colgroup>
-                  <col style={{ width: '12%' }} /><col style={{ width: '11%' }} /><col style={{ width: '20%' }} />
-                  <col style={{ width: '10%' }} /><col style={{ width: '16%' }} /><col style={{ width: '11%' }} />
+                  <col style={{ width: '12%' }} /><col style={{ width: '10%' }} /><col style={{ width: '24%' }} />
+                  <col style={{ width: '10%' }} /><col style={{ width: '16%' }} /><col style={{ width: '8%' }} />
                   <col style={{ width: '7%' }} />
                 </colgroup>
                 <thead>
@@ -3446,7 +3446,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       <td data-label="Description">
                         <input
                           type="text"
-                          style={{ width: 120, fontSize: 12 }}
+                          style={{ width: '100%', minWidth: 0, fontSize: 12 }}
                           value={expenseDrafts[e.id]?.description ?? ''}
                           onChange={(ev) => updateExpenseDraftField(e.id, 'description', ev.target.value)}
                           onBlur={(ev) => commitExpenseField(e.id, 'description', ev.target.value)}
