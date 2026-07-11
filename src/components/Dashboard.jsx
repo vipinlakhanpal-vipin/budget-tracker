@@ -3114,9 +3114,23 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
             {recurringExpenses.length === 0 ? (
               <div className="empty">No loans, EMIs, or fixed monthly bills added yet.</div>
+            ) : recurringForMonth.length === 0 ? (
+              /* Bug fix: this list used to always render EVERY fixed expense
+                 ever added, regardless of which month was selected in the
+                 month-nav above -- so scrolling back to e.g. Jan 2021 (long
+                 before the item's own start date, or even before the app
+                 existed) still showed it as if it applied there. Fixed
+                 expenses are recurring RULES, but which ones are actually "in
+                 effect" still depends on each rule's own start/end date and
+                 repeat frequency -- exactly what recurringForMonth (used
+                 elsewhere for the month's total) already computes via
+                 recurringOccursInMonth. Filtering this list the same way is
+                 what makes the visible rows finally match the selected
+                 month. */
+              <div className="empty">No fixed expenses apply to {monthLabel(currentMonth)}.</div>
             ) : isMobile ? (
               <div className="mobile-txn-list">
-                {recurringExpenses.map((r) => {
+                {recurringForMonth.map((r) => {
                   const catIdx = categories.findIndex((c) => c.id === r.category_id);
                   const catColor = COLORS[(catIdx >= 0 ? catIdx : 0) % COLORS.length];
                   const catName = categoryNameById[r.category_id] || 'Uncategorized';
@@ -3153,17 +3167,28 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   it needs; if that adds up to more than the panel's visible
                   width, .table-scroll's horizontal scroll handles the rest
                   (same technique already used for .users-table). */}
-              <table className="responsive-table" style={{ marginTop: 14, fontSize: 11, minWidth: 869 }}>
+              <table className="responsive-table" style={{ marginTop: 14, fontSize: 11, minWidth: 892 }}>
                 <colgroup>
-                  <col style={{ width: '150px' }} /><col style={{ width: '142px' }} /><col style={{ width: '85px' }} />
-                  <col style={{ width: '85px' }} /><col style={{ width: '85px' }} /><col style={{ width: '110px' }} />
-                  <col style={{ width: '90px' }} /><col style={{ width: '82px' }} /><col style={{ width: '40px' }} />
+                  {/* Start/End/Due date widened from 85/85/90px -- at those
+                      widths the native date picker's own dd/mm/yyyy text
+                      silently clipped the last digit of the year (confirmed
+                      live: "15/07/2026" rendered as "15/07/202"). Native date
+                      inputs are drawn by the browser itself, so there's no way
+                      to shrink the YEAR specifically (no 2-digit-year display
+                      mode) -- the only real fix is giving the whole control
+                      enough width to show its full native text, confirmed
+                      live at 100/100/105px before shipping. Category gives up
+                      the matching 22px so the table's total width barely
+                      grows. */}
+                  <col style={{ width: '150px' }} /><col style={{ width: '120px' }} /><col style={{ width: '85px' }} />
+                  <col style={{ width: '100px' }} /><col style={{ width: '100px' }} /><col style={{ width: '110px' }} />
+                  <col style={{ width: '105px' }} /><col style={{ width: '82px' }} /><col style={{ width: '40px' }} />
                 </colgroup>
                 <thead>
                   <tr><th>Name</th><th>Category</th><th>Amount</th><th>Start</th><th>End</th><th>Repeats</th><th>Due date</th><th>Payment</th><th></th></tr>
                 </thead>
                 <tbody>
-                  {recurringExpenses.map((r) => (
+                  {recurringForMonth.map((r) => (
                     <tr key={r.id}>
                       <td data-label="Name">
                         <input

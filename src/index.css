@@ -684,7 +684,16 @@ td.amount { font-weight: 600; text-align: right; }
    chrome. */
 .table-scroll table td input:not([type="date"]):not([type="month"]),
 .table-scroll table td select {
-  background: var(--bg);
+  background: #f5fbfb;
+  border-color: #d8ecec;
+}
+/* Amount fields get their own soft mint tint (money = green, a common
+   ledger convention) so the one column that matters most for a budget app
+   is visually distinct from Name/Category/Payment at a glance, instead of
+   every field in the row reading as identically plain. */
+.table-scroll table td .amount-field-wrap.tight input[type="number"] {
+  background: #ecfdf5;
+  border-color: #a7e8cf;
 }
 .table-scroll table td input:hover,
 .table-scroll table td select:hover {
@@ -701,58 +710,20 @@ td.amount { font-weight: 600; text-align: right; }
   font-size: 11px;
 }
 
-/* Amount cells were stretching their "$4,500"-style symbol+number block to
-   fill the entire column width (inherited from the width:100% rule above),
-   so any value shorter than the column's worst-case width just sat flush
-   against the LEFT edge with visible empty space to its right -- read as
-   "not right-aligned" compared to every other numeric figure in the app.
-   This went through two failed fixes before the actual root cause was
-   found, both confirmed live via getComputedStyle rather than assumed:
-   1. A fixed 76px box pushed right via margin-left:auto -- the box's own
-      text stayed left-aligned inside it (required so the symbol stays
-      snug against the first digit), so the box's edge lined up but the
-      visible digits still drifted left for shorter numbers.
-   2. A shrink-to-content box (width driven by the input's "size" HTML
-      attribute, set in JSX from the value's character count) pushed right
-      via margin-left:auto on the wrap. This looked right in theory but
-      still didn't work, for two compounding reasons: (a) Chrome silently
-      ignores the "size" attribute on <input type="number"> entirely --
-      confirmed by setting size from 1 to 20 on a bare, unstyled number
-      input and seeing zero width change -- so the box was actually still
-      a fixed width regardless of digit count; and (b) margin-left:auto
-      only absorbs leftover space on BLOCK-level boxes, but the wrap is
-      display:inline-flex (inline-level, needed to avoid stretching) --
-      auto margins compute to 0 on inline-level boxes, confirmed via
-      getComputedStyle showing marginLeft: "0px" despite the rule.
-   The actual fix has two independent parts:
-   1. Right-align via the containing <td> instead of margin-left:auto --
-      every amount cell's td holds nothing but this one wrap, so this is
-      safe and precise, and ordinary text-align works correctly on
-      inline-level children regardless of block/inline (unlike auto
-      margins), which is exactly the alignment mechanism that was missing.
-   2. Size the input from a --amt-ch custom property (set inline from
-      JSX, from the value's own character count) using the CSS `ch` unit,
-      instead of the broken "size" HTML attribute -- this is a completely
-      different, actually-functional mechanism for the same intent. */
-.table-scroll table td:has(.amount-field-wrap.tight) {
-  text-align: right;
-}
+/* Amount cells: the cell itself stays exactly where every other column's
+   cell sits (full-width, same box as Name/Category/etc -- no more shrinking
+   the box to content and shoving it over, which read as the amount box
+   "floating" in a different spot on every row depending on digit count).
+   Only the DIGITS inside are right-aligned, via ordinary text-align on the
+   input, so the column reads as a clean ledger while every cell's outer box
+   still lines up with the rest of the table. The currency symbol is a
+   separate absolutely-positioned element pinned to the box's left inset
+   (see .currency-prefix above) so it doesn't move when the digits do. */
 .table-scroll table td .amount-field-wrap.tight {
-  display: inline-flex;
-  align-items: center;
-  width: auto;
-  max-width: 100%;
+  width: 100%;
 }
 .table-scroll table td .amount-field-wrap.tight input[type="number"] {
-  /* +34px covers the currency symbol's own padding-left:15px inset plus
-     border/right-padding; 1.5ch per digit (rather than a plain 1ch) is a
-     deliberate safety margin -- a first pass at exactly 1ch + 20px came
-     up short and silently clipped the last digit off-screen (confirmed
-     live: "304" rendered as "30" with the box just barely too narrow),
-     since `ch` is based on the "0" glyph's advance width alone and this
-     font renders slightly wider than that in practice. */
-  width: calc(max(var(--amt-ch, 2), 2) * 1.5ch + 34px) !important;
-  flex: 0 1 auto;
+  text-align: right;
 }
 
 /* On narrower screens, wide fixed-column tables (e.g. Fixed Expenses) exceed
@@ -774,6 +745,12 @@ td.amount { font-weight: 600; text-align: right; }
   .table-scroll table td:has(button.del) {
     box-shadow: -6px 0 6px -6px rgba(15, 42, 46, .25);
   }
+  /* Faint alternating row tint (desktop table view only -- mobile switches
+     to bordered cards below 720px, which already have their own look) so
+     long tables are easier to scan across, and the sheet reads as a soft
+     colored ledger instead of a flat white grid. */
+  .table-scroll table tbody tr:nth-child(even) { background: #f4fafa; }
+  .table-scroll table tbody tr:nth-child(even) td:has(button.del) { background: #f4fafa; }
 }
 
 .cat-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
