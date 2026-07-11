@@ -228,24 +228,28 @@ function CurrencyPrefix() {
 // slack once right-aligned. Measuring the real string removes that
 // residual inconsistency entirely rather than tuning the formula further.
 let _amtMeasureCanvas = null;
-function measureAmountWidthPx(value, font) {
+function measureAmountWidthPx(value, font, emptyFallback) {
   if (!_amtMeasureCanvas) _amtMeasureCanvas = document.createElement('canvas');
   const ctx = _amtMeasureCanvas.getContext('2d');
   ctx.font = font;
-  const text = String(value ?? '').trim() || '0';
+  const text = String(value ?? '').trim() || emptyFallback;
   return ctx.measureText(text).width;
 }
 // Table cells: 11px Nunito (the unified table font size -- see the
 // "Unify font size across all table inputs/selects" fix). Small fixed
 // buffer just for the input's own subpixel rounding/caret, not a safety
 // margin for missing digits (the measurement is exact, so it doesn't need
-// one the way the old ch-based formula did).
+// one the way the old ch-based formula did). Empty is rare here (rows
+// already have a value), but floors at 2 digits' width same as before.
 function tightAmountPx(value) {
-  return Math.ceil(measureAmountWidthPx(value, '400 11px Nunito, sans-serif')) + 2;
+  return Math.ceil(measureAmountWidthPx(value, '400 11px Nunito, sans-serif', '00')) + 2;
 }
-// Top-level Add-form fields: 14px, the standard .field input size.
+// Top-level Add-form fields: 14px, the standard .field input size. Empty
+// measures against the field's own "0.00" placeholder (not a bare "0") --
+// otherwise the box sizes for 1 character while 4 characters of grey
+// placeholder text are actually rendered inside it, clipping the "0.00".
 function formAmountPx(value) {
-  return Math.ceil(measureAmountWidthPx(value, '400 14px Nunito, sans-serif')) + 2;
+  return Math.ceil(measureAmountWidthPx(value, '400 14px Nunito, sans-serif', '0.00')) + 2;
 }
 
 // Read-only currency display used everywhere a figure is just shown (not
