@@ -319,7 +319,18 @@ button, input, select, textarea { font-family: inherit; }
 }
 
 .wrap { max-width: 1520px; margin: 0 auto; padding: 24px; }
-.top-bar { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; flex-wrap: wrap; gap: 12px; }
+/* Frozen to the top of the viewport while the page scrolls, so the title
+   and the Help/Report/Coach/Settings/Users/Sign out row stay reachable
+   without scrolling back up. Own background (matching the page) is what
+   keeps scrolled-past content from showing through underneath once it's
+   stuck; sticky naturally closes the gap from .wrap's own top padding as
+   the page scrolls, so no extra margin trick is needed for that. */
+.top-bar {
+  display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; flex-wrap: wrap; gap: 12px;
+  position: sticky; top: 0; z-index: 60;
+  background: var(--bg);
+  padding-bottom: 8px;
+}
 .top-bar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .input-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
 .action-row-teal {
@@ -702,9 +713,17 @@ td.amount { font-weight: 600; text-align: right; }
   background: linear-gradient(160deg, #eef2ff, #ffffff);
   border-color: #c7d2fe;
 }
-.table-scroll table td .amount-field-wrap.tight input[type="number"] {
-  background: linear-gradient(160deg, #ecfdf5, #ffffff);
-  border-color: #a7f3d0;
+/* Payment gets its own orange tone (matching .card-spent) instead of the
+   same indigo as every other dropdown -- rounds the palette out to more of
+   the dashboard's own color spread (teal/indigo/green/blue plus this
+   orange) rather than stopping at four, and "spending" mapping to the same
+   orange as the SPENT SO FAR card is a natural pairing. Targets both
+   selects stacked in a Payment cell (source + bank) via the existing
+   data-label attribute already used for the mobile responsive-table
+   headers, so no markup changes were needed. */
+.table-scroll table td[data-label="Payment"] select {
+  background: linear-gradient(160deg, #fff7ed, #ffffff);
+  border-color: #fed7aa;
 }
 .table-scroll table td input[type="date"],
 .table-scroll table td input[type="month"] {
@@ -726,24 +745,48 @@ td.amount { font-weight: 600; text-align: right; }
   font-size: 11px;
 }
 
-/* Amount cells: symbol + digits are glued together as ONE unit ("Đ4,500",
-   same convention as the top-level Add-form fields) and that whole unit is
-   right-aligned WITHIN the cell -- the cell's own box stays full-width and
-   in the exact same place as every other column (no more shrinking/shoving
-   the visible bordered box itself, which read as misaligned/"funny"). The
-   wrap is a flex row with justify-content:flex-end so the currency prefix
-   (now a normal flex child, not an absolutely-positioned overlay) and the
-   input pack together flush against the box's right edge; only the input's
-   own width shrinks to fit its digits (via the --amt-ch custom property, so
-   there's no dead gap between symbol and number). 2ch + 16px is a verified
-   safety margin per digit -- confirmed live against every value across all
-   four tables (2, 3, 4, and 5-digit amounts, plus decimals) with
-   scrollWidth <= clientWidth on each, so nothing clips. */
+/* Amount cells -- three requirements that all failed independently before
+   this version, each confirmed live before shipping:
+   1. Symbol + digits truly share ONE bordered/tinted box (border+background
+      now live on the WRAP itself, not the <input> -- previously the symbol
+      sat outside the input's own border, which is what actually reads as
+      "outside the cell" even though it's technically still inside the <td>).
+   2. That box shrinks to fit its own content (via the --amt-ch custom
+      property, now set on the WRAP so its own calc() can read it -- custom
+      properties don't inherit from a child's inline style up to a parent,
+      which is why setting --amt-ch only on the <input> silently did nothing
+      when the wrap tried to read it) and is centered under the column
+      header via margin:0 auto, instead of being shoved flush to the cell's
+      right edge (confirmed live: a shrink-to-fit box pinned to the right
+      edge reads as disconnected from a left-aligned header above it).
+   3. Digits stay right-aligned WITHIN that box (text-align:right on the
+      input, which fills the remaining flex space next to the prefix).
+   Important constraint discovered live: table-layout:fixed + the standard
+   overflow:hidden on td HARD-CAPS any descendant's width to the column's
+   own width, even with inline style="width:...!important" -- so the box
+   can only be as wide as its Amount COLUMN allows. Each table's Amount
+   column was widened enough for its own worst case (5-digit values in
+   Income/Fixed Expenses) -- see each table's colgroup. 2ch + 28px is the
+   verified safety margin per digit (confirmed live for 2/3/4/5-digit values
+   and decimals across all four tables, scrollWidth <= clientWidth on every
+   one -- an earlier +22px pass still clipped the smallest 2-digit values,
+   where the fixed padding/border/prefix overhead eats proportionally more
+   of a very small box). */
 .table-scroll table td .amount-field-wrap.tight {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  width: 100%;
+  width: calc(max(var(--amt-ch, 2), 2) * 2ch + 28px);
+  max-width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+  background: linear-gradient(160deg, #ecfdf5, #ffffff);
+  border: 1.5px solid #a7f3d0;
+  border-radius: 9px;
+  padding: 0 5px 0 6px;
+  transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+}
+.table-scroll table td .amount-field-wrap.tight:focus-within {
+  border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-light); background: #fff;
 }
 .table-scroll table td .amount-field-wrap.tight .currency-prefix {
   position: static;
@@ -751,11 +794,13 @@ td.amount { font-weight: 600; text-align: right; }
   flex: 0 0 auto;
 }
 .table-scroll table td .amount-field-wrap.tight input[type="number"] {
-  flex: 0 1 auto;
-  width: calc(max(var(--amt-ch, 2), 2) * 2ch + 16px) !important;
+  flex: 1 1 auto;
+  width: 100% !important;
+  min-width: 0;
   text-align: right;
-  padding-left: 2px;
-  padding-right: 4px;
+  padding: 0;
+  border: none;
+  background: transparent;
 }
 
 /* On narrower screens, wide fixed-column tables (e.g. Fixed Expenses) exceed

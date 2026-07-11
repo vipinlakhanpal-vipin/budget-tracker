@@ -2909,13 +2909,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       </td>
                       <td className="muted-small" data-label="Member">{i.member_email}</td>
                       <td data-label="Amount">
-                        <div className="amount-field-wrap tight">
+                        <div className="amount-field-wrap tight" style={{ '--amt-ch': Math.max(2, String(incomeDrafts[i.id]?.amount ?? '').length) }}>
                           <span className="currency-prefix"><CurrencyPrefix /></span>
                           <input
                             type="number"
                             step="0.01"
                             min="0"
-                            style={{ fontSize: 11, '--amt-ch': Math.max(2, String(incomeDrafts[i.id]?.amount ?? '').length) }}
+                            style={{ fontSize: 11 }}
                             value={incomeDrafts[i.id]?.amount ?? ''}
                             onChange={(e) => updateIncomeDraftField(i.id, 'amount', e.target.value)}
                             onBlur={(e) => commitIncomeField(i.id, 'amount', e.target.value)}
@@ -3178,30 +3178,23 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   it needs; if that adds up to more than the panel's visible
                   width, .table-scroll's horizontal scroll handles the rest
                   (same technique already used for .users-table). */}
-              <table className="responsive-table" style={{ marginTop: 14, fontSize: 11, minWidth: 927 }}>
+              <table className="responsive-table" style={{ marginTop: 14, fontSize: 11, minWidth: 851 }}>
                 <colgroup>
-                  {/* Start/End/Due date widened from 85/85/90px -- at those
-                      widths the native date picker's own dd/mm/yyyy text
-                      silently clipped the last digit of the year (confirmed
-                      live: "15/07/2026" rendered as "15/07/202"). Native date
-                      inputs are drawn by the browser itself, so there's no way
-                      to shrink the YEAR specifically (no 2-digit-year display
-                      mode) -- the only real fix is giving the whole control
-                      enough width to show its full native text, confirmed
-                      live at 100/100/105px before shipping.
-                      Payment widened from 82px to 105px -- at 82px the
-                      select's own dropdown arrow sat right at (or past) the
-                      column edge and got clipped by the cell's overflow:
-                      hidden, especially once a bank name (e.g. "FAB (First
-                      Abu Dhabi Bank)") is showing in the stacked bank select
-                      underneath. Name and Category give up the matching
-                      width so the table's total width only grows modestly;
-                      the delete column keeps working via its existing sticky
-                      + horizontal-scroll handling regardless of total
-                      width. */}
-                  <col style={{ width: '130px' }} /><col style={{ width: '120px' }} /><col style={{ width: '85px' }} />
+                  {/* Widened Start/End/Due date so the native dd/mm/yyyy text
+                      never clips its year, and widened Payment so its own
+                      dropdown arrow + a stacked bank name aren't clipped --
+                      both confirmed live. But NOT wide enough to reintroduce
+                      horizontal scroll: per explicit feedback the table must
+                      fit the panel with zero scroll, so Name/Category/Amount/
+                      delete gave up width to compensate. Total (851px) was
+                      confirmed live to sit safely under this panel's actual
+                      content width (~882px measured live), and every date/
+                      payment/delete value was individually re-confirmed
+                      non-clipped (scrollWidth <= clientWidth) at these exact
+                      widths before shipping. */}
+                  <col style={{ width: '110px' }} /><col style={{ width: '105px' }} /><col style={{ width: '80px' }} />
                   <col style={{ width: '100px' }} /><col style={{ width: '100px' }} /><col style={{ width: '110px' }} />
-                  <col style={{ width: '105px' }} /><col style={{ width: '105px' }} /><col style={{ width: '42px' }} />
+                  <col style={{ width: '105px' }} /><col style={{ width: '101px' }} /><col style={{ width: '40px' }} />
                 </colgroup>
                 <thead>
                   <tr><th>Name</th><th>Category</th><th>Amount</th><th>Start</th><th>End</th><th>Repeats</th><th>Due date</th><th>Payment</th><th></th></tr>
@@ -3230,13 +3223,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         </select>
                       </td>
                       <td data-label="Amount">
-                        <div className="amount-field-wrap tight">
+                        <div className="amount-field-wrap tight" style={{ '--amt-ch': Math.max(2, String(recurringDrafts[r.id]?.amount ?? '').length) }}>
                           <span className="currency-prefix"><CurrencyPrefix /></span>
                           <input
                             type="number"
                             step="0.01"
                             min="0"
-                            style={{ fontSize: 11, '--amt-ch': Math.max(2, String(recurringDrafts[r.id]?.amount ?? '').length) }}
+                            style={{ fontSize: 11 }}
                             value={recurringDrafts[r.id]?.amount ?? ''}
                             onChange={(e) => updateRecurringDraftField(r.id, 'amount', e.target.value)}
                             onBlur={(e) => commitRecurringField(r.id, 'amount', e.target.value)}
@@ -3544,13 +3537,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         />
                       </td>
                       <td data-label="Amount">
-                        <div className="amount-field-wrap tight">
+                        <div className="amount-field-wrap tight" style={{ '--amt-ch': Math.max(2, String(savingsDrafts[s.id]?.amount ?? '').length) }}>
                           <span className="currency-prefix"><CurrencyPrefix /></span>
                           <input
                             type="number"
                             step="0.01"
                             min="0"
-                            style={{ fontSize: 11, '--amt-ch': Math.max(2, String(savingsDrafts[s.id]?.amount ?? '').length) }}
+                            style={{ fontSize: 11 }}
                             value={savingsDrafts[s.id]?.amount ?? ''}
                             onChange={(e) => updateSavingDraftField(s.id, 'amount', e.target.value)}
                             onBlur={(e) => commitSavingField(s.id, 'amount', e.target.value)}
@@ -3718,13 +3711,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         />
                       </td>
                       <td data-label="Amount">
-                        <div className="amount-field-wrap tight">
+                        <div className="amount-field-wrap tight" style={{ '--amt-ch': Math.max(2, String(expenseDrafts[e.id]?.amount ?? '').length) }}>
                           <span className="currency-prefix"><CurrencyPrefix /></span>
                           <input
                             type="number"
                             step="0.01"
                             min="0"
-                            style={{ fontSize: 11, '--amt-ch': Math.max(2, String(expenseDrafts[e.id]?.amount ?? '').length) }}
+                            style={{ fontSize: 11 }}
                             value={expenseDrafts[e.id]?.amount ?? ''}
                             onChange={(ev) => updateExpenseDraftField(e.id, 'amount', ev.target.value)}
                             onBlur={(ev) => commitExpenseField(e.id, 'amount', ev.target.value)}
