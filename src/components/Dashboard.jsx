@@ -2707,11 +2707,20 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <button
                 type="button"
                 className="chat-fab-btn"
-                title={chatOpen ? 'Close chat' : 'Ask about your budget (AI powered)'}
+                title={chatOpen ? 'Close chat' : 'Chat BoT -- Ask about your budget (AI powered)'}
                 onClick={() => setChatOpen((o) => !o)}
               >
                 {chatOpen ? <X size={18} /> : <MessageCircle size={18} />}
               </button>
+              {!chatOpen && (
+                <span className="chat-fab-badge">
+                  <span className="chat-fab-badge-title">Chat BoT</span>
+                  <span className="chat-fab-badge-sub">
+                    <Sparkles size={11} className="ai-tag-sparkle" strokeWidth={2.25} />
+                    AI powered
+                  </span>
+                </span>
+              )}
               {chatOpen && (
                 <div className="chat-window">
                   <div className="chat-header">

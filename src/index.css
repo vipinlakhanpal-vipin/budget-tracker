@@ -1239,12 +1239,32 @@ td.amount { font-weight: 600; text-align: right; }
    the chat bubble can never again drift off and collide with the header
    (the recurring bug with the old free-floating, draggable version). */
 .chat-fab-wrap { position: relative; }
+/* Same filled sky-blue color combo as the original floating chat bubble
+   (background var(--accent2), white icon, soft blue glow) -- restored per
+   explicit request, rather than the outline style shared by the bell/
+   profile buttons, so the chat button still reads as its own distinct
+   "AI" accent color in the row. */
 .chat-fab-btn {
   position: relative; display: inline-flex; align-items: center; justify-content: center;
-  background: #fff; color: var(--accent2); border: 1.5px solid var(--accent2);
+  background: var(--accent2); color: #fff; border: none;
   border-radius: 8px; width: 34px; height: 34px; padding: 0; cursor: pointer;
+  box-shadow: 0 4px 14px rgba(14, 165, 233, .38);
 }
-.chat-fab-btn:hover { background: var(--accent2-light); }
+.chat-fab-btn:hover { filter: brightness(1.08); }
+/* "Chat BoT" + "AI powered" caption, restored from the old floating bubble --
+   absolutely positioned just below the button so it doesn't add height to
+   the header row itself, and hidden once the chat window is open (the
+   window's own header already carries an AI-powered tag then). */
+.chat-fab-badge {
+  position: absolute; top: 100%; right: 0; margin-top: 4px; z-index: 41;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 1px;
+  color: var(--accent2); background: none;
+  font-size: 10px; font-weight: 800; letter-spacing: .2px;
+  text-shadow: 0 1px 3px rgba(255, 255, 255, .9), 0 0 8px rgba(255, 255, 255, .7);
+  pointer-events: none; white-space: nowrap;
+}
+.chat-fab-badge-title { font-size: 11px; font-weight: 800; line-height: 1.15; }
+.chat-fab-badge-sub { display: inline-flex; align-items: center; gap: 3px; line-height: 1.15; }
 .chat-window {
   position: absolute; top: calc(100% + 8px); right: 0; z-index: 43;
   width: 340px; max-width: min(85vw, 340px); height: 440px; max-height: 65vh;
