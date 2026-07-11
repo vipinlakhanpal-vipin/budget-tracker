@@ -347,6 +347,24 @@ button, input, select, textarea { font-family: inherit; }
 .header-title-row { display: flex; align-items: center; gap: 8px; }
 .header-title-row h1 { margin: 0; }
 .app-title-purple { color: #7c3aed; }
+/* Heartbeat loop for the header logo's heart (HearthMark in Dashboard.jsx):
+   a quick "lub-dub" double pulse, then a rest for the remainder of the
+   cycle, like a real pulse -- not a single continuous throb. transform-box:
+   fill-box makes the scale happen around the heart's OWN center rather than
+   the whole SVG's top-left corner (the default origin for transforms on SVG
+   children), so it grows/shrinks in place instead of drifting. */
+@keyframes hearth-heartbeat {
+  0%, 100% { transform: scale(1); }
+  14% { transform: scale(1.22); }
+  28% { transform: scale(1); }
+  42% { transform: scale(1.14); }
+  56% { transform: scale(1); }
+}
+.hearth-heartbeat {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: hearth-heartbeat 1.4s ease-in-out infinite;
+}
 .top-bar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .input-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
 /* This original in-content Income/Fixed Expenses/Add an expense/Savings
@@ -1203,72 +1221,33 @@ td.amount { font-weight: 600; text-align: right; }
   }
   .mobile-delete-btn:active { background: #fadbd8; }
 
-  /* Stacking the chat bubble directly above the "+" FAB (both on the right)
-     turned out too tight in practice -- on real phones it read as crowded
-     against both the FAB and the bottom nav's rightmost "Settings" button,
-     which all share that same corner. Rather than fine-tune pixel math
-     again (this is the second overlap bug in this exact spot), the chat
-     bubble moves to the LEFT on mobile only, at the same height as the "+"
-     FAB -- a completely separate corner from the FAB and nav, so there's no
-     shared space to crowd regardless of exact nav/FAB rendered height on
-     any given device. Desktop keeps the bottom-right position from the
-     .chat-fab base rule below (there's no mobile bottom nav to conflict
-     with there). */
-  .chat-fab-wrapper { left: 16px; right: auto; align-items: flex-start; bottom: calc(100px + env(safe-area-inset-bottom)); }
+  /* Chat bubble now lives fixed in the header next to the bell (see
+     .chat-fab-wrap below) instead of floating over the page, so it no
+     longer needs a separate mobile corner/position override -- its
+     dropdown already shrinks to fit the viewport the same way the bell's
+     and profile's dropdowns do. */
   .chat-window {
-    left: 8px; right: 8px; width: auto;
-    bottom: calc(162px + env(safe-area-inset-bottom));
-    max-height: 50vh;
+    width: auto; max-width: min(90vw, 340px);
+    max-height: 60vh;
   }
 }
 
-/* AI feature #4: floating, draggable chat bubble + its popup window.
-   .chat-fab-wrapper is the single positioned element -- it holds both the
-   round button and the caption beneath it, so dragging the wrapper moves
-   both together as one unit instead of two separately-fixed pieces that
-   could drift apart. Desktop-default position here (bottom-right,
-   mirroring where the mobile "+" FAB lives); the @media block above
-   overrides it for mobile so the bubble stacks above the FAB instead of
-   overlapping it or hiding behind the bottom nav. When the user drags it,
-   Dashboard.jsx sets inline left/top (and right/bottom:auto) which simply
-   overrides these defaults. */
-.chat-fab-wrapper {
-  position: fixed; right: 16px; bottom: 40px; z-index: 42;
-  display: flex; flex-direction: column; align-items: flex-end; gap: 4px;
-  touch-action: none;
+/* AI feature #4: chat assistant, now a fixed icon button living in the
+   header right next to the notification bell -- same relative-wrapper +
+   absolutely-positioned-dropdown pattern as .notif-bell-wrap and
+   .profile-menu-wrap right beside it, so all three read as one family and
+   the chat bubble can never again drift off and collide with the header
+   (the recurring bug with the old free-floating, draggable version). */
+.chat-fab-wrap { position: relative; }
+.chat-fab-btn {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  background: #fff; color: var(--accent2); border: 1.5px solid var(--accent2);
+  border-radius: 8px; width: 34px; height: 34px; padding: 0; cursor: pointer;
 }
-.chat-fab {
-  width: 44px; height: 44px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  background: var(--accent2); color: #fff; border: none;
-  box-shadow: 0 4px 14px rgba(14, 165, 233, .45); cursor: grab;
-  transition: transform .12s ease; touch-action: none;
-}
-.chat-fab:active { transform: scale(.92); cursor: grabbing; }
-/* Small "AI powered" caption that sits just below the closed chat bubble so
-   it's clear the assistant is AI-driven before the user even opens it --
-   hidden once the chat window is open (the header already carries its own
-   ai-powered-tag then). No longer separately positioned -- it's just a
-   normal flex child stacked under the button inside .chat-fab-wrapper now,
-   so it always travels with the bubble. */
-.chat-fab-badge {
-  display: flex; flex-direction: column; align-items: flex-end; gap: 1px;
-  /* No background/pill, per explicit preference -- plain teal text, with a
-     soft light shadow standing in for a background so it stays readable
-     over whatever's scrolled underneath (it floats over the whole page). */
-  color: var(--accent); background: none;
-  font-size: 10px; font-weight: 800; letter-spacing: .2px;
-  text-shadow: 0 1px 3px rgba(255, 255, 255, .9), 0 0 8px rgba(255, 255, 255, .7);
-  pointer-events: none; white-space: nowrap;
-}
-/* "Chat BoT" line -- sits above "AI powered" so it's immediately clear this
-   is an AI assistant, not a plain support/contact chat button. Slightly
-   larger than the caption beneath it so it reads as the primary label. */
-.chat-fab-badge-title { font-size: 11px; font-weight: 800; line-height: 1.15; }
-.chat-fab-badge-sub { display: inline-flex; align-items: center; gap: 3px; line-height: 1.15; }
+.chat-fab-btn:hover { background: var(--accent2-light); }
 .chat-window {
-  position: fixed; right: 16px; bottom: 106px; z-index: 43;
-  width: 340px; max-width: calc(100vw - 32px); height: 440px; max-height: 65vh;
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 43;
+  width: 340px; max-width: min(85vw, 340px); height: 440px; max-height: 65vh;
   background: var(--card); border: 1px solid var(--border); border-radius: 16px;
   box-shadow: 0 10px 30px rgba(15, 42, 46, .18);
   display: flex; flex-direction: column; overflow: hidden;

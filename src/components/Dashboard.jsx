@@ -34,31 +34,38 @@ function AiTag({ style }) {
 // above the household name in the top bar so the app's own mark, not just
 // plain text, anchors the header.
 function HearthMark({ size = 30 }) {
+  // v2 of this mark: hut roofline (unchanged) with a small gold "$" coin
+  // capping each end of the roof, and a proper RED heart nested under the
+  // peak -- not the flame this used to be. The heart is drawn by scaling a
+  // classic sharp-cleft heart glyph down to size (via the group transform
+  // below) rather than a hand-drawn blob, which is what was reading as a
+  // rounded belly before -- this keeps the top notch and pointed bottom
+  // crisp even at a small header size. It also gently "beats" on a loop
+  // (.hearth-heartbeat in index.css) -- a quick double-pulse then a pause,
+  // like a real heartbeat, rather than a single continuous throb.
   return (
-    <svg width={size} height={size * (56 / 64)} viewBox="0 0 64 56" xmlns="http://www.w3.org/2000/svg">
+    <svg width={size} height={size * (58 / 64)} viewBox="0 0 64 58" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <linearGradient id="hdrFlameOuter" x1="0" y1="1" x2="0" y2="0">
-          <stop offset="0" stopColor="#e6432c" />
-          <stop offset="1" stopColor="#ff8a3d" />
-        </linearGradient>
-        <linearGradient id="hdrFlameMid" x1="0" y1="1" x2="0" y2="0">
-          <stop offset="0" stopColor="#ff8a3d" />
-          <stop offset="1" stopColor="#ffcf5c" />
-        </linearGradient>
-        <linearGradient id="hdrFlameInner" x1="0" y1="1" x2="0" y2="0">
-          <stop offset="0" stopColor="#ffe27a" />
-          <stop offset="1" stopColor="#fffbe6" />
+        <linearGradient id="hdrHeart" x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0" stopColor="#b91c1c" />
+          <stop offset="1" stopColor="#ef4444" />
         </linearGradient>
       </defs>
       <path
-        d="M8 26 L32 6 L56 26"
+        d="M6 28 L32 8 L58 28"
         stroke="var(--accent)" strokeOpacity="0.85" strokeWidth="4.5"
         fill="none" strokeLinecap="round" strokeLinejoin="round"
       />
-      <path d="M22 44 C22 40 26 38 30 38 L36 38 C40 38 44 40 44 44 Z" fill="#1c3634" />
-      <path d="M32 40 C25 34 24 25 32 12 C40 25 39 34 32 40 Z" fill="url(#hdrFlameOuter)" />
-      <path d="M32 39 C27 34 26 27 32 18 C38 27 37 34 32 39 Z" fill="url(#hdrFlameMid)" />
-      <path d="M32 37 C29 34 28.5 29 32 23 C35.5 29 35 34 32 37 Z" fill="url(#hdrFlameInner)" />
+      <circle cx="6" cy="28" r="6.5" fill="#eab308" stroke="#a16207" strokeWidth="1.2" />
+      <text x="6" y="31.2" fontSize="8.5" fontWeight="800" textAnchor="middle" fill="#fffbe6" fontFamily="Arial, sans-serif">$</text>
+      <circle cx="58" cy="28" r="6.5" fill="#eab308" stroke="#a16207" strokeWidth="1.2" />
+      <text x="58" y="31.2" fontSize="8.5" fontWeight="800" textAnchor="middle" fill="#fffbe6" fontFamily="Arial, sans-serif">$</text>
+      <g className="hearth-heartbeat" transform="translate(18.97,26.81) scale(0.0509)">
+        <path
+          d="M462.3 62.6C407.5 15.9 326 24.3 275.7 76.2L256 96.5l-19.7-20.3C186.1 24.3 104.5 15.9 49.7 62.6c-62.8 53.6-66.1 149.8-9.9 207.9l193.5 199.8c12.5 12.9 32.8 12.9 45.3 0l193.5-199.8c56.3-58.1 53-154.3-9.8-207.9z"
+          fill="url(#hdrHeart)" stroke="#7f1d1d" strokeWidth="9"
+        />
+      </g>
     </svg>
   );
 }
@@ -557,111 +564,27 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const chatMessagesRef = useRef(null);
-  // Draggable chat bubble: null means "use the default bottom-right/bottom-left
-  // CSS corner", {x,y} means "the user dragged it, pin it exactly here" --
-  // restored from localStorage so the chosen spot survives a reload. Kept as
-  // viewport pixel coordinates (position: fixed left/top) rather than
-  // right/bottom so the drag math (which only ever knows the pointer's
-  // clientX/clientY) doesn't have to convert back and forth.
-  const [chatFabPos, setChatFabPos] = useState(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem('hearth-chat-fab-pos') || 'null');
-      return saved && typeof saved.x === 'number' && typeof saved.y === 'number' ? saved : null;
-    } catch {
-      return null;
+  // Chat bubble now lives as a fixed icon button in the header, directly
+  // next to the notification bell (see .chat-fab-wrap in index.css) --
+  // no longer a free-floating, draggable FAB. That removes the recurring
+  // "collides with the header/bell" bugs for good, since its position is
+  // now just normal document flow right next to the bell (same dropdown
+  // pattern as the bell and profile menus) instead of fixed viewport
+  // coordinates that had to be reclamped on every header change.
+  const chatMenuRef = useRef(null);
+  useEffect(() => {
+    if (!chatOpen) return;
+    function onDocClick(e) {
+      if (chatMenuRef.current && !chatMenuRef.current.contains(e.target)) setChatOpen(false);
     }
-  });
-  const chatFabWrapRef = useRef(null);
-  const chatFabDragRef = useRef({ dragging: false, moved: false, startX: 0, startY: 0, origX: 0, origY: 0 });
-  // A short drag (a few px of finger/mouse jitter) should still count as a
-  // tap that opens the chat -- only a real drag (past this threshold)
-  // should reposition the bubble and suppress the click that would
-  // otherwise follow pointerup.
-  const FAB_DRAG_THRESHOLD = 6;
-  const handleChatFabPointerDown = (e) => {
-    const rect = chatFabWrapRef.current.getBoundingClientRect();
-    chatFabDragRef.current = {
-      dragging: true, moved: false,
-      startX: e.clientX, startY: e.clientY,
-      origX: rect.left, origY: rect.top,
-    };
-    e.currentTarget.setPointerCapture?.(e.pointerId);
-  };
-  // The sticky header (title/logo, the merged tab+action row, month nav,
-  // and both summary-card grids) now stays pinned at the very top of the
-  // viewport, so the FAB must never be draggable to a y above its bottom
-  // edge -- otherwise it can end up sitting on top of (or right next to)
-  // the bell icon / other header buttons. Falls back to a small fixed
-  // margin if the ref isn't ready yet (first paint).
-  function minChatFabY() {
-    const frame = stickyFrameRef.current;
-    return frame ? frame.getBoundingClientRect().bottom + 8 : 60;
-  }
-  const handleChatFabPointerMove = (e) => {
-    const d = chatFabDragRef.current;
-    if (!d.dragging) return;
-    const dx = e.clientX - d.startX;
-    const dy = e.clientY - d.startY;
-    if (!d.moved && Math.hypot(dx, dy) < FAB_DRAG_THRESHOLD) return;
-    d.moved = true;
-    const wrap = chatFabWrapRef.current;
-    const w = wrap ? wrap.offsetWidth : 60;
-    const h = wrap ? wrap.offsetHeight : 90;
-    const x = Math.min(Math.max(8, d.origX + dx), window.innerWidth - w - 8);
-    const y = Math.min(Math.max(minChatFabY(), d.origY + dy), window.innerHeight - h - 8);
-    setChatFabPos({ x, y });
-  };
-  const handleChatFabPointerUp = () => {
-    const d = chatFabDragRef.current;
-    if (d.moved) {
-      setChatFabPos((pos) => {
-        if (pos) localStorage.setItem('hearth-chat-fab-pos', JSON.stringify(pos));
-        return pos;
-      });
-    }
-    chatFabDragRef.current.dragging = false;
-  };
-  const handleChatFabClick = () => {
-    // Suppress the click that fires right after a drag's pointerup -- only
-    // toggle the chat window open/closed when this was a plain tap.
-    if (chatFabDragRef.current.moved) {
-      chatFabDragRef.current.moved = false;
-      return;
-    }
-    setChatOpen((o) => !o);
-  };
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [chatOpen]);
   useEffect(() => {
     if (chatMessagesRef.current) {
       chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight;
     }
   }, [chatMessages, chatLoading]);
-
-  // A position saved from BEFORE the header became this tall/sticky (or
-  // from a wider window) can otherwise leave the chat FAB parked on top of
-  // the bell/header buttons after this update, or off-screen after a
-  // resize -- nudge any restored/previously-saved spot back into bounds
-  // once the header has actually rendered and whenever the window resizes.
-  useEffect(() => {
-    function clampFabPos() {
-      setChatFabPos((pos) => {
-        if (!pos) return pos;
-        const wrap = chatFabWrapRef.current;
-        const w = wrap ? wrap.offsetWidth : 60;
-        const h = wrap ? wrap.offsetHeight : 90;
-        const minY = minChatFabY();
-        const x = Math.min(Math.max(8, pos.x), window.innerWidth - w - 8);
-        const y = Math.min(Math.max(minY, pos.y), window.innerHeight - h - 8);
-        if (x === pos.x && y === pos.y) return pos;
-        const next = { x, y };
-        localStorage.setItem('hearth-chat-fab-pos', JSON.stringify(next));
-        return next;
-      });
-    }
-    clampFabPos();
-    window.addEventListener('resize', clampFabPos);
-    return () => window.removeEventListener('resize', clampFabPos);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // AI feature #5 (Budget Coach): unlike the monthly digest (#2), which
   // summarizes just the currently viewed month, this looks across the last
@@ -2771,6 +2694,54 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       <div key={n.id} className="notif-item">{n.text}</div>
                     ))
                   )}
+                </div>
+              )}
+            </div>
+            {/* AI feature #4: chat assistant, now anchored as a fixed icon
+                button right next to the bell (same relative/absolute
+                dropdown pattern as notif-bell-wrap and profile-menu-wrap
+                just above) instead of a free-floating draggable bubble --
+                per explicit request, this stays put next to the bell no
+                matter what else changes in the header. */}
+            <div className="chat-fab-wrap" ref={chatMenuRef}>
+              <button
+                type="button"
+                className="chat-fab-btn"
+                title={chatOpen ? 'Close chat' : 'Ask about your budget (AI powered)'}
+                onClick={() => setChatOpen((o) => !o)}
+              >
+                {chatOpen ? <X size={18} /> : <MessageCircle size={18} />}
+              </button>
+              {chatOpen && (
+                <div className="chat-window">
+                  <div className="chat-header">
+                    <span>Ask me About Budget &amp; Expenses / Suggestions <AiTag /></span>
+                    <button onClick={() => setChatOpen(false)} aria-label="Close chat"><X size={16} /></button>
+                  </div>
+                  <div className="chat-messages" ref={chatMessagesRef}>
+                    {chatMessages.length === 0 && (
+                      <div className="chat-empty">
+                        Ask about any tab -- Income, Fixed Expenses, Add an expense, Savings, or how a feature works -- and ask for suggestions too, e.g. "how much did I spend on dining this month?", "how do fixed expenses work?", or "any suggestions to lower my spending?". I can only see the numbers already in your household's data, nothing outside it.
+                      </div>
+                    )}
+                    {chatMessages.map((m, i) => (
+                      <div key={i} className={`chat-bubble ${m.role}`}>{m.content}</div>
+                    ))}
+                    {chatLoading && <div className="chat-bubble assistant chat-typing">Thinking...</div>}
+                  </div>
+                  <form
+                    className="chat-input-row"
+                    onSubmit={(e) => { e.preventDefault(); sendChatMessage(); }}
+                  >
+                    <input
+                      type="text"
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      placeholder="Ask a question..."
+                      disabled={chatLoading}
+                    />
+                    <button type="submit" className="btn small" disabled={chatLoading || !chatInput.trim()}>Send</button>
+                  </form>
                 </div>
               )}
             </div>
@@ -4944,77 +4915,6 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
         </button>
       </nav>
 
-      {/* AI feature #4: a floating, draggable chat bubble available from
-          anywhere in the app, not tied to any tab/panel. Defaults to
-          bottom-right on desktop / bottom-left on mobile (see
-          .chat-fab-wrapper in index.css); press-and-drag anywhere on
-          screen repositions it, and the spot is remembered (localStorage)
-          for next time. A plain tap still opens the chat -- only a real
-          drag (past a small pixel threshold) moves the bubble instead. */}
-      <div
-        ref={chatFabWrapRef}
-        className="chat-fab-wrapper"
-        style={chatFabPos ? { left: chatFabPos.x, top: chatFabPos.y, right: 'auto', bottom: 'auto' } : undefined}
-      >
-        <button
-          className="chat-fab"
-          onPointerDown={handleChatFabPointerDown}
-          onPointerMove={handleChatFabPointerMove}
-          onPointerUp={handleChatFabPointerUp}
-          onClick={handleChatFabClick}
-          aria-label={chatOpen ? 'Close chat' : 'Ask about your budget (AI powered). Press and drag to move.'}
-          title={chatOpen ? 'Close chat' : 'Ask about your budget (AI powered). Press and drag to move.'}
-        >
-          {chatOpen ? <X size={18} /> : <MessageCircle size={18} />}
-        </button>
-        {!chatOpen && (
-          <span className="chat-fab-badge">
-            {/* "Chat BoT" line makes clear up front that this is an AI
-                assistant and not a plain contact/support chat button --
-                sits directly above the existing "AI powered" line. Order
-                swapped vs. the button above: this caption should sit
-                BELOW the bubble icon, closer to the screen edge. */}
-            <span className="chat-fab-badge-title">Chat BoT</span>
-            <span className="chat-fab-badge-sub">
-              <Sparkles size={11} className="ai-tag-sparkle" strokeWidth={2.25} />
-              AI powered
-            </span>
-          </span>
-        )}
-      </div>
-
-      {chatOpen && (
-        <div className="chat-window">
-          <div className="chat-header">
-            <span>Ask me About Budget &amp; Expenses / Suggestions <AiTag /></span>
-            <button onClick={() => setChatOpen(false)} aria-label="Close chat"><X size={16} /></button>
-          </div>
-          <div className="chat-messages" ref={chatMessagesRef}>
-            {chatMessages.length === 0 && (
-              <div className="chat-empty">
-                Ask about any tab -- Income, Fixed Expenses, Add an expense, Savings, or how a feature works -- and ask for suggestions too, e.g. "how much did I spend on dining this month?", "how do fixed expenses work?", or "any suggestions to lower my spending?". I can only see the numbers already in your household's data, nothing outside it.
-              </div>
-            )}
-            {chatMessages.map((m, i) => (
-              <div key={i} className={`chat-bubble ${m.role}`}>{m.content}</div>
-            ))}
-            {chatLoading && <div className="chat-bubble assistant chat-typing">Thinking...</div>}
-          </div>
-          <form
-            className="chat-input-row"
-            onSubmit={(e) => { e.preventDefault(); sendChatMessage(); }}
-          >
-            <input
-              type="text"
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              placeholder="Ask a question..."
-              disabled={chatLoading}
-            />
-            <button type="submit" className="btn small" disabled={chatLoading || !chatInput.trim()}>Send</button>
-          </form>
-        </div>
-      )}
     </div>
   );
 }
