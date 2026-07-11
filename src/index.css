@@ -482,10 +482,12 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
    Forcing the same fixed height here (box-sizing:border-box already global)
    guarantees every field in a row starts and ends at the same pixel
    regardless of its own font-size/padding. */
-input[type="date"] {
+input[type="date"],
+input[type="month"] {
   font-size: 12px; min-width: 122px; padding: 8px 6px; height: 40px;
 }
-.field input[type="date"] { min-width: 130px; height: 40px; }
+.field input[type="date"],
+.field input[type="month"] { min-width: 130px; height: 40px; }
 /* Bold, right-aligned amounts read more like a receipt/ledger and are
    easier to compare at a glance than left-aligned plain numbers. */
 .field input[type="number"] { font-weight: 700; text-align: right; }

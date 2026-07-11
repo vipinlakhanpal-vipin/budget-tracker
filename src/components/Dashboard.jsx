@@ -2837,7 +2837,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   />
                 </div>
               </div>
-              <div className="field">
+              <div className="field" style={{ flex: '0 1 150px', minWidth: 130 }}>
                 <label>Month</label>
                 <input
                   type="month"
@@ -2845,9 +2845,15 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   onChange={(e) => setNewIncome({ ...newIncome, month: e.target.value })}
                 />
               </div>
-            </div>
-            <div style={{ marginTop: 12 }}>
-              <button className="btn" type="submit">Add</button>
+              {/* Add sits right next to Month, in the same row, instead of on
+                  its own line below -- the invisible label above it matches
+                  every other field's label height so the button's own 40px
+                  height still lines up on the same baseline as the inputs
+                  next to it (the row is align-items:flex-end). */}
+              <div className="field" style={{ flex: '0 0 auto' }}>
+                <label style={{ visibility: 'hidden' }}>Add</label>
+                <button className="btn" type="submit" style={{ height: 40 }}>Add</button>
+              </div>
             </div>
             </form>
             <div className="muted-small" style={{ marginTop: 6 }}>
@@ -3106,9 +3112,14 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   </select>
                 </div>
               )}
-            </div>
-            <div style={{ marginTop: 12 }}>
-              <button className="btn" type="submit">Add</button>
+              {/* Add sits right next to Payment Source (and Bank, when it's
+                  showing) in this same row, instead of on its own line below.
+                  Same invisible-label trick as Income's Add button so its
+                  40px height still lines up with the row's other fields. */}
+              <div className="field" style={{ flex: '0 0 auto' }}>
+                <label style={{ visibility: 'hidden' }}>Add</label>
+                <button className="btn" type="submit" style={{ height: 40 }}>Add</button>
+              </div>
             </div>
             </form>
 
