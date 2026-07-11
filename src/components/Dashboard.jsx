@@ -2707,7 +2707,11 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 </select>
                 {aiCategoryHint && <div className="ai-hint">{aiCategoryHint}</div>}
               </div>
-              <div className="field" style={{ flex: '0 1 140px', minWidth: 120 }}>
+              <div className="field" style={{ flex: '0 0 auto' }}>
+                {/* Was flex:'0 1 140px'/minWidth:120 -- same leftover width
+                    reservation fixed on Income's Amount field. Sizing to
+                    content instead closes the dead space now that the box
+                    itself is exactly as wide as the typed value. */}
                 <label>Amount</label>
                 <div className="amount-field-wrap">
                   <span className="currency-prefix"><CurrencyPrefix /></span>
@@ -2752,14 +2756,11 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   </select>
                 </div>
               )}
-              {/* Add + Scan a receipt now sit inline right after Payment
-                  Source (and Bank, when shown), matching the Income/Fixed
-                  Expenses pattern. Scan stays type="button" so it can't
-                  accidentally submit the Add form now that it lives inside it. */}
-              <div className="field" style={{ flex: '0 0 auto' }}>
-                <label style={{ visibility: 'hidden' }}>Add</label>
-                <button className="btn" type="submit" style={{ height: 40 }}>Add</button>
-              </div>
+              {/* Scan a receipt now comes before Add, reading left-to-right as
+                  "capture it, then confirm/submit it" -- Add is the final
+                  action in the row, same order the eye naturally follows.
+                  Scan stays type="button" so it can't accidentally submit the
+                  Add form now that it lives inside it. */}
               <div className="field" style={{ flex: '0 0 auto' }}>
                 <label style={{ visibility: 'hidden' }}>Scan</label>
                 <button
@@ -2773,6 +2774,10 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   {scanLoading ? 'Reading receipt...' : 'Scan a receipt'}
                   <AiTag />
                 </button>
+              </div>
+              <div className="field" style={{ flex: '0 0 auto' }}>
+                <label style={{ visibility: 'hidden' }}>Add</label>
+                <button className="btn" type="submit" style={{ height: 40 }}>Add</button>
               </div>
             </div>
             </form>
@@ -3096,7 +3101,11 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   ))}
                 </select>
               </div>
-              <div className="field" style={{ flex: '0 1 150px', minWidth: 130 }}>
+              <div className="field" style={{ flex: '0 0 auto' }}>
+                {/* Was flex:'0 1 150px'/minWidth:130 -- same leftover width
+                    reservation fixed on Income's Amount field. Sizing to
+                    content instead closes the dead space now that the box
+                    itself is exactly as wide as the typed value. */}
                 <label>Amount / month</label>
                 <div className="amount-field-wrap">
                   <span className="currency-prefix"><CurrencyPrefix /></span>
@@ -3518,7 +3527,11 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   onChange={(e) => setNewSaving({ ...newSaving, name: e.target.value })}
                 />
               </div>
-              <div className="field" style={{ flex: '0 1 150px', minWidth: 130 }}>
+              <div className="field" style={{ flex: '0 0 auto' }}>
+                {/* Was flex:'0 1 150px'/minWidth:130 -- same leftover width
+                    reservation fixed on Income's Amount field. Sizing to
+                    content instead closes the dead space now that the box
+                    itself is exactly as wide as the typed value. */}
                 <label>Amount / month</label>
                 <div className="amount-field-wrap">
                   <span className="currency-prefix"><CurrencyPrefix /></span>
@@ -3533,7 +3546,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   />
                 </div>
               </div>
-              <div className="field">
+              <div className="field" style={{ flex: '0 1 150px', minWidth: 130 }}>
                 <label>Month</label>
                 <input
                   type="month"
@@ -3541,9 +3554,15 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   onChange={(e) => setNewSaving({ ...newSaving, month: e.target.value })}
                 />
               </div>
-            </div>
-            <div style={{ marginTop: 12 }}>
-              <button className="btn" type="submit">Add</button>
+              {/* Add now sits inline right after Month, in the same row,
+                  instead of on its own line below -- matching the Income/
+                  Fixed Expenses/Add-expense pattern (invisible label keeps
+                  the button's 40px height on the same baseline as the row's
+                  other fields, since the row is align-items:flex-end). */}
+              <div className="field" style={{ flex: '0 0 auto' }}>
+                <label style={{ visibility: 'hidden' }}>Add</label>
+                <button className="btn" type="submit" style={{ height: 40 }}>Add</button>
+              </div>
             </div>
             </form>
             <div className="muted-small" style={{ marginTop: 6 }}>
