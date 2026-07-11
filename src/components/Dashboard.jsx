@@ -33,37 +33,48 @@ function AiTag({ style }) {
 // wallet, piggy bank, receipt) that only make sense at splash size. Sits
 // above the household name in the top bar so the app's own mark, not just
 // plain text, anchors the header.
-function HearthMark({ size = 30 }) {
-  // v2 of this mark: hut roofline (unchanged) with a small gold "$" coin
-  // capping each end of the roof, and a proper RED heart nested under the
-  // peak -- not the flame this used to be. The heart is drawn by scaling a
-  // classic sharp-cleft heart glyph down to size (via the group transform
-  // below) rather than a hand-drawn blob, which is what was reading as a
-  // rounded belly before -- this keeps the top notch and pointed bottom
-  // crisp even at a small header size. It also gently "beats" on a loop
-  // (.hearth-heartbeat in index.css) -- a quick double-pulse then a pause,
-  // like a real heartbeat, rather than a single continuous throb.
+function HearthMark({ size = 32 }) {
+  // v4 of this mark: rebuilt to match the gold "heart-shaped roofline +
+  // house + chimney with rising hearts" logo the user provided as a
+  // reference (family silhouette + full wordmark version lives at splash
+  // size in Splash.jsx -- there's no room for that level of detail at a
+  // 30-ish px header icon, so this keeps just the heart outline, the small
+  // roof peak nested inside it, and the chimney with a single tiny rising
+  // heart above it). Gold throughout now, replacing the red filled heart
+  // from the previous version, to match that reference. The heart outline
+  // has a brighter, blurred "glow chase" copy animating its dash-offset
+  // around the perimeter (.heart-glow-chase in index.css) -- the same
+  // traveling-shimmer technique used on the big splash version, rather than
+  // a plain scale pulse, so the two read as the same animated mark at two
+  // sizes instead of two different effects.
   return (
-    <svg width={size} height={size * (58 / 64)} viewBox="0 0 64 58" xmlns="http://www.w3.org/2000/svg">
+    <svg width={size} height={size} viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <linearGradient id="hdrHeart" x1="0" y1="1" x2="0" y2="0">
-          <stop offset="0" stopColor="#b91c1c" />
-          <stop offset="1" stopColor="#ef4444" />
+        <linearGradient id="hdrHeartGold" x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0" stopColor="#a16207" />
+          <stop offset="1" stopColor="#fde68a" />
         </linearGradient>
       </defs>
       <path
-        d="M6 28 L32 8 L58 28"
-        stroke="var(--accent)" strokeOpacity="0.85" strokeWidth="4.5"
-        fill="none" strokeLinecap="round" strokeLinejoin="round"
+        className="heart-outline-draw"
+        d="M32 54 C32 54 9 35 9 22 C9 12 17 7 25 10 C29 11.5 31 15 32 18 C33 15 35 11.5 39 10 C47 7 55 12 55 22 C55 35 32 54 32 54 Z"
+        fill="none" stroke="url(#hdrHeartGold)" strokeWidth="3" strokeLinejoin="round"
       />
-      <circle cx="6" cy="28" r="6.5" fill="#eab308" stroke="#a16207" strokeWidth="1.2" />
-      <text x="6" y="31.2" fontSize="8.5" fontWeight="800" textAnchor="middle" fill="#fffbe6" fontFamily="Arial, sans-serif">$</text>
-      <circle cx="58" cy="28" r="6.5" fill="#eab308" stroke="#a16207" strokeWidth="1.2" />
-      <text x="58" y="31.2" fontSize="8.5" fontWeight="800" textAnchor="middle" fill="#fffbe6" fontFamily="Arial, sans-serif">$</text>
-      <g className="hearth-heartbeat" transform="translate(18.97,26.81) scale(0.0509)">
+      <path
+        className="heart-glow-chase"
+        d="M32 54 C32 54 9 35 9 22 C9 12 17 7 25 10 C29 11.5 31 15 32 18 C33 15 35 11.5 39 10 C47 7 55 12 55 22 C55 35 32 54 32 54 Z"
+        fill="none" stroke="#fff3c4" strokeWidth="2" strokeLinejoin="round"
+      />
+      <path
+        className="hearth-roof"
+        d="M20 32 L32 19 L44 32"
+        stroke="#a16207" strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"
+      />
+      <rect x="41" y="15" width="5" height="11" fill="url(#hdrHeartGold)" />
+      <g className="mini-rising-heart">
         <path
-          d="M462.3 62.6C407.5 15.9 326 24.3 275.7 76.2L256 96.5l-19.7-20.3C186.1 24.3 104.5 15.9 49.7 62.6c-62.8 53.6-66.1 149.8-9.9 207.9l193.5 199.8c12.5 12.9 32.8 12.9 45.3 0l193.5-199.8c56.3-58.1 53-154.3-9.8-207.9z"
-          fill="url(#hdrHeart)" stroke="#7f1d1d" strokeWidth="9"
+          d="M43.5,10.1l-.44-.4C41.6,8.3,40.6,7.4,40.6,6.2c0-.9.7-1.6,1.6-1.6.5,0,1,.24,1.3.62.3-.38.8-.62,1.3-.62.9,0,1.6.7,1.6,1.6,0,1.2-1,2.1-2.5,3.5l-.4.38Z"
+          fill="#fde68a"
         />
       </g>
     </svg>
@@ -2553,7 +2564,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       <div className="top-bar" ref={topRef}>
         <div className="top-bar-row">
           <div className="header-title-row">
-            <HearthMark size={26} />
+            <HearthMark size={34} />
             <h1 className="app-title-purple">{household.name || 'Hearth'}</h1>
           </div>
           <span className="corner-version-badge" title="This updates automatically -- if a change doesn't look right, reload the page.">

@@ -3,6 +3,30 @@
   --accent: #0d9488; --accent-light: #ccfbf1; --accent2: #0ea5e9; --accent2-light: #e0f2fe;
   --danger: #dc2626; --danger-bg: #fef2f2;
   --ok: #0d9488; --border: #d5ecec;
+  /* Fixed purple used by the "Expense Management" title and the Chat BoT
+     button -- deliberately NOT swapped by the color-theme picker below, so
+     the app's own AI/purple accent stays recognizable no matter which
+     accent theme is active. */
+  --chat-accent: #7c3aed;
+}
+/* Color theme picker (see .theme-fab-btn / ThemeMenu in Dashboard.jsx):
+   swaps only the two "accent" pairs that drive buttons, borders, tab
+   highlights, etc. app-wide -- never --bg/--card/--text/--danger, so the
+   app never becomes hard to read no matter which theme is picked. Applied
+   via a data-theme attribute on <html>, set from the saved choice in
+   localStorage, rather than inline styles, so every themed rule lives in
+   one place here instead of being computed in JS. */
+[data-theme="ocean"] {
+  --accent: #0369a1; --accent-light: #dbeafe; --accent2: #0ea5e9; --accent2-light: #e0f2fe;
+}
+[data-theme="purple"] {
+  --accent: #7c3aed; --accent-light: #ede9fe; --accent2: #a78bfa; --accent2-light: #f5f3ff;
+}
+[data-theme="rose"] {
+  --accent: #db2777; --accent-light: #fce7f3; --accent2: #f472b6; --accent2-light: #fdf2f8;
+}
+[data-theme="forest"] {
+  --accent: #15803d; --accent-light: #dcfce7; --accent2: #22c55e; --accent2-light: #f0fdf4;
 }
 * { box-sizing: border-box; }
 html {
@@ -76,8 +100,14 @@ button, input, select, textarea { font-family: inherit; }
   50% { opacity: .25; }
 }
 .geo-label {
-  fill: #ffffff; font-size: 8px; font-weight: 700; font-family: 'Nunito', sans-serif;
-  paint-order: stroke; stroke: #063d37; stroke-width: 1.8px; stroke-linejoin: round;
+  /* This is set in the map SVG's own user-space units, not real CSS px --
+     the map is blown up ~1.85x on a typical viewport (viewBox width 784
+     stretched to 130vmax), so the old "8" here was actually rendering
+     around 15px on screen. Shortening the country name to "UAE" (see
+     COUNTRY_SHORT_NAMES in Splash.jsx) frees up room, and this value is
+     tuned down so the label renders close to a true 10px. */
+  fill: #ffffff; font-size: 5.5px; font-weight: 700; font-family: 'Nunito', sans-serif;
+  paint-order: stroke; stroke: #063d37; stroke-width: 1.2px; stroke-linejoin: round;
   opacity: .95; letter-spacing: .01em;
 }
 /* Small twinkling points scattered across the background -- turns the
@@ -229,6 +259,14 @@ button, input, select, textarea { font-family: inherit; }
   text-shadow: 0 2px 18px rgba(255, 255, 255, .35);
   animation: splash-pop .5s ease .25s both;
 }
+/* Gold gradient wordmark, matching the heart-outline mark above it, instead
+   of plain white -- background-clip:text is the standard way to fill text
+   with a gradient (there's no plain CSS "gradient color" property). */
+.splash-title-gold {
+  background: linear-gradient(180deg, #fff3c4 0%, #eab308 55%, #a16207 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  text-shadow: none;
+}
 /* Small "AI-powered" pill under the app name -- same gradient family as the
    in-app <AiTag /> badges, so the splash reads as a preview of the AI
    features rather than a generic loading screen. */
@@ -260,6 +298,20 @@ button, input, select, textarea { font-family: inherit; }
 .splash-tagline {
   color: rgba(255, 255, 255, .88); font-size: 13px; font-weight: 600;
   animation: splash-pop .5s ease .35s both;
+}
+/* "A Happy Hearth" -- the reference logo's own tagline treatment: a thin
+   rule either side of the words, gold and uppercase-ish letter-spaced like
+   the source, with a small solid heart underneath (separate element right
+   below, since a heart doesn't sit well inline with the rule/text baseline). */
+.splash-happy-hearth {
+  display: flex; align-items: center; gap: 10px; margin-top: 6px;
+  color: #fde68a; font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase;
+  animation: splash-pop .5s ease .4s both;
+}
+.splash-happy-rule { width: 26px; height: 1px; background: rgba(253, 230, 138, .55); }
+.splash-happy-heart {
+  margin-top: 4px;
+  animation: splash-pop .5s ease .42s both, hearth-family-breathe 2.4s ease-in-out 1s infinite;
 }
 .splash-version {
   margin-top: 4px; color: rgba(255, 255, 255, .7); font-size: 11px; font-weight: 700; letter-spacing: .02em;
@@ -347,24 +399,93 @@ button, input, select, textarea { font-family: inherit; }
 .header-title-row { display: flex; align-items: center; gap: 8px; }
 .header-title-row h1 { margin: 0; }
 .app-title-purple { color: #7c3aed; }
-/* Heartbeat loop for the header logo's heart (HearthMark in Dashboard.jsx):
-   a quick "lub-dub" double pulse, then a rest for the remainder of the
-   cycle, like a real pulse -- not a single continuous throb. transform-box:
-   fill-box makes the scale happen around the heart's OWN center rather than
-   the whole SVG's top-left corner (the default origin for transforms on SVG
-   children), so it grows/shrinks in place instead of drifting. */
-@keyframes hearth-heartbeat {
-  0%, 100% { transform: scale(1); }
-  14% { transform: scale(1.22); }
-  28% { transform: scale(1); }
-  42% { transform: scale(1.14); }
-  56% { transform: scale(1); }
+/* Shared animation set for the gold heart-outline logo mark -- used at two
+   sizes: the small HearthMark in the header (Dashboard.jsx) and the much
+   larger version in the splash screen (Splash.jsx). Same three effects at
+   both sizes so the mark reads as "the same animated logo, just resized"
+   rather than two different treatments:
+   1. .heart-outline-draw / .hearth-roof -- the heart and the small roof
+      peak nested inside it each draw themselves in like a single pen
+      stroke as the mark appears (stroke-dasharray/dashoffset), the same
+      technique the old roofline-only mark used.
+   2. .heart-glow-chase -- a brighter, blurred duplicate of the heart
+      outline with a short dash and a long gap, whose dash-offset animates
+      continuously around the path -- reads as a traveling shimmer chasing
+      around the heart's perimeter (this is the effect visible in the
+      reference logo's animation frames, not a scale pulse).
+   3. .mini-rising-heart / .rising-heart -- tiny heart(s) drifting up out of
+      the chimney and fading, looping. */
+@keyframes heart-draw-in {
+  to { stroke-dashoffset: 0; }
 }
-.hearth-heartbeat {
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: hearth-heartbeat 1.4s ease-in-out infinite;
+.heart-outline-draw {
+  stroke-dasharray: 230; stroke-dashoffset: 230;
+  animation: heart-draw-in 1.1s cubic-bezier(.34, 1.56, .64, 1) .1s forwards;
 }
+@keyframes heart-glow-move {
+  0% { stroke-dashoffset: 0; opacity: 0; }
+  8%, 92% { opacity: .95; }
+  100% { stroke-dashoffset: -230; opacity: 0; }
+}
+.heart-glow-chase {
+  stroke-dasharray: 34 230;
+  filter: blur(1.6px) drop-shadow(0 0 4px rgba(253, 230, 138, .85));
+  animation: heart-glow-move 3.2s linear 1.1s infinite;
+}
+@keyframes mini-heart-rise {
+  0% { opacity: 0; transform: translateY(0) scale(.5); }
+  15% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-11px) scale(1.05); }
+}
+.mini-rising-heart {
+  opacity: 0; transform-box: fill-box; transform-origin: center;
+  animation: mini-heart-rise 2.2s ease-in 1s infinite;
+}
+
+/* Splash-size versions of the same draw-in/glow-chase pair -- identical
+   technique to the header's, just a bigger stroke-dasharray tuned to this
+   much longer path so the draw-in and the chasing dash both cover the
+   whole outline correctly. */
+.heart-outline-draw-lg {
+  stroke-dasharray: 900; stroke-dashoffset: 900;
+  animation: heart-draw-in 1.3s cubic-bezier(.34, 1.56, .64, 1) .1s forwards;
+}
+@keyframes heart-glow-move-lg {
+  0% { stroke-dashoffset: 0; opacity: 0; }
+  8%, 92% { opacity: .95; }
+  100% { stroke-dashoffset: -900; opacity: 0; }
+}
+.heart-glow-chase-lg {
+  stroke-dasharray: 110 900;
+  filter: blur(3px) drop-shadow(0 0 8px rgba(253, 230, 138, .85));
+  animation: heart-glow-move-lg 3.6s linear 1.3s infinite;
+}
+/* Warm light behind the family silhouette gently brightens/dims and
+   breathes outward, like the reference logo's inner glow, rather than
+   sitting static. */
+@keyframes hearth-family-breathe {
+  0%, 100% { opacity: .55; transform: scale(1); }
+  50% { opacity: .85; transform: scale(1.08); }
+}
+.hearth-family-glow {
+  transform-box: fill-box; transform-origin: center;
+  animation: hearth-family-breathe 3s ease-in-out infinite;
+}
+/* Three tiny hearts drifting up out of the chimney and fading, staggered so
+   they don't rise in lockstep -- the splash-size equivalent of
+   .mini-rising-heart in the header. */
+@keyframes rising-heart-float {
+  0% { opacity: 0; transform: translateY(0) scale(.6); }
+  15% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-46px) scale(1.1); }
+}
+.rising-heart {
+  opacity: 0; transform-box: fill-box; transform-origin: center;
+  animation: rising-heart-float 2.8s ease-in infinite;
+}
+.rising-heart-1 { animation-delay: 1.1s; }
+.rising-heart-2 { animation-delay: 1.9s; }
+.rising-heart-3 { animation-delay: 2.6s; }
 .top-bar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .input-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
 /* This original in-content Income/Fixed Expenses/Add an expense/Savings
@@ -1239,16 +1360,16 @@ td.amount { font-weight: 600; text-align: right; }
    the chat bubble can never again drift off and collide with the header
    (the recurring bug with the old free-floating, draggable version). */
 .chat-fab-wrap { position: relative; }
-/* Same filled sky-blue color combo as the original floating chat bubble
-   (background var(--accent2), white icon, soft blue glow) -- restored per
-   explicit request, rather than the outline style shared by the bell/
-   profile buttons, so the chat button still reads as its own distinct
-   "AI" accent color in the row. */
+/* Filled purple color combo, per explicit correction (the original floating
+   chat bubble was purple, not the sky-blue this was first restored to) --
+   same purple as the "Expense Management" title (--chat-accent) so it reads
+   as the app's own AI-purple accent rather than the teal/blue used
+   elsewhere in the row. */
 .chat-fab-btn {
   position: relative; display: inline-flex; align-items: center; justify-content: center;
-  background: var(--accent2); color: #fff; border: none;
+  background: var(--chat-accent); color: #fff; border: none;
   border-radius: 8px; width: 34px; height: 34px; padding: 0; cursor: pointer;
-  box-shadow: 0 4px 14px rgba(14, 165, 233, .38);
+  box-shadow: 0 4px 14px rgba(124, 58, 237, .4);
 }
 .chat-fab-btn:hover { filter: brightness(1.08); }
 /* "Chat BoT" + "AI powered" caption, restored from the old floating bubble --
@@ -1258,7 +1379,7 @@ td.amount { font-weight: 600; text-align: right; }
 .chat-fab-badge {
   position: absolute; top: 100%; right: 0; margin-top: 4px; z-index: 41;
   display: flex; flex-direction: column; align-items: flex-end; gap: 1px;
-  color: var(--accent2); background: none;
+  color: var(--chat-accent); background: none;
   font-size: 10px; font-weight: 800; letter-spacing: .2px;
   text-shadow: 0 1px 3px rgba(255, 255, 255, .9), 0 0 8px rgba(255, 255, 255, .7);
   pointer-events: none; white-space: nowrap;

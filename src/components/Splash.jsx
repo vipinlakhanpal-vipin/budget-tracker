@@ -58,6 +58,12 @@ const WORLD_MAP_PATH =
 // bounding-box center in this map. Looking a resolved country up here
 // (rather than re-projecting its lat/lon separately) guarantees the red
 // dot always lands inside that country's own shape on this exact map.
+// Short-form overrides for country names in the "City, Country" label --
+// ipapi.co's full country_name ("United Arab Emirates") reads long next to
+// a city name at the small splash label size, so known short forms are
+// swapped in here (falls back to the full name for anything not listed).
+const COUNTRY_SHORT_NAMES = { ae: 'UAE' };
+
 const COUNTRY_CENTROIDS = JSON.parse('{"_somaliland":[519.8,505.8],"ae":[534.4,467.2],"af":[560.8,439.9],"al":[452.4,422.7],"am":[507.7,424],"ao":[449.8,559.4],"ar":[261.6,642],"at":[436.7,403.1],"au":[718.5,623.6],"az":[513.7,423.1],"ba":[446.4,414.3],"bd":[621.1,465.3],"be":[417.2,394.4],"bf":[403.5,499.7],"bg":[463,417.7],"bi":[480.3,540.3],"bj":[412.9,508.1],"bn":[688.1,516.9],"bo":[253.6,576.1],"br":[275,569.3],"bs":[225.4,463.8],"bt":[619,454.2],"bw":[465.2,588.7],"by":[465.6,382.6],"bz":[193.4,484.1],"ca":[218.9,333.3],"cd":[460.8,542.2],"cf":[458.6,513.8],"cg":[443.2,533.2],"ch":[424.9,406],"ci":[393.3,513.4],"cl":[251.2,636.9],"cm":[437.6,512.8],"cn":[635.1,419.2],"co":[228,520.7],"cr":[201.1,506.3],"cu":[217.4,473.4],"cv":[352,493.9],"cy":[482.6,439.7],"cz":[440.3,396.6],"de":[429.8,392.7],"dk":[428.4,375.5],"dj":[510.2,500.1],"dm":[256.5,486.8],"do":[238.4,481],"dz":[411.4,458.9],"ec":[202,537.2],"ee":[456.5,366.2],"eg":[478.6,461.9],"er":[503.1,491.9],"es":[389.4,437.9],"et":[505.9,508.5],"fi":[457.1,342.9],"fk":[281.3,679.7],"fr":[397,491.3],"ga":[435.1,534.3],"gb":[400.6,382],"ge":[501.7,417.6],"gh":[403.4,511.7],"gl":[342.1,312.7],"gm":[369.8,497],"gn":[378.1,506.2],"gq":[430.7,525],"gr":[460.2,430.8],"gt":[188.6,488.7],"gw":[370.5,502.6],"gy":[263.3,520.1],"hn":[198.3,493.3],"hr":[442.8,413.3],"ht":[231.7,480.5],"hu":[450.1,404.2],"id":[695.3,537.9],"ie":[389.1,384.8],"il":[486.9,449.7],"in":[601.9,472.6],"iq":[507.9,443.8],"ir":[530.8,445],"is":[370.3,346],"it":[435.3,420.7],"jm":[220.9,482.1],"jo":[491.4,450.5],"jp":[723.1,403.7],"ke":[499.6,530],"kg":[573.7,415.4],"kh":[660.1,495.5],"km":[515.7,560.7],"kp":[692.6,404.3],"kr":[698.2,417.4],"kw":[517.6,454.4],"kz":[550.6,394.4],"la":[656.4,478.6],"lb":[487.8,442.3],"lc":[259.3,494.5],"lk":[605.2,509.7],"lr":[382.9,516],"ls":[473.2,607.5],"lt":[456.1,378.7],"lu":[421.3,397],"lv":[457.4,372.3],"ly":[447.9,463.3],"ma":[384.6,458.7],"md":[468,403.9],"me":[449.9,418.3],"mg":[520.8,579.2],"mk":[455.9,421.1],"ml":[397.3,486.9],"mm":[636.8,476],"mn":[631.7,389.5],"mr":[379.8,478.6],"mt":[440.3,439.5],"mu":[545.1,585.8],"mv":[584.2,522.4],"mw":[491.2,565.5],"mx":[166.7,462.1],"my":[673.5,519.7],"mz":[493.8,578.7],"na":[450.7,590.3],"nc":[801.6,606.6],"ne":[427,485.9],"ng":[427.6,508.8],"ni":[200.4,496.9],"nl":[418.3,388.8],"no":[439.6,324.5],"np":[604.5,452.2],"nz":[791.8,678],"om":[540.7,476.7],"pa":[212.2,508.7],"pe":[224.3,558],"pg":[766.6,554.2],"ph":[704.2,494.1],"pk":[569,447.7],"pl":[447.9,388.7],"pr":[247.2,482.6],"pt":[363.7,433.8],"py":[268.3,594.7],"qa":[528.3,464.9],"ro":[462.4,408],"rs":[452.6,413.3],"ru":[619.3,330.7],"rw":[480.4,535.3],"sa":[513.2,468.3],"sb":[792.3,561.6],"sc":[540.1,546],"sd":[480.2,490.2],"se":[440.9,354],"sg":[659.4,527.4],"si":[439.6,407.4],"sk":[449.7,399.9],"sl":[377,510.7],"sn":[372.5,495.4],"so":[519.4,517.6],"sr":[270.6,522],"ss":[479.4,512.1],"st":[423.9,529.5],"sv":[191.3,495],"sy":[494.6,440.1],"sz":[482.1,599.2],"td":[451.4,492.3],"tg":[409.5,510.4],"th":[650.2,493.7],"tj":[568.5,423.4],"tm":[541,425],"tn":[429.9,443.3],"tr":[485.5,428.4],"tt":[258.6,504.5],"tw":[694.1,458.7],"tz":[492.7,546.7],"ua":[474.7,399],"ug":[486.4,528.2],"us":[145.3,361.9],"uy":[279.6,619.3],"uz":[550.2,417.4],"vc":[258.3,498.9],"ve":[245.2,515.3],"vn":[661.2,485.2],"vu":[812.4,590.7],"ye":[524,491.2],"za":[464.8,605.6],"zm":[474,564.8],"zw":[477.3,579.6]}');
 
 export default function Splash() {
@@ -72,7 +78,8 @@ export default function Splash() {
         const code = (d.country_code || '').toLowerCase();
         const centroid = COUNTRY_CENTROIDS[code];
         if (!centroid) return; // country not in this map's table -- skip the dot rather than guess a position
-        const place = [d.city, d.country_name].filter(Boolean).join(', ');
+        const countryLabel = COUNTRY_SHORT_NAMES[code] || d.country_name;
+        const place = [d.city, countryLabel].filter(Boolean).join(', ');
         if (place) setGeo({ place, x: centroid[0], y: centroid[1] });
       })
       .catch(() => {
@@ -136,25 +143,13 @@ export default function Splash() {
                 <stop offset="0" stopColor="#ffffff" stopOpacity="0.4" />
                 <stop offset="1" stopColor="#ffffff" stopOpacity="0" />
               </radialGradient>
-              <radialGradient id="fireGlow" cx="50%" cy="60%" r="50%">
-                <stop offset="0" stopColor="#ffd88a" stopOpacity="0.85" />
+              <radialGradient id="familyGlow" cx="50%" cy="55%" r="55%">
+                <stop offset="0" stopColor="#ffd88a" stopOpacity="0.9" />
                 <stop offset="1" stopColor="#ffd88a" stopOpacity="0" />
               </radialGradient>
-              <linearGradient id="flameOuter" x1="0" y1="1" x2="0" y2="0">
-                <stop offset="0" stopColor="#e6432c" />
-                <stop offset="1" stopColor="#ff8a3d" />
-              </linearGradient>
-              <linearGradient id="flameMid" x1="0" y1="1" x2="0" y2="0">
-                <stop offset="0" stopColor="#ff8a3d" />
-                <stop offset="1" stopColor="#ffcf5c" />
-              </linearGradient>
-              <linearGradient id="flameInner" x1="0" y1="1" x2="0" y2="0">
-                <stop offset="0" stopColor="#ffe27a" />
-                <stop offset="1" stopColor="#fffbe6" />
-              </linearGradient>
-              <linearGradient id="hearthBase" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stopColor="#3a5a56" />
-                <stop offset="1" stopColor="#1c3634" />
+              <linearGradient id="heartGold" x1="0" y1="1" x2="0" y2="0">
+                <stop offset="0" stopColor="#8a5a04" />
+                <stop offset="1" stopColor="#ffe9a8" />
               </linearGradient>
               <linearGradient id="coinFace" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0" stopColor="#ffe27a" />
@@ -178,51 +173,90 @@ export default function Splash() {
             <ellipse cx="190" cy="168" rx="150" ry="118" fill="url(#glow)" />
             <ellipse cx="190" cy="262" rx="118" ry="12" fill="rgba(0,0,0,0.18)" />
 
-            {/* a simple roofline arching over the hearth -- drawn in like a
-                sketch as the splash opens, standing in for "home" without
-                a literal illustrated house competing with the flame for
-                attention. */}
+            {/* The gold heart-outline logo, matching the header HearthMark
+                exactly in technique (same two classes, just a bigger
+                dasharray tuned to this path's length): draws itself in like
+                a pen stroke as the splash opens, then a brighter blurred
+                duplicate chases around the same outline continuously,
+                reading as a traveling shimmer rather than a scale pulse. */}
             <path
-              className="hearth-roof"
-              d="M96 128 L190 48 L284 128"
-              stroke="#ffffff" strokeOpacity="0.85" strokeWidth="6"
-              fill="none" strokeLinecap="round" strokeLinejoin="round"
+              className="heart-outline-draw-lg"
+              d="M190 258 C190 258 82 178 82 108 C82 62 118 32 158 42 C172 46 182 58 190 72 C198 58 208 46 222 42 C262 32 298 62 298 108 C298 178 190 258 190 258 Z"
+              fill="none" stroke="url(#heartGold)" strokeWidth="7" strokeLinejoin="round"
+            />
+            <path
+              className="heart-glow-chase-lg"
+              d="M190 258 C190 258 82 178 82 108 C82 62 118 32 158 42 C172 46 182 58 190 72 C198 58 208 46 222 42 C262 32 298 62 298 108 C298 178 190 258 190 258 Z"
+              fill="none" stroke="#fff3c4" strokeWidth="4"
             />
 
-            {/* the hearth itself -- a rounded stone ledge holding the fire */}
-            <path d="M132 238 Q132 214 156 210 L224 210 Q248 214 248 238 Z" fill="url(#hearthBase)" />
-            <rect x="126" y="234" width="128" height="16" rx="8" fill="url(#hearthBase)" />
+            {/* The house frame -- roof peak + both side posts drawn as one
+                continuous stroke (same drawn-in-like-a-pencil-stroke
+                technique as the old roofline-only version), nested inside
+                the heart outline rather than arching over it. */}
+            <path
+              className="hearth-roof"
+              d="M150 205 L150 150 L190 95 L230 150 L230 205"
+              stroke="url(#heartGold)" strokeWidth="5"
+              fill="none" strokeLinecap="round" strokeLinejoin="round"
+            />
+            {/* small 4-pane window under the peak */}
+            <rect x="178" y="112" width="24" height="20" rx="1" fill="none" stroke="url(#heartGold)" strokeWidth="2" />
+            <path d="M190 112 V132 M178 122 H202" stroke="url(#heartGold)" strokeWidth="2" />
 
-            {/* warm glow radiating from the fire, behind the flame itself */}
-            <ellipse cx="190" cy="190" rx="95" ry="90" fill="url(#fireGlow)" />
-
-            {/* the flame -- three layered teardrops, each with its own
-                gentle independent flicker so the whole thing reads as
-                alive rather than a static icon */}
-            <g className="hearth-flame" style={{ transformOrigin: '190px 232px' }}>
-              <path className="flame-layer flame-outer" d="M190 232 C162 208 158 172 190 118 C222 172 218 208 190 232 Z" fill="url(#flameOuter)" />
-              <path className="flame-layer flame-mid" d="M190 230 C170 210 168 182 190 144 C212 182 210 210 190 230 Z" fill="url(#flameMid)" />
-              <path className="flame-layer flame-inner" d="M190 226 C178 212 177 194 190 168 C203 194 202 212 190 226 Z" fill="url(#flameInner)" />
+            {/* warm, gently breathing glow behind the family, then the
+                family itself -- two parents and a small child between them,
+                simple silhouette shapes rather than a photo (a photo would
+                need licensing and wouldn't match this vector scene). */}
+            <ellipse className="hearth-family-glow" cx="190" cy="182" rx="52" ry="58" fill="url(#familyGlow)" />
+            <g fill="#2a1608">
+              <circle cx="172" cy="163" r="14" />
+              <path d="M154 205 Q154 178 172 178 Q190 178 190 205 Z" />
+              <circle cx="210" cy="160" r="15" />
+              <path d="M190 205 Q190 176 210 176 Q230 176 230 205 Z" />
+              <circle cx="190" cy="182" r="10" />
+              <path d="M176 206 Q176 190 190 190 Q204 190 204 206 Z" />
             </g>
 
-            {/* embers rising from the fire -- soft round glows */}
-            <g className="ember ember-1"><circle r="4" fill="#ffb457" transform="translate(160 150)" /></g>
-            <g className="ember ember-2"><circle r="3" fill="#ffd88a" transform="translate(218 140)" /></g>
-            <g className="ember ember-3"><circle r="3.5" fill="#ff8a3d" transform="translate(190 110)" /></g>
-            <g className="ember ember-4"><circle r="2.6" fill="#ffe27a" transform="translate(172 96)" /></g>
+            {/* Leaf sprigs flanking the base of the heart. */}
+            <g stroke="#b8952f" strokeWidth="2" fill="#c9a83a" strokeLinejoin="round">
+              <path d="M112 232 L100 216" fill="none" />
+              <ellipse cx="102" cy="220" rx="7" ry="3.4" transform="rotate(-32 102 220)" />
+              <ellipse cx="94" cy="207" rx="6" ry="3" transform="rotate(-32 94 207)" />
+              <ellipse cx="112" cy="211" rx="6" ry="3" transform="rotate(-10 112 211)" />
+            </g>
+            <g stroke="#b8952f" strokeWidth="2" fill="#c9a83a" strokeLinejoin="round">
+              <path d="M268 232 L280 216" fill="none" />
+              <ellipse cx="278" cy="220" rx="7" ry="3.4" transform="rotate(32 278 220)" />
+              <ellipse cx="286" cy="207" rx="6" ry="3" transform="rotate(32 286 207)" />
+              <ellipse cx="268" cy="211" rx="6" ry="3" transform="rotate(10 268 211)" />
+            </g>
+
+            {/* Chimney, rising above the heart's right lobe, with three tiny
+                hearts drifting up out of it and fading, looping -- the
+                direct equivalent of the reference logo's animation. */}
+            <rect x="224" y="45" width="16" height="70" fill="url(#heartGold)" />
+            <g className="rising-heart rising-heart-1" transform="translate(232 30) scale(1.1)">
+              <path d="M0,4.3l-1-.9C-2.9,1.7-4,.7-4-.4c0-.9.7-1.6,1.6-1.6.5,0,1,.24,1.3.62.3-.38.8-.62,1.3-.62.9,0,1.6.7,1.6,1.6,0,1.1-1.1,2.1-3,3.8Z" fill="#fde68a" />
+            </g>
+            <g className="rising-heart rising-heart-2" transform="translate(220 14) scale(.85)">
+              <path d="M0,4.3l-1-.9C-2.9,1.7-4,.7-4-.4c0-.9.7-1.6,1.6-1.6.5,0,1,.24,1.3.62.3-.38.8-.62,1.3-.62.9,0,1.6.7,1.6,1.6,0,1.1-1.1,2.1-3,3.8Z" fill="#ffe27a" />
+            </g>
+            <g className="rising-heart rising-heart-3" transform="translate(238 0) scale(.7)">
+              <path d="M0,4.3l-1-.9C-2.9,1.7-4,.7-4-.4c0-.9.7-1.6,1.6-1.6.5,0,1,.24,1.3.62.3-.38.8-.62,1.3-.62.9,0,1.6.7,1.6,1.6,0,1.1-1.1,2.1-3,3.8Z" fill="#fffbe6" />
+            </g>
 
             {/* AI sparkle accents -- the same twinkling 4-point stars used
-                for every "AI powered" tag elsewhere in the app, drifting
-                up with the embers so the fire's own sparks double as the
-                AI motif, rather than a separate unrelated badge. */}
+                for every "AI powered" tag elsewhere in the app, scattered
+                near the rising hearts instead of the old flame. */}
             <g className="splash-sparkle splash-sparkle-1">
-              <path d="M0 -9 L2.2 -2.2 L9 0 L2.2 2.2 L0 9 L-2.2 2.2 L-9 0 L-2.2 -2.2 Z" fill="#eab308" transform="translate(136 92)" />
+              <path d="M0 -9 L2.2 -2.2 L9 0 L2.2 2.2 L0 9 L-2.2 2.2 L-9 0 L-2.2 -2.2 Z" fill="#eab308" transform="translate(256 40)" />
             </g>
             <g className="splash-sparkle splash-sparkle-2">
-              <path d="M0 -7 L1.7 -1.7 L7 0 L1.7 1.7 L0 7 L-1.7 1.7 L-7 0 L-1.7 -1.7 Z" fill="#ffe27a" transform="translate(246 78)" />
+              <path d="M0 -7 L1.7 -1.7 L7 0 L1.7 1.7 L0 7 L-1.7 1.7 L-7 0 L-1.7 -1.7 Z" fill="#ffe27a" transform="translate(210 24)" />
             </g>
             <g className="splash-sparkle splash-sparkle-3">
-              <path d="M0 -6 L1.5 -1.5 L6 0 L1.5 1.5 L0 6 L-1.5 1.5 L-6 0 L-1.5 -1.5 Z" fill="#ffffff" transform="translate(190 60)" />
+              <path d="M0 -6 L1.5 -1.5 L6 0 L1.5 1.5 L0 6 L-1.5 1.5 L-6 0 L-1.5 -1.5 Z" fill="#ffffff" transform="translate(250 8)" />
             </g>
 
             {/* Left of the hearth: a spinning Dirham coin -- the app's own
@@ -293,7 +327,7 @@ export default function Splash() {
         </div>
         </div>
 
-        <div className="splash-title">Hearth</div>
+        <div className="splash-title splash-title-gold">Hearth</div>
         <div className="splash-ai-tag">
           <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
             <path d="M10 1 L12.2 7.8 L19 10 L12.2 12.2 L10 19 L7.8 12.2 L1 10 L7.8 7.8 Z" fill="#eab308" />
@@ -301,6 +335,20 @@ export default function Splash() {
           AI-powered budgeting
         </div>
         <div className="splash-tagline">The heart of your home&rsquo;s finances.</div>
+        {/* Matches the reference logo's own tagline treatment directly --
+            thin flanking rules either side of "A Happy Hearth", with a
+            small solid red heart underneath. */}
+        <div className="splash-happy-hearth">
+          <span className="splash-happy-rule" />
+          <span>A Happy Hearth</span>
+          <span className="splash-happy-rule" />
+        </div>
+        <svg className="splash-happy-heart" width="14" height="13" viewBox="0 0 24 22">
+          <path
+            d="M12,21.35l-1.45-1.32C5.4,15.36,2,12.28,2,8.5 C2,5.42,4.42,3,7.5,3c1.74,0,3.41,0.81,4.5,2.09C13.09,3.81,14.76,3,16.5,3 C19.58,3,22,5.42,22,8.5c0,3.78-3.4,6.86-8.55,11.54L12,21.35z"
+            fill="#ef4444"
+          />
+        </svg>
         <div className="splash-version">{formatVersionBadge()}</div>
       </div>
 
