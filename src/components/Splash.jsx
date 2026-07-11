@@ -139,17 +139,24 @@ export default function Splash() {
         <div className="splash-illustration splash-illustration-hearth">
           <svg viewBox="0 0 380 300" xmlns="http://www.w3.org/2000/svg">
             <defs>
-              <radialGradient id="glow" cx="50%" cy="58%" r="42%">
-                <stop offset="0" stopColor="#ffffff" stopOpacity="0.4" />
+              {/* Ambient white glow behind the whole scene -- given a touch
+                  more presence (opacity + radius) per explicit request for
+                  "darker teal and white slight touch" so the darkened
+                  background isn't flat, without turning it back into the
+                  earlier lighter teal. */}
+              <radialGradient id="glow" cx="50%" cy="58%" r="46%">
+                <stop offset="0" stopColor="#ffffff" stopOpacity="0.48" />
                 <stop offset="1" stopColor="#ffffff" stopOpacity="0" />
               </radialGradient>
               <radialGradient id="familyGlow" cx="50%" cy="55%" r="55%">
                 <stop offset="0" stopColor="#ffd88a" stopOpacity="0.9" />
                 <stop offset="1" stopColor="#ffd88a" stopOpacity="0" />
               </radialGradient>
+              {/* Rich amber-copper, picked from the sample set over the
+                  original paler warm-gold version. */}
               <linearGradient id="heartGold" x1="0" y1="1" x2="0" y2="0">
-                <stop offset="0" stopColor="#8a5a04" />
-                <stop offset="1" stopColor="#ffe9a8" />
+                <stop offset="0" stopColor="#7c2d12" />
+                <stop offset="1" stopColor="#fb923c" />
               </linearGradient>
               <linearGradient id="coinFace" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0" stopColor="#ffe27a" />

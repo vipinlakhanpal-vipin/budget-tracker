@@ -51,24 +51,30 @@ function HearthMark({ size = 32 }) {
     <svg width={size} height={size} viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id="hdrHeartGold" x1="0" y1="1" x2="0" y2="0">
-          <stop offset="0" stopColor="#a16207" />
-          <stop offset="1" stopColor="#fde68a" />
+          <stop offset="0" stopColor="#5c3a06" />
+          <stop offset="1" stopColor="#b45309" />
         </linearGradient>
       </defs>
+      {/* Darkened per explicit follow-up ("keep it gold, just darken the
+          lines") -- the first version's gradient ran up to a pale
+          #fde68a top stop, which is exactly the shade that disappears
+          against this header's light background. Both stops here are now
+          solidly dark/mid amber-brown, so the outline stays clearly
+          visible the whole way around rather than fading out at the top. */}
       <path
         className="heart-outline-draw"
         d="M32 54 C32 54 9 35 9 22 C9 12 17 7 25 10 C29 11.5 31 15 32 18 C33 15 35 11.5 39 10 C47 7 55 12 55 22 C55 35 32 54 32 54 Z"
-        fill="none" stroke="url(#hdrHeartGold)" strokeWidth="3" strokeLinejoin="round"
+        fill="none" stroke="url(#hdrHeartGold)" strokeWidth="3.4" strokeLinejoin="round"
       />
       <path
         className="heart-glow-chase"
         d="M32 54 C32 54 9 35 9 22 C9 12 17 7 25 10 C29 11.5 31 15 32 18 C33 15 35 11.5 39 10 C47 7 55 12 55 22 C55 35 32 54 32 54 Z"
-        fill="none" stroke="#fff3c4" strokeWidth="2" strokeLinejoin="round"
+        fill="none" stroke="#eab308" strokeWidth="2.2" strokeLinejoin="round"
       />
       <path
         className="hearth-roof"
         d="M20 32 L32 19 L44 32"
-        stroke="#a16207" strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round"
+        stroke="#5c3a06" strokeWidth="2.8" fill="none" strokeLinecap="round" strokeLinejoin="round"
       />
       <rect x="41" y="15" width="5" height="11" fill="url(#hdrHeartGold)" />
       <g className="mini-rising-heart">
@@ -76,6 +82,17 @@ function HearthMark({ size = 32 }) {
           d="M43.5,10.1l-.44-.4C41.6,8.3,40.6,7.4,40.6,6.2c0-.9.7-1.6,1.6-1.6.5,0,1,.24,1.3.62.3-.38.8-.62,1.3-.62.9,0,1.6.7,1.6,1.6,0,1.2-1,2.1-2.5,3.5l-.4.38Z"
           fill="#fde68a"
         />
+      </g>
+      {/* Smallest possible hint of the splash version's family silhouette --
+          three plain dots (two "parents" + a smaller "child" in front)
+          rather than actual head+shoulder shapes, since any finer detail
+          just anti-aliases into a blob at this size (the exact problem the
+          original fine-line heart had). Sized/positioned so the mark's
+          overall footprint (viewBox, size prop) doesn't change at all. */}
+      <g fill="#2a1608">
+        <circle cx="27.5" cy="39.5" r="3" />
+        <circle cx="36.5" cy="39.5" r="3" />
+        <circle cx="32" cy="43.5" r="2.3" />
       </g>
     </svg>
   );
@@ -2724,13 +2741,17 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 {chatOpen ? <X size={18} /> : <MessageCircle size={18} />}
               </button>
               {!chatOpen && (
-                <span className="chat-fab-badge">
-                  <span className="chat-fab-badge-title">Chat BoT</span>
-                  <span className="chat-fab-badge-sub">
+                <>
+                  {/* "AI powered" sits above the icon, "Chat BoT" below --
+                      both centered on the button itself, per explicit
+                      request (previously both lines were stacked below and
+                      right-aligned to the button). */}
+                  <span className="chat-fab-badge-sub chat-fab-badge-above">
                     <Sparkles size={11} className="ai-tag-sparkle" strokeWidth={2.25} />
                     AI powered
                   </span>
-                </span>
+                  <span className="chat-fab-badge-title chat-fab-badge-below">Chat BoT</span>
+                </>
               )}
               {chatOpen && (
                 <div className="chat-window">

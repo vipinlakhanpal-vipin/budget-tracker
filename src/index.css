@@ -55,12 +55,16 @@ button, input, select, textarea { font-family: inherit; }
 .splash-screen {
   position: fixed; inset: 0; z-index: 999999; overflow: hidden;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  /* A radial glow centered where the flame sits (rather than a flat
+  /* A radial glow centered where the logo sits (rather than a flat
      top-to-bottom linear fade) keeps the middle of the screen bright and
-     warm -- the old linear version faded to a dark, muted teal across
-     the whole frame, which read as gloomy instead of premium. */
+     warm. Darkened a step further than before, per explicit request, so
+     the gold heart/house/family mark reads with real contrast the way it
+     does against the reference logo's near-black backdrop -- still the
+     app's own teal, just a deeper, moodier version of it rather than
+     switching to literal black, so it stays "the same theme, darker"
+     instead of a different background altogether. */
   background:
-    radial-gradient(circle at 50% 38%, #22b8a8 0%, #109c8c 32%, #0b6b60 62%, #063d37 100%);
+    radial-gradient(circle at 50% 38%, #167f76 0%, #0b5a52 32%, #063b34 62%, #021512 100%);
   pointer-events: none;
   animation: splash-fade-out .5s ease forwards;
   /* Splash is on screen for a full 6s (kept in sync with the setTimeout in
@@ -259,11 +263,12 @@ button, input, select, textarea { font-family: inherit; }
   text-shadow: 0 2px 18px rgba(255, 255, 255, .35);
   animation: splash-pop .5s ease .25s both;
 }
-/* Gold gradient wordmark, matching the heart-outline mark above it, instead
-   of plain white -- background-clip:text is the standard way to fill text
-   with a gradient (there's no plain CSS "gradient color" property). */
+/* Same rich amber-copper as the heart-outline mark above it (not the paler
+   gold this used before), per explicit request to match the text to the
+   logo -- background-clip:text is the standard way to fill text with a
+   gradient (there's no plain CSS "gradient color" property). */
 .splash-title-gold {
-  background: linear-gradient(180deg, #fff3c4 0%, #eab308 55%, #a16207 100%);
+  background: linear-gradient(180deg, #fb923c 0%, #c2410c 55%, #7c2d12 100%);
   -webkit-background-clip: text; background-clip: text; color: transparent;
   text-shadow: none;
 }
@@ -304,11 +309,15 @@ button, input, select, textarea { font-family: inherit; }
    the source, with a small solid heart underneath (separate element right
    below, since a heart doesn't sit well inline with the rule/text baseline). */
 .splash-happy-hearth {
+  /* Text kept exactly as written in the reference ("A Happy Hearth", not
+     forced to all-caps) -- the letter-spacing alone gives the same
+     spaced-out look without changing the actual wording's casing. Color
+     matched to the amber-copper mark above, same as the "Hearth" title. */
   display: flex; align-items: center; gap: 10px; margin-top: 6px;
-  color: #fde68a; font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase;
+  color: #fb923c; font-size: 12px; font-weight: 800; letter-spacing: .1em;
   animation: splash-pop .5s ease .4s both;
 }
-.splash-happy-rule { width: 26px; height: 1px; background: rgba(253, 230, 138, .55); }
+.splash-happy-rule { width: 26px; height: 1px; background: rgba(251, 146, 60, .55); }
 .splash-happy-heart {
   margin-top: 4px;
   animation: splash-pop .5s ease .42s both, hearth-family-breathe 2.4s ease-in-out 1s infinite;
@@ -1372,20 +1381,21 @@ td.amount { font-weight: 600; text-align: right; }
   box-shadow: 0 4px 14px rgba(124, 58, 237, .4);
 }
 .chat-fab-btn:hover { filter: brightness(1.08); }
-/* "Chat BoT" + "AI powered" caption, restored from the old floating bubble --
-   absolutely positioned just below the button so it doesn't add height to
-   the header row itself, and hidden once the chat window is open (the
-   window's own header already carries an AI-powered tag then). */
-.chat-fab-badge {
-  position: absolute; top: 100%; right: 0; margin-top: 4px; z-index: 41;
-  display: flex; flex-direction: column; align-items: flex-end; gap: 1px;
+/* "AI powered" above the button and "Chat BoT" below it, both centered on
+   the button itself (not right-aligned/stacked together the way the old
+   floating bubble's caption was) -- per explicit request. Absolutely
+   positioned so neither adds height to the header row, and both hidden
+   once the chat window is open (its own header already carries an
+   AI-powered tag then). */
+.chat-fab-badge-title, .chat-fab-badge-sub {
+  position: absolute; left: 50%; transform: translateX(-50%); z-index: 41;
   color: var(--chat-accent); background: none;
-  font-size: 10px; font-weight: 800; letter-spacing: .2px;
+  font-weight: 800; letter-spacing: .2px;
   text-shadow: 0 1px 3px rgba(255, 255, 255, .9), 0 0 8px rgba(255, 255, 255, .7);
   pointer-events: none; white-space: nowrap;
 }
-.chat-fab-badge-title { font-size: 11px; font-weight: 800; line-height: 1.15; }
-.chat-fab-badge-sub { display: inline-flex; align-items: center; gap: 3px; line-height: 1.15; }
+.chat-fab-badge-above { bottom: 100%; margin-bottom: 4px; display: inline-flex; align-items: center; gap: 3px; font-size: 10px; }
+.chat-fab-badge-below { top: 100%; margin-top: 4px; font-size: 11px; }
 .chat-window {
   position: absolute; top: calc(100% + 8px); right: 0; z-index: 43;
   width: 340px; max-width: min(85vw, 340px); height: 440px; max-height: 65vh;
