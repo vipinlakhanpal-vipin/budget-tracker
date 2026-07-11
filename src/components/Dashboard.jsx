@@ -213,6 +213,41 @@ function CurrencyPrefix() {
   return currencySymbol();
 }
 
+// Every editable amount field (top-level Add forms + in-table cells) sizes
+// its input to exactly fit the digits typed, so the currency symbol sits
+// glued against them with zero gap -- the same "$4,500" look the read-only
+// dashboard figures and description text already have for free (a plain
+// text node just IS as wide as its content). An <input> can't do that on
+// its own, so this measures the actual rendered pixel width of the typed
+// value with a shared offscreen canvas and returns it directly, instead of
+// approximating it from a per-character formula. The formula approach (an
+// earlier version of this fix) used a flat "1ch per character" estimate,
+// which is close but not exact -- a "." is narrower than a digit, and even
+// digits aren't perfectly uniform width in this font, so different values
+// with the same character count ended up with visibly different amounts of
+// slack once right-aligned. Measuring the real string removes that
+// residual inconsistency entirely rather than tuning the formula further.
+let _amtMeasureCanvas = null;
+function measureAmountWidthPx(value, font) {
+  if (!_amtMeasureCanvas) _amtMeasureCanvas = document.createElement('canvas');
+  const ctx = _amtMeasureCanvas.getContext('2d');
+  ctx.font = font;
+  const text = String(value ?? '').trim() || '0';
+  return ctx.measureText(text).width;
+}
+// Table cells: 11px Nunito (the unified table font size -- see the
+// "Unify font size across all table inputs/selects" fix). Small fixed
+// buffer just for the input's own subpixel rounding/caret, not a safety
+// margin for missing digits (the measurement is exact, so it doesn't need
+// one the way the old ch-based formula did).
+function tightAmountPx(value) {
+  return Math.ceil(measureAmountWidthPx(value, '400 11px Nunito, sans-serif')) + 2;
+}
+// Top-level Add-form fields: 14px, the standard .field input size.
+function formAmountPx(value) {
+  return Math.ceil(measureAmountWidthPx(value, '400 14px Nunito, sans-serif')) + 2;
+}
+
 // Read-only currency display used everywhere a figure is just shown (not
 // edited) -- dashboard summary cards, mobile transaction amounts, budget-cap
 // progress, etc. Glues the symbol straight onto the number with no space,
@@ -2673,13 +2708,14 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               </div>
               <div className="field" style={{ flex: '0 1 140px', minWidth: 120 }}>
                 <label>Amount</label>
-                <div className="amount-field-wrap" style={{ '--amt-ch': Math.max(4, String(form.amount ?? '').length) }}>
+                <div className="amount-field-wrap">
                   <span className="currency-prefix"><CurrencyPrefix /></span>
                   <input
                     type="number"
                     step="0.01"
                     min="0"
                     placeholder="0.00"
+                    style={{ '--amt-px': formAmountPx(form.amount) + 'px' }}
                     value={form.amount}
                     onChange={(e) => setForm({ ...form, amount: e.target.value })}
                   />
@@ -2834,13 +2870,14 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               </div>
               <div className="field" style={{ flex: '0 1 150px', minWidth: 130 }}>
                 <label>Amount / month</label>
-                <div className="amount-field-wrap" style={{ '--amt-ch': Math.max(4, String(newIncome.amount ?? '').length) }}>
+                <div className="amount-field-wrap">
                   <span className="currency-prefix"><CurrencyPrefix /></span>
                   <input
                     type="number"
                     step="0.01"
                     min="0"
                     placeholder="0.00"
+                    style={{ '--amt-px': formAmountPx(newIncome.amount) + 'px' }}
                     value={newIncome.amount}
                     onChange={(e) => setNewIncome({ ...newIncome, amount: e.target.value })}
                   />
@@ -2918,13 +2955,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       </td>
                       <td className="muted-small" data-label="Member">{i.member_email}</td>
                       <td data-label="Amount">
-                        <div className="amount-field-wrap tight" style={{ '--amt-ch': Math.max(2, String(incomeDrafts[i.id]?.amount ?? '').length) }}>
+                        <div className="amount-field-wrap tight">
                           <span className="currency-prefix"><CurrencyPrefix /></span>
                           <input
                             type="number"
                             step="0.01"
                             min="0"
-                            style={{ fontSize: 11 }}
+                            style={{ fontSize: 11, '--amt-px': tightAmountPx(incomeDrafts[i.id]?.amount) + 'px' }}
                             value={incomeDrafts[i.id]?.amount ?? ''}
                             onChange={(e) => updateIncomeDraftField(i.id, 'amount', e.target.value)}
                             onBlur={(e) => commitIncomeField(i.id, 'amount', e.target.value)}
@@ -3049,13 +3086,14 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               </div>
               <div className="field" style={{ flex: '0 1 150px', minWidth: 130 }}>
                 <label>Amount / month</label>
-                <div className="amount-field-wrap" style={{ '--amt-ch': Math.max(4, String(newRecurring.amount ?? '').length) }}>
+                <div className="amount-field-wrap">
                   <span className="currency-prefix"><CurrencyPrefix /></span>
                   <input
                     type="number"
                     step="0.01"
                     min="0"
                     placeholder="0.00"
+                    style={{ '--amt-px': formAmountPx(newRecurring.amount) + 'px' }}
                     value={newRecurring.amount}
                     onChange={(e) => setNewRecurring({ ...newRecurring, amount: e.target.value })}
                   />
@@ -3232,13 +3270,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         </select>
                       </td>
                       <td data-label="Amount">
-                        <div className="amount-field-wrap tight" style={{ '--amt-ch': Math.max(2, String(recurringDrafts[r.id]?.amount ?? '').length) }}>
+                        <div className="amount-field-wrap tight">
                           <span className="currency-prefix"><CurrencyPrefix /></span>
                           <input
                             type="number"
                             step="0.01"
                             min="0"
-                            style={{ fontSize: 11 }}
+                            style={{ fontSize: 11, '--amt-px': tightAmountPx(recurringDrafts[r.id]?.amount) + 'px' }}
                             value={recurringDrafts[r.id]?.amount ?? ''}
                             onChange={(e) => updateRecurringDraftField(r.id, 'amount', e.target.value)}
                             onBlur={(e) => commitRecurringField(r.id, 'amount', e.target.value)}
@@ -3470,13 +3508,14 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               </div>
               <div className="field" style={{ flex: '0 1 150px', minWidth: 130 }}>
                 <label>Amount / month</label>
-                <div className="amount-field-wrap" style={{ '--amt-ch': Math.max(4, String(newSaving.amount ?? '').length) }}>
+                <div className="amount-field-wrap">
                   <span className="currency-prefix"><CurrencyPrefix /></span>
                   <input
                     type="number"
                     step="0.01"
                     min="0"
                     placeholder="0.00"
+                    style={{ '--amt-px': formAmountPx(newSaving.amount) + 'px' }}
                     value={newSaving.amount}
                     onChange={(e) => setNewSaving({ ...newSaving, amount: e.target.value })}
                   />
@@ -3546,13 +3585,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         />
                       </td>
                       <td data-label="Amount">
-                        <div className="amount-field-wrap tight" style={{ '--amt-ch': Math.max(2, String(savingsDrafts[s.id]?.amount ?? '').length) }}>
+                        <div className="amount-field-wrap tight">
                           <span className="currency-prefix"><CurrencyPrefix /></span>
                           <input
                             type="number"
                             step="0.01"
                             min="0"
-                            style={{ fontSize: 11 }}
+                            style={{ fontSize: 11, '--amt-px': tightAmountPx(savingsDrafts[s.id]?.amount) + 'px' }}
                             value={savingsDrafts[s.id]?.amount ?? ''}
                             onChange={(e) => updateSavingDraftField(s.id, 'amount', e.target.value)}
                             onBlur={(e) => commitSavingField(s.id, 'amount', e.target.value)}
@@ -3720,13 +3759,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         />
                       </td>
                       <td data-label="Amount">
-                        <div className="amount-field-wrap tight" style={{ '--amt-ch': Math.max(2, String(expenseDrafts[e.id]?.amount ?? '').length) }}>
+                        <div className="amount-field-wrap tight">
                           <span className="currency-prefix"><CurrencyPrefix /></span>
                           <input
                             type="number"
                             step="0.01"
                             min="0"
-                            style={{ fontSize: 11 }}
+                            style={{ fontSize: 11, '--amt-px': tightAmountPx(expenseDrafts[e.id]?.amount) + 'px' }}
                             value={expenseDrafts[e.id]?.amount ?? ''}
                             onChange={(ev) => updateExpenseDraftField(e.id, 'amount', ev.target.value)}
                             onBlur={(ev) => commitExpenseField(e.id, 'amount', ev.target.value)}
@@ -4510,12 +4549,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 <div className="row" style={{ marginBottom: 12 }}>
                   <div className="field">
                     <label>Total monthly budget</label>
-                    <div className="amount-field-wrap" style={{ '--amt-ch': Math.max(4, String(totalBudgetDraft ?? '').length) }}>
+                    <div className="amount-field-wrap">
                       <span className="currency-prefix"><CurrencyPrefix /></span>
                       <input
                         type="number"
                         step="0.01"
                         min="0"
+                        style={{ '--amt-px': formAmountPx(totalBudgetDraft) + 'px' }}
                         value={totalBudgetDraft}
                         onChange={(e) => setTotalBudgetDraft(e.target.value)}
                         onBlur={(e) => commitTotalBudget(e.target.value)}

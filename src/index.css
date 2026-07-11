@@ -556,7 +556,12 @@ input[type="month"] {
    width of the "0.00" placeholder) when the field is empty. */
 .amount-field-wrap:not(.tight) input[type="number"] {
   flex: 0 1 auto; min-width: 0; max-width: 100%;
-  width: calc(max(var(--amt-ch, 4), 4) * 1ch + 4px);
+  /* --amt-px is set inline per-field from the real measured pixel width of
+     the current value (see measureAmountWidthPx/formAmountPx in
+     Dashboard.jsx) -- exact, not a per-character estimate. The ch-based
+     calc is just a defensive fallback for the rare case JS hasn't set it
+     yet (first paint before React's effect/render cycle settles). */
+  width: var(--amt-px, calc(max(var(--amt-ch, 4), 4) * 1ch + 4px));
 }
 .amount-field-wrap.tight .currency-prefix { font-size: 10.5px; }
 /* Hide the native step spinner everywhere an amount is typed -- it was only
@@ -805,13 +810,20 @@ td.amount { font-weight: 600; text-align: right; }
    double the width the digits need -- with text-align:right, that leftover
    space shows up as empty space between the currency symbol and the first
    digit, which is exactly the "not actually joined" gap reported live.
-   1ch + 27px (re-verified the same way: real text width vs box width,
-   2-5 digit values and decimals, all four tables) removes that gap while
-   keeping a small margin so nothing clips. */
+   1ch + 27px removed that gap but was still an estimate (a flat per-
+   character rate), not the real width of a given string -- decimals and
+   different digit combinations of the same length still ended up with
+   slightly different amounts of slack, which read as "some rows closer
+   than others". Switched to measuring the actual pixel width of the
+   current value directly (see tightAmountPx() in Dashboard.jsx) and
+   setting it via --amt-px, so the box is now exactly as wide as its
+   content, every time, the same way the read-only dashboard/description
+   figures already are (those are just plain text, which is inherently
+   exact -- this reproduces that for an editable <input>). */
 .table-scroll table td .amount-field-wrap.tight {
   display: flex;
   align-items: center;
-  width: calc(max(var(--amt-ch, 2), 2) * 1ch + 27px);
+  width: fit-content;
   max-width: 100%;
   margin: 0 auto;
   box-sizing: border-box;
@@ -835,8 +847,13 @@ td.amount { font-weight: 600; text-align: right; }
   flex: 0 0 auto;
 }
 .table-scroll table td .amount-field-wrap.tight input[type="number"] {
-  flex: 1 1 auto;
-  width: 100% !important;
+  flex: 0 1 auto;
+  /* Overrides the generic ".table-scroll table td input {width:100%
+     !important}" rule above -- needs its own !important to win the tie
+     (this rule is later in the file, so it wins on source order), reading
+     the exact pixel value from --amt-px (set inline per field) instead of
+     stretching to fill the wrap. */
+  width: var(--amt-px, 100%) !important;
   min-width: 0;
   text-align: right;
   padding: 0;
