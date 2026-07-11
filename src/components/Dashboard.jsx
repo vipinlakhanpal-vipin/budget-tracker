@@ -12,6 +12,7 @@ import { formatVersionBadge } from '../version.js';
 import {
   Home, Plus, FileText, Users as UsersIcon, Settings as SettingsIcon,
   Pencil, Trash2, X, ChevronLeft, ChevronRight, Camera, MessageCircle, Sparkles, User,
+  Palette, Check,
 } from 'lucide-react';
 
 // Small reusable "AI powered" pill -- a magic-wand sparkle + label used next
@@ -450,6 +451,47 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     document.addEventListener('mousedown', onDocClick);
     return () => document.removeEventListener('mousedown', onDocClick);
   }, [profileMenuOpen]);
+  // Color theme picker -- swaps the app's --accent/--accent2 pairs (see the
+  // [data-theme="..."] rules in index.css) via a data-theme attribute on
+  // <html>, remembered per-browser in localStorage. Purely cosmetic/local:
+  // there's no per-household "theme" column, so each signed-in device can
+  // pick its own without affecting anyone else in the household.
+  const THEMES = [
+    { id: 'teal', label: 'Teal (default)', color: '#0d9488' },
+    { id: 'ocean', label: 'Ocean blue', color: '#0369a1' },
+    { id: 'purple', label: 'Purple', color: '#7c3aed' },
+    { id: 'rose', label: 'Rose', color: '#db2777' },
+    { id: 'forest', label: 'Forest green', color: '#15803d' },
+  ];
+  const [theme, setTheme] = useState(() => {
+    try {
+      return localStorage.getItem('hearth-theme') || 'teal';
+    } catch {
+      return 'teal';
+    }
+  });
+  const [themeMenuOpen, setThemeMenuOpen] = useState(false);
+  const themeMenuRef = useRef(null);
+  useEffect(() => {
+    if (theme === 'teal') {
+      document.documentElement.removeAttribute('data-theme');
+    } else {
+      document.documentElement.setAttribute('data-theme', theme);
+    }
+    try {
+      localStorage.setItem('hearth-theme', theme);
+    } catch {
+      // ignore -- purely a nice-to-have persistence, not worth surfacing an error for
+    }
+  }, [theme]);
+  useEffect(() => {
+    if (!themeMenuOpen) return;
+    function onDocClick(e) {
+      if (themeMenuRef.current && !themeMenuRef.current.contains(e.target)) setThemeMenuOpen(false);
+    }
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [themeMenuOpen]);
   function markNotifsSeen(ids) {
     setSeenNotifIds((cur) => {
       const next = new Set(cur);
@@ -2645,6 +2687,39 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             <button className="btn-teal" onClick={() => togglePanel('help')}>
               {activePanel === 'help' ? 'Hide help' : 'Help'}
             </button>
+            {/* Color theme picker -- deliberately styled as a multi-color
+                swatch (conic-gradient ring) rather than matching the plain
+                teal/white icon-button family right next to it, so the
+                button itself hints at "pick a color" before it's even
+                opened, while still behaving like every other header
+                dropdown (click to open, click outside to close). */}
+            <div className="theme-fab-wrap" ref={themeMenuRef}>
+              <button
+                type="button"
+                className="theme-fab-btn"
+                title="Color theme"
+                onClick={() => setThemeMenuOpen((o) => !o)}
+              >
+                <Palette size={16} />
+              </button>
+              {themeMenuOpen && (
+                <div className="theme-dropdown">
+                  <div className="theme-dropdown-title">Color theme</div>
+                  {THEMES.map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      className={`theme-swatch-row ${theme === t.id ? 'active' : ''}`}
+                      onClick={() => { setTheme(t.id); setThemeMenuOpen(false); }}
+                    >
+                      <span className="theme-swatch-dot" style={{ background: t.color }} />
+                      {t.label}
+                      {theme === t.id && <Check size={14} style={{ marginLeft: 'auto' }} />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             {/* Profile icon replaces the old standalone Sign out button --
                 clicking it shows the signed-in email plus the same
                 self-editable Name/Phone/Location fields as "My details" in

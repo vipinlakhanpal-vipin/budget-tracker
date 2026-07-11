@@ -1423,3 +1423,39 @@ td.amount { font-weight: 600; text-align: right; }
   flex: 1; padding: 8px 10px; border: 1.5px solid var(--border); border-radius: 20px; font-size: 13px;
 }
 .chat-input-row input:focus { outline: none; border-color: var(--accent2); }
+
+/* Color-theme picker, sitting right after the Help button. Its button is
+   deliberately multi-color (a conic-gradient ring) rather than matching the
+   single-color icon-button look of its neighbors -- per explicit request
+   ("make the tab multi color keeing its function character") -- so it reads
+   as "change the app's color" at a glance, while the wrapper/dropdown
+   structure mirrors .chat-fab-wrap / .notif-bell-wrap exactly (relative
+   wrapper + absolutely positioned dropdown + outside-click-to-close). */
+.theme-fab-wrap { position: relative; }
+.theme-fab-btn {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; padding: 0; border-radius: 8px; cursor: pointer;
+  border: 2px solid #fff;
+  background: conic-gradient(from 0deg, #0d9488, #0369a1, #7c3aed, #db2777, #15803d, #0d9488);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(15, 42, 46, .25);
+}
+.theme-fab-btn:hover { filter: brightness(1.08); }
+.theme-dropdown {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 43;
+  width: 190px; background: var(--card); border: 1px solid var(--border);
+  border-radius: 14px; box-shadow: 0 10px 30px rgba(15, 42, 46, .18);
+  padding: 8px; display: flex; flex-direction: column; gap: 2px;
+}
+.theme-dropdown-title {
+  font-size: 11px; font-weight: 800; color: var(--muted); text-transform: uppercase;
+  letter-spacing: .4px; padding: 4px 8px 6px;
+}
+.theme-swatch-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 8px; border-radius: 9px; border: none; background: none;
+  font-size: 13px; font-weight: 600; color: var(--text); text-align: left; cursor: pointer;
+}
+.theme-swatch-row:hover { background: var(--bg); }
+.theme-swatch-row.active { background: var(--accent2-light); }
+.theme-swatch-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; box-shadow: inset 0 0 0 1.5px rgba(0,0,0,.08); }
