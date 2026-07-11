@@ -3066,6 +3066,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           )}
 
           {inputTab === 'fixed' && (
+          <>
           <div className="panel">
             <h2>Fixed Expenses (loans, EMIs, credit cards, rent)</h2>
             {/* With 7 fields, this form can wrap onto several lines on
@@ -3190,7 +3191,14 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               </div>
             </div>
             </form>
-
+          </div>
+          {/* Data entry (above) and the list of what's already been entered
+              (below) are now two separate frames, same as how "Expenses this
+              month" already sits in its own panel below the Add-expense form
+              -- makes it visually clear where you type a NEW fixed expense
+              versus where you review/edit the ones you've already added. */}
+          <div className="panel">
+            <h2 style={{ marginBottom: 14 }}>Your fixed expenses</h2>
             {recurringExpenses.length === 0 ? (
               <div className="empty">No loans, EMIs, or fixed monthly bills added yet.</div>
             ) : recurringForMonth.length === 0 ? (
@@ -3511,6 +3519,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               );
             })()}
           </div>
+          </>
           )}
 
           {inputTab === 'savings' && (
