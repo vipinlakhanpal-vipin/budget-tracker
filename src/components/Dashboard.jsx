@@ -2673,7 +2673,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               </div>
               <div className="field" style={{ flex: '0 1 140px', minWidth: 120 }}>
                 <label>Amount</label>
-                <div className="amount-field-wrap">
+                <div className="amount-field-wrap" style={{ '--amt-ch': Math.max(4, String(form.amount ?? '').length) }}>
                   <span className="currency-prefix"><CurrencyPrefix /></span>
                   <input
                     type="number"
@@ -2692,7 +2692,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 that caused the earlier Amount/Start-date overlap bug in
                 Fixed Expenses). The bank picker only renders once a card
                 option is chosen, so Cash payers never see an irrelevant field. */}
-            <div className="row" style={{ marginTop: 10 }}>
+            <div className="row" style={{ marginTop: 10, alignItems: 'flex-end' }}>
               <div className="field" style={{ flex: '0 1 150px', minWidth: 130 }}>
                 <label>Payment Source</label>
                 <select
@@ -2715,9 +2715,28 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   </select>
                 </div>
               )}
-            </div>
-            <div style={{ marginTop: 12 }}>
-              <button className="btn" type="submit">Add</button>
+              {/* Add + Scan a receipt now sit inline right after Payment
+                  Source (and Bank, when shown), matching the Income/Fixed
+                  Expenses pattern. Scan stays type="button" so it can't
+                  accidentally submit the Add form now that it lives inside it. */}
+              <div className="field" style={{ flex: '0 0 auto' }}>
+                <label style={{ visibility: 'hidden' }}>Add</label>
+                <button className="btn" type="submit" style={{ height: 40 }}>Add</button>
+              </div>
+              <div className="field" style={{ flex: '0 0 auto' }}>
+                <label style={{ visibility: 'hidden' }}>Scan</label>
+                <button
+                  type="button"
+                  className="btn small secondary"
+                  onClick={() => scanFileInputRef.current?.click()}
+                  disabled={scanLoading}
+                  style={{ height: 40 }}
+                >
+                  <Camera size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
+                  {scanLoading ? 'Reading receipt...' : 'Scan a receipt'}
+                  <AiTag />
+                </button>
+              </div>
             </div>
             </form>
 
@@ -2729,16 +2748,6 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 style={{ display: 'none' }}
                 onChange={handleScanFileChange}
               />
-              <button
-                type="button"
-                className="btn small secondary"
-                onClick={() => scanFileInputRef.current?.click()}
-                disabled={scanLoading}
-              >
-                <Camera size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
-                {scanLoading ? 'Reading receipt...' : 'Scan a receipt'}
-                <AiTag />
-              </button>
               <div className="muted-small" style={{ marginTop: 6 }}>
                 Upload a photo of a receipt, or a sheet/screenshot listing several expenses -- review what Claude finds before anything is added.
               </div>
@@ -2825,7 +2834,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               </div>
               <div className="field" style={{ flex: '0 1 150px', minWidth: 130 }}>
                 <label>Amount / month</label>
-                <div className="amount-field-wrap">
+                <div className="amount-field-wrap" style={{ '--amt-ch': Math.max(4, String(newIncome.amount ?? '').length) }}>
                   <span className="currency-prefix"><CurrencyPrefix /></span>
                   <input
                     type="number"
@@ -3040,7 +3049,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               </div>
               <div className="field" style={{ flex: '0 1 150px', minWidth: 130 }}>
                 <label>Amount / month</label>
-                <div className="amount-field-wrap">
+                <div className="amount-field-wrap" style={{ '--amt-ch': Math.max(4, String(newRecurring.amount ?? '').length) }}>
                   <span className="currency-prefix"><CurrencyPrefix /></span>
                   <input
                     type="number"
@@ -3461,7 +3470,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               </div>
               <div className="field" style={{ flex: '0 1 150px', minWidth: 130 }}>
                 <label>Amount / month</label>
-                <div className="amount-field-wrap">
+                <div className="amount-field-wrap" style={{ '--amt-ch': Math.max(4, String(newSaving.amount ?? '').length) }}>
                   <span className="currency-prefix"><CurrencyPrefix /></span>
                   <input
                     type="number"
@@ -4501,7 +4510,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 <div className="row" style={{ marginBottom: 12 }}>
                   <div className="field">
                     <label>Total monthly budget</label>
-                    <div className="amount-field-wrap">
+                    <div className="amount-field-wrap" style={{ '--amt-ch': Math.max(4, String(totalBudgetDraft ?? '').length) }}>
                       <span className="currency-prefix"><CurrencyPrefix /></span>
                       <input
                         type="number"

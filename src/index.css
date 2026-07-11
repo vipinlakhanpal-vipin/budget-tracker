@@ -513,33 +513,61 @@ input[type="month"] {
    as a "$" printed inside a bank app's amount field. .tight just uses a
    smaller inset + smaller symbol, sized for the narrower table cells and
    11px table font. */
+/* Superseded the old "absolute-positioned prefix + padding-left on the
+   input" scheme (which left a visible ~6-8px gap between the symbol and the
+   first digit -- confirmed live by measuring the rendered symbol's ink vs
+   where the digit glyphs actually started, since the padding-left figure
+   was always a bit more generous than the symbol's own rendered width) with
+   the same flex-row "pill" design already proven for the in-table amount
+   cells: symbol and input are adjacent flex children with zero gap between
+   their boxes, so there's nothing left to create a visual gap regardless of
+   which digits are typed. This makes every amount field in the app -- the
+   4 top-level Add forms (Add an expense, Income, Fixed Expenses, Savings)
+   and the in-table/mobile-card cells -- look and behave identically. */
 .amount-field-wrap { position: relative; width: 100%; }
+.amount-field-wrap:not(.tight) {
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  background: linear-gradient(160deg, #ecfdf5, #ffffff);
+  border: 1.5px solid #a7f3d0;
+  border-radius: 9px;
+  padding: 0 8px;
+  height: 40px;
+  transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+}
+.amount-field-wrap:not(.tight):focus-within {
+  border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-light); background: #fff;
+}
 .amount-field-wrap .currency-prefix {
-  position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
-  z-index: 1; pointer-events: none;
+  position: static; transform: none;
+  flex: 0 0 auto; z-index: 1; pointer-events: none;
   font-size: 12px; font-weight: 800; color: var(--muted); white-space: nowrap;
 }
-/* text-align: left here (overriding the app-wide right-align default on
-   number inputs) is what actually makes the digits sit flush against the
-   symbol, "$4500"-style, regardless of how many digits are typed -- with
-   text-align: right the digits stay pinned to the far-right edge of the
-   box while the symbol stays pinned to the left, opening up a growing gap
-   between them for any value that doesn't happen to fill the whole box. */
 .amount-field-wrap input[type="number"] {
-  width: 100%; padding-left: 26px; text-align: left;
+  text-align: right; border: none; background: transparent; padding: 0;
 }
-/* A fixed, modest width (rather than stretching to fill the field) is what
-   keeps the input snug instead of leaving a big gap after the digits.
-   Table cells override this with their own inline width (100%, driven by
-   the colgroup); this is just the fallback for the top-level Add/edit
-   forms, which don't set one. min-width: 0 still matters -- without it a
-   bare <input type="number"> refuses to shrink below its browser-default
-   intrinsic size (~170px+) even inside a constrained flex parent, which is
-   exactly what caused the old Amount/Start-date overlap bug in Fixed
-   Expenses. */
-.amount-field-wrap:not(.tight) input[type="number"] { flex: 0 1 auto; min-width: 0; width: 92px; max-width: 100%; }
-.amount-field-wrap.tight .currency-prefix { left: 4px; font-size: 10.5px; }
-.amount-field-wrap.tight input[type="number"] { padding-left: 15px; }
+/* Shrink-to-fit width driven by the actual number of characters typed
+   (--amt-ch, set inline from the field's own React state) -- the same
+   mechanism that keeps the in-table amount pills snug instead of leaving
+   trailing empty space after the digits. Falls back to 4 characters (the
+   width of the "0.00" placeholder) when the field is empty. */
+.amount-field-wrap:not(.tight) input[type="number"] {
+  flex: 0 1 auto; min-width: 0; max-width: 100%;
+  width: calc(max(var(--amt-ch, 4), 4) * 1ch + 10px);
+}
+.amount-field-wrap.tight .currency-prefix { font-size: 10.5px; }
+/* Hide the native step spinner everywhere an amount is typed -- it was only
+   ever visible on the top-level Add-form fields (the in-table cells are too
+   narrow for Chrome to render it), which made those fields look like a
+   different, older control next to the spinner-free table cells. */
+.amount-field-wrap input[type="number"]::-webkit-outer-spin-button,
+.amount-field-wrap input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none; margin: 0;
+}
+.amount-field-wrap input[type="number"] { -moz-appearance: textfield; }
 
 /* Read-only currency figures (dashboard cards, mobile transaction amounts,
    budget-cap progress) -- glues the symbol straight onto the number with
