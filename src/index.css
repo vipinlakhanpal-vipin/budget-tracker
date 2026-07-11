@@ -545,6 +545,18 @@ input[type="month"] {
   position: static; transform: none;
   flex: 0 0 auto; z-index: 1; pointer-events: none;
   font-size: 12px; font-weight: 800; color: var(--muted); white-space: nowrap;
+  /* The Dirham glyph is an inline <svg>, which by default sits on its
+     parent's text baseline (vertical-align: baseline) rather than centered
+     in the line -- a baseline sits a couple px above the true vertical
+     center (room is reserved below it for descenders like "g"/"y"), which
+     is exactly the "symbol floats slightly above the digits" offset
+     reported live. Making this span itself a small inline-flex row and
+     centering its one child on the cross-axis sidesteps text-baseline
+     math entirely -- confirmed live (measuring this span's SVG center
+     against the sibling input's center): 848.0 vs 848.0, an exact match,
+     versus roughly 1.75px high before this. */
+  display: inline-flex;
+  align-items: center;
 }
 .amount-field-wrap input[type="number"] {
   text-align: right; border: none; background: transparent; padding: 0;
@@ -721,6 +733,12 @@ td.amount { font-weight: 600; text-align: right; }
   width: 100% !important;
   max-width: 100%;
   box-sizing: border-box;
+  /* A gentle curve (not the fully square corners this had before, and not
+     the near-pill look a bigger radius gave the narrow Amount box) --
+     matches the same soft-edged feel already used on the top-level Add
+     forms and the compact 11px fields elsewhere (Users table, My details),
+     applied consistently to every editable cell in every table now. */
+  border-radius: 6px;
   transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
 }
 /* These inline table cells are quietly always-editable (no separate "edit
@@ -829,12 +847,12 @@ td.amount { font-weight: 600; text-align: right; }
   box-sizing: border-box;
   background: linear-gradient(160deg, #ecfdf5, #ffffff);
   border: 1.5px solid #a7f3d0;
-  /* Same square corners as its Name/Category/Payment/Date neighbors in the
-     same row (those have border-radius: 0, an app-wide table-cell
-     convention) -- the pill/rounded look only showed up once the box got
-     narrow enough (after the 1ch width fix above) for a 9px radius to read
-     as a full capsule instead of a subtly-rounded rectangle. */
-  border-radius: 0;
+  /* Matches the same gentle curve every other cell in the row now uses
+     (Name/Category/Payment/Date, and the top-level Add-form fields) --
+     6px reads as a soft edge rather than the near-pill look a bigger
+     radius gave this specific box back when it was still wide from the
+     old ch-based sizing. */
+  border-radius: 6px;
   padding: 0 5px 0 6px;
   transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
 }

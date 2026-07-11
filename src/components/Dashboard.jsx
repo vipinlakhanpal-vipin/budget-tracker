@@ -2579,9 +2579,6 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             <button className="btn-teal" onClick={() => togglePanel('report')}>
               {activePanel === 'report' ? 'Hide report' : 'Report'}
             </button>
-            <button className="btn-teal" onClick={() => togglePanel('coach')}>
-              {activePanel === 'coach' ? 'Hide coach' : 'Coach'}
-            </button>
             <button className="btn-teal" onClick={() => togglePanel('settings')}>
               {activePanel === 'settings' ? 'Hide settings' : 'Settings'}
             </button>
@@ -2872,7 +2869,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   ))}
                 </select>
               </div>
-              <div className="field" style={{ flex: '0 1 150px', minWidth: 130 }}>
+              <div className="field" style={{ flex: '0 0 auto' }}>
+                {/* Was flex:'0 1 150px'/minWidth:130 -- a leftover width
+                    reservation from before the Amount box shrank to its
+                    exact content (see tightAmountPx/formAmountPx). That fixed
+                    minimum left a big empty gap between the now-narrow pill
+                    and the Month field next to it. Sizing to content instead
+                    (like the Add button field) closes that gap. */}
                 <label>Amount / month</label>
                 <div className="amount-field-wrap">
                   <span className="currency-prefix"><CurrencyPrefix /></span>
@@ -2928,7 +2931,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       </span>
                       <span className="mobile-txn-mid">
                         <span className="mobile-txn-title">{title}</span>
-                        <span className="mobile-txn-sub">{i.member_email}</span>
+                        <span className="mobile-txn-sub">{displayNameForEmail(i.member_email)}</span>
                       </span>
                       <span className="mobile-txn-amount"><Amt value={i.amount} /></span>
                     </button>
@@ -2939,8 +2942,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <div className="table-scroll">
               <table className="responsive-table" style={{ marginTop: 14, fontSize: 11 }}>
                 <colgroup>
-                  <col style={{ width: '26%' }} /><col style={{ width: '26%' }} /><col style={{ width: '17%' }} />
-                  <col style={{ width: '19%' }} /><col style={{ width: '12%' }} />
+                  {/* Member only ever shows a first name now (displayNameForEmail),
+                      so its old 26% (same as Source) was reserving far more room
+                      than it needs -- that unused space read as a big gap next to
+                      the Amount column. Narrowed to 16% and redistributed to
+                      Source/Month/delete. */}
+                  <col style={{ width: '30%' }} /><col style={{ width: '16%' }} /><col style={{ width: '16%' }} />
+                  <col style={{ width: '24%' }} /><col style={{ width: '14%' }} />
                 </colgroup>
                 <thead>
                   <tr><th>Source</th><th>Member</th><th>Amount</th><th>Month</th><th></th></tr>
@@ -2957,7 +2965,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           onBlur={(e) => commitIncomeField(i.id, 'name', e.target.value)}
                         />
                       </td>
-                      <td className="muted-small" data-label="Member">{i.member_email}</td>
+                      <td className="muted-small" data-label="Member">{displayNameForEmail(i.member_email)}</td>
                       <td data-label="Amount">
                         <div className="amount-field-wrap tight">
                           <span className="currency-prefix"><CurrencyPrefix /></span>
@@ -4118,6 +4126,29 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             )}
           </div>
 
+          <div className="panel" style={{ marginTop: 16 }}>
+            <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+              <h2 style={{ margin: 0 }}>
+                Budget Coach <AiTag />
+              </h2>
+              <button className="btn small secondary" onClick={generateBudgetCoach} disabled={coachLoading}>
+                {coachLoading ? 'Analyzing...' : coachResult ? 'Re-analyze' : 'Analyze trends'}
+              </button>
+            </div>
+            <div className="muted-small" style={{ marginBottom: 10 }}>
+              Looks across the last 6 months (not just the one you're viewing) for patterns -- categories that stay over budget, spending trending up or down, whether your savings goal still looks realistic. Suggestions only -- nothing here changes your Settings automatically.
+            </div>
+            {coachResult ? (
+              <div className="muted-small" style={{ lineHeight: 1.6, whiteSpace: 'pre-line', color: 'var(--text)' }}>
+                {coachResult}
+              </div>
+            ) : coachError ? (
+              <div className="muted-small">Couldn't analyze trends right now -- try again in a moment.</div>
+            ) : (
+              <div className="empty">Tap "Analyze trends" to get a coaching read on your last 6 months.</div>
+            )}
+          </div>
+
           {activePanel === 'members' && (
           <div className="panel" ref={panelRef}>
               <div>
@@ -4351,31 +4382,6 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   </>
                 )}
               </div>
-          </div>
-          )}
-
-          {activePanel === 'coach' && (
-          <div className="panel" ref={panelRef}>
-            <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-              <h2 style={{ margin: 0 }}>
-                Budget Coach <AiTag />
-              </h2>
-              <button className="btn small secondary" onClick={generateBudgetCoach} disabled={coachLoading}>
-                {coachLoading ? 'Analyzing...' : coachResult ? 'Re-analyze' : 'Analyze trends'}
-              </button>
-            </div>
-            <div className="muted-small" style={{ marginBottom: 10 }}>
-              Looks across the last 6 months (not just the one you're viewing) for patterns -- categories that stay over budget, spending trending up or down, whether your savings goal still looks realistic. Suggestions only -- nothing here changes your Settings automatically.
-            </div>
-            {coachResult ? (
-              <div className="muted-small" style={{ lineHeight: 1.6, whiteSpace: 'pre-line', color: 'var(--text)' }}>
-                {coachResult}
-              </div>
-            ) : coachError ? (
-              <div className="muted-small">Couldn't analyze trends right now -- try again in a moment.</div>
-            ) : (
-              <div className="empty">Tap "Analyze trends" to get a coaching read on your last 6 months.</div>
-            )}
           </div>
           )}
 
