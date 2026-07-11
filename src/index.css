@@ -340,7 +340,12 @@ button, input, select, textarea { font-family: inherit; }
    of the header that's still a left/right split. Everything else (the
    merged tab+action row below) spans the full width and is left-aligned. */
 .top-bar-row { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; }
-.header-logo-row { margin-bottom: 2px; }
+/* Logo sits right before the title now, on the same line, instead of its
+   own row above it -- the "Signed in as..." line that used to sit under
+   the title is gone too, since that same email is already shown at the top
+   of the Profile dropdown right in this row. */
+.header-title-row { display: flex; align-items: center; gap: 8px; }
+.header-title-row h1 { margin: 0; }
 .app-title-purple { color: #7c3aed; }
 .top-bar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .input-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
@@ -369,6 +374,15 @@ button, input, select, textarea { font-family: inherit; }
   white-space: nowrap;
 }
 .btn-teal:hover { opacity: .88; }
+/* The 4 data-entry tabs are always solid teal + white now (no outline
+   "unselected" look) -- this just adds a subtle inset ring + slightly
+   darker shade to the currently-open one so it's still distinguishable
+   from the other three, without breaking the "all teal, all white text"
+   look that was asked for. */
+.header-tab-btn-active {
+  background: #0f766e;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,.55);
+}
 /* Outline variant for the "which sub-section" toggle inside Settings (App
    Settings / Admin Console) -- same teal family as the top action row so it
    reads as the same button language, but the inactive choice needs to look

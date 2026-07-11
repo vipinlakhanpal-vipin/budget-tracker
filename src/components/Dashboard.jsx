@@ -2591,12 +2591,9 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       <div className="sticky-dashboard-frame">
       <div className="top-bar" ref={topRef}>
         <div className="top-bar-row">
-          <div>
-            <div className="header-logo-row">
-              <HearthMark size={28} />
-            </div>
+          <div className="header-title-row">
+            <HearthMark size={26} />
             <h1 className="app-title-purple">{household.name || 'Hearth'}</h1>
-            <div className="sub">Signed in as {session.user.email}{isOwner ? ' (owner)' : ''}</div>
           </div>
           <span className="corner-version-badge" title="This updates automatically -- if a change doesn't look right, reload the page.">
             {formatVersionBadge()}
@@ -2611,30 +2608,36 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               own bottom-nav/FAB pattern -- the original in-content tab
               switcher (further below) still drives that. */}
           <div className="action-row-teal action-row-left">
+            {/* All four tabs are always solid teal + white text now (no more
+                outline "not selected" look) -- matches the Help/Report/
+                Settings/Users buttons right next to them so the whole row
+                reads as one consistent button style. header-tab-btn-active
+                just adds a subtle inset ring so you can still tell which
+                one is currently open. */}
             <button
               type="button"
-              className={`btn small header-tab-btn ${inputTab === 'income' ? '' : 'secondary'}`}
+              className={`btn-teal header-tab-btn ${inputTab === 'income' ? 'header-tab-btn-active' : ''}`}
               onClick={() => setInputTab('income')}
             >
               Income
             </button>
             <button
               type="button"
-              className={`btn small header-tab-btn ${inputTab === 'fixed' ? '' : 'secondary'}`}
+              className={`btn-teal header-tab-btn ${inputTab === 'fixed' ? 'header-tab-btn-active' : ''}`}
               onClick={() => setInputTab('fixed')}
             >
               Fixed Expenses
             </button>
             <button
               type="button"
-              className={`btn small header-tab-btn ${inputTab === 'expense' ? '' : 'secondary'}`}
+              className={`btn-teal header-tab-btn ${inputTab === 'expense' ? 'header-tab-btn-active' : ''}`}
               onClick={() => setInputTab('expense')}
             >
               Add an expense
             </button>
             <button
               type="button"
-              className={`btn small header-tab-btn ${inputTab === 'savings' ? '' : 'secondary'}`}
+              className={`btn-teal header-tab-btn ${inputTab === 'savings' ? 'header-tab-btn-active' : ''}`}
               onClick={() => setInputTab('savings')}
             >
               Savings
