@@ -434,6 +434,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   // screen size, this just gives mobile a faster, app-like way to get
   // around using the same underlying state.
   const topRef = useRef(null);
+  const stickyFrameRef = useRef(null);
   const inputTabsSectionRef = useRef(null);
   // On mobile, tapping "+" or "Add" opens the exact same Add
   // expense/income/fixed/savings forms as a sliding bottom sheet instead of
@@ -586,6 +587,16 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     };
     e.currentTarget.setPointerCapture?.(e.pointerId);
   };
+  // The sticky header (title/logo, the merged tab+action row, month nav,
+  // and both summary-card grids) now stays pinned at the very top of the
+  // viewport, so the FAB must never be draggable to a y above its bottom
+  // edge -- otherwise it can end up sitting on top of (or right next to)
+  // the bell icon / other header buttons. Falls back to a small fixed
+  // margin if the ref isn't ready yet (first paint).
+  function minChatFabY() {
+    const frame = stickyFrameRef.current;
+    return frame ? frame.getBoundingClientRect().bottom + 8 : 60;
+  }
   const handleChatFabPointerMove = (e) => {
     const d = chatFabDragRef.current;
     if (!d.dragging) return;
@@ -597,7 +608,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     const w = wrap ? wrap.offsetWidth : 60;
     const h = wrap ? wrap.offsetHeight : 90;
     const x = Math.min(Math.max(8, d.origX + dx), window.innerWidth - w - 8);
-    const y = Math.min(Math.max(8, d.origY + dy), window.innerHeight - h - 8);
+    const y = Math.min(Math.max(minChatFabY(), d.origY + dy), window.innerHeight - h - 8);
     setChatFabPos({ x, y });
   };
   const handleChatFabPointerUp = () => {
@@ -624,6 +635,33 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight;
     }
   }, [chatMessages, chatLoading]);
+
+  // A position saved from BEFORE the header became this tall/sticky (or
+  // from a wider window) can otherwise leave the chat FAB parked on top of
+  // the bell/header buttons after this update, or off-screen after a
+  // resize -- nudge any restored/previously-saved spot back into bounds
+  // once the header has actually rendered and whenever the window resizes.
+  useEffect(() => {
+    function clampFabPos() {
+      setChatFabPos((pos) => {
+        if (!pos) return pos;
+        const wrap = chatFabWrapRef.current;
+        const w = wrap ? wrap.offsetWidth : 60;
+        const h = wrap ? wrap.offsetHeight : 90;
+        const minY = minChatFabY();
+        const x = Math.min(Math.max(8, pos.x), window.innerWidth - w - 8);
+        const y = Math.min(Math.max(minY, pos.y), window.innerHeight - h - 8);
+        if (x === pos.x && y === pos.y) return pos;
+        const next = { x, y };
+        localStorage.setItem('hearth-chat-fab-pos', JSON.stringify(next));
+        return next;
+      });
+    }
+    clampFabPos();
+    window.addEventListener('resize', clampFabPos);
+    return () => window.removeEventListener('resize', clampFabPos);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // AI feature #5 (Budget Coach): unlike the monthly digest (#2), which
   // summarizes just the currently viewed month, this looks across the last
@@ -2588,7 +2626,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           sticky block (see .sticky-dashboard-frame) so the whole "dashboard
           frame" stays frozen at the top while only the tabs/panels/lists
           below it scroll -- rather than just the title bar row by itself. */}
-      <div className="sticky-dashboard-frame">
+      <div className="sticky-dashboard-frame" ref={stickyFrameRef}>
       <div className="top-bar" ref={topRef}>
         <div className="top-bar-row">
           <div className="header-title-row">
@@ -2642,9 +2680,6 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             >
               Savings
             </button>
-            <button className="btn-teal" onClick={() => togglePanel('help')}>
-              {activePanel === 'help' ? 'Hide help' : 'Help'}
-            </button>
             <button className="btn-teal" onClick={() => togglePanel('report')}>
               {activePanel === 'report' ? 'Hide report' : 'Report'}
             </button>
@@ -2656,6 +2691,9 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 {activePanel === 'members' ? 'Hide users' : 'Users'}
               </button>
             )}
+            <button className="btn-teal" onClick={() => togglePanel('help')}>
+              {activePanel === 'help' ? 'Hide help' : 'Help'}
+            </button>
             {/* Profile icon replaces the old standalone Sign out button --
                 clicking it shows the signed-in email plus the same
                 self-editable Name/Phone/Location fields as "My details" in
@@ -2772,7 +2810,23 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       </div>
 
       <div className="grid">
-        <div className="card card-income ok"><div className="k">Combined income</div><div className="v"><Amt value={totalIncome} /></div></div>
+        <div className="card card-income ok">
+          <div className="k">Combined income</div>
+          <div className="v"><Amt value={totalIncome} /></div>
+          {/* Same breakdown treatment as Combined expenses/Spent so far --
+              income doesn't have fixed "types" the way expenses do
+              (Regular/Fixed/Savings), so this lists each of this month's
+              income sources by name instead, in the same "+"-joined style. */}
+          {incomeForMonth.length > 0 && (
+            <div className="muted-small" style={{ marginTop: 4 }}>
+              {incomeForMonth.map((i, idx) => (
+                <span key={i.id}>
+                  {idx > 0 ? ' + ' : ''}{i.name} <Amt value={i.amount} />
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
         <div className="card card-expenses">
           <div className="k">Combined expenses</div>
           <div className="v"><Amt value={combinedOutflow} /></div>
