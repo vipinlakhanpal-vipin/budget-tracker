@@ -556,7 +556,7 @@ input[type="month"] {
    width of the "0.00" placeholder) when the field is empty. */
 .amount-field-wrap:not(.tight) input[type="number"] {
   flex: 0 1 auto; min-width: 0; max-width: 100%;
-  width: calc(max(var(--amt-ch, 4), 4) * 1ch + 10px);
+  width: calc(max(var(--amt-ch, 4), 4) * 1ch + 4px);
 }
 .amount-field-wrap.tight .currency-prefix { font-size: 10.5px; }
 /* Hide the native step spinner everywhere an amount is typed -- it was only
@@ -794,16 +794,24 @@ td.amount { font-weight: 600; text-align: right; }
    own width, even with inline style="width:...!important" -- so the box
    can only be as wide as its Amount COLUMN allows. Each table's Amount
    column was widened enough for its own worst case (5-digit values in
-   Income/Fixed Expenses) -- see each table's colgroup. 2ch + 28px is the
-   verified safety margin per digit (confirmed live for 2/3/4/5-digit values
-   and decimals across all four tables, scrollWidth <= clientWidth on every
-   one -- an earlier +22px pass still clipped the smallest 2-digit values,
-   where the fixed padding/border/prefix overhead eats proportionally more
-   of a very small box). */
+   Income/Fixed Expenses) -- see each table's colgroup.
+   NOTE on the multiplier: an earlier pass used "2ch" per digit (to fix a
+   clipping bug, verified at the time via scrollWidth<=clientWidth). That
+   check was misleading -- scrollWidth just reports box width when there's
+   no overflow, it doesn't measure how much of the box the actual digits
+   fill. Measuring the real rendered text width directly (via a mirrored
+   off-screen span) showed 1ch already matches a digit's true width almost
+   exactly in this font/size, so "2ch" was quietly making every box roughly
+   double the width the digits need -- with text-align:right, that leftover
+   space shows up as empty space between the currency symbol and the first
+   digit, which is exactly the "not actually joined" gap reported live.
+   1ch + 27px (re-verified the same way: real text width vs box width,
+   2-5 digit values and decimals, all four tables) removes that gap while
+   keeping a small margin so nothing clips. */
 .table-scroll table td .amount-field-wrap.tight {
   display: flex;
   align-items: center;
-  width: calc(max(var(--amt-ch, 2), 2) * 2ch + 28px);
+  width: calc(max(var(--amt-ch, 2), 2) * 1ch + 27px);
   max-width: 100%;
   margin: 0 auto;
   box-sizing: border-box;
