@@ -817,7 +817,12 @@ td.amount { font-weight: 600; text-align: right; }
   box-sizing: border-box;
   background: linear-gradient(160deg, #ecfdf5, #ffffff);
   border: 1.5px solid #a7f3d0;
-  border-radius: 9px;
+  /* Same square corners as its Name/Category/Payment/Date neighbors in the
+     same row (those have border-radius: 0, an app-wide table-cell
+     convention) -- the pill/rounded look only showed up once the box got
+     narrow enough (after the 1ch width fix above) for a 9px radius to read
+     as a full capsule instead of a subtly-rounded rectangle. */
+  border-radius: 0;
   padding: 0 5px 0 6px;
   transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
 }
