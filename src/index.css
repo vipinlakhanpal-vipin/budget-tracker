@@ -682,18 +682,32 @@ td.amount { font-weight: 600; text-align: right; }
    as read-only text. A faint tint plus a visible focus ring gives a clearer
    "this is a live field, tap to change it" signal without adding any new UI
    chrome. */
-.table-scroll table td input:not([type="date"]):not([type="month"]),
-.table-scroll table td select {
-  background: #f5fbfb;
-  border-color: #d8ecec;
+/* Per-cell color tone -- reuses the exact same soft gradient family already
+   established for the 6 dashboard summary cards (.card-budget/.card-income/
+   etc, further up this file) so the table styling feels like one designed
+   system rather than a separate flat-gray palette invented for tables. Each
+   FIELD's own box gets the tint (not the row/line behind it, which stayed
+   plain -- a full-row background read as a heavier "banded spreadsheet"
+   look than wanted here). Text inputs (Name/Description) reuse the teal
+   of .card-remaining; dropdowns (Category/Repeats/Payment/Bank) reuse the
+   indigo of .card-budget; Amount reuses the green of .card-income (money);
+   dates reuse the blue of .card-net. */
+.table-scroll table td input[type="text"] {
+  background: linear-gradient(160deg, #f0fdfa, #ffffff);
+  border-color: #99f6e4;
 }
-/* Amount fields get their own soft mint tint (money = green, a common
-   ledger convention) so the one column that matters most for a budget app
-   is visually distinct from Name/Category/Payment at a glance, instead of
-   every field in the row reading as identically plain. */
+.table-scroll table td select {
+  background: linear-gradient(160deg, #eef2ff, #ffffff);
+  border-color: #c7d2fe;
+}
 .table-scroll table td .amount-field-wrap.tight input[type="number"] {
-  background: #ecfdf5;
-  border-color: #a7e8cf;
+  background: linear-gradient(160deg, #ecfdf5, #ffffff);
+  border-color: #a7f3d0;
+}
+.table-scroll table td input[type="date"],
+.table-scroll table td input[type="month"] {
+  background: linear-gradient(160deg, #eff6ff, #ffffff);
+  border-color: #bfdbfe;
 }
 .table-scroll table td input:hover,
 .table-scroll table td select:hover {
@@ -710,20 +724,36 @@ td.amount { font-weight: 600; text-align: right; }
   font-size: 11px;
 }
 
-/* Amount cells: the cell itself stays exactly where every other column's
-   cell sits (full-width, same box as Name/Category/etc -- no more shrinking
-   the box to content and shoving it over, which read as the amount box
-   "floating" in a different spot on every row depending on digit count).
-   Only the DIGITS inside are right-aligned, via ordinary text-align on the
-   input, so the column reads as a clean ledger while every cell's outer box
-   still lines up with the rest of the table. The currency symbol is a
-   separate absolutely-positioned element pinned to the box's left inset
-   (see .currency-prefix above) so it doesn't move when the digits do. */
+/* Amount cells: symbol + digits are glued together as ONE unit ("Đ4,500",
+   same convention as the top-level Add-form fields) and that whole unit is
+   right-aligned WITHIN the cell -- the cell's own box stays full-width and
+   in the exact same place as every other column (no more shrinking/shoving
+   the visible bordered box itself, which read as misaligned/"funny"). The
+   wrap is a flex row with justify-content:flex-end so the currency prefix
+   (now a normal flex child, not an absolutely-positioned overlay) and the
+   input pack together flush against the box's right edge; only the input's
+   own width shrinks to fit its digits (via the --amt-ch custom property, so
+   there's no dead gap between symbol and number). 2ch + 16px is a verified
+   safety margin per digit -- confirmed live against every value across all
+   four tables (2, 3, 4, and 5-digit amounts, plus decimals) with
+   scrollWidth <= clientWidth on each, so nothing clips. */
 .table-scroll table td .amount-field-wrap.tight {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
   width: 100%;
 }
+.table-scroll table td .amount-field-wrap.tight .currency-prefix {
+  position: static;
+  transform: none;
+  flex: 0 0 auto;
+}
 .table-scroll table td .amount-field-wrap.tight input[type="number"] {
+  flex: 0 1 auto;
+  width: calc(max(var(--amt-ch, 2), 2) * 2ch + 16px) !important;
   text-align: right;
+  padding-left: 2px;
+  padding-right: 4px;
 }
 
 /* On narrower screens, wide fixed-column tables (e.g. Fixed Expenses) exceed
@@ -745,12 +775,6 @@ td.amount { font-weight: 600; text-align: right; }
   .table-scroll table td:has(button.del) {
     box-shadow: -6px 0 6px -6px rgba(15, 42, 46, .25);
   }
-  /* Faint alternating row tint (desktop table view only -- mobile switches
-     to bordered cards below 720px, which already have their own look) so
-     long tables are easier to scan across, and the sheet reads as a soft
-     colored ledger instead of a flat white grid. */
-  .table-scroll table tbody tr:nth-child(even) { background: #f4fafa; }
-  .table-scroll table tbody tr:nth-child(even) td:has(button.del) { background: #f4fafa; }
 }
 
 .cat-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }

@@ -3167,7 +3167,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   it needs; if that adds up to more than the panel's visible
                   width, .table-scroll's horizontal scroll handles the rest
                   (same technique already used for .users-table). */}
-              <table className="responsive-table" style={{ marginTop: 14, fontSize: 11, minWidth: 892 }}>
+              <table className="responsive-table" style={{ marginTop: 14, fontSize: 11, minWidth: 927 }}>
                 <colgroup>
                   {/* Start/End/Due date widened from 85/85/90px -- at those
                       widths the native date picker's own dd/mm/yyyy text
@@ -3177,12 +3177,20 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       to shrink the YEAR specifically (no 2-digit-year display
                       mode) -- the only real fix is giving the whole control
                       enough width to show its full native text, confirmed
-                      live at 100/100/105px before shipping. Category gives up
-                      the matching 22px so the table's total width barely
-                      grows. */}
-                  <col style={{ width: '150px' }} /><col style={{ width: '120px' }} /><col style={{ width: '85px' }} />
+                      live at 100/100/105px before shipping.
+                      Payment widened from 82px to 105px -- at 82px the
+                      select's own dropdown arrow sat right at (or past) the
+                      column edge and got clipped by the cell's overflow:
+                      hidden, especially once a bank name (e.g. "FAB (First
+                      Abu Dhabi Bank)") is showing in the stacked bank select
+                      underneath. Name and Category give up the matching
+                      width so the table's total width only grows modestly;
+                      the delete column keeps working via its existing sticky
+                      + horizontal-scroll handling regardless of total
+                      width. */}
+                  <col style={{ width: '130px' }} /><col style={{ width: '120px' }} /><col style={{ width: '85px' }} />
                   <col style={{ width: '100px' }} /><col style={{ width: '100px' }} /><col style={{ width: '110px' }} />
-                  <col style={{ width: '105px' }} /><col style={{ width: '82px' }} /><col style={{ width: '40px' }} />
+                  <col style={{ width: '105px' }} /><col style={{ width: '105px' }} /><col style={{ width: '42px' }} />
                 </colgroup>
                 <thead>
                   <tr><th>Name</th><th>Category</th><th>Amount</th><th>Start</th><th>End</th><th>Repeats</th><th>Due date</th><th>Payment</th><th></th></tr>
