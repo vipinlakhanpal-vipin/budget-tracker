@@ -11,7 +11,7 @@ import AdminConsole from './AdminConsole.jsx';
 import { formatVersionBadge } from '../version.js';
 import {
   Home, Plus, FileText, Users as UsersIcon, Settings as SettingsIcon,
-  Pencil, Trash2, X, ChevronLeft, ChevronRight, Camera, MessageCircle, Sparkles,
+  Pencil, Trash2, X, ChevronLeft, ChevronRight, Camera, MessageCircle, Sparkles, User,
 } from 'lucide-react';
 
 // Small reusable "AI powered" pill -- a magic-wand sparkle + label used next
@@ -24,6 +24,42 @@ function AiTag({ style }) {
       <Sparkles size={11} className="ai-tag-sparkle" strokeWidth={2.25} />
       AI powered
     </span>
+  );
+}
+
+// A small header-sized version of the splash screen's own hearth motif
+// (roofline + layered flame) -- reuses the exact same gradients/paths as
+// Splash.jsx, just without the surrounding scene (glow ellipses, coin,
+// wallet, piggy bank, receipt) that only make sense at splash size. Sits
+// above the household name in the top bar so the app's own mark, not just
+// plain text, anchors the header.
+function HearthMark({ size = 30 }) {
+  return (
+    <svg width={size} height={size * (56 / 64)} viewBox="0 0 64 56" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="hdrFlameOuter" x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0" stopColor="#e6432c" />
+          <stop offset="1" stopColor="#ff8a3d" />
+        </linearGradient>
+        <linearGradient id="hdrFlameMid" x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0" stopColor="#ff8a3d" />
+          <stop offset="1" stopColor="#ffcf5c" />
+        </linearGradient>
+        <linearGradient id="hdrFlameInner" x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0" stopColor="#ffe27a" />
+          <stop offset="1" stopColor="#fffbe6" />
+        </linearGradient>
+      </defs>
+      <path
+        d="M8 26 L32 6 L56 26"
+        stroke="var(--accent)" strokeOpacity="0.85" strokeWidth="4.5"
+        fill="none" strokeLinecap="round" strokeLinejoin="round"
+      />
+      <path d="M22 44 C22 40 26 38 30 38 L36 38 C40 38 44 40 44 44 Z" fill="#1c3634" />
+      <path d="M32 40 C25 34 24 25 32 12 C40 25 39 34 32 40 Z" fill="url(#hdrFlameOuter)" />
+      <path d="M32 39 C27 34 26 27 32 18 C38 27 37 34 32 39 Z" fill="url(#hdrFlameMid)" />
+      <path d="M32 37 C29 34 28.5 29 32 23 C35.5 29 35 34 32 37 Z" fill="url(#hdrFlameInner)" />
+    </svg>
   );
 }
 
@@ -362,6 +398,23 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     document.addEventListener('mousedown', onDocClick);
     return () => document.removeEventListener('mousedown', onDocClick);
   }, [notifOpen]);
+
+  // Profile icon (replaces the old standalone "Sign out" button) -- same
+  // open/close-on-outside-click pattern as the notification bell above.
+  // Shows the signed-in email plus the same self-editable Name/Phone/
+  // Location fields as "My details" in Users (myDetailsDraft/
+  // commitMyDetailsField, already defined below), with Sign out as the
+  // last action in the dropdown instead of its own top-bar button.
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef(null);
+  useEffect(() => {
+    if (!profileMenuOpen) return;
+    function onDocClick(e) {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target)) setProfileMenuOpen(false);
+    }
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [profileMenuOpen]);
   function markNotifsSeen(ids) {
     setSeenNotifIds((cur) => {
       const next = new Set(cur);
@@ -2531,16 +2584,123 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
   return (
     <div className="wrap">
+      {/* Header, month nav, and both summary-card rows are wrapped in one
+          sticky block (see .sticky-dashboard-frame) so the whole "dashboard
+          frame" stays frozen at the top while only the tabs/panels/lists
+          below it scroll -- rather than just the title bar row by itself. */}
+      <div className="sticky-dashboard-frame">
       <div className="top-bar" ref={topRef}>
-        <div>
-          <h1>{household.name || 'Hearth'}</h1>
-          <div className="sub">Signed in as {session.user.email}{isOwner ? ' (owner)' : ''}</div>
-        </div>
-        <div className="top-right-group">
+        <div className="top-bar-row">
+          <div>
+            <div className="header-logo-row">
+              <HearthMark size={28} />
+            </div>
+            <h1 className="app-title-purple">{household.name || 'Hearth'}</h1>
+            <div className="sub">Signed in as {session.user.email}{isOwner ? ' (owner)' : ''}</div>
+          </div>
           <span className="corner-version-badge" title="This updates automatically -- if a change doesn't look right, reload the page.">
             {formatVersionBadge()}
           </span>
-          <div className="action-row-teal">
+        </div>
+          {/* Left-aligned, single row: the 4 data-entry tabs first, then the
+              teal panel-toggle buttons, then the Profile icon, then the
+              bell last -- all one flowing group instead of two separate
+              rows (tabs used to live down in the content area; teal buttons
+              used to be right-aligned in their own row up here). The 4 tabs
+              are hidden on mobile (.header-tab-btn) since phones keep their
+              own bottom-nav/FAB pattern -- the original in-content tab
+              switcher (further below) still drives that. */}
+          <div className="action-row-teal action-row-left">
+            <button
+              type="button"
+              className={`btn small header-tab-btn ${inputTab === 'income' ? '' : 'secondary'}`}
+              onClick={() => setInputTab('income')}
+            >
+              Income
+            </button>
+            <button
+              type="button"
+              className={`btn small header-tab-btn ${inputTab === 'fixed' ? '' : 'secondary'}`}
+              onClick={() => setInputTab('fixed')}
+            >
+              Fixed Expenses
+            </button>
+            <button
+              type="button"
+              className={`btn small header-tab-btn ${inputTab === 'expense' ? '' : 'secondary'}`}
+              onClick={() => setInputTab('expense')}
+            >
+              Add an expense
+            </button>
+            <button
+              type="button"
+              className={`btn small header-tab-btn ${inputTab === 'savings' ? '' : 'secondary'}`}
+              onClick={() => setInputTab('savings')}
+            >
+              Savings
+            </button>
+            <button className="btn-teal" onClick={() => togglePanel('help')}>
+              {activePanel === 'help' ? 'Hide help' : 'Help'}
+            </button>
+            <button className="btn-teal" onClick={() => togglePanel('report')}>
+              {activePanel === 'report' ? 'Hide report' : 'Report'}
+            </button>
+            <button className="btn-teal" onClick={() => togglePanel('settings')}>
+              {activePanel === 'settings' ? 'Hide settings' : 'Settings'}
+            </button>
+            {isOwner && (
+              <button className="btn-teal" onClick={() => togglePanel('members')}>
+                {activePanel === 'members' ? 'Hide users' : 'Users'}
+              </button>
+            )}
+            {/* Profile icon replaces the old standalone Sign out button --
+                clicking it shows the signed-in email plus the same
+                self-editable Name/Phone/Location fields as "My details" in
+                Users, with Sign out as the last action in the dropdown. */}
+            <div className="profile-menu-wrap" ref={profileMenuRef}>
+              <button
+                type="button"
+                className="profile-icon-btn"
+                title="Profile"
+                onClick={() => setProfileMenuOpen((o) => !o)}
+              >
+                <User size={18} />
+              </button>
+              {profileMenuOpen && (
+                <div className="profile-dropdown">
+                  <div className="profile-dropdown-email">{session.user.email}</div>
+                  <div className="field" style={{ marginBottom: 10 }}>
+                    <label>Full name</label>
+                    <input
+                      type="text"
+                      value={myDetailsDraft.name}
+                      onChange={(e) => setMyDetailsDraft((d) => ({ ...d, name: e.target.value }))}
+                      onBlur={(e) => commitMyDetailsField('name', e.target.value)}
+                    />
+                  </div>
+                  <div className="field" style={{ marginBottom: 10 }}>
+                    <label>Phone (optional)</label>
+                    <input
+                      type="text"
+                      value={myDetailsDraft.phone}
+                      onChange={(e) => setMyDetailsDraft((d) => ({ ...d, phone: e.target.value }))}
+                      onBlur={(e) => commitMyDetailsField('phone', e.target.value)}
+                    />
+                  </div>
+                  <div className="field" style={{ marginBottom: 12 }}>
+                    <label>Location</label>
+                    <input
+                      type="text"
+                      value={myDetailsDraft.location}
+                      onChange={(e) => setMyDetailsDraft((d) => ({ ...d, location: e.target.value }))}
+                      onBlur={(e) => commitMyDetailsField('location', e.target.value)}
+                    />
+                  </div>
+                  <div className="muted-small" style={{ marginBottom: 12 }}>Changes save automatically.</div>
+                  <button className="btn-teal profile-signout-btn" onClick={handleSignOut}>Sign out</button>
+                </div>
+              )}
+            </div>
             <div className="notif-bell-wrap" ref={notifBellRef}>
               <button
                 type="button"
@@ -2573,24 +2733,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 </div>
               )}
             </div>
-            <button className="btn-teal" onClick={() => togglePanel('help')}>
-              {activePanel === 'help' ? 'Hide help' : 'Help'}
-            </button>
-            <button className="btn-teal" onClick={() => togglePanel('report')}>
-              {activePanel === 'report' ? 'Hide report' : 'Report'}
-            </button>
-            <button className="btn-teal" onClick={() => togglePanel('settings')}>
-              {activePanel === 'settings' ? 'Hide settings' : 'Settings'}
-            </button>
-            {isOwner && (
-              <button className="btn-teal" onClick={() => togglePanel('members')}>
-                {activePanel === 'members' ? 'Hide users' : 'Users'}
-              </button>
-            )}
-            <button className="btn-teal" onClick={handleSignOut}>Sign out</button>
           </div>
         </div>
-      </div>
 
       <div className="month-nav">
         <button onClick={() => setCurrentMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))}>&lsaquo;</button>
@@ -2637,6 +2781,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           <div className="k">Net (income - expenses - savings)</div><div className="v"><Amt value={netCombined} /></div>
         </div>
       </div>
+      </div>
 
       <div className="content-grid">
         <div ref={inputTabsSectionRef} className={addSheetOpen ? 'mobile-add-sheet' : undefined}>
@@ -2652,7 +2797,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               </button>
             </div>
           )}
-          <div className="input-tabs">
+          <div className="input-tabs data-entry-tabs">
             <button
               className={`btn small ${inputTab === 'income' ? '' : 'secondary'}`}
               onClick={() => setInputTab('income')}

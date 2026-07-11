@@ -319,23 +319,50 @@ button, input, select, textarea { font-family: inherit; }
 }
 
 .wrap { max-width: 1520px; margin: 0 auto; padding: 24px; }
-/* Frozen to the top of the viewport while the page scrolls, so the title
-   and the Help/Report/Coach/Settings/Users/Sign out row stay reachable
-   without scrolling back up. Own background (matching the page) is what
-   keeps scrolled-past content from showing through underneath once it's
-   stuck; sticky naturally closes the gap from .wrap's own top padding as
-   the page scrolls, so no extra margin trick is needed for that. */
-.top-bar {
-  display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; flex-wrap: wrap; gap: 12px;
+/* Frozen to the top of the viewport while the page scrolls -- now wraps the
+   ENTIRE "dashboard frame" (title/logo, the merged tab+action row, month
+   nav, and both summary-card rows), not just the title bar, so all of it
+   stays reachable without scrolling back up; only the tabs/panels/lists
+   below this frame scroll underneath. Own background (matching the page) is
+   what keeps scrolled-past content from showing through underneath once
+   it's stuck; sticky naturally closes the gap from .wrap's own top padding
+   as the page scrolls, so no extra margin trick is needed for that. */
+.sticky-dashboard-frame {
   position: sticky; top: 0; z-index: 60;
   background: var(--bg);
+  padding-bottom: 4px;
+}
+.top-bar {
+  display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px;
   padding-bottom: 8px;
 }
+/* Title/logo on the left, the version badge on the right -- the only part
+   of the header that's still a left/right split. Everything else (the
+   merged tab+action row below) spans the full width and is left-aligned. */
+.top-bar-row { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; }
+.header-logo-row { margin-bottom: 2px; }
+.app-title-purple { color: #7c3aed; }
 .top-bar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .input-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+/* This original in-content Income/Fixed Expenses/Add an expense/Savings
+   switcher (.data-entry-tabs, a second class on top of the shared
+   .input-tabs styling -- the chart-type Pie/Bar/Pareto/Treemap toggle
+   reuses plain .input-tabs too and must stay visible at every width) now
+   only matters on phones, where it doubles as the tab switcher inside the
+   "Add" bottom sheet -- desktop uses the new header-tab-btn buttons in the
+   sticky frame instead, so showing this one too would just duplicate the
+   same 4 buttons twice. */
+@media (min-width: 641px) {
+  .data-entry-tabs { display: none; }
+}
+/* The merged row: Income/Fixed Expenses/Add an expense/Savings tabs, then
+   Help/Report/Settings/Users, then the Profile icon, then the bell last --
+   all left-aligned as one flowing group (replaces the old right-aligned
+   .top-right-group column). */
 .action-row-teal {
   display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-start;
 }
+.action-row-left { justify-content: flex-start; width: 100%; }
 .btn-teal {
   background: var(--accent); color: #fff; border: none; border-radius: 8px;
   padding: 7px 14px; font-size: 13px; font-weight: 600; cursor: pointer;
@@ -350,6 +377,29 @@ button, input, select, textarea { font-family: inherit; }
   background: transparent; color: var(--accent); border: 1.5px solid var(--accent);
 }
 .btn-teal.secondary:hover { background: var(--accent-light); opacity: 1; }
+
+/* Profile icon (replaces the old standalone "Sign out" button) -- same
+   circular-icon-button + absolutely-positioned-dropdown pattern as the
+   notification bell right next to it, so the two read as one family. */
+.profile-menu-wrap { position: relative; }
+.profile-icon-btn {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  background: #fff; color: var(--accent); border: 1.5px solid var(--accent);
+  border-radius: 8px; width: 34px; height: 34px; padding: 0; cursor: pointer;
+}
+.profile-icon-btn:hover { background: var(--accent-light); }
+.profile-dropdown {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 40;
+  width: 260px; max-width: min(85vw, 280px);
+  background: #fff; border: 1px solid var(--border); border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.14); padding: 14px;
+}
+.profile-dropdown-email {
+  font-size: 12.5px; font-weight: 700; color: var(--text);
+  background: var(--accent-light); border-radius: 8px; padding: 7px 10px; margin-bottom: 12px;
+  word-break: break-all;
+}
+.profile-signout-btn { width: 100%; text-align: center; }
 
 /* Notification bell (replaces the old always-visible red "over budget" /
    "bill due soon" banners) -- sits first in the top action row, just before
@@ -382,13 +432,6 @@ button, input, select, textarea { font-family: inherit; }
 }
 .notif-item:last-child { margin-bottom: 0; }
 .notif-empty { font-size: 13px; color: var(--muted); padding: 10px 6px; text-align: center; }
-/* Stacked above the action buttons, both right-aligned, as one column at
-   the top-right of the top bar -- this is what actually keeps the badge
-   from ever overlapping the teal buttons: it takes its own row in normal
-   layout flow instead of floating independently over them. Pulls from the
-   same version.js as the splash screen's version line so the two never
-   disagree. */
-.top-right-group { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
 .corner-version-badge {
   font-size: 10.5px; font-weight: 700; color: var(--muted);
   background: var(--bg); border: 1px solid var(--border); border-radius: 999px;
@@ -915,11 +958,14 @@ td.amount { font-weight: 600; text-align: right; }
 
 @media (max-width: 640px) {
   .wrap { padding: 14px; }
-  .top-bar { flex-direction: column; align-items: flex-start; gap: 10px; }
   .top-bar .btn.secondary.small { align-self: flex-start; }
-  .top-right-group { width: 100%; }
   .action-row-teal { width: 100%; }
   .btn-teal { flex: 1 1 auto; text-align: center; }
+  /* The 4 data-entry tabs stay out of the header on phones -- the bottom
+     nav's "+" button and its own bottom-sheet tab switcher already cover
+     that job there, so showing both would just be two ways to do the same
+     thing in a much smaller space. */
+  .header-tab-btn { display: none; }
   h1 { font-size: 19px; }
   .month-nav { gap: 8px; margin: 12px 0 16px; }
   .month-nav .label { min-width: 0; flex: 1; font-size: 14px; }
