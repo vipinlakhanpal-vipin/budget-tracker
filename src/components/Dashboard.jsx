@@ -3626,7 +3626,16 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           onChange={(e) => commitIncomeField(i.id, 'month', e.target.value)}
                         />
                       </td>
-                      <td><button className="del" onClick={() => handleDeleteIncome(i.id, i.name)} title="Delete"><Trash2 size={14} /></button></td>
+                      <td>
+                        <div className="row-actions">
+                          {i.attachment_url && (
+                            <button type="button" className="row-icon-btn" title={i.attachment_name || 'View attachment'} onClick={() => openAttachmentViewer(i.attachment_url, i.attachment_name)}>
+                              <Paperclip size={12} />
+                            </button>
+                          )}
+                          <button className="del" onClick={() => handleDeleteIncome(i.id, i.name)} title="Delete"><Trash2 size={14} /></button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -4093,7 +4102,16 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           ))}
                         </select>
                       </td>
-                      <td><button className="del" onClick={() => handleDeleteRecurring(r.id, r.name)} title="Delete"><Trash2 size={14} /></button></td>
+                      <td>
+                        <div className="row-actions">
+                          {r.attachment_url && (
+                            <button type="button" className="row-icon-btn" title={r.attachment_name || 'View attachment'} onClick={() => openAttachmentViewer(r.attachment_url, r.attachment_name)}>
+                              <Paperclip size={12} />
+                            </button>
+                          )}
+                          <button className="del" onClick={() => handleDeleteRecurring(r.id, r.name)} title="Delete"><Trash2 size={14} /></button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -4431,7 +4449,16 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           onChange={(e) => commitSavingField(s.id, 'month', e.target.value)}
                         />
                       </td>
-                      <td><button className="del" onClick={() => handleDeleteSaving(s.id, s.name)} title="Delete"><Trash2 size={14} /></button></td>
+                      <td>
+                        <div className="row-actions">
+                          {s.attachment_url && (
+                            <button type="button" className="row-icon-btn" title={s.attachment_name || 'View attachment'} onClick={() => openAttachmentViewer(s.attachment_url, s.attachment_name)}>
+                              <Paperclip size={12} />
+                            </button>
+                          )}
+                          <button className="del" onClick={() => handleDeleteSaving(s.id, s.name)} title="Delete"><Trash2 size={14} /></button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -4654,7 +4681,16 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         </select>
                       </td>
                       <td data-label="By" className="muted-small" style={{ textAlign: 'center' }}>{displayNameForEmail(e.created_by_email)}</td>
-                      <td><button className="del" onClick={() => handleDeleteExpense(e.id)} title="Delete"><Trash2 size={14} /></button></td>
+                      <td>
+                        <div className="row-actions">
+                          {e.attachment_url && (
+                            <button type="button" className="row-icon-btn" title={e.attachment_name || 'View attachment'} onClick={() => openAttachmentViewer(e.attachment_url, e.attachment_name)}>
+                              <Paperclip size={12} />
+                            </button>
+                          )}
+                          <button className="del" onClick={() => handleDeleteExpense(e.id)} title="Delete"><Trash2 size={14} /></button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -5000,8 +5036,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             )}
           </div>
 
-          {activePanel === 'members' && (
-          <div className="panel" ref={panelRef}>
+          {(activePanel === 'members' || (activePanel === 'settings' && settingsSubTab === 'users')) && (
+          // ref only attached for the standalone "members" route -- when
+          // reached via Settings > Users instead, the Settings panel just
+          // below already carries panelRef, and two elements fighting over
+          // the same ref in one render would make the auto-scroll effect
+          // land on whichever happened to mount second.
+          <div className="panel" ref={activePanel === 'members' ? panelRef : undefined}>
               <div>
                 <h2>Users</h2>
 
@@ -5244,7 +5285,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <p><strong>Scan a receipt</strong> -- below the Regular Expenses form, upload a photo of a receipt (or a screenshot/sheet listing several expenses) and Claude will read it for you. You'll see an editable review list first -- fix anything that looks wrong, untick what you don't want, then add only what you confirm. Nothing is saved automatically.</p>
               <p><strong>Income</strong> -- add each income source per month (e.g. Salary). Income does NOT roll over automatically -- since pay can change month to month (deductions, advances, etc.), add a fresh row each month with that month's actual amount, or edit an existing row's Month field forward. Every field auto-saves. It has the same optional note + attachment icons as Regular Expenses.</p>
               <p><strong>Fixed Expenses</strong> -- for recurring bills, loans, EMIs, and rent. Set a Start date, an optional End date, and how often it repeats (Monthly, Alternate month, Quarterly, Half-yearly, Once a year). Every field auto-saves as you edit -- there's no Save button to click. Set a Due date to get an in-app reminder starting 3 days before it's due, and an email reminder if it's set up. It has the same optional note + attachment icons as Regular Expenses -- handy for keeping a loan agreement or lease document attached to the bill itself.</p>
-              <p><strong>Notes &amp; Attachments</strong> -- the note (<StickyNote size={11} style={{ verticalAlign: -2 }} />) and paperclip (<Paperclip size={11} style={{ verticalAlign: -2 }} />) icons sit right before the Add button on Income, Fixed Expenses, Regular Expenses, and Savings. Tapping a saved paperclip icon (in a table row or an edit sheet) opens a viewer where you can see the document on screen, open it in a compatible app on your device, or share it by email or WhatsApp.</p>
+              <p><strong>Notes &amp; Attachments</strong> -- the note (<StickyNote size={11} style={{ verticalAlign: -2 }} />) and paperclip (<Paperclip size={11} style={{ verticalAlign: -2 }} />) icons sit right before the Add button on Income, Fixed Expenses, Regular Expenses, and Savings. Once a row has a saved document, its paperclip icon shows up in two places for convenience -- under the Description/Name cell, and again next to that row's delete icon -- either one opens the same viewer, where you can see the document on screen, open it in a compatible app on your device, or share it by email or WhatsApp.</p>
               <p><strong>Savings</strong> -- set how much you'd like to set aside for the month, e.g. "Emergency fund" or "Investment". Works exactly like Income: entered fresh per month with no auto-rollover, since the amount you're able to save can change month to month -- add a new row each month, or edit an existing row's Month field forward. Since money you set aside is no longer available to spend, it's treated the same as an expense: it's counted in "Spent so far" and "Combined expenses", and subtracted in "Remaining" and "Net", in addition to getting its own page in the PDF report so you can see planned savings build up over time. It has the same optional note + attachment icons as Regular Expenses.</p>
               <p><strong>Expenses this month</strong> is always visible below the tabs so you can see what's been logged without switching tabs. It also auto-saves.</p>
               <p><strong>Spending by category</strong> chart -- toggle between Pie, Bar, Pareto, and Treemap. The Pie groups smaller categories into "Other" to stay readable; Bar and Treemap show every category individually. The totals cards above show your combined income, combined expenses (split into Regular, Fixed, and Savings), and what's left of your budget and income after all three are accounted for.</p>
@@ -5252,9 +5293,9 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <p><strong>Budget Coach</strong> -- unlike AI Insights (one month at a time), Coach looks across your last 6 months for patterns: a category that keeps going over budget, spending trending up or down, or a savings goal that no longer looks realistic. It only ever writes out suggestions -- it never changes your Settings for you.</p>
               <p><strong>Chat BoT</strong> -- the round chat bubble in the corner (drag it anywhere on screen) answers questions about your household's own numbers across every tab -- Income, Fixed Expenses, Savings, one-off spending, and who's in the household -- and can also answer "how do I..." questions about the app itself and give suggestions when asked. It can only see the data already in the app -- nothing outside it.</p>
               <p><strong>Report</strong> -- generate a PDF for any date range, then view it on screen, download it, or email it. Each topic gets its own page -- Income, Expenses, Fixed Expenses, Savings, Spend Analysis (Pareto chart), and Recommendations -- except the Category Breakdown bar chart and the Summary table, which share one page by default and only split onto two once the chart itself grows long enough to need the room. Every table also auto-shrinks its text to try to fit on one page first, and only flows onto a second page if the list is too long even at a readable size. The last page closes with a data & privacy note.</p>
-              <p><strong>Settings</strong> -- has its own sub-tabs. App Settings covers household name and currency. Smart Budget always follows whichever month you're viewing on the dashboard (change the Month field there to set or review a different month instead) and covers your overall monthly cap for that month, plus an optional "Budget for Per Category" section below it and how this month's spending compares to those caps (you'll get a notification in the bell icon if you go over). Add Category adds, renames, or removes categories. Admin Console (owners only) covers members and invites. Every field auto-saves as you edit -- there's no Save button to click.</p>
+              <p><strong>Settings</strong> -- has its own sub-tabs. App Settings covers household name and currency. Smart Budget always follows whichever month you're viewing on the dashboard (change the Month field there to set or review a different month instead) and covers your overall monthly cap for that month, plus an optional "Budget for Per Category" section below it and how this month's spending compares to those caps (you'll get a notification in the bell icon if you go over). Add Category adds, renames, or removes categories. Users (owners only) is a shortcut to the same Users panel described below, without leaving Settings. Admin Console (owners only) covers members and invites. Every field auto-saves as you edit -- there's no Save button to click.</p>
               <p><strong>Notifications</strong> -- the bell icon next to Help (top-right) replaces the old always-on red banners. It shows a count of unread items -- over-total-budget, over a category's budget, or a bill due soon -- and opening it lists them and marks them read.</p>
-              <p><strong>Users</strong> -- see who's active in the household and who's been invited but hasn't joined yet, with full Name/Email/Phone/Location. Owners can invite new members (which also sends them a notification email), fill in or fix anyone's Name/Phone/Location, and edit their own details under "My details" -- handy for accounts created before these fields existed. The Admin console (if you have access) is separate and never visible to other household members.</p>
+              <p><strong>Users</strong> -- see who's active in the household and who's been invited but hasn't joined yet, with full Name/Email/Phone/Location. Owners can invite new members (which also sends them a notification email), fill in or fix anyone's Name/Phone/Location, and edit their own details under "My details" -- handy for accounts created before these fields existed. Reachable either from its own header button or from Settings' Users sub-tab -- same panel either way. The Admin console (if you have access) is separate and never visible to other household members.</p>
               <p>All figures use your household's chosen currency, set in Settings. Your data is confidential and private to your household -- it's never shared with anyone outside it.</p>
               <p>The small <strong>{formatVersionBadge()}</strong> badge in the top-right corner shows which build you're on. The app updates itself automatically -- you'll never need to manually update anything -- but if something looks off, reload the page and check that it matches the latest you were told about.</p>
             </div>
@@ -5391,6 +5432,14 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   >
                     Add Category
                   </button>
+                  {isOwner && (
+                    <button
+                      className={`btn-teal ${settingsSubTab === 'users' ? '' : 'secondary'}`}
+                      onClick={() => setSettingsSubTab('users')}
+                    >
+                      Users
+                    </button>
+                  )}
                   {isAdmin && (
                     <button
                       className={`btn-teal ${settingsSubTab === 'admin' ? '' : 'secondary'}`}
@@ -5401,6 +5450,12 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   )}
                 </div>
 
+                {/* The "Users" sub-tab intentionally does not render its own
+                    content here -- it reuses the exact same Users panel that
+                    already lives further down this file (see
+                    `activePanel === 'members'`), which now also renders
+                    whenever this sub-tab is selected, so household member
+                    management logic exists in exactly one place. */}
                 {settingsSubTab === 'admin' && isAdmin ? (
                   <AdminConsole embedded onClose={() => setSettingsSubTab('app')} />
                 ) : settingsSubTab === 'budgeting' ? (
@@ -5445,7 +5500,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   <label className="muted-small" style={{ fontWeight: 700 }}>Budget for Per Category (optional)</label>
                   {categories.map((c) => (
                     <div className="cat-budget-row" key={c.id}>
-                      <span>{c.name}</span>
+                      <span className="cat-budget-name">{c.name}</span>
                       <div className="amount-field-wrap tight">
                         <span className="currency-prefix"><CurrencyPrefix /></span>
                         <input
@@ -5453,6 +5508,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           step="0.01"
                           min="0"
                           placeholder="0.00"
+                          style={{ '--amt-px': formAmountPx(categoryBudgetDrafts[c.id] ?? '') + 'px' }}
                           value={categoryBudgetDrafts[c.id] ?? ''}
                           onChange={(e) =>
                             setCategoryBudgetDrafts({ ...categoryBudgetDrafts, [c.id]: e.target.value })
@@ -5475,7 +5531,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       const over = spent > c.monthly_budget;
                       return (
                         <div className="cat-budget-row" key={c.id}>
-                          <span>{c.name}</span>
+                          <span className="cat-budget-name">{c.name}</span>
                           <span className={over ? 'muted-small' : 'muted-small'} style={{ color: over ? 'var(--danger)' : 'var(--ok)', fontWeight: 600 }}>
                             <Amt value={spent} /> / <Amt value={c.monthly_budget} />
                           </span>
@@ -5485,6 +5541,12 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   </div>
                 )}
                 </>
+                ) : settingsSubTab === 'users' ? (
+                  // No content here -- the Users sub-tab reuses the Users
+                  // panel that renders separately just below (see the
+                  // broadened `activePanel === 'members'` condition), so
+                  // nothing needs duplicating in this spot.
+                  null
                 ) : settingsSubTab === 'category' ? (
                 <>
                 {/* Add Category tab -- split out on its own, separate from

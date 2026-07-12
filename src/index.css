@@ -469,6 +469,13 @@ button, input, select, textarea { font-family: inherit; }
 }
 .row-icon-btn:hover { color: var(--accent); background: var(--accent-light); }
 .row-attach-hint { color: var(--muted); margin-left: 5px; vertical-align: -1px; }
+/* Groups the paperclip "view attachment" shortcut next to the row's own
+   Trash2 delete icon (last table column) -- a second, faster way to reach
+   the same viewer as the icon already shown under Description/Name,
+   requested so opening a saved doc doesn't require hunting for the small
+   icon further over in the row. Only rendered when the row actually has
+   an attachment, so rows without one still show just the delete icon. */
+.row-actions { display: flex; align-items: center; justify-content: center; gap: 2px; }
 
 .confidentiality-note {
   margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border);
@@ -917,6 +924,42 @@ input[type="month"] {
   width: var(--amt-px, calc(max(var(--amt-ch, 4), 4) * 1ch + 4px));
 }
 .amount-field-wrap.tight .currency-prefix { font-size: 10.5px; }
+/* The ".tight" pill treatment (border/background/tight-fit width) was only
+   ever defined scoped to ".table-scroll table td" (see further down this
+   file), since every existing ".tight" field lived inside a table. The
+   Smart Budget per-category rows (.cat-budget-row) also use ".tight" but
+   are plain flex rows, not table cells -- so outside a table this class
+   rendered with none of that styling: no border/background/flex layout on
+   the wrap, and the currency symbol and input just sat as two separate
+   inline elements with normal text spacing between them, reading as "way
+   away from the value". This generic rule gives ".tight" its pill look
+   everywhere, not just inside tables -- the table-scoped rule below still
+   wins there (equal specificity, later in the file, plus its own
+   !important on width), so nothing changes for the existing table cells. */
+.amount-field-wrap.tight {
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  background: linear-gradient(160deg, #ecfdf5, #ffffff);
+  border: 1.5px solid #a7f3d0;
+  border-radius: 6px;
+  padding: 0 5px 0 6px;
+  transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+}
+.amount-field-wrap.tight:focus-within {
+  border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-light); background: #fff;
+}
+.amount-field-wrap.tight input[type="number"] {
+  flex: 0 1 auto;
+  width: var(--amt-px, 100%);
+  min-width: 0;
+  text-align: right;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
 /* Hide the native step spinner everywhere an amount is typed -- it was only
    ever visible on the top-level Add-form fields (the in-table cells are too
    narrow for Chrome to render it), which made those fields look like a
@@ -1249,10 +1292,29 @@ td.amount { font-weight: 600; text-align: right; }
 .cat-chip button { background: none; border: none; color: var(--accent2); cursor: pointer; display: inline-flex; align-items: center; }
 .empty { color: var(--muted); font-size: 13px; padding: 20px 0; text-align: center; }
 .cat-budget-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; }
-.cat-budget-row span { flex: 1; }
-.cat-budget-row input { width: 90px; padding: 5px 8px; border: 1px solid var(--border); border-radius: 6px; }
-.cat-budget-row .amount-field-wrap { flex: 0 0 auto; width: 100px; }
-.cat-budget-row .amount-field-wrap input { width: 100%; }
+/* The category name used to be bare text and the amount used to have its
+   own conflicting width/border/padding rules (below) that fought with the
+   shared ".tight" pill treatment added above -- together those made the
+   currency symbol look "way away" from the value. Both cells now use the
+   same soft-rounded "curvy cell" convention as every select/input elsewhere
+   in the app (see .table-scroll table td select for the indigo tone this
+   matches): a bordered, tinted, 6px-radius box, one for the name and one
+   for the amount pill from the shared .amount-field-wrap.tight rule. */
+.cat-budget-row .cat-budget-name {
+  flex: 1;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border: 1.5px solid #c7d2fe;
+  border-radius: 6px;
+  background: linear-gradient(160deg, #eef2ff, #ffffff);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cat-budget-row .amount-field-wrap { flex: 0 0 auto; }
 
 @media (max-width: 640px) {
   .wrap { padding: 14px; }
