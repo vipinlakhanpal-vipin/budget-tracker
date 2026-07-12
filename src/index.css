@@ -154,10 +154,16 @@ button, input, select, textarea { font-family: inherit; }
   position: absolute; top: max(28px, env(safe-area-inset-top)); left: 50%;
   transform: translateX(-50%); z-index: 2;
   width: max-content; max-width: 92vw;
-  color: #ffffff; font-size: 14px; font-weight: 700; letter-spacing: .02em;
+  font-size: 25px; font-weight: 700; letter-spacing: .02em;
   text-align: center;
-  text-shadow: 0 1px 6px rgba(0, 0, 0, .25);
   animation: splash-pop .5s ease .15s both;
+  /* Same amber-copper gradient as the heart-outline logo/"Hearth" title
+     (see #heartGold / .splash-title-gold), per explicit request to match
+     the logo's own color rather than plain white. background-clip:text is
+     the standard way to fill text with a gradient -- text-shadow doesn't
+     render meaningfully once color is transparent, so it's dropped here. */
+  background: linear-gradient(180deg, #fb923c 0%, #c2410c 55%, #7c2d12 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
 }
 .splash-orb {
   position: absolute; border-radius: 50%; filter: blur(40px); opacity: .35;
