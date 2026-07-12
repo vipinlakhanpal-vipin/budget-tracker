@@ -3247,25 +3247,22 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           <div className="empty">Add a regular expense to see the breakdown.</div>
         ) : chartType === 'pie' ? (
           <>
-            {/* Home's big pie had a lot of dead space on either side of a
-                circle that was never going to stretch to fill a wide card --
-                a brief summary now fills the left gutter instead of leaving
-                it empty, per explicit request. Small side panel (big=false)
-                is untouched -- it's narrow enough that this wouldn't fit
-                anyway. */}
-            <div style={{ display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' }}>
-              {big && (() => {
-                const sortedPie = [...pieData].sort((a, b) => b.value - a.value);
-                const totalSpent = pieData.reduce((s, d) => s + d.value, 0);
-                const topCat = sortedPie[0];
-                const topPct = totalSpent > 0 ? Math.round((topCat.value / totalSpent) * 100) : 0;
-                return (
-                  <div style={{ flex: '0 0 190px' }}>
+            {/* Summary now sits full-width right under the "Spending by
+                category" title, above the chart, instead of squeezed into a
+                narrow left gutter beside it -- per explicit request. Total
+                spent/category count/over-budget stay in their own small
+                column; "Top category" became a "Top 5 categories" list
+                (name, % of spend, amount) since that's more useful than a
+                single line. Small side panel (big=false) is untouched. */}
+            {big && (() => {
+              const sortedPie = [...pieData].sort((a, b) => b.value - a.value);
+              const totalSpent = pieData.reduce((s, d) => s + d.value, 0);
+              const top5 = sortedPie.slice(0, 5);
+              return (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 28, marginBottom: 18, paddingBottom: 16, borderBottom: '1px solid var(--border)' }}>
+                  <div style={{ flex: '0 0 150px' }}>
                     <div className="muted-small" style={{ textTransform: 'uppercase', letterSpacing: 0.4 }}>Total spent</div>
-                    <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--text)', marginBottom: 14 }}><Amt value={totalSpent} /></div>
-                    <div className="muted-small" style={{ textTransform: 'uppercase', letterSpacing: 0.4 }}>Top category</div>
-                    <div style={{ fontWeight: 700, marginBottom: 2 }}>{topCat.name}</div>
-                    <div className="muted-small" style={{ marginBottom: 14 }}><Amt value={topCat.value} /> -- {topPct}% of spending</div>
+                    <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}><Amt value={totalSpent} /></div>
                     <div className="muted-small">{pieData.length} categor{pieData.length === 1 ? 'y' : 'ies'} this month</div>
                     {overCategories.length > 0 && (
                       <div className="muted-small" style={{ color: 'var(--danger)', marginTop: 4 }}>
@@ -3273,9 +3270,27 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       </div>
                     )}
                   </div>
-                );
-              })()}
-              <div style={{ flex: '1 1 300px', minWidth: 0 }}>
+                  <div style={{ flex: '1 1 280px', minWidth: 0 }}>
+                    <div className="muted-small" style={{ textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 8 }}>Top 5 categories</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {top5.map((c, i) => {
+                        const pct = totalSpent > 0 ? Math.round((c.value / totalSpent) * 100) : 0;
+                        return (
+                          <div key={c.name} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
+                            <span style={{ width: 9, height: 9, borderRadius: '50%', background: COLORS[i % COLORS.length], flexShrink: 0 }} />
+                            <span style={{ flex: 1, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
+                            <span className="muted-small" style={{ flexShrink: 0 }}>{pct}%</span>
+                            <span style={{ fontWeight: 700, minWidth: 78, textAlign: 'right', flexShrink: 0 }}><Amt value={c.value} /></span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+            <div style={{ display: 'flex', gap: 20, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <div style={{ flex: '1 1 300px', minWidth: 0, maxWidth: big ? 640 : 'none' }}>
                 <ResponsiveContainer width="100%" height={big ? 560 : 360}>
                   <PieChart margin={{ top: 20, right: 20, bottom: 0, left: 20 }}>
                     <Pie
@@ -3435,14 +3450,14 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   // their content is text, not a chart that benefits from more room.
   const aiInsightsCard = (
     <div className="panel" style={{ marginTop: 16 }}>
-      {/* Title + button both left-aligned now (was title-left/button-right
-          via space-between) -- per explicit request to keep the Generate
-          and Analyze trends buttons on the left instead of floating off to
-          the far right edge of the card. */}
+      {/* Title on its own line, Generate button on the line right below it
+          (was inline next to the title) -- both left-aligned, per explicit
+          request to move the button below rather than floating beside the
+          title. */}
+      <h2 style={{ margin: '0 0 8px' }}>
+        AI Insights <AiTag />
+      </h2>
       <div className="row" style={{ justifyContent: 'flex-start', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-        <h2 style={{ margin: 0 }}>
-          AI Insights <AiTag />
-        </h2>
         <button
           className="btn small secondary"
           onClick={generateMonthlyDigest}
@@ -3469,10 +3484,12 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
   const budgetCoachCard = (
     <div className="panel" style={{ marginTop: 16 }}>
+      {/* Same treatment as AI Insights above: title on its own line,
+          Analyze trends button on the line right below it, left-aligned. */}
+      <h2 style={{ margin: '0 0 8px' }}>
+        Budget Coach <AiTag />
+      </h2>
       <div className="row" style={{ justifyContent: 'flex-start', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-        <h2 style={{ margin: 0 }}>
-          Budget Coach <AiTag />
-        </h2>
         <button className="btn small secondary" onClick={generateBudgetCoach} disabled={coachLoading}>
           {coachLoading ? 'Analyzing...' : coachResult ? 'Re-analyze' : 'Analyze trends'}
         </button>
