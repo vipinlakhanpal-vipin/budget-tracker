@@ -653,12 +653,19 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     // requestAnimationFrame gives the panel (which only mounts once
     // activePanel matches) one tick to actually be in the DOM/laid out
     // before measuring it.
+    //
+    // Uses behavior: 'auto' (instant) rather than 'smooth' -- same reason
+    // as scrollToFrameA above: a 'smooth' scroll can get clamped or
+    // silently cancelled if anything else nudges the page's layout during
+    // the animation window, which was exactly why opening Report/Settings/
+    // Help sometimes looked like it "did nothing" (the scroll fired, but
+    // never actually finished moving the page).
     const raf = requestAnimationFrame(() => {
       if (!panelRef.current) return;
       const stickyHeight = stickyFrameRef.current?.offsetHeight || 0;
       const panelTop = panelRef.current.getBoundingClientRect().top + window.scrollY;
       const targetY = Math.max(panelTop - stickyHeight - 12, 0);
-      window.scrollTo({ top: targetY, behavior: 'smooth' });
+      window.scrollTo({ top: targetY, behavior: 'auto' });
     });
     return () => cancelAnimationFrame(raf);
   }, [activePanel]);
