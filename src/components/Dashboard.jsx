@@ -2851,6 +2851,23 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 reads as one consistent button style. header-tab-btn-active
                 just adds a subtle inset ring so you can still tell which
                 one is currently open. */}
+            {/* Home -- the one entry in this row that isn't a data-entry tab.
+                Clicking it clears both inputTab and activePanel so nothing
+                but the dashboard itself (summary cards, chart, AI Insights,
+                Budget Coach) is showing -- a quick way back to the plain
+                overview after drilling into Income/Fixed/Report/etc. Every
+                other button in this row keeps working exactly as before;
+                clicking any of them simply replaces inputTab/activePanel
+                again, the same way it always did. */}
+            <button
+              type="button"
+              className={`btn-teal header-tab-btn ${!inputTab && !activePanel ? 'header-tab-btn-active' : ''}`}
+              onClick={() => { setActivePanel(null); setInputTab(null); }}
+              title="Show just the dashboard"
+            >
+              <Home size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
+              Home
+            </button>
             <button
               type="button"
               className={`btn-teal header-tab-btn ${inputTab === 'income' ? 'header-tab-btn-active' : ''}`}
