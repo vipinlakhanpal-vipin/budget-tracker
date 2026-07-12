@@ -11,7 +11,7 @@ import AdminConsole from './AdminConsole.jsx';
 import { formatVersionBadge } from '../version.js';
 import {
   Home, Plus, FileText, Users as UsersIcon, Settings as SettingsIcon,
-  Pencil, Trash2, X, ChevronLeft, ChevronRight, Camera, MessageCircle, Sparkles, User,
+  Pencil, Trash2, X, ChevronLeft, ChevronRight, ChevronDown, Camera, MessageCircle, Sparkles, User,
   Palette, Check, StickyNote, Paperclip, ExternalLink, Mail,
 } from 'lucide-react';
 
@@ -468,6 +468,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   // and panel; folding it into Settings as a sub-toggle instead reduces the
   // top bar to fewer buttons and groups "app configuration" together.
   const [settingsSubTab, setSettingsSubTab] = useState('app');
+  // Help panel is now an accordion -- each topic's bold title is a button;
+  // clicking one opens just that topic's description and closes whichever
+  // other one was open, instead of one long always-visible wall of text.
+  // Starts with nothing open so the panel reads as a clean list of topics
+  // first, per explicit request ("when Home is clicked... the Home
+  // description appears... do this for all").
+  const [helpOpenTopic, setHelpOpenTopic] = useState(null);
   function togglePanel(name) {
     // Closing the mobile add sheet whenever a different panel opens keeps
     // only one "overlay" on screen at a time, so Report/Users/Settings
@@ -3247,19 +3254,20 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           <div className="empty">Add a regular expense to see the breakdown.</div>
         ) : chartType === 'pie' ? (
           <>
-            {/* Summary now sits full-width right under the "Spending by
-                category" title, above the chart, instead of squeezed into a
-                narrow left gutter beside it -- per explicit request. Total
-                spent/category count/over-budget stay in their own small
-                column; "Top category" became a "Top 5 categories" list
-                (name, % of spend, amount) since that's more useful than a
-                single line. Small side panel (big=false) is untouched. */}
-            {big && (() => {
+            {/* Home's big pie is now one 3-column row -- Total spent stats
+                on the left, the pie itself in the middle, Top 5 categories
+                on the right -- instead of a summary bar stacked above the
+                chart. That lifts the pie up level with the stat blocks
+                instead of sitting in its own row further down, and puts it
+                literally between the left and right values, per explicit
+                request. Small side panel (big=false) is untouched -- still
+                just the chart alone, centered. */}
+            {big ? (() => {
               const sortedPie = [...pieData].sort((a, b) => b.value - a.value);
               const totalSpent = pieData.reduce((s, d) => s + d.value, 0);
               const top5 = sortedPie.slice(0, 5);
               return (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 28, marginBottom: 4 }}>
+                <div style={{ display: 'flex', gap: 24, alignItems: 'center', flexWrap: 'wrap' }}>
                   <div style={{ flex: '0 0 150px' }}>
                     <div className="muted-small" style={{ textTransform: 'uppercase', letterSpacing: 0.4 }}>Total spent</div>
                     <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}><Amt value={totalSpent} /></div>
@@ -3270,7 +3278,29 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       </div>
                     )}
                   </div>
-                  <div style={{ flex: '1 1 280px', minWidth: 0 }}>
+                  <div style={{ flex: '1 1 320px', minWidth: 0, maxWidth: 480 }}>
+                    <ResponsiveContainer width="100%" height={480}>
+                      <PieChart margin={{ top: 4, right: 10, bottom: 0, left: 10 }}>
+                        <Pie
+                          data={chartPieData}
+                          dataKey="value"
+                          nameKey="name"
+                          cy="42%"
+                          outerRadius={150}
+                          isAnimationActive={false}
+                          label={({ percent }) => (percent >= 0.04 ? `${Math.round(percent * 100)}%` : '')}
+                          labelLine={false}
+                        >
+                          {chartPieData.map((_, i) => (
+                            <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(v) => fmt(v)} />
+                        <Legend wrapperStyle={{ fontSize: 12, lineHeight: '17px', paddingTop: 8 }} iconSize={10} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div style={{ flex: '1 1 230px', minWidth: 0 }}>
                     <div className="muted-small" style={{ textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 8 }}>Top 5 categories</div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                       {top5.map((c, i) => {
@@ -3288,41 +3318,32 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   </div>
                 </div>
               );
-            })()}
-            <div style={{ display: 'flex', gap: 20, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
-              <div style={{ flex: '1 1 300px', minWidth: 0, maxWidth: big ? 640 : 'none' }}>
-                {/* No divider line above the chart -- just a tight gap so the
-                    pie sits right under the summary block instead of feeling
-                    separated from it. Top margin trimmed and cy pulled up
-                    slightly (46% -> 40%) to shift the circle upward into
-                    that reclaimed space, with a bit more radius (160 -> 172)
-                    since there's now room for it without spilling past the
-                    card -- per explicit request. */}
-                <ResponsiveContainer width="100%" height={big ? 560 : 360}>
-                  <PieChart margin={{ top: 4, right: 20, bottom: 0, left: 20 }}>
-                    <Pie
-                      data={chartPieData}
-                      dataKey="value"
-                      nameKey="name"
-                      cy={big ? '40%' : '46%'}
-                      outerRadius={big ? 172 : 95}
-                      isAnimationActive={false}
-                      label={({ percent }) => (percent >= 0.04 ? `${Math.round(percent * 100)}%` : '')}
-                      labelLine={false}
-                    >
-                      {chartPieData.map((_, i) => (
-                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(v) => fmt(v)} />
-                    <Legend
-                      wrapperStyle={{ fontSize: big ? 13 : 10, lineHeight: '18px', paddingTop: 10 }}
-                      iconSize={big ? 11 : 8}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+            })() : (
+              <div style={{ display: 'flex', gap: 20, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <div style={{ flex: '1 1 300px', minWidth: 0 }}>
+                  <ResponsiveContainer width="100%" height={360}>
+                    <PieChart margin={{ top: 20, right: 20, bottom: 0, left: 20 }}>
+                      <Pie
+                        data={chartPieData}
+                        dataKey="value"
+                        nameKey="name"
+                        cy="46%"
+                        outerRadius={95}
+                        isAnimationActive={false}
+                        label={({ percent }) => (percent >= 0.04 ? `${Math.round(percent * 100)}%` : '')}
+                        labelLine={false}
+                      >
+                        {chartPieData.map((_, i) => (
+                          <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(v) => fmt(v)} />
+                      <Legend wrapperStyle={{ fontSize: 10, lineHeight: '18px', paddingTop: 10 }} iconSize={8} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
-            </div>
+            )}
             {pieData.length > topN && (
               <div className="muted-small" style={{ marginTop: 4 }}>
                 Showing your top {topN} categories -- the rest are grouped into "Other" to keep this readable. Switch to Treemap or Bar to see every category separately.
@@ -5597,31 +5618,63 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           </div>
           )}
 
-          {activePanel === 'help' && (
-          <div className="panel" ref={panelRef}>
-            <h2>How to use this app</h2>
-            <div className="muted-small" style={{ lineHeight: 1.6 }}>
-              <p><strong>Home</strong> -- shows just the dashboard (summary cards and totals), nothing else. Below it, a bigger "Explore" section holds the same Spending by category chart (Pie/Bar/Pareto/Treemap), AI Insights, and Budget Coach, sized larger so there's more room to look through them. Clicking Income, Fixed Expenses, Regular Expenses, Savings, Report, Settings, or Help scrolls back up to the top and switches to that tab as usual.</p>
-              <p><strong>Regular Expenses</strong> -- log one-off spending (groceries, dining, shopping). Pick the date, category, a short description, and the amount, then Add. It appears under "Expenses this month" and is always editable there -- just type into a field and it saves. The note icon (<StickyNote size={11} style={{ verticalAlign: -2 }} />) next to Amount opens a spot for a longer free-text description, and the paperclip (<Paperclip size={11} style={{ verticalAlign: -2 }} />) lets you attach one photo or PDF (5MB max) -- a receipt, warranty, or anything else worth keeping with that expense. Both are optional. Once saved, a small icon appears next to the entry if it has a note or attachment -- click it to read the note or open the file.</p>
-              <p><strong>Scan a receipt</strong> -- below the Regular Expenses form, upload a photo of a receipt (or a screenshot/sheet listing several expenses) and Claude will read it for you. You'll see an editable review list first -- fix anything that looks wrong, untick what you don't want, then add only what you confirm. Nothing is saved automatically.</p>
-              <p><strong>Income</strong> -- add each income source per month (e.g. Salary). Income does NOT roll over automatically -- since pay can change month to month (deductions, advances, etc.), add a fresh row each month with that month's actual amount, or edit an existing row's Month field forward. Every field auto-saves. It has the same optional note + attachment icons as Regular Expenses.</p>
-              <p><strong>Fixed Expenses</strong> -- for recurring bills, loans, EMIs, and rent. Set a Start date, an optional End date, and how often it repeats (Monthly, Alternate month, Quarterly, Half-yearly, Once a year). Every field auto-saves as you edit -- there's no Save button to click. Set a Due date to get an in-app reminder starting 3 days before it's due, and an email reminder if it's set up. It has the same optional note + attachment icons as Regular Expenses -- handy for keeping a loan agreement or lease document attached to the bill itself.</p>
-              <p><strong>Notes &amp; Attachments</strong> -- the note (<StickyNote size={11} style={{ verticalAlign: -2 }} />) and paperclip (<Paperclip size={11} style={{ verticalAlign: -2 }} />) icons sit right before the Add button on Income, Fixed Expenses, Regular Expenses, and Savings. Once a row has a saved document, its paperclip icon shows up in two places for convenience -- under the Description/Name cell, and again next to that row's delete icon -- either one opens the same viewer, where you can see the document on screen, open it in a compatible app on your device, or share it by email or WhatsApp.</p>
-              <p><strong>Savings</strong> -- set how much you'd like to set aside for the month, e.g. "Emergency fund" or "Investment". Works exactly like Income: entered fresh per month with no auto-rollover, since the amount you're able to save can change month to month -- add a new row each month, or edit an existing row's Month field forward. Since money you set aside is no longer available to spend, it's treated the same as an expense: it's counted in "Spent so far" and "Combined expenses", and subtracted in "Remaining" and "Net", in addition to getting its own page in the PDF report so you can see planned savings build up over time. It has the same optional note + attachment icons as Regular Expenses.</p>
-              <p><strong>Regular Expenses for [month]</strong> (labelled with whichever month you're viewing) is visible below whichever tab (Income, Fixed Expenses, Regular Expenses, Savings) you're on, so you can see what's been logged without switching tabs. It also auto-saves. It's hidden on Home, which shows only the dashboard and the Explore section instead.</p>
-              <p><strong>Spending by category</strong> chart -- toggle between Pie, Bar, Pareto, and Treemap. The Pie groups smaller categories into "Other" to stay readable; Bar and Treemap show every category individually. The totals cards above show your combined income, combined expenses (split into Regular, Fixed, and Savings), and what's left of your budget and income after all three are accounted for.</p>
-              <p><strong>AI Insights</strong> -- tap Generate below the chart for a short AI-written summary of the month you're viewing (spending patterns, whether you're over budget, and a couple of concrete suggestions). It only runs when you tap the button -- never automatically -- and Refresh regenerates it if your numbers have changed.</p>
-              <p><strong>Budget Coach</strong> -- unlike AI Insights (one month at a time), Coach looks across your last 6 months for patterns: a category that keeps going over budget, spending trending up or down, or a savings goal that no longer looks realistic. It only ever writes out suggestions -- it never changes your Settings for you.</p>
-              <p><strong>Chat BoT</strong> -- the round chat bubble in the corner (drag it anywhere on screen) answers questions about your household's own numbers across every tab -- Income, Fixed Expenses, Savings, one-off spending, and who's in the household -- and can also answer "how do I..." questions about the app itself and give suggestions when asked. It can only see the data already in the app -- nothing outside it.</p>
-              <p><strong>Report</strong> -- generate a PDF for any date range, then view it on screen, download it, or email it. Each topic gets its own page -- Income, Expenses, Fixed Expenses, Savings, Spend Analysis (Pareto chart), and Recommendations -- except the Category Breakdown bar chart and the Summary table, which share one page by default and only split onto two once the chart itself grows long enough to need the room. Every table also auto-shrinks its text to try to fit on one page first, and only flows onto a second page if the list is too long even at a readable size. The last page closes with a data & privacy note.</p>
-              <p><strong>Settings</strong> -- has its own sub-tabs. Currency covers your household's chosen currency (renaming the app/household name itself happens right in the header now -- click the title next to the logo, owners only). Smart Budget always follows whichever month you're viewing on the dashboard (change the Month field there to set or review a different month instead) and covers your overall monthly cap for that month, plus an optional "Budget for Per Category" section below it and how this month's spending compares to those caps (you'll get a notification in the bell icon if you go over). Add Category adds, renames, or removes categories. Users (owners only) covers household members and invites -- see below. Admin Console (owners only) covers members and invites. Every field auto-saves as you edit -- there's no Save button to click.</p>
-              <p><strong>Notifications</strong> -- the bell icon next to Help (top-right) replaces the old always-on red banners. It shows a count of unread items -- over-total-budget, over a category's budget, or a bill due soon -- and opening it lists them and marks them read.</p>
-              <p><strong>Users</strong> -- see who's active in the household and who's been invited but hasn't joined yet, with full Name/Email/Phone/Location. Owners can invite new members (which also sends them a notification email), fill in or fix anyone's Name/Phone/Location, and edit their own details under "My details" -- handy for accounts created before these fields existed. Reachable from Settings' Users sub-tab. The Admin console (if you have access) is separate and never visible to other household members.</p>
-              <p>All figures use your household's chosen currency, set in Settings. Your data is confidential and private to your household -- it's never shared with anyone outside it.</p>
-              <p>The small <strong>{formatVersionBadge()}</strong> badge in the top-right corner shows which build you're on. The app updates itself automatically -- you'll never need to manually update anything -- but if something looks off, reload the page and check that it matches the latest you were told about.</p>
+          {activePanel === 'help' && (() => {
+            // Accordion content: bold title + description, one entry per
+            // topic. Clicking a title opens just that topic (closing
+            // whichever other one was open) instead of the old single wall
+            // of always-visible paragraphs -- per explicit request, mirrors
+            // how clicking Home/Regular Expenses/etc. in the header itself
+            // jumps straight to that one thing.
+            const helpTopics = [
+              { key: 'home', title: 'Home', body: <>Shows just the dashboard (summary cards and totals), nothing else. Below it, a bigger "Explore" section holds the same Spending by category chart (Pie/Bar/Pareto/Treemap), AI Insights, and Budget Coach, sized larger so there's more room to look through them. Clicking Income, Fixed Expenses, Regular Expenses, Savings, Report, Settings, or Help scrolls back up to the top and switches to that tab as usual.</> },
+              { key: 'regular', title: 'Regular Expenses', body: <>Log one-off spending (groceries, dining, shopping). Pick the date, category, a short description, and the amount, then Add. It appears under "Expenses this month" and is always editable there -- just type into a field and it saves. The note icon (<StickyNote size={11} style={{ verticalAlign: -2 }} />) next to Amount opens a spot for a longer free-text description, and the paperclip (<Paperclip size={11} style={{ verticalAlign: -2 }} />) lets you attach one photo or PDF (5MB max) -- a receipt, warranty, or anything else worth keeping with that expense. Both are optional. Once saved, a small icon appears next to the entry if it has a note or attachment -- click it to read the note or open the file.</> },
+              { key: 'scan', title: 'Scan a receipt', body: <>Below the Regular Expenses form, upload a photo of a receipt (or a screenshot/sheet listing several expenses) and Claude will read it for you. You'll see an editable review list first -- fix anything that looks wrong, untick what you don't want, then add only what you confirm. Nothing is saved automatically.</> },
+              { key: 'income', title: 'Income', body: <>Add each income source per month (e.g. Salary). Income does NOT roll over automatically -- since pay can change month to month (deductions, advances, etc.), add a fresh row each month with that month's actual amount, or edit an existing row's Month field forward. Every field auto-saves. It has the same optional note + attachment icons as Regular Expenses.</> },
+              { key: 'fixed', title: 'Fixed Expenses', body: <>For recurring bills, loans, EMIs, and rent. Set a Start date, an optional End date, and how often it repeats (Monthly, Alternate month, Quarterly, Half-yearly, Once a year). Every field auto-saves as you edit -- there's no Save button to click. Set a Due date to get an in-app reminder starting 3 days before it's due, and an email reminder if it's set up. It has the same optional note + attachment icons as Regular Expenses -- handy for keeping a loan agreement or lease document attached to the bill itself.</> },
+              { key: 'notes', title: 'Notes & Attachments', body: <>The note (<StickyNote size={11} style={{ verticalAlign: -2 }} />) and paperclip (<Paperclip size={11} style={{ verticalAlign: -2 }} />) icons sit right before the Add button on Income, Fixed Expenses, Regular Expenses, and Savings. Once a row has a saved document, its paperclip icon shows up in two places for convenience -- under the Description/Name cell, and again next to that row's delete icon -- either one opens the same viewer, where you can see the document on screen, open it in a compatible app on your device, or share it by email or WhatsApp.</> },
+              { key: 'savings', title: 'Savings', body: <>Set how much you'd like to set aside for the month, e.g. "Emergency fund" or "Investment". Works exactly like Income: entered fresh per month with no auto-rollover, since the amount you're able to save can change month to month -- add a new row each month, or edit an existing row's Month field forward. Since money you set aside is no longer available to spend, it's treated the same as an expense: it's counted in "Spent so far" and "Combined expenses", and subtracted in "Remaining" and "Net", in addition to getting its own page in the PDF report so you can see planned savings build up over time. It has the same optional note + attachment icons as Regular Expenses.</> },
+              { key: 'regmonth', title: 'Regular Expenses for [month]', body: <>Labelled with whichever month you're viewing, this is visible below whichever tab (Income, Fixed Expenses, Regular Expenses, Savings) you're on, so you can see what's been logged without switching tabs. It also auto-saves. It's hidden on Home, which shows only the dashboard and the Explore section instead.</> },
+              { key: 'chart', title: 'Spending by category chart', body: <>Toggle between Pie, Bar, Pareto, and Treemap. The Pie groups smaller categories into "Other" to stay readable; Bar and Treemap show every category individually. The totals cards above show your combined income, combined expenses (split into Regular, Fixed, and Savings), and what's left of your budget and income after all three are accounted for.</> },
+              { key: 'insights', title: 'AI Insights', body: <>Tap Generate below the chart for a short AI-written summary of the month you're viewing (spending patterns, whether you're over budget, and a couple of concrete suggestions). It only runs when you tap the button -- never automatically -- and Refresh regenerates it if your numbers have changed.</> },
+              { key: 'coach', title: 'Budget Coach', body: <>Unlike AI Insights (one month at a time), Coach looks across your last 6 months for patterns: a category that keeps going over budget, spending trending up or down, or a savings goal that no longer looks realistic. It only ever writes out suggestions -- it never changes your Settings for you.</> },
+              { key: 'chatbot', title: 'Chat BoT', body: <>The round chat bubble in the corner (drag it anywhere on screen) answers questions about your household's own numbers across every tab -- Income, Fixed Expenses, Savings, one-off spending, and who's in the household -- and can also answer "how do I..." questions about the app itself and give suggestions when asked. It can only see the data already in the app -- nothing outside it.</> },
+              { key: 'report', title: 'Report', body: <>Generate a PDF for any date range, then view it on screen, download it, or email it. Each topic gets its own page -- Income, Expenses, Fixed Expenses, Savings, Spend Analysis (Pareto chart), and Recommendations -- except the Category Breakdown bar chart and the Summary table, which share one page by default and only split onto two once the chart itself grows long enough to need the room. Every table also auto-shrinks its text to try to fit on one page first, and only flows onto a second page if the list is too long even at a readable size. The last page closes with a data & privacy note.</> },
+              { key: 'settings', title: 'Settings', body: <>Has its own sub-tabs. Currency covers your household's chosen currency (renaming the app/household name itself happens right in the header now -- click the title next to the logo, owners only). Smart Budget always follows whichever month you're viewing on the dashboard (change the Month field there to set or review a different month instead) and covers your overall monthly cap for that month, plus an optional "Budget for Per Category" section below it and how this month's spending compares to those caps (you'll get a notification in the bell icon if you go over). Add Category adds, renames, or removes categories. Users (owners only) covers household members and invites -- see below. Admin Console (owners only) covers members and invites. Every field auto-saves as you edit -- there's no Save button to click.</> },
+              { key: 'notifications', title: 'Notifications', body: <>The bell icon next to Help (top-right) replaces the old always-on red banners. It shows a count of unread items -- over-total-budget, over a category's budget, or a bill due soon -- and opening it lists them and marks them read.</> },
+              { key: 'users', title: 'Users', body: <>See who's active in the household and who's been invited but hasn't joined yet, with full Name/Email/Phone/Location. Owners can invite new members (which also sends them a notification email), fill in or fix anyone's Name/Phone/Location, and edit their own details under "My details" -- handy for accounts created before these fields existed. Reachable from Settings' Users sub-tab. The Admin console (if you have access) is separate and never visible to other household members.</> },
+            ];
+            return (
+            <div className="panel" ref={panelRef}>
+              <h2>How to use this app</h2>
+              <div className="muted-small" style={{ marginBottom: 10 }}>Tap any topic below to open its description.</div>
+              <div className="help-accordion">
+                {helpTopics.map((t) => {
+                  const open = helpOpenTopic === t.key;
+                  return (
+                    <div key={t.key} className="help-accordion-item">
+                      <button
+                        type="button"
+                        className="help-accordion-title"
+                        onClick={() => setHelpOpenTopic(open ? null : t.key)}
+                        aria-expanded={open}
+                      >
+                        <span>{t.title}</span>
+                        <ChevronDown size={16} className={`help-accordion-chevron ${open ? 'open' : ''}`} />
+                      </button>
+                      {open && (
+                        <div className="muted-small help-accordion-body">{t.body}</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="muted-small" style={{ lineHeight: 1.6, marginTop: 16 }}>
+                <p>All figures use your household's chosen currency, set in Settings. Your data is confidential and private to your household -- it's never shared with anyone outside it.</p>
+                <p>The small <strong>{formatVersionBadge()}</strong> badge in the top-right corner shows which build you're on. The app updates itself automatically -- you'll never need to manually update anything -- but if something looks off, reload the page and check that it matches the latest you were told about.</p>
+              </div>
             </div>
-          </div>
-          )}
+            );
+          })()}
 
           {activePanel === 'report' && (
           <div className="panel" ref={panelRef}>

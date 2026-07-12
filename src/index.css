@@ -818,6 +818,20 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
 
 .panel { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
 .panel h2 { font-size: 15px; margin: 0 0 14px 0; }
+
+/* Help panel accordion -- each topic is a rounded row with a bold title
+   button; tapping it reveals just that topic's description below it. */
+.help-accordion { display: flex; flex-direction: column; gap: 8px; }
+.help-accordion-item { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--bg); }
+.help-accordion-title {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; background: none; border: none; cursor: pointer;
+  padding: 12px 14px; font-weight: 800; font-size: 13.5px; color: var(--text);
+  text-align: left; font-family: inherit;
+}
+.help-accordion-chevron { transition: transform .15s ease; flex-shrink: 0; color: var(--muted); }
+.help-accordion-chevron.open { transform: rotate(180deg); color: var(--accent); }
+.help-accordion-body { padding: 0 14px 14px; line-height: 1.6; }
 .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
 .field { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 110px; }
 /* Bold, higher-contrast labels everywhere (Name, Category, Amount/month,
