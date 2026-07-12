@@ -564,9 +564,25 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     setAddSheetOpen(true);
   }
   useEffect(() => {
-    if (activePanel && panelRef.current) {
-      panelRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    if (!activePanel || !panelRef.current) return;
+    // Plain scrollIntoView({block:'start'}) aligns the panel's top edge with
+    // the very top of the viewport -- but .sticky-dashboard-frame (logo,
+    // tab row, month nav, summary cards) is pinned to that exact spot, so it
+    // was covering each panel's own heading (e.g. Help's "How to use this
+    // app") right after the "scroll", leaving users looking at a header they
+    // already had and not the section they just opened. Instead, compute
+    // the sticky frame's real rendered height and land just below it.
+    // requestAnimationFrame gives the panel (which only mounts once
+    // activePanel matches) one tick to actually be in the DOM/laid out
+    // before measuring it.
+    const raf = requestAnimationFrame(() => {
+      if (!panelRef.current) return;
+      const stickyHeight = stickyFrameRef.current?.offsetHeight || 0;
+      const panelTop = panelRef.current.getBoundingClientRect().top + window.scrollY;
+      const targetY = Math.max(panelTop - stickyHeight - 12, 0);
+      window.scrollTo({ top: targetY, behavior: 'smooth' });
+    });
+    return () => cancelAnimationFrame(raf);
   }, [activePanel]);
   const [inputTab, setInputTab] = useState('expense');
   const [members, setMembers] = useState([]);
