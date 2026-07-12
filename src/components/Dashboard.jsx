@@ -3399,16 +3399,25 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             >
               Savings
             </button>
-            <button className="btn-teal" onClick={() => { togglePanel('report'); scrollToFrameA(); }}>
+            {/* Report/Settings/Help deliberately do NOT call scrollToFrameA()
+                here -- they already have their own scroll-to-panel effect
+                (see the activePanel-keyed useEffect above, which computes
+                the sticky frame's real height and lands just below the
+                panel's own heading). Calling scrollToFrameA() here too was
+                firing a *second*, later scroll back to the very top of the
+                page right after that effect had already positioned things
+                correctly, which is why opening Report/Settings/Help looked
+                like it stopped doing anything. */}
+            <button className="btn-teal" onClick={() => togglePanel('report')}>
               {activePanel === 'report' ? 'Hide report' : 'Report'}
             </button>
-            <button className="btn-teal" onClick={() => { togglePanel('settings'); scrollToFrameA(); }}>
+            <button className="btn-teal" onClick={() => togglePanel('settings')}>
               {activePanel === 'settings' ? 'Hide settings' : 'Settings'}
             </button>
             {/* Standalone "Users" button removed from this row -- Users
                 management now lives under Settings > Users instead, so
                 there's one way to reach it, not two. */}
-            <button className="btn-teal" onClick={() => { togglePanel('help'); scrollToFrameA(); }}>
+            <button className="btn-teal" onClick={() => togglePanel('help')}>
               {activePanel === 'help' ? 'Hide help' : 'Help'}
             </button>
             {/* Color theme picker -- deliberately styled as a multi-color
@@ -4089,18 +4098,16 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           onChange={(e) => updateIncomeDraftField(i.id, 'name', e.target.value)}
                           onBlur={(e) => commitIncomeField(i.id, 'name', e.target.value)}
                         />
-                        {(i.notes || i.attachment_url) && (
+                        {/* Attachment icon removed from here -- it already
+                            shows next to the delete icon on the right (see
+                            .row-actions below), so showing it twice per row
+                            was redundant. Note icon stays, since it has no
+                            other home. */}
+                        {i.notes && (
                           <div className="row-attach-icons">
-                            {i.notes && (
-                              <button type="button" className="row-icon-btn" title={i.notes} onClick={() => alert(i.notes)}>
-                                <StickyNote size={11} />
-                              </button>
-                            )}
-                            {i.attachment_url && (
-                              <button type="button" className="row-icon-btn" title={i.attachment_name || 'View attachment'} onClick={() => openAttachmentViewer(i.attachment_url, i.attachment_name)}>
-                                <Paperclip size={11} />
-                              </button>
-                            )}
+                            <button type="button" className="row-icon-btn" title={i.notes} onClick={() => alert(i.notes)}>
+                              <StickyNote size={11} />
+                            </button>
                           </div>
                         )}
                       </td>
@@ -4495,18 +4502,16 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           onChange={(e) => updateRecurringDraftField(r.id, 'name', e.target.value)}
                           onBlur={(e) => commitRecurringField(r.id, 'name', e.target.value)}
                         />
-                        {(r.notes || r.attachment_url) && (
+                        {/* Attachment icon removed from here -- it already
+                            shows next to the delete icon on the right (see
+                            .row-actions below), so showing it twice per row
+                            was redundant. Note icon stays, since it has no
+                            other home. */}
+                        {r.notes && (
                           <div className="row-attach-icons">
-                            {r.notes && (
-                              <button type="button" className="row-icon-btn" title={r.notes} onClick={() => alert(r.notes)}>
-                                <StickyNote size={11} />
-                              </button>
-                            )}
-                            {r.attachment_url && (
-                              <button type="button" className="row-icon-btn" title={r.attachment_name || 'View attachment'} onClick={() => openAttachmentViewer(r.attachment_url, r.attachment_name)}>
-                                <Paperclip size={11} />
-                              </button>
-                            )}
+                            <button type="button" className="row-icon-btn" title={r.notes} onClick={() => alert(r.notes)}>
+                              <StickyNote size={11} />
+                            </button>
                           </div>
                         )}
                       </td>
@@ -4913,18 +4918,16 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           onChange={(e) => updateSavingDraftField(s.id, 'name', e.target.value)}
                           onBlur={(e) => commitSavingField(s.id, 'name', e.target.value)}
                         />
-                        {(s.notes || s.attachment_url) && (
+                        {/* Attachment icon removed from here -- it already
+                            shows next to the delete icon on the right (see
+                            .row-actions below), so showing it twice per row
+                            was redundant. Note icon stays, since it has no
+                            other home. */}
+                        {s.notes && (
                           <div className="row-attach-icons">
-                            {s.notes && (
-                              <button type="button" className="row-icon-btn" title={s.notes} onClick={() => alert(s.notes)}>
-                                <StickyNote size={11} />
-                              </button>
-                            )}
-                            {s.attachment_url && (
-                              <button type="button" className="row-icon-btn" title={s.attachment_name || 'View attachment'} onClick={() => openAttachmentViewer(s.attachment_url, s.attachment_name)}>
-                                <Paperclip size={11} />
-                              </button>
-                            )}
+                            <button type="button" className="row-icon-btn" title={s.notes} onClick={() => alert(s.notes)}>
+                              <StickyNote size={11} />
+                            </button>
                           </div>
                         )}
                       </td>
@@ -5129,18 +5132,16 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           onChange={(ev) => updateExpenseDraftField(e.id, 'description', ev.target.value)}
                           onBlur={(ev) => commitExpenseField(e.id, 'description', ev.target.value)}
                         />
-                        {(e.notes || e.attachment_url) && (
+                        {/* Attachment icon removed from here -- it already
+                            shows next to the delete icon on the right (see
+                            .row-actions below), so showing it twice per row
+                            was redundant. Note icon stays, since it has no
+                            other home. */}
+                        {e.notes && (
                           <div className="row-attach-icons">
-                            {e.notes && (
-                              <button type="button" className="row-icon-btn" title={e.notes} onClick={() => alert(e.notes)}>
-                                <StickyNote size={11} />
-                              </button>
-                            )}
-                            {e.attachment_url && (
-                              <button type="button" className="row-icon-btn" title={e.attachment_name || 'View attachment'} onClick={() => openAttachmentViewer(e.attachment_url, e.attachment_name)}>
-                                <Paperclip size={11} />
-                              </button>
-                            )}
+                            <button type="button" className="row-icon-btn" title={e.notes} onClick={() => alert(e.notes)}>
+                              <StickyNote size={11} />
+                            </button>
                           </div>
                         )}
                       </td>
