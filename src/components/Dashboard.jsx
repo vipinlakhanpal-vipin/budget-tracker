@@ -604,17 +604,25 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   // synchronously in the same click handler that flips inputTab/activePanel.
   // Switching tabs changes which panels/tables are mounted, which can
   // shrink or grow the page's total height a lot (e.g. Home hides every
-  // form and table). Calling scrollTo('smooth') *before* React has
-  // re-rendered starts the animation against the OLD (taller) page, and if
-  // the resize lands mid-animation the browser clamps the in-flight scroll
-  // to whatever the new max scroll position is instead of finishing the
-  // trip to 0 -- landing partway down the page instead of at the top.
-  // Waiting two rAFs lets the resize settle first, so the scroll always
-  // starts from (and finishes at) the right place.
+  // form and table). Calling scrollTo *before* React has re-rendered starts
+  // it against the OLD (taller or shorter) page, and if the resize lands
+  // mid-scroll the browser clamps the in-flight position to whatever the
+  // new max scroll position is instead of finishing the trip to 0 --
+  // landing partway down the page instead of at the top. Waiting two rAFs
+  // lets the resize settle first, so the scroll always starts from (and
+  // finishes at) the right place.
+  //
+  // Uses behavior: 'auto' (instant), not 'smooth'. A 'smooth' scroll is an
+  // animation spread over several frames -- if anything on the page nudges
+  // layout again during that window (images/charts finishing their own
+  // layout, a second state update, etc.) the browser can clamp or cancel it
+  // partway, landing short of the top again. An instant jump has no window
+  // for that to happen in, so it reliably lands exactly at the top every
+  // time.
   function scrollToFrameA() {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        window.scrollTo({ top: 0, behavior: 'auto' });
       });
     });
   }
