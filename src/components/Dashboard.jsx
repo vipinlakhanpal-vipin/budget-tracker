@@ -215,6 +215,46 @@ function DirhamBarLabel(props) {
   );
 }
 
+// Rotated (vertical, reading bottom-to-top) variants of the label above --
+// used only on Home's big "Explore" bar chart (both orientations it
+// offers), per explicit request: instead of the value trailing off
+// sideways from the bar's tip (eating into the chart's width), it prints
+// straight up from the bar's own edge instead. That frees up the
+// horizontal room the old sideways label needed, which is exactly what
+// lets the bars themselves shrink and the plot area cover more of the
+// available width -- "more coverage, more elegantly" as asked. Built by
+// laying the exact same D-glyph + number out along +x from a pivot point
+// (the bar's edge), then rotating the whole group -90 degrees around that
+// same pivot, which swings +x to point straight up.
+function DirhamBarLabelVerticalSideways(props) {
+  const { x, y, width, height, value } = props;
+  const px = x + width;
+  const py = y + height / 2;
+  const numStr = Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return (
+    <g transform={`rotate(-90, ${px}, ${py})`}>
+      <text x={px + 3} y={py} dy={3} fontSize={8.5} fontWeight={700} fill="#0f2a2e" fontFamily="Arial, sans-serif">D</text>
+      <line x1={px + 2} y1={py - 2} x2={px + 8} y2={py - 2} stroke="#0f2a2e" strokeWidth={1} />
+      <line x1={px + 2} y1={py + 2} x2={px + 8} y2={py + 2} stroke="#0f2a2e" strokeWidth={1} />
+      <text x={px + 11} y={py} dy={3} fontSize={8.5} fill="#0f2a2e">{numStr}</text>
+    </g>
+  );
+}
+function DirhamBarLabelVerticalColumn(props) {
+  const { x, y, width, value } = props;
+  const px = x + width / 2;
+  const py = y;
+  const numStr = Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return (
+    <g transform={`rotate(-90, ${px}, ${py})`}>
+      <text x={px + 3} y={py} dy={3} fontSize={9} fontWeight={700} fill="#0f2a2e" fontFamily="Arial, sans-serif">D</text>
+      <line x1={px + 2} y1={py - 2.2} x2={px + 8.5} y2={py - 2.2} stroke="#0f2a2e" strokeWidth={1} />
+      <line x1={px + 2} y1={py + 2.2} x2={px + 8.5} y2={py + 2.2} stroke="#0f2a2e" strokeWidth={1} />
+      <text x={px + 11.5} y={py} dy={3} fontSize={9} fill="#0f2a2e">{numStr}</text>
+    </g>
+  );
+}
+
 // Treemap tile renderer -- each category gets a box sized by how much was
 // spent, colored from the same palette as the other charts. Unlike a pie
 // slice, a treemap box has room to print its own label directly inside it,
@@ -3207,29 +3247,60 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           <div className="empty">Add a regular expense to see the breakdown.</div>
         ) : chartType === 'pie' ? (
           <>
-            <ResponsiveContainer width="100%" height={big ? 560 : 360}>
-              <PieChart margin={{ top: 20, right: 20, bottom: 0, left: 20 }}>
-                <Pie
-                  data={chartPieData}
-                  dataKey="value"
-                  nameKey="name"
-                  cy="46%"
-                  outerRadius={big ? 160 : 95}
-                  isAnimationActive={false}
-                  label={({ percent }) => (percent >= 0.04 ? `${Math.round(percent * 100)}%` : '')}
-                  labelLine={false}
-                >
-                  {chartPieData.map((_, i) => (
-                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(v) => fmt(v)} />
-                <Legend
-                  wrapperStyle={{ fontSize: big ? 13 : 10, lineHeight: '18px', paddingTop: 10 }}
-                  iconSize={big ? 11 : 8}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            {/* Home's big pie had a lot of dead space on either side of a
+                circle that was never going to stretch to fill a wide card --
+                a brief summary now fills the left gutter instead of leaving
+                it empty, per explicit request. Small side panel (big=false)
+                is untouched -- it's narrow enough that this wouldn't fit
+                anyway. */}
+            <div style={{ display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' }}>
+              {big && (() => {
+                const sortedPie = [...pieData].sort((a, b) => b.value - a.value);
+                const totalSpent = pieData.reduce((s, d) => s + d.value, 0);
+                const topCat = sortedPie[0];
+                const topPct = totalSpent > 0 ? Math.round((topCat.value / totalSpent) * 100) : 0;
+                return (
+                  <div style={{ flex: '0 0 190px' }}>
+                    <div className="muted-small" style={{ textTransform: 'uppercase', letterSpacing: 0.4 }}>Total spent</div>
+                    <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--text)', marginBottom: 14 }}><Amt value={totalSpent} /></div>
+                    <div className="muted-small" style={{ textTransform: 'uppercase', letterSpacing: 0.4 }}>Top category</div>
+                    <div style={{ fontWeight: 700, marginBottom: 2 }}>{topCat.name}</div>
+                    <div className="muted-small" style={{ marginBottom: 14 }}><Amt value={topCat.value} /> -- {topPct}% of spending</div>
+                    <div className="muted-small">{pieData.length} categor{pieData.length === 1 ? 'y' : 'ies'} this month</div>
+                    {overCategories.length > 0 && (
+                      <div className="muted-small" style={{ color: 'var(--danger)', marginTop: 4 }}>
+                        {overCategories.length} over budget
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+              <div style={{ flex: '1 1 300px', minWidth: 0 }}>
+                <ResponsiveContainer width="100%" height={big ? 560 : 360}>
+                  <PieChart margin={{ top: 20, right: 20, bottom: 0, left: 20 }}>
+                    <Pie
+                      data={chartPieData}
+                      dataKey="value"
+                      nameKey="name"
+                      cy="46%"
+                      outerRadius={big ? 160 : 95}
+                      isAnimationActive={false}
+                      label={({ percent }) => (percent >= 0.04 ? `${Math.round(percent * 100)}%` : '')}
+                      labelLine={false}
+                    >
+                      {chartPieData.map((_, i) => (
+                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(v) => fmt(v)} />
+                    <Legend
+                      wrapperStyle={{ fontSize: big ? 13 : 10, lineHeight: '18px', paddingTop: 10 }}
+                      iconSize={big ? 11 : 8}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
             {pieData.length > topN && (
               <div className="muted-small" style={{ marginTop: 4 }}>
                 Showing your top {topN} categories -- the rest are grouped into "Other" to keep this readable. Switch to Treemap or Bar to see every category separately.
@@ -3242,7 +3313,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           // Y-axis -- the more familiar "bar chart" look, available on
           // Home's wider canvas.
           <ResponsiveContainer width="100%" height={big ? 480 : 340}>
-            <BarChart data={pieData} layout="horizontal" margin={{ top: 20, right: 20, left: 0, bottom: 70 }} barCategoryGap="25%">
+            {/* Top margin widened (20 -> 46, big only) to leave room for the
+                rotated value label poking up above each column -- see
+                DirhamBarLabelVerticalColumn. Bar itself narrowed (28 -> 20,
+                big only) so more categories fit before the chart feels
+                crowded, per explicit request to shrink bars for denser,
+                more "elegant" coverage. */}
+            <BarChart data={pieData} layout="horizontal" margin={{ top: big ? 46 : 20, right: 20, left: 0, bottom: 70 }} barCategoryGap={big ? '20%' : '25%'}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis
                 type="category"
@@ -3256,18 +3333,26 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               />
               <YAxis type="number" tick={{ fontSize: 11 }} />
               <Tooltip formatter={(v) => fmt(v)} />
-              <Bar dataKey="value" barSize={28} radius={[3, 3, 0, 0]} isAnimationActive={false}>
+              <Bar dataKey="value" barSize={big ? 20 : 28} radius={[3, 3, 0, 0]} isAnimationActive={false}>
                 {pieData.map((_, i) => (
                   <Cell key={i} fill={COLORS[i % COLORS.length]} />
                 ))}
-                <LabelList dataKey="value" content={DirhamBarLabel} />
+                <LabelList dataKey="value" content={big ? DirhamBarLabelVerticalColumn : DirhamBarLabel} />
               </Bar>
             </BarChart>
           </ResponsiveContainer>
         ) : chartType === 'bar' ? (
-          <div style={{ maxHeight: big ? 760 : 520, overflowY: pieData.length > (big ? 24 : 17) ? 'auto' : 'visible' }}>
-            <ResponsiveContainer width="100%" height={Math.max(big ? 260 : 180, pieData.length * (big ? 42 : 30))}>
-              <BarChart data={pieData} layout="vertical" margin={{ top: 5, right: 55, left: 10, bottom: 5 }} barCategoryGap="30%">
+          <div style={{ maxHeight: big ? 760 : 520, overflowY: pieData.length > (big ? 30 : 17) ? 'auto' : 'visible' }}>
+            {/* Right margin narrowed a lot on the big view (55 -> 26) --
+                the rotated value label (DirhamBarLabelVerticalSideways)
+                shoots straight up off the bar's tip instead of trailing
+                sideways, so it no longer needs that wide reserved strip.
+                That freed width plus a thinner bar (14 -> 10) and a
+                shorter per-row height (42 -> 32) is what actually lets the
+                plot area "cover more of the data elegantly": longer bars,
+                more categories visible per screen, per explicit request. */}
+            <ResponsiveContainer width="100%" height={Math.max(big ? 240 : 180, pieData.length * (big ? 32 : 30))}>
+              <BarChart data={pieData} layout="vertical" margin={{ top: 5, right: big ? 26 : 55, left: 10, bottom: 5 }} barCategoryGap={big ? '35%' : '30%'}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                 <XAxis type="number" tick={{ fontSize: big ? 11 : 8.5 }} hide />
                 <YAxis
@@ -3278,11 +3363,11 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   tickFormatter={(name) => (name.length > (big ? 20 : 13) ? name.slice(0, big ? 20 : 13) + '…' : name)}
                 />
                 <Tooltip formatter={(v) => fmt(v)} />
-                <Bar dataKey="value" barSize={big ? 14 : 9} radius={[0, 3, 3, 0]} isAnimationActive={false}>
+                <Bar dataKey="value" barSize={big ? 10 : 9} radius={[0, 3, 3, 0]} isAnimationActive={false}>
                   {pieData.map((_, i) => (
                     <Cell key={i} fill={COLORS[i % COLORS.length]} />
                   ))}
-                  <LabelList dataKey="value" content={DirhamBarLabel} />
+                  <LabelList dataKey="value" content={big ? DirhamBarLabelVerticalSideways : DirhamBarLabel} />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -3350,7 +3435,11 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   // their content is text, not a chart that benefits from more room.
   const aiInsightsCard = (
     <div className="panel" style={{ marginTop: 16 }}>
-      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+      {/* Title + button both left-aligned now (was title-left/button-right
+          via space-between) -- per explicit request to keep the Generate
+          and Analyze trends buttons on the left instead of floating off to
+          the far right edge of the card. */}
+      <div className="row" style={{ justifyContent: 'flex-start', alignItems: 'center', gap: 10, marginBottom: 4 }}>
         <h2 style={{ margin: 0 }}>
           AI Insights <AiTag />
         </h2>
@@ -3380,7 +3469,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
   const budgetCoachCard = (
     <div className="panel" style={{ marginTop: 16 }}>
-      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+      <div className="row" style={{ justifyContent: 'flex-start', alignItems: 'center', gap: 10, marginBottom: 4 }}>
         <h2 style={{ margin: 0 }}>
           Budget Coach <AiTag />
         </h2>

@@ -522,8 +522,11 @@ button, input, select, textarea { font-family: inherit; }
    regardless of media query or source order. Also covers "wherever user
    changes" the household name (now renamed right here in the header,
    owners only -- see .app-title-input below) -- the size here is
-   independent of the text content/length, so renaming never changes it. */
-.app-title-purple { color: #7c3aed; font-size: 35px; }
+   independent of the text content/length, so renaming never changes it.
+   Bolded (font-weight 800) per explicit request -- applies to both the
+   owner's editable <input> and the plain <h1> everyone else sees, so the
+   two don't look inconsistent with each other. */
+.app-title-purple { color: #7c3aed; font-size: 35px; font-weight: 800; }
 /* The owner-only editable version of the title above -- same visual size/
    color/weight as the plain <h1>, but as a real <input> so it can be typed
    into directly instead of only through a separate Settings field. Strip
