@@ -5924,15 +5924,24 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           existing top action row and input tabs -- nothing about desktop
           changes, this just gives a phone user a thumb-reachable way to
           jump straight to the main destinations instead of scrolling back
-          up to the top of a long page every time. */}
-      <button
-        className="mobile-fab"
-        onClick={() => goToAdd('expense')}
-        aria-label="Add a regular expense"
-        title="Add a regular expense"
-      >
-        <Plus size={26} strokeWidth={2.5} />
-      </button>
+          up to the top of a long page every time.
+          Only shown with no panel open (Report/Settings/Help): those panels
+          are often short, and their own action buttons (Generate report,
+          Hide on-screen report, Download...) sit at a fixed spot near the
+          bottom of the screen -- exactly where this floating button also
+          sits -- so on a short panel the two would visually overlap/collide.
+          The Add FAB isn't the primary action while reading a panel anyway;
+          the bottom-nav "Add" button still works the same via goToAdd(). */}
+      {!activePanel && (
+        <button
+          className="mobile-fab"
+          onClick={() => goToAdd('expense')}
+          aria-label="Add a regular expense"
+          title="Add a regular expense"
+        >
+          <Plus size={26} strokeWidth={2.5} />
+        </button>
+      )}
       <nav className="mobile-bottom-nav">
         <button className={!activePanel && !addSheetOpen ? 'active' : ''} onClick={goToOverview}>
           <Home size={20} strokeWidth={2.2} />
