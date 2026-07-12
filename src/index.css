@@ -1038,6 +1038,17 @@ input[type="number"] { text-align: right; }
    biggest source of the Fixed Expenses table needing a horizontal scroll on
    typical laptop-width windows. The chart panel keeps its own 320px floor
    so it never gets uncomfortably narrow. */
+/* Home tab's full-width "explore" frame -- only rendered when Home is
+   active (inputTab null). Deliberately full-width (not the narrow
+   content-grid right column the other tabs share) so the chart and AI
+   cards inside it have room to breathe and are easy to "play around
+   with", per explicit request. Mirrors .panel's card look at the outer
+   level; the chart/AI cards inside already bring their own .panel styling. */
+.home-explore-frame { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 20px; }
+.home-explore-frame h2 { font-size: 17px; }
+.home-explore-frame .panel { border: none; padding: 0; margin-bottom: 24px; background: transparent; }
+.home-explore-frame .panel:last-child { margin-bottom: 0; }
+
 .content-grid { display: grid; grid-template-columns: minmax(0, 2.6fr) minmax(320px, 1fr); gap: 24px; }
 @media (max-width: 1150px) { .content-grid { grid-template-columns: 1fr; } }
 /* Tablet-width only (641-800px) -- stack to a single column since 3 cards

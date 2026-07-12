@@ -581,6 +581,15 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     closeAllMobileEditSheets();
     topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
+  // Scrolls the sticky header/month-nav/summary-cards block ("Frame A")
+  // back into view -- called whenever one of the header row's own tabs
+  // (Income/Fixed/Regular/Savings/Report/Settings/Help) is clicked, so
+  // switching tabs always re-anchors back at Frame A instead of leaving the
+  // page wherever it happened to be scrolled to (e.g. after exploring the
+  // Home tab's larger chart section further down the page).
+  function scrollToFrameA() {
+    topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
   function goToAdd(tab) {
     setActivePanel(null);
     closeAllMobileEditSheets();
@@ -2819,6 +2828,464 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   });
   const unreadNotifCount = notifications.filter((n) => !seenNotifIds.has(n.id)).length;
 
+  // Shared body for the Users panel -- rendered from two different spots
+  // (the standalone "Users" header button, and the "Users" sub-tab inside
+  // Settings) so there is exactly one copy of this markup/logic instead of
+  // two that could drift apart. Defined as a plain JSX value (not its own
+  // component function) deliberately: a component defined inside another
+  // component's body gets a new identity every render, which would force
+  // React to unmount/remount this whole subtree on every keystroke (since
+  // typing in any draft field re-renders the parent) and drop focus out of
+  // whichever input the person was mid-edit in.
+  const usersPanelBody = (
+              <div>
+                <h2>Users</h2>
+
+                <div className="my-details-box" style={{ marginBottom: 18, padding: 12, border: '1px solid var(--border)', borderRadius: 8 }}>
+                  <div className="muted-small" style={{ fontWeight: 600, marginBottom: 8 }}>My details</div>
+                  <div className="row">
+                    <div className="field">
+                      <label>Full name</label>
+                      <input
+                        type="text"
+                        value={myDetailsDraft.name}
+                        onChange={(e) => setMyDetailsDraft((d) => ({ ...d, name: e.target.value }))}
+                        onBlur={(e) => commitMyDetailsField('name', e.target.value)}
+                      />
+                    </div>
+                    <div className="field">
+                      <label>Phone (optional)</label>
+                      <input
+                        type="text"
+                        value={myDetailsDraft.phone}
+                        onChange={(e) => setMyDetailsDraft((d) => ({ ...d, phone: e.target.value }))}
+                        onBlur={(e) => commitMyDetailsField('phone', e.target.value)}
+                      />
+                    </div>
+                    <div className="field">
+                      <label>Location</label>
+                      <input
+                        type="text"
+                        value={myDetailsDraft.location}
+                        onChange={(e) => setMyDetailsDraft((d) => ({ ...d, location: e.target.value }))}
+                        onBlur={(e) => commitMyDetailsField('location', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="muted-small" style={{ marginTop: 4 }}>Changes save automatically. Use this to fill in or fix your own info, including for accounts created before this field existed.</div>
+                </div>
+
+                <div className="muted-small" style={{ marginBottom: 4, fontWeight: 600 }}>
+                  {members.length + pendingInvites.length} total -- {members.length} active, {pendingInvites.length} pending
+                </div>
+                {isOwner && (
+                  <div className="muted-small" style={{ marginBottom: 6 }}>
+                    As owner, you can fill in or fix Name / Phone / Location for anyone below -- handy for family members who haven't set theirs yet.
+                  </div>
+                )}
+                <div className="table-scroll">
+                <table className="responsive-table users-table">
+                  <colgroup>
+                    <col style={{ width: '20%' }} /><col style={{ width: '16%' }} />
+                    <col style={{ width: '18%' }} /><col style={{ width: '26%' }} /><col style={{ width: '20%' }} />
+                  </colgroup>
+                  <thead>
+                    <tr><th>Name</th><th>Email</th><th>Phone</th><th>Location</th><th>Status</th></tr>
+                  </thead>
+                  <tbody>
+                    {members.map((m) => (
+                      <tr key={'m-' + m.id}>
+                        {isOwner ? (
+                          <>
+                            <td data-label="Name">
+                              <input
+                                data-editable
+                                type="text"
+                                placeholder="--"
+                                value={memberDetailDrafts[m.id]?.name ?? ''}
+                                onChange={(e) => updateMemberDetailDraft(m.id, 'name', e.target.value)}
+                                onBlur={(e) => commitMemberDetailField(m.id, 'name', e.target.value)}
+                              />
+                            </td>
+                            <td data-label="Email">{m.email}</td>
+                            <td data-label="Phone">
+                              <input
+                                data-editable
+                                type="text"
+                                placeholder="--"
+                                value={memberDetailDrafts[m.id]?.phone ?? ''}
+                                onChange={(e) => updateMemberDetailDraft(m.id, 'phone', e.target.value)}
+                                onBlur={(e) => commitMemberDetailField(m.id, 'phone', e.target.value)}
+                              />
+                            </td>
+                            <td data-label="Location">
+                              <input
+                                data-editable
+                                type="text"
+                                placeholder="--"
+                                value={memberDetailDrafts[m.id]?.location ?? ''}
+                                onChange={(e) => updateMemberDetailDraft(m.id, 'location', e.target.value)}
+                                onBlur={(e) => commitMemberDetailField(m.id, 'location', e.target.value)}
+                              />
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td data-label="Name">{m.name || <span className="muted-small">--</span>}</td>
+                            <td data-label="Email">{m.email}</td>
+                            <td className="muted-small" data-label="Phone">{m.phone || '--'}</td>
+                            <td className="muted-small" data-label="Location">{m.location || '--'}</td>
+                          </>
+                        )}
+                        <td data-label="Status"><span className="status-pill active">Active</span></td>
+                      </tr>
+                    ))}
+                    {pendingInvites.map((inv) => (
+                      <tr key={'p-' + inv.id}>
+                        {isOwner ? (
+                          <>
+                            <td data-label="Name">
+                              <input
+                                data-editable
+                                type="text"
+                                placeholder="--"
+                                value={inviteDetailDrafts[inv.id]?.name ?? ''}
+                                onChange={(e) => updateInviteDetailDraft(inv.id, 'name', e.target.value)}
+                                onBlur={(e) => commitInviteDetailField(inv.id, 'name', e.target.value)}
+                              />
+                            </td>
+                            <td data-label="Email">{inv.email}</td>
+                            <td data-label="Phone">
+                              <input
+                                data-editable
+                                type="text"
+                                placeholder="--"
+                                value={inviteDetailDrafts[inv.id]?.phone ?? ''}
+                                onChange={(e) => updateInviteDetailDraft(inv.id, 'phone', e.target.value)}
+                                onBlur={(e) => commitInviteDetailField(inv.id, 'phone', e.target.value)}
+                              />
+                            </td>
+                            <td data-label="Location">
+                              <input
+                                data-editable
+                                type="text"
+                                placeholder="--"
+                                value={inviteDetailDrafts[inv.id]?.location ?? ''}
+                                onChange={(e) => updateInviteDetailDraft(inv.id, 'location', e.target.value)}
+                                onBlur={(e) => commitInviteDetailField(inv.id, 'location', e.target.value)}
+                              />
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td data-label="Name">{inv.name || <span className="muted-small">--</span>}</td>
+                            <td data-label="Email">{inv.email}</td>
+                            <td className="muted-small" data-label="Phone">{inv.phone || '--'}</td>
+                            <td className="muted-small" data-label="Location">{inv.location || '--'}</td>
+                          </>
+                        )}
+                        <td data-label="Status"><span className="status-pill pending">Pending</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                </div>
+
+                {isOwner && members.some((m) => m.role !== 'owner') && (
+                  <div style={{ marginTop: 14 }}>
+                    <div className="muted-small" style={{ marginBottom: 4, fontWeight: 600 }}>Change a member's relation</div>
+                    {members.filter((m) => m.role !== 'owner').map((m) => (
+                      <div className="row" key={m.id} style={{ alignItems: 'center', marginBottom: 6 }}>
+                        <span className="muted-small" style={{ flex: 1 }}>{m.name || m.email}</span>
+                        <select value={m.relation} onChange={(e) => handleUpdateMemberRelation(m.id, e.target.value)}>
+                          {RELATIONS.map((r) => (
+                            <option key={r} value={r}>{r}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {isOwner && (
+                  <>
+                    <div className="muted-small" style={{ marginTop: 20, marginBottom: 4, fontWeight: 600 }}>
+                      Invite someone new
+                    </div>
+                    {Math.max(0, members.length - 1) + pendingInvites.length >= MAX_ADDITIONAL_USERS ? (
+                      <div
+                        className="muted-small"
+                        style={{
+                          marginTop: 4, padding: '12px 14px', borderRadius: 10,
+                          background: 'var(--accent-light)', border: '1px solid var(--border)', color: 'var(--text)',
+                        }}
+                      >
+                        <strong>Free plan limit reached</strong> -- this household already has the owner plus {MAX_ADDITIONAL_USERS} more people (active + pending). Remove a pending invite or an existing member to invite someone else, or upgrade for more seats.
+                      </div>
+                    ) : (
+                    <>
+                    <form className="row" onSubmit={handleSendInvite}>
+                      <input
+                        type="email"
+                        placeholder="Invite by email"
+                        style={{ flex: 1.2 }}
+                        value={inviteEmail}
+                        onChange={(e) => setInviteEmail(e.target.value)}
+                        required
+                      />
+                      <select value={inviteRelation} onChange={(e) => setInviteRelation(e.target.value)}>
+                        {RELATIONS.filter((r) => r !== 'Self').map((r) => (
+                          <option key={r} value={r}>{r}</option>
+                        ))}
+                      </select>
+                      <button className="btn secondary small" type="submit">Invite</button>
+                    </form>
+                    <div className="muted-small" style={{ marginTop: 6 }}>
+                      They'll land in this household automatically the moment they sign up (or sign in) with this exact email address -- an invite notification email is also sent to let them know, once you've set up email sending (see Settings/Vercel setup). Free plan: owner + {MAX_ADDITIONAL_USERS} more people.
+                    </div>
+                    </>
+                    )}
+                    {inviteStatus === 'sending' && (
+                      <div className="muted-small" style={{ marginTop: 6 }}>Sending...</div>
+                    )}
+                    {inviteStatus === 'sent' && (
+                      <div className="muted-small" style={{ marginTop: 6, color: 'var(--ok)' }}>Invite created and notification email sent.</div>
+                    )}
+                    {inviteStatus.startsWith('sent-no-email') && (
+                      <div className="muted-small" style={{ marginTop: 6, color: '#92400e' }}>
+                        Invite created -- they'll still auto-join when they sign up with this email. The notification email itself couldn't be sent ({inviteStatus.replace('sent-no-email: ', '')}); share the sign-up link with them directly for now.
+                      </div>
+                    )}
+                    {pendingInvites.length > 0 && (
+                      <div className="cat-list" style={{ marginTop: 10 }}>
+                        {pendingInvites.map((inv) => (
+                          <div className="cat-chip" key={inv.id}>
+                            {inv.email}
+                            <button onClick={() => handleCancelInvite(inv.id)} title="Cancel invite"><Trash2 size={12} /></button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+  );
+
+  // Shared Pie/Bar/Pareto/Treemap toggle row -- identical in both the
+  // normal (narrow, next to the data-entry tabs) and Home-tab ("big
+  // explore") layouts, since it's the same chartType state either way.
+  const chartTypeToggle = (
+    <div className="input-tabs">
+      <button
+        className={`btn small ${chartType === 'pie' ? '' : 'secondary'}`}
+        onClick={() => setChartType('pie')}
+      >
+        Pie
+      </button>
+      <button
+        className={`btn small ${chartType === 'bar' ? '' : 'secondary'}`}
+        onClick={() => setChartType('bar')}
+      >
+        Bar
+      </button>
+      <button
+        className={`btn small ${chartType === 'pareto' ? '' : 'secondary'}`}
+        onClick={() => setChartType('pareto')}
+      >
+        Pareto
+      </button>
+      <button
+        className={`btn small ${chartType === 'treemap' ? '' : 'secondary'}`}
+        onClick={() => setChartType('treemap')}
+      >
+        Treemap
+      </button>
+    </div>
+  );
+
+  // Renders the "Spending by category" chart card. Called with big=true
+  // from the Home tab's dedicated explore section (see the !inputTab block
+  // further down) for noticeably larger chart real estate to "play around"
+  // in, and big=false everywhere else so the normal narrow layout next to
+  // the data-entry tabs is untouched. Plain function (not its own component)
+  // so it's just JSX built fresh per call -- see usersPanelBody above for
+  // why that distinction matters.
+  function renderChartCard(big) {
+    return (
+      <div className="panel">
+        <h2 style={{ margin: '0 0 4px' }}>Spending by category</h2>
+        {pieData.length === 0 ? (
+          <div className="empty">Add a regular expense to see the breakdown.</div>
+        ) : chartType === 'pie' ? (
+          <>
+            <ResponsiveContainer width="100%" height={big ? 560 : 360}>
+              <PieChart margin={{ top: 20, right: 20, bottom: 0, left: 20 }}>
+                <Pie
+                  data={pieChartData}
+                  dataKey="value"
+                  nameKey="name"
+                  cy="46%"
+                  outerRadius={big ? 160 : 95}
+                  isAnimationActive={false}
+                  label={({ percent }) => (percent >= 0.04 ? `${Math.round(percent * 100)}%` : '')}
+                  labelLine={false}
+                >
+                  {pieChartData.map((_, i) => (
+                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(v) => fmt(v)} />
+                <Legend
+                  wrapperStyle={{ fontSize: big ? 13 : 10, lineHeight: '18px', paddingTop: 10 }}
+                  iconSize={big ? 11 : 8}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+            {pieData.length > PIE_TOP_N && (
+              <div className="muted-small" style={{ marginTop: 4 }}>
+                Showing your top {PIE_TOP_N} categories -- the rest are grouped into "Other" to keep this readable. Switch to Treemap or Bar to see every category separately.
+              </div>
+            )}
+          </>
+        ) : chartType === 'bar' ? (
+          <div style={{ maxHeight: big ? 760 : 520, overflowY: pieData.length > (big ? 24 : 17) ? 'auto' : 'visible' }}>
+            <ResponsiveContainer width="100%" height={Math.max(big ? 260 : 180, pieData.length * (big ? 42 : 30))}>
+              <BarChart data={pieData} layout="vertical" margin={{ top: 5, right: 55, left: 10, bottom: 5 }} barCategoryGap="30%">
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: big ? 11 : 8.5 }} hide />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  width={big ? 140 : 95}
+                  tick={{ fontSize: big ? 11 : 8.5 }}
+                  tickFormatter={(name) => (name.length > (big ? 20 : 13) ? name.slice(0, big ? 20 : 13) + '…' : name)}
+                />
+                <Tooltip formatter={(v) => fmt(v)} />
+                <Bar dataKey="value" barSize={big ? 14 : 9} radius={[0, 3, 3, 0]} isAnimationActive={false}>
+                  {pieData.map((_, i) => (
+                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                  ))}
+                  <LabelList dataKey="value" content={DirhamBarLabel} />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        ) : chartType === 'treemap' ? (
+          <ResponsiveContainer width="100%" height={big ? 560 : 360}>
+            <Treemap
+              data={pieData}
+              dataKey="value"
+              nameKey="name"
+              isAnimationActive={false}
+              content={<TreemapTile />}
+            >
+              <Tooltip formatter={(v) => fmt(v)} />
+            </Treemap>
+          </ResponsiveContainer>
+        ) : (
+          <ResponsiveContainer width="100%" height={big ? 520 : 340}>
+            <ComposedChart data={paretoData} margin={{ top: 20, right: 30, left: 0, bottom: 60 }}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis
+                dataKey="name"
+                tick={{ fontSize: big ? 12 : paretoFontSize }}
+                interval={0}
+                angle={-50}
+                textAnchor="end"
+                height={75}
+                tickFormatter={(name) => (name.length > paretoMaxNameLen ? name.slice(0, paretoMaxNameLen) + '…' : name)}
+              />
+              <YAxis yAxisId="left" tick={{ fontSize: big ? 11 : 9 }} width={big ? 50 : 40} />
+              <YAxis
+                yAxisId="right"
+                orientation="right"
+                domain={[0, 100]}
+                tickFormatter={(v) => v + '%'}
+                tick={{ fontSize: big ? 11 : 9 }}
+                width={big ? 40 : 34}
+              />
+              <Tooltip
+                formatter={(v, key) => (key === 'cumulative' ? v + '%' : fmt(v))}
+              />
+              <Bar yAxisId="left" dataKey="value" barSize={big ? paretoBarSize + 6 : paretoBarSize} isAnimationActive={false}>
+                {paretoData.map((_, i) => (
+                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                ))}
+              </Bar>
+              <Line
+                yAxisId="right"
+                type="monotone"
+                dataKey="cumulative"
+                stroke="#dc2626"
+                strokeWidth={2}
+                dot={{ r: 3 }}
+                isAnimationActive={false}
+              />
+            </ComposedChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+    );
+  }
+
+  // AI Insights and Budget Coach cards -- reused as-is (same size) in both
+  // the normal narrow layout and the Home tab's big explore section, since
+  // their content is text, not a chart that benefits from more room.
+  const aiInsightsCard = (
+    <div className="panel" style={{ marginTop: 16 }}>
+      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+        <h2 style={{ margin: 0 }}>
+          AI Insights <AiTag />
+        </h2>
+        <button
+          className="btn small secondary"
+          onClick={generateMonthlyDigest}
+          disabled={aiDigestLoading || pieData.length === 0}
+        >
+          {aiDigestLoading ? 'Thinking...' : aiDigest ? 'Refresh' : 'Generate'}
+        </button>
+      </div>
+      {pieData.length === 0 ? (
+        <div className="empty">Add a regular expense to get insights on this month.</div>
+      ) : aiDigest && aiDigestMonthKey === monthKey(currentMonth) ? (
+        <div className="muted-small" style={{ lineHeight: 1.6, whiteSpace: 'pre-line', color: 'var(--text)' }}>
+          {aiDigest}
+        </div>
+      ) : aiDigestError ? (
+        <div className="muted-small">Couldn't generate insights right now -- try again in a moment.</div>
+      ) : (
+        <div className="muted-small">
+          Get a short AI-written summary of {monthLabel(currentMonth)}'s spending, with a couple of suggestions -- tap Generate.
+        </div>
+      )}
+    </div>
+  );
+
+  const budgetCoachCard = (
+    <div className="panel" style={{ marginTop: 16 }}>
+      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+        <h2 style={{ margin: 0 }}>
+          Budget Coach <AiTag />
+        </h2>
+        <button className="btn small secondary" onClick={generateBudgetCoach} disabled={coachLoading}>
+          {coachLoading ? 'Analyzing...' : coachResult ? 'Re-analyze' : 'Analyze trends'}
+        </button>
+      </div>
+      <div className="muted-small" style={{ marginBottom: 10 }}>
+        Looks across the last 6 months (not just the one you're viewing) for patterns -- categories that stay over budget, spending trending up or down, whether your savings goal still looks realistic. Suggestions only -- nothing here changes your Settings automatically.
+      </div>
+      {coachResult ? (
+        <div className="muted-small" style={{ lineHeight: 1.6, whiteSpace: 'pre-line', color: 'var(--text)' }}>
+          {coachResult}
+        </div>
+      ) : coachError ? (
+        <div className="muted-small">Couldn't analyze trends right now -- try again in a moment.</div>
+      ) : (
+        <div className="empty">Tap "Analyze trends" to get a coaching read on your last 6 months.</div>
+      )}
+    </div>
+  );
+
   return (
     <div className="wrap">
       {/* Header, month nav, and both summary-card rows are wrapped in one
@@ -2871,43 +3338,41 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             <button
               type="button"
               className={`btn-teal header-tab-btn ${inputTab === 'income' ? 'header-tab-btn-active' : ''}`}
-              onClick={() => setInputTab('income')}
+              onClick={() => { setInputTab('income'); scrollToFrameA(); }}
             >
               Income
             </button>
             <button
               type="button"
               className={`btn-teal header-tab-btn ${inputTab === 'fixed' ? 'header-tab-btn-active' : ''}`}
-              onClick={() => setInputTab('fixed')}
+              onClick={() => { setInputTab('fixed'); scrollToFrameA(); }}
             >
               Fixed Expenses
             </button>
             <button
               type="button"
               className={`btn-teal header-tab-btn ${inputTab === 'expense' ? 'header-tab-btn-active' : ''}`}
-              onClick={() => setInputTab('expense')}
+              onClick={() => { setInputTab('expense'); scrollToFrameA(); }}
             >
               Regular Expenses
             </button>
             <button
               type="button"
               className={`btn-teal header-tab-btn ${inputTab === 'savings' ? 'header-tab-btn-active' : ''}`}
-              onClick={() => setInputTab('savings')}
+              onClick={() => { setInputTab('savings'); scrollToFrameA(); }}
             >
               Savings
             </button>
-            <button className="btn-teal" onClick={() => togglePanel('report')}>
+            <button className="btn-teal" onClick={() => { togglePanel('report'); scrollToFrameA(); }}>
               {activePanel === 'report' ? 'Hide report' : 'Report'}
             </button>
-            <button className="btn-teal" onClick={() => togglePanel('settings')}>
+            <button className="btn-teal" onClick={() => { togglePanel('settings'); scrollToFrameA(); }}>
               {activePanel === 'settings' ? 'Hide settings' : 'Settings'}
             </button>
-            {isOwner && (
-              <button className="btn-teal" onClick={() => togglePanel('members')}>
-                {activePanel === 'members' ? 'Hide users' : 'Users'}
-              </button>
-            )}
-            <button className="btn-teal" onClick={() => togglePanel('help')}>
+            {/* Standalone "Users" button removed from this row -- Users
+                management now lives under Settings > Users instead, so
+                there's one way to reach it, not two. */}
+            <button className="btn-teal" onClick={() => { togglePanel('help'); scrollToFrameA(); }}>
               {activePanel === 'help' ? 'Hide help' : 'Help'}
             </button>
             {/* Color theme picker -- deliberately styled as a multi-color
@@ -4540,6 +5005,11 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           </div>
           )}
 
+          {/* Hidden entirely in Home mode (inputTab null) -- per explicit
+              request, Home should show nothing but the dashboard itself
+              plus its own big chart/AI explore section further down, not
+              this always-on transaction list. */}
+          {inputTab && (
           <div className="panel">
             <h2>Expenses this month</h2>
             {monthExpenses.length === 0 ? (
@@ -4703,6 +5173,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               </div>
             )}
           </div>
+          )}
 
           {/* Mobile edit sheet for a tapped transaction -- same fields, same
               auto-save-on-blur handlers as desktop's inline row, just
@@ -4816,464 +5287,31 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
         </div>
 
         <div>
-          {/* Same row/height as the left column's Add-expense/Income/Fixed
-              Expenses/Savings tabs, so the two white panels below line up
-              at the same top edge instead of the chart card floating
-              higher (it used to keep its own toggle inside the panel,
-              which pushed the panel's actual top down past where the
-              left column's panel starts). */}
-          <div className="input-tabs">
-            <button
-              className={`btn small ${chartType === 'pie' ? '' : 'secondary'}`}
-              onClick={() => setChartType('pie')}
-            >
-              Pie
-            </button>
-            <button
-              className={`btn small ${chartType === 'bar' ? '' : 'secondary'}`}
-              onClick={() => setChartType('bar')}
-            >
-              Bar
-            </button>
-            <button
-              className={`btn small ${chartType === 'pareto' ? '' : 'secondary'}`}
-              onClick={() => setChartType('pareto')}
-            >
-              Pareto
-            </button>
-            <button
-              className={`btn small ${chartType === 'treemap' ? '' : 'secondary'}`}
-              onClick={() => setChartType('treemap')}
-            >
-              Treemap
-            </button>
-          </div>
-          <div className="panel">
-            <h2 style={{ margin: '0 0 4px' }}>Spending by category</h2>
-            {pieData.length === 0 ? (
-              <div className="empty">Add a regular expense to see the breakdown.</div>
-            ) : chartType === 'pie' ? (
-              // Capped to the top PIE_TOP_N categories (see pieChartData) --
-              // with everything else folded into one "Other" slice -- since a
-              // pie chart is the one chart type where every extra category
-              // makes every OTHER slice harder to read too. Slice labels only
-              // show a percentage (and only for slices big enough to read,
-              // >=4%) instead of the full name, since the Legend below
-              // already lists every name.
-              <>
-                <ResponsiveContainer width="100%" height={360}>
-                  <PieChart margin={{ top: 20, right: 20, bottom: 0, left: 20 }}>
-                    <Pie
-                      data={pieChartData}
-                      dataKey="value"
-                      nameKey="name"
-                      cy="46%"
-                      outerRadius={95}
-                      isAnimationActive={false}
-                      label={({ percent }) => (percent >= 0.04 ? `${Math.round(percent * 100)}%` : '')}
-                      labelLine={false}
-                    >
-                      {pieChartData.map((_, i) => (
-                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(v) => fmt(v)} />
-                    <Legend
-                      wrapperStyle={{ fontSize: 10, lineHeight: '18px', paddingTop: 10 }}
-                      iconSize={8}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-                {pieData.length > PIE_TOP_N && (
-                  <div className="muted-small" style={{ marginTop: 4 }}>
-                    Showing your top {PIE_TOP_N} categories -- the rest are grouped into "Other" to keep this readable. Switch to Treemap or Bar to see every category separately.
-                  </div>
-                )}
-              </>
-            ) : chartType === 'bar' ? (
-              // Thinner bars (7px) than the original version so the chart
-              // stays compact per category, but given more vertical room to
-              // grow overall (maxHeight 520 vs. the earlier 380, and more
-              // height per row) so more categories are visible without
-              // scrolling -- only once the list gets genuinely long does the
-              // scrollable cap kick in.
-              <div style={{ maxHeight: 520, overflowY: pieData.length > 17 ? 'auto' : 'visible' }}>
-                <ResponsiveContainer width="100%" height={Math.max(180, pieData.length * 30)}>
-                  <BarChart data={pieData} layout="vertical" margin={{ top: 5, right: 55, left: 10, bottom: 5 }} barCategoryGap="30%">
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                    <XAxis type="number" tick={{ fontSize: 8.5 }} hide />
-                    <YAxis
-                      type="category"
-                      dataKey="name"
-                      width={95}
-                      tick={{ fontSize: 8.5 }}
-                      tickFormatter={(name) => (name.length > 13 ? name.slice(0, 13) + '…' : name)}
-                    />
-                    <Tooltip formatter={(v) => fmt(v)} />
-                    <Bar dataKey="value" barSize={9} radius={[0, 3, 3, 0]} isAnimationActive={false}>
-                      {pieData.map((_, i) => (
-                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                      ))}
-                      <LabelList dataKey="value" content={DirhamBarLabel} />
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            ) : chartType === 'treemap' ? (
-              // Every category gets its own proportionally-sized box with its
-              // own label printed inside it -- unlike a pie, nothing has to
-              // compete for space around a shared ring, so this stays legible
-              // no matter how many categories there are. The smallest
-              // categories just render as an unlabeled sliver of color
-              // instead of overlapping text (see TreemapTile).
-              <ResponsiveContainer width="100%" height={360}>
-                <Treemap
-                  data={pieData}
-                  dataKey="value"
-                  nameKey="name"
-                  isAnimationActive={false}
-                  content={<TreemapTile />}
-                >
-                  <Tooltip formatter={(v) => fmt(v)} />
-                </Treemap>
-              </ResponsiveContainer>
-            ) : (
-              // Pareto -- bar thickness and label size shrink as the category
-              // count grows (see paretoBarSize/paretoFontSize/paretoMaxNameLen
-              // above) so every category always fits within the chart's own
-              // width. No horizontal scrolling needed regardless of count.
-              <ResponsiveContainer width="100%" height={340}>
-                <ComposedChart data={paretoData} margin={{ top: 20, right: 30, left: 0, bottom: 60 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="name"
-                    tick={{ fontSize: paretoFontSize }}
-                    interval={0}
-                    angle={-50}
-                    textAnchor="end"
-                    height={75}
-                    tickFormatter={(name) => (name.length > paretoMaxNameLen ? name.slice(0, paretoMaxNameLen) + '…' : name)}
-                  />
-                  <YAxis yAxisId="left" tick={{ fontSize: 9 }} width={40} />
-                  <YAxis
-                    yAxisId="right"
-                    orientation="right"
-                    domain={[0, 100]}
-                    tickFormatter={(v) => v + '%'}
-                    tick={{ fontSize: 9 }}
-                    width={34}
-                  />
-                  <Tooltip
-                    formatter={(v, key) => (key === 'cumulative' ? v + '%' : fmt(v))}
-                  />
-                  <Bar yAxisId="left" dataKey="value" barSize={paretoBarSize} isAnimationActive={false}>
-                    {paretoData.map((_, i) => (
-                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                    ))}
-                  </Bar>
-                  <Line
-                    yAxisId="right"
-                    type="monotone"
-                    dataKey="cumulative"
-                    stroke="#dc2626"
-                    strokeWidth={2}
-                    dot={{ r: 3 }}
-                    isAnimationActive={false}
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
-            )}
-          </div>
+          {/* This narrow chart/AI column only shows for the normal
+              data-entry tabs now (inputTab truthy) -- Home has its own
+              full-width, bigger version of the same three cards further
+              down the page (see the !inputTab section right after this
+              content-grid closes), so the two don't show at once. Report/
+              Settings/Help panels below still render regardless of
+              inputTab, since those can be open at the same time as Home. */}
+          {inputTab && (
+            <>
+              {chartTypeToggle}
+              {renderChartCard(false)}
+              {aiInsightsCard}
+              {budgetCoachCard}
+            </>
+          )}
 
-          <div className="panel" style={{ marginTop: 16 }}>
-            <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-              <h2 style={{ margin: 0 }}>
-                AI Insights <AiTag />
-              </h2>
-              <button
-                className="btn small secondary"
-                onClick={generateMonthlyDigest}
-                disabled={aiDigestLoading || pieData.length === 0}
-              >
-                {aiDigestLoading ? 'Thinking...' : aiDigest ? 'Refresh' : 'Generate'}
-              </button>
-            </div>
-            {pieData.length === 0 ? (
-              <div className="empty">Add a regular expense to get insights on this month.</div>
-            ) : aiDigest && aiDigestMonthKey === monthKey(currentMonth) ? (
-              <div className="muted-small" style={{ lineHeight: 1.6, whiteSpace: 'pre-line', color: 'var(--text)' }}>
-                {aiDigest}
-              </div>
-            ) : aiDigestError ? (
-              <div className="muted-small">Couldn't generate insights right now -- try again in a moment.</div>
-            ) : (
-              <div className="muted-small">
-                Get a short AI-written summary of {monthLabel(currentMonth)}'s spending, with a couple of suggestions -- tap Generate.
-              </div>
-            )}
-          </div>
-
-          <div className="panel" style={{ marginTop: 16 }}>
-            <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-              <h2 style={{ margin: 0 }}>
-                Budget Coach <AiTag />
-              </h2>
-              <button className="btn small secondary" onClick={generateBudgetCoach} disabled={coachLoading}>
-                {coachLoading ? 'Analyzing...' : coachResult ? 'Re-analyze' : 'Analyze trends'}
-              </button>
-            </div>
-            <div className="muted-small" style={{ marginBottom: 10 }}>
-              Looks across the last 6 months (not just the one you're viewing) for patterns -- categories that stay over budget, spending trending up or down, whether your savings goal still looks realistic. Suggestions only -- nothing here changes your Settings automatically.
-            </div>
-            {coachResult ? (
-              <div className="muted-small" style={{ lineHeight: 1.6, whiteSpace: 'pre-line', color: 'var(--text)' }}>
-                {coachResult}
-              </div>
-            ) : coachError ? (
-              <div className="muted-small">Couldn't analyze trends right now -- try again in a moment.</div>
-            ) : (
-              <div className="empty">Tap "Analyze trends" to get a coaching read on your last 6 months.</div>
-            )}
-          </div>
-
-          {(activePanel === 'members' || (activePanel === 'settings' && settingsSubTab === 'users')) && (
-          // ref only attached for the standalone "members" route -- when
-          // reached via Settings > Users instead, the Settings panel just
-          // below already carries panelRef, and two elements fighting over
-          // the same ref in one render would make the auto-scroll effect
-          // land on whichever happened to mount second.
-          <div className="panel" ref={activePanel === 'members' ? panelRef : undefined}>
-              <div>
-                <h2>Users</h2>
-
-                <div className="my-details-box" style={{ marginBottom: 18, padding: 12, border: '1px solid var(--border)', borderRadius: 8 }}>
-                  <div className="muted-small" style={{ fontWeight: 600, marginBottom: 8 }}>My details</div>
-                  <div className="row">
-                    <div className="field">
-                      <label>Full name</label>
-                      <input
-                        type="text"
-                        value={myDetailsDraft.name}
-                        onChange={(e) => setMyDetailsDraft((d) => ({ ...d, name: e.target.value }))}
-                        onBlur={(e) => commitMyDetailsField('name', e.target.value)}
-                      />
-                    </div>
-                    <div className="field">
-                      <label>Phone (optional)</label>
-                      <input
-                        type="text"
-                        value={myDetailsDraft.phone}
-                        onChange={(e) => setMyDetailsDraft((d) => ({ ...d, phone: e.target.value }))}
-                        onBlur={(e) => commitMyDetailsField('phone', e.target.value)}
-                      />
-                    </div>
-                    <div className="field">
-                      <label>Location</label>
-                      <input
-                        type="text"
-                        value={myDetailsDraft.location}
-                        onChange={(e) => setMyDetailsDraft((d) => ({ ...d, location: e.target.value }))}
-                        onBlur={(e) => commitMyDetailsField('location', e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div className="muted-small" style={{ marginTop: 4 }}>Changes save automatically. Use this to fill in or fix your own info, including for accounts created before this field existed.</div>
-                </div>
-
-                <div className="muted-small" style={{ marginBottom: 4, fontWeight: 600 }}>
-                  {members.length + pendingInvites.length} total -- {members.length} active, {pendingInvites.length} pending
-                </div>
-                {isOwner && (
-                  <div className="muted-small" style={{ marginBottom: 6 }}>
-                    As owner, you can fill in or fix Name / Phone / Location for anyone below -- handy for family members who haven't set theirs yet.
-                  </div>
-                )}
-                <div className="table-scroll">
-                <table className="responsive-table users-table">
-                  <colgroup>
-                    <col style={{ width: '20%' }} /><col style={{ width: '16%' }} />
-                    <col style={{ width: '18%' }} /><col style={{ width: '26%' }} /><col style={{ width: '20%' }} />
-                  </colgroup>
-                  <thead>
-                    <tr><th>Name</th><th>Email</th><th>Phone</th><th>Location</th><th>Status</th></tr>
-                  </thead>
-                  <tbody>
-                    {members.map((m) => (
-                      <tr key={'m-' + m.id}>
-                        {isOwner ? (
-                          <>
-                            <td data-label="Name">
-                              <input
-                                data-editable
-                                type="text"
-                                placeholder="--"
-                                value={memberDetailDrafts[m.id]?.name ?? ''}
-                                onChange={(e) => updateMemberDetailDraft(m.id, 'name', e.target.value)}
-                                onBlur={(e) => commitMemberDetailField(m.id, 'name', e.target.value)}
-                              />
-                            </td>
-                            <td data-label="Email">{m.email}</td>
-                            <td data-label="Phone">
-                              <input
-                                data-editable
-                                type="text"
-                                placeholder="--"
-                                value={memberDetailDrafts[m.id]?.phone ?? ''}
-                                onChange={(e) => updateMemberDetailDraft(m.id, 'phone', e.target.value)}
-                                onBlur={(e) => commitMemberDetailField(m.id, 'phone', e.target.value)}
-                              />
-                            </td>
-                            <td data-label="Location">
-                              <input
-                                data-editable
-                                type="text"
-                                placeholder="--"
-                                value={memberDetailDrafts[m.id]?.location ?? ''}
-                                onChange={(e) => updateMemberDetailDraft(m.id, 'location', e.target.value)}
-                                onBlur={(e) => commitMemberDetailField(m.id, 'location', e.target.value)}
-                              />
-                            </td>
-                          </>
-                        ) : (
-                          <>
-                            <td data-label="Name">{m.name || <span className="muted-small">--</span>}</td>
-                            <td data-label="Email">{m.email}</td>
-                            <td className="muted-small" data-label="Phone">{m.phone || '--'}</td>
-                            <td className="muted-small" data-label="Location">{m.location || '--'}</td>
-                          </>
-                        )}
-                        <td data-label="Status"><span className="status-pill active">Active</span></td>
-                      </tr>
-                    ))}
-                    {pendingInvites.map((inv) => (
-                      <tr key={'p-' + inv.id}>
-                        {isOwner ? (
-                          <>
-                            <td data-label="Name">
-                              <input
-                                data-editable
-                                type="text"
-                                placeholder="--"
-                                value={inviteDetailDrafts[inv.id]?.name ?? ''}
-                                onChange={(e) => updateInviteDetailDraft(inv.id, 'name', e.target.value)}
-                                onBlur={(e) => commitInviteDetailField(inv.id, 'name', e.target.value)}
-                              />
-                            </td>
-                            <td data-label="Email">{inv.email}</td>
-                            <td data-label="Phone">
-                              <input
-                                data-editable
-                                type="text"
-                                placeholder="--"
-                                value={inviteDetailDrafts[inv.id]?.phone ?? ''}
-                                onChange={(e) => updateInviteDetailDraft(inv.id, 'phone', e.target.value)}
-                                onBlur={(e) => commitInviteDetailField(inv.id, 'phone', e.target.value)}
-                              />
-                            </td>
-                            <td data-label="Location">
-                              <input
-                                data-editable
-                                type="text"
-                                placeholder="--"
-                                value={inviteDetailDrafts[inv.id]?.location ?? ''}
-                                onChange={(e) => updateInviteDetailDraft(inv.id, 'location', e.target.value)}
-                                onBlur={(e) => commitInviteDetailField(inv.id, 'location', e.target.value)}
-                              />
-                            </td>
-                          </>
-                        ) : (
-                          <>
-                            <td data-label="Name">{inv.name || <span className="muted-small">--</span>}</td>
-                            <td data-label="Email">{inv.email}</td>
-                            <td className="muted-small" data-label="Phone">{inv.phone || '--'}</td>
-                            <td className="muted-small" data-label="Location">{inv.location || '--'}</td>
-                          </>
-                        )}
-                        <td data-label="Status"><span className="status-pill pending">Pending</span></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                </div>
-
-                {isOwner && members.some((m) => m.role !== 'owner') && (
-                  <div style={{ marginTop: 14 }}>
-                    <div className="muted-small" style={{ marginBottom: 4, fontWeight: 600 }}>Change a member's relation</div>
-                    {members.filter((m) => m.role !== 'owner').map((m) => (
-                      <div className="row" key={m.id} style={{ alignItems: 'center', marginBottom: 6 }}>
-                        <span className="muted-small" style={{ flex: 1 }}>{m.name || m.email}</span>
-                        <select value={m.relation} onChange={(e) => handleUpdateMemberRelation(m.id, e.target.value)}>
-                          {RELATIONS.map((r) => (
-                            <option key={r} value={r}>{r}</option>
-                          ))}
-                        </select>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {isOwner && (
-                  <>
-                    <div className="muted-small" style={{ marginTop: 20, marginBottom: 4, fontWeight: 600 }}>
-                      Invite someone new
-                    </div>
-                    {Math.max(0, members.length - 1) + pendingInvites.length >= MAX_ADDITIONAL_USERS ? (
-                      <div
-                        className="muted-small"
-                        style={{
-                          marginTop: 4, padding: '12px 14px', borderRadius: 10,
-                          background: 'var(--accent-light)', border: '1px solid var(--border)', color: 'var(--text)',
-                        }}
-                      >
-                        <strong>Free plan limit reached</strong> -- this household already has the owner plus {MAX_ADDITIONAL_USERS} more people (active + pending). Remove a pending invite or an existing member to invite someone else, or upgrade for more seats.
-                      </div>
-                    ) : (
-                    <>
-                    <form className="row" onSubmit={handleSendInvite}>
-                      <input
-                        type="email"
-                        placeholder="Invite by email"
-                        style={{ flex: 1.2 }}
-                        value={inviteEmail}
-                        onChange={(e) => setInviteEmail(e.target.value)}
-                        required
-                      />
-                      <select value={inviteRelation} onChange={(e) => setInviteRelation(e.target.value)}>
-                        {RELATIONS.filter((r) => r !== 'Self').map((r) => (
-                          <option key={r} value={r}>{r}</option>
-                        ))}
-                      </select>
-                      <button className="btn secondary small" type="submit">Invite</button>
-                    </form>
-                    <div className="muted-small" style={{ marginTop: 6 }}>
-                      They'll land in this household automatically the moment they sign up (or sign in) with this exact email address -- an invite notification email is also sent to let them know, once you've set up email sending (see Settings/Vercel setup). Free plan: owner + {MAX_ADDITIONAL_USERS} more people.
-                    </div>
-                    </>
-                    )}
-                    {inviteStatus === 'sending' && (
-                      <div className="muted-small" style={{ marginTop: 6 }}>Sending...</div>
-                    )}
-                    {inviteStatus === 'sent' && (
-                      <div className="muted-small" style={{ marginTop: 6, color: 'var(--ok)' }}>Invite created and notification email sent.</div>
-                    )}
-                    {inviteStatus.startsWith('sent-no-email') && (
-                      <div className="muted-small" style={{ marginTop: 6, color: '#92400e' }}>
-                        Invite created -- they'll still auto-join when they sign up with this email. The notification email itself couldn't be sent ({inviteStatus.replace('sent-no-email: ', '')}); share the sign-up link with them directly for now.
-                      </div>
-                    )}
-                    {pendingInvites.length > 0 && (
-                      <div className="cat-list" style={{ marginTop: 10 }}>
-                        {pendingInvites.map((inv) => (
-                          <div className="cat-chip" key={inv.id}>
-                            {inv.email}
-                            <button onClick={() => handleCancelInvite(inv.id)} title="Cancel invite"><Trash2 size={12} /></button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
+          {/* Only the standalone header-button route renders here now --
+              the Settings > Users sub-tab renders this same usersPanelBody
+              value in place, inside the Settings panel itself, instead of
+              in this separate box (which used to make it appear above the
+              Settings panel rather than replacing its content like every
+              other sub-tab does). */}
+          {activePanel === 'members' && (
+          <div className="panel" ref={panelRef}>
+            {usersPanelBody}
           </div>
           )}
 
@@ -5281,21 +5319,22 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           <div className="panel" ref={panelRef}>
             <h2>How to use this app</h2>
             <div className="muted-small" style={{ lineHeight: 1.6 }}>
+              <p><strong>Home</strong> -- shows just the dashboard (summary cards and totals), nothing else. Below it, a bigger "Explore" section holds the same Spending by category chart (Pie/Bar/Pareto/Treemap), AI Insights, and Budget Coach, sized larger so there's more room to look through them. Clicking Income, Fixed Expenses, Regular Expenses, Savings, Report, Settings, or Help scrolls back up to the top and switches to that tab as usual.</p>
               <p><strong>Regular Expenses</strong> -- log one-off spending (groceries, dining, shopping). Pick the date, category, a short description, and the amount, then Add. It appears under "Expenses this month" and is always editable there -- just type into a field and it saves. The note icon (<StickyNote size={11} style={{ verticalAlign: -2 }} />) next to Amount opens a spot for a longer free-text description, and the paperclip (<Paperclip size={11} style={{ verticalAlign: -2 }} />) lets you attach one photo or PDF (5MB max) -- a receipt, warranty, or anything else worth keeping with that expense. Both are optional. Once saved, a small icon appears next to the entry if it has a note or attachment -- click it to read the note or open the file.</p>
               <p><strong>Scan a receipt</strong> -- below the Regular Expenses form, upload a photo of a receipt (or a screenshot/sheet listing several expenses) and Claude will read it for you. You'll see an editable review list first -- fix anything that looks wrong, untick what you don't want, then add only what you confirm. Nothing is saved automatically.</p>
               <p><strong>Income</strong> -- add each income source per month (e.g. Salary). Income does NOT roll over automatically -- since pay can change month to month (deductions, advances, etc.), add a fresh row each month with that month's actual amount, or edit an existing row's Month field forward. Every field auto-saves. It has the same optional note + attachment icons as Regular Expenses.</p>
               <p><strong>Fixed Expenses</strong> -- for recurring bills, loans, EMIs, and rent. Set a Start date, an optional End date, and how often it repeats (Monthly, Alternate month, Quarterly, Half-yearly, Once a year). Every field auto-saves as you edit -- there's no Save button to click. Set a Due date to get an in-app reminder starting 3 days before it's due, and an email reminder if it's set up. It has the same optional note + attachment icons as Regular Expenses -- handy for keeping a loan agreement or lease document attached to the bill itself.</p>
               <p><strong>Notes &amp; Attachments</strong> -- the note (<StickyNote size={11} style={{ verticalAlign: -2 }} />) and paperclip (<Paperclip size={11} style={{ verticalAlign: -2 }} />) icons sit right before the Add button on Income, Fixed Expenses, Regular Expenses, and Savings. Once a row has a saved document, its paperclip icon shows up in two places for convenience -- under the Description/Name cell, and again next to that row's delete icon -- either one opens the same viewer, where you can see the document on screen, open it in a compatible app on your device, or share it by email or WhatsApp.</p>
               <p><strong>Savings</strong> -- set how much you'd like to set aside for the month, e.g. "Emergency fund" or "Investment". Works exactly like Income: entered fresh per month with no auto-rollover, since the amount you're able to save can change month to month -- add a new row each month, or edit an existing row's Month field forward. Since money you set aside is no longer available to spend, it's treated the same as an expense: it's counted in "Spent so far" and "Combined expenses", and subtracted in "Remaining" and "Net", in addition to getting its own page in the PDF report so you can see planned savings build up over time. It has the same optional note + attachment icons as Regular Expenses.</p>
-              <p><strong>Expenses this month</strong> is always visible below the tabs so you can see what's been logged without switching tabs. It also auto-saves.</p>
+              <p><strong>Expenses this month</strong> is visible below whichever tab (Income, Fixed Expenses, Regular Expenses, Savings) you're on, so you can see what's been logged without switching tabs. It also auto-saves. It's hidden on Home, which shows only the dashboard and the Explore section instead.</p>
               <p><strong>Spending by category</strong> chart -- toggle between Pie, Bar, Pareto, and Treemap. The Pie groups smaller categories into "Other" to stay readable; Bar and Treemap show every category individually. The totals cards above show your combined income, combined expenses (split into Regular, Fixed, and Savings), and what's left of your budget and income after all three are accounted for.</p>
               <p><strong>AI Insights</strong> -- tap Generate below the chart for a short AI-written summary of the month you're viewing (spending patterns, whether you're over budget, and a couple of concrete suggestions). It only runs when you tap the button -- never automatically -- and Refresh regenerates it if your numbers have changed.</p>
               <p><strong>Budget Coach</strong> -- unlike AI Insights (one month at a time), Coach looks across your last 6 months for patterns: a category that keeps going over budget, spending trending up or down, or a savings goal that no longer looks realistic. It only ever writes out suggestions -- it never changes your Settings for you.</p>
               <p><strong>Chat BoT</strong> -- the round chat bubble in the corner (drag it anywhere on screen) answers questions about your household's own numbers across every tab -- Income, Fixed Expenses, Savings, one-off spending, and who's in the household -- and can also answer "how do I..." questions about the app itself and give suggestions when asked. It can only see the data already in the app -- nothing outside it.</p>
               <p><strong>Report</strong> -- generate a PDF for any date range, then view it on screen, download it, or email it. Each topic gets its own page -- Income, Expenses, Fixed Expenses, Savings, Spend Analysis (Pareto chart), and Recommendations -- except the Category Breakdown bar chart and the Summary table, which share one page by default and only split onto two once the chart itself grows long enough to need the room. Every table also auto-shrinks its text to try to fit on one page first, and only flows onto a second page if the list is too long even at a readable size. The last page closes with a data & privacy note.</p>
-              <p><strong>Settings</strong> -- has its own sub-tabs. App Settings covers household name and currency. Smart Budget always follows whichever month you're viewing on the dashboard (change the Month field there to set or review a different month instead) and covers your overall monthly cap for that month, plus an optional "Budget for Per Category" section below it and how this month's spending compares to those caps (you'll get a notification in the bell icon if you go over). Add Category adds, renames, or removes categories. Users (owners only) is a shortcut to the same Users panel described below, without leaving Settings. Admin Console (owners only) covers members and invites. Every field auto-saves as you edit -- there's no Save button to click.</p>
+              <p><strong>Settings</strong> -- has its own sub-tabs. App Settings covers household name and currency. Smart Budget always follows whichever month you're viewing on the dashboard (change the Month field there to set or review a different month instead) and covers your overall monthly cap for that month, plus an optional "Budget for Per Category" section below it and how this month's spending compares to those caps (you'll get a notification in the bell icon if you go over). Add Category adds, renames, or removes categories. Users (owners only) covers household members and invites -- see below. Admin Console (owners only) covers members and invites. Every field auto-saves as you edit -- there's no Save button to click.</p>
               <p><strong>Notifications</strong> -- the bell icon next to Help (top-right) replaces the old always-on red banners. It shows a count of unread items -- over-total-budget, over a category's budget, or a bill due soon -- and opening it lists them and marks them read.</p>
-              <p><strong>Users</strong> -- see who's active in the household and who's been invited but hasn't joined yet, with full Name/Email/Phone/Location. Owners can invite new members (which also sends them a notification email), fill in or fix anyone's Name/Phone/Location, and edit their own details under "My details" -- handy for accounts created before these fields existed. Reachable either from its own header button or from Settings' Users sub-tab -- same panel either way. The Admin console (if you have access) is separate and never visible to other household members.</p>
+              <p><strong>Users</strong> -- see who's active in the household and who's been invited but hasn't joined yet, with full Name/Email/Phone/Location. Owners can invite new members (which also sends them a notification email), fill in or fix anyone's Name/Phone/Location, and edit their own details under "My details" -- handy for accounts created before these fields existed. Reachable from Settings' Users sub-tab. The Admin console (if you have access) is separate and never visible to other household members.</p>
               <p>All figures use your household's chosen currency, set in Settings. Your data is confidential and private to your household -- it's never shared with anyone outside it.</p>
               <p>The small <strong>{formatVersionBadge()}</strong> badge in the top-right corner shows which build you're on. The app updates itself automatically -- you'll never need to manually update anything -- but if something looks off, reload the page and check that it matches the latest you were told about.</p>
             </div>
@@ -5542,11 +5581,11 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 )}
                 </>
                 ) : settingsSubTab === 'users' ? (
-                  // No content here -- the Users sub-tab reuses the Users
-                  // panel that renders separately just below (see the
-                  // broadened `activePanel === 'members'` condition), so
-                  // nothing needs duplicating in this spot.
-                  null
+                  // Renders the exact same usersPanelBody shown by the
+                  // standalone header "Users" button -- in place, right
+                  // here below the sub-tab row, the same way every other
+                  // sub-tab's content appears.
+                  usersPanelBody
                 ) : settingsSubTab === 'category' ? (
                 <>
                 {/* Add Category tab -- split out on its own, separate from
@@ -5621,6 +5660,25 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
         </div>
       </div>
 
+      {/* Home-only "explore" section -- a full-width frame that only shows
+          when Home is active (inputTab null), sitting right below Frame A
+          (the sticky header/month-nav/summary-cards block) and the now-
+          hidden content-grid. Reuses the exact same chart toggle/big chart/
+          AI Insights/Budget Coach pieces the normal tabs use (extracted
+          above as chartTypeToggle/renderChartCard/aiInsightsCard/
+          budgetCoachCard), just rendered bigger and full width here so
+          there's room to "play around" with the charts and AI features,
+          per explicit request. */}
+      {!inputTab && (
+        <div className="home-explore-frame">
+          <h2 style={{ margin: '0 0 10px' }}>Explore</h2>
+          {chartTypeToggle}
+          {renderChartCard(true)}
+          {aiInsightsCard}
+          {budgetCoachCard}
+        </div>
+      )}
+
       <div className="app-footer">
         Your data is confidential and private to this household. It is never shared with anyone outside it.
       </div>
@@ -5657,12 +5715,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           <FileText size={20} strokeWidth={2.2} />
           <span>Report</span>
         </button>
-        {isOwner && (
-          <button className={activePanel === 'members' ? 'active' : ''} onClick={() => togglePanel('members')}>
-            <UsersIcon size={20} strokeWidth={2.2} />
-            <span>Users</span>
-          </button>
-        )}
+        {/* Users button removed from here too -- reach it via Settings >
+            Users now, same as desktop. */}
         <button className={activePanel === 'settings' ? 'active' : ''} onClick={() => togglePanel('settings')}>
           <SettingsIcon size={20} strokeWidth={2.2} />
           <span>Settings</span>
