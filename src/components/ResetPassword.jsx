@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../supabaseClient';
+import { passwordRuleError, PASSWORD_HINT } from '../passwordRules.js';
 
 // Shown when the app is opened via a Supabase password-recovery link.
 // Previously, clicking the reset link in the email just logged the user
@@ -20,8 +21,9 @@ export default function ResetPassword({ onDone }) {
   async function handleSubmit(e) {
     e.preventDefault();
     setErrorMsg('');
-    if (password.length < 6) {
-      setErrorMsg('Password must be at least 6 characters.');
+    const pwError = passwordRuleError(password);
+    if (pwError) {
+      setErrorMsg(pwError);
       return;
     }
     if (password !== confirmPassword) {
@@ -36,9 +38,20 @@ export default function ResetPassword({ onDone }) {
       return;
     }
     setStatus('done');
-    // The recovery link already left them signed in with a valid session --
-    // no need to force a second sign-in with the password they just set.
-    setTimeout(onDone, 1200);
+    // Per explicit request: after a successful reset, take the person to the
+    // actual Sign-in screen (rather than silently continuing the recovery
+    // session straight into the Dashboard) so the new password is
+    // immediately verified end-to-end. Remember their email first so Login's
+    // sign-in field auto-fills it -- they only have to type the new
+    // password, not their email too.
+    try {
+      const { data } = await supabase.auth.getUser();
+      if (data?.user?.email) localStorage.setItem('hearth-last-email', data.user.email);
+    } catch {
+      // ignore -- purely a nice-to-have convenience, not worth surfacing an error for
+    }
+    await supabase.auth.signOut();
+    setTimeout(onDone, 1500);
   }
 
   return (
@@ -47,17 +60,20 @@ export default function ResetPassword({ onDone }) {
         <h1>Hearth</h1>
         <p className="sub">Choose a new password for your account.</p>
         {status === 'done' ? (
-          <div className="login-sent">Password updated -- taking you to your account...</div>
+          <div className="login-sent">Password successfully changed -- taking you to sign in...</div>
         ) : (
           <form onSubmit={handleSubmit}>
             <input
               type="password"
-              placeholder="New password (min 6 characters)"
+              placeholder="New password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               autoFocus
             />
+            <div className="muted-small" style={{ margin: '-6px 0 8px' }}>
+              {PASSWORD_HINT}
+            </div>
             <input
               type="password"
               placeholder="Confirm new password"

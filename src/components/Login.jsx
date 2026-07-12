@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../supabaseClient';
+import { passwordRuleError, PASSWORD_HINT } from '../passwordRules.js';
 
 const SITE_URL = 'https://budget-tracker-tau-liart.vercel.app';
 
@@ -8,7 +9,18 @@ export default function Login() {
   const [mode, setMode] = useState('signin');
 
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  // Pre-filled from the last successful sign-in on this device, per explicit
+  // request ("user name should auto appear... user has to enter only the
+  // password") -- so returning users only need to type their password.
+  // Wrapped in try/catch since localStorage access can throw in some
+  // contexts (private browsing, disabled storage, etc.).
+  const [email, setEmail] = useState(() => {
+    try {
+      return localStorage.getItem('hearth-last-email') || '';
+    } catch {
+      return '';
+    }
+  });
   const [location, setLocation] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -34,8 +46,9 @@ export default function Login() {
       setErrorMsg('Please fill in your name, email, location, and a password.');
       return;
     }
-    if (password.length < 6) {
-      setErrorMsg('Password must be at least 6 characters.');
+    const pwError = passwordRuleError(password);
+    if (pwError) {
+      setErrorMsg(pwError);
       return;
     }
     if (password !== confirmPassword) {
@@ -95,8 +108,16 @@ export default function Login() {
     if (error) {
       setStatus('idle');
       setErrorMsg(error.message);
+      return;
     }
-    // On success, onAuthStateChange in App.jsx takes over -- nothing else to do here.
+    // Remember this email for next time, so a returning user only has to
+    // type their password. On success, onAuthStateChange in App.jsx takes
+    // over from here -- nothing else to do in this function.
+    try {
+      localStorage.setItem('hearth-last-email', email.trim());
+    } catch {
+      // ignore -- purely a nice-to-have convenience, not worth surfacing an error for
+    }
   }
 
   async function handleForgotPassword(e) {
@@ -211,11 +232,14 @@ export default function Login() {
                 />
                 <input
                   type="password"
-                  placeholder="Password (min 6 characters)"
+                  placeholder="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
+                <div className="muted-small" style={{ margin: '-6px 0 8px' }}>
+                  {PASSWORD_HINT}
+                </div>
                 <input
                   type="password"
                   placeholder="Confirm password"
