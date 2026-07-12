@@ -407,6 +407,15 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     setHouseholdNameDraft(household.name || '');
   }, [household.name]);
   const [chartType, setChartType] = useState('pie');
+  // Bar chart orientation -- only exposed on the Home tab's big "Explore"
+  // chart (see renderChartCard(big) below); the normal small chart panel
+  // next to every other tab keeps its original fixed orientation, per
+  // explicit request. 'vertical' matches the app's original/default bar
+  // layout (categories stacked in a vertical list, bars extending
+  // sideways); 'horizontal' is the more familiar column-chart look (bars
+  // standing up, categories spread left-to-right along the bottom) -- handy
+  // on Home's wider canvas where there's room for that.
+  const [barOrientation, setBarOrientation] = useState('vertical');
   const [loading, setLoading] = useState(true);
   // Exactly one of these panels (Budget settings / Users / Admin console / Help)
   // can be open at a time -- they all render in the same spot below the chart,
@@ -1219,13 +1228,20 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   // what actually fixes clutter -- shrinking or resizing the chart doesn't,
   // since the underlying problem is too many slices, not too little room.
   const PIE_TOP_N = 6;
-  const pieChartData = useMemo(() => {
-    if (pieData.length <= PIE_TOP_N) return pieData;
+  // Home's bigger "Explore" pie gets a slightly higher cap than the normal
+  // small side-panel pie -- there's enough room on that larger canvas for a
+  // few more slices before it turns back into clutter, per explicit
+  // request ("Pie can slightly expand with more categories"). The small
+  // panel used everywhere else keeps the original PIE_TOP_N untouched.
+  const PIE_TOP_N_BIG = 9;
+  function getPieChartData(topN) {
+    if (pieData.length <= topN) return pieData;
     const sorted = [...pieData].sort((a, b) => b.value - a.value);
-    const top = sorted.slice(0, PIE_TOP_N);
-    const otherTotal = sorted.slice(PIE_TOP_N).reduce((s, d) => s + d.value, 0);
+    const top = sorted.slice(0, topN);
+    const otherTotal = sorted.slice(topN).reduce((s, d) => s + d.value, 0);
     return otherTotal > 0 ? [...top, { name: 'Other', value: otherTotal }] : top;
-  }, [pieData]);
+  }
+  const pieChartData = useMemo(() => getPieChartData(PIE_TOP_N), [pieData]);
 
   // Pareto = categories sorted highest-spend-first with a running cumulative
   // percentage line overlaid, so it's easy to see which categories make up
@@ -3147,9 +3163,34 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   // so it's just JSX built fresh per call -- see usersPanelBody above for
   // why that distinction matters.
   function renderChartCard(big) {
+    // Home's bigger view gets a slightly higher pie cap (PIE_TOP_N_BIG);
+    // the normal small side-panel chart keeps the original PIE_TOP_N.
+    const topN = big ? PIE_TOP_N_BIG : PIE_TOP_N;
+    const chartPieData = big ? getPieChartData(topN) : pieChartData;
+    // Home's big bar chart can be flipped between the app's original
+    // sideways-bar layout ('vertical') and a standing-column layout
+    // ('horizontal') -- the small panel everywhere else always stays
+    // 'vertical', matching its original look.
+    const effectiveBarOrientation = big ? barOrientation : 'vertical';
     return (
       <div className="panel">
         <h2 style={{ margin: '0 0 4px' }}>Spending by category</h2>
+        {big && chartType === 'bar' && (
+          <div className="input-tabs" style={{ marginBottom: 8 }}>
+            <button
+              className={`btn small ${effectiveBarOrientation === 'vertical' ? '' : 'secondary'}`}
+              onClick={() => setBarOrientation('vertical')}
+            >
+              Vertical
+            </button>
+            <button
+              className={`btn small ${effectiveBarOrientation === 'horizontal' ? '' : 'secondary'}`}
+              onClick={() => setBarOrientation('horizontal')}
+            >
+              Horizontal
+            </button>
+          </div>
+        )}
         {pieData.length === 0 ? (
           <div className="empty">Add a regular expense to see the breakdown.</div>
         ) : chartType === 'pie' ? (
@@ -3157,7 +3198,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             <ResponsiveContainer width="100%" height={big ? 560 : 360}>
               <PieChart margin={{ top: 20, right: 20, bottom: 0, left: 20 }}>
                 <Pie
-                  data={pieChartData}
+                  data={chartPieData}
                   dataKey="value"
                   nameKey="name"
                   cy="46%"
@@ -3166,7 +3207,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   label={({ percent }) => (percent >= 0.04 ? `${Math.round(percent * 100)}%` : '')}
                   labelLine={false}
                 >
-                  {pieChartData.map((_, i) => (
+                  {chartPieData.map((_, i) => (
                     <Cell key={i} fill={COLORS[i % COLORS.length]} />
                   ))}
                 </Pie>
@@ -3177,12 +3218,40 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 />
               </PieChart>
             </ResponsiveContainer>
-            {pieData.length > PIE_TOP_N && (
+            {pieData.length > topN && (
               <div className="muted-small" style={{ marginTop: 4 }}>
-                Showing your top {PIE_TOP_N} categories -- the rest are grouped into "Other" to keep this readable. Switch to Treemap or Bar to see every category separately.
+                Showing your top {topN} categories -- the rest are grouped into "Other" to keep this readable. Switch to Treemap or Bar to see every category separately.
               </div>
             )}
           </>
+        ) : chartType === 'bar' && effectiveBarOrientation === 'horizontal' ? (
+          // Standing-column layout: category names run along the bottom
+          // (angled so longer names don't overlap), value goes up the
+          // Y-axis -- the more familiar "bar chart" look, available on
+          // Home's wider canvas.
+          <ResponsiveContainer width="100%" height={big ? 480 : 340}>
+            <BarChart data={pieData} layout="horizontal" margin={{ top: 20, right: 20, left: 0, bottom: 70 }} barCategoryGap="25%">
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis
+                type="category"
+                dataKey="name"
+                interval={0}
+                angle={-45}
+                textAnchor="end"
+                height={80}
+                tick={{ fontSize: 11 }}
+                tickFormatter={(name) => (name.length > 14 ? name.slice(0, 14) + '…' : name)}
+              />
+              <YAxis type="number" tick={{ fontSize: 11 }} />
+              <Tooltip formatter={(v) => fmt(v)} />
+              <Bar dataKey="value" barSize={28} radius={[3, 3, 0, 0]} isAnimationActive={false}>
+                {pieData.map((_, i) => (
+                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                ))}
+                <LabelList dataKey="value" content={DirhamBarLabel} />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
         ) : chartType === 'bar' ? (
           <div style={{ maxHeight: big ? 760 : 520, overflowY: pieData.length > (big ? 24 : 17) ? 'auto' : 'visible' }}>
             <ResponsiveContainer width="100%" height={Math.max(big ? 260 : 180, pieData.length * (big ? 42 : 30))}>
@@ -3333,7 +3402,28 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
         <div className="top-bar-row">
           <div className="header-title-row">
             <HearthMark size={34} />
-            <h1 className="app-title-purple">{household.name || 'Hearth'}</h1>
+            {/* The page title is now editable right here, in place, instead
+                of only through Settings > App Settings -- typing here and
+                clicking away (auto-saves, same commitHouseholdName as
+                before) renames the household/app label everywhere it shows
+                (this header, the splash screen, PDF reports). Settings no
+                longer has its own separate "Household name" field for this,
+                since it would just be a second way to edit the same value. */}
+            {isOwner ? (
+              <input
+                type="text"
+                className="app-title-purple app-title-input"
+                value={householdNameDraft}
+                onChange={(e) => setHouseholdNameDraft(e.target.value)}
+                onBlur={(e) => commitHouseholdName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
+                placeholder="Expense Management"
+                title="Click to rename -- saves automatically"
+                style={{ width: Math.max(120, (householdNameDraft?.length || 8) * 21) + 'px' }}
+              />
+            ) : (
+              <h1 className="app-title-purple">{household.name || 'Hearth'}</h1>
+            )}
           </div>
           <span className="corner-version-badge" title="This updates automatically -- if a change doesn't look right, reload the page.">
             {formatVersionBadge()}
@@ -5050,7 +5140,12 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               this always-on transaction list. */}
           {inputTab && (
           <div className="panel">
-            <h2>Expenses this month</h2>
+            {/* Renamed from the generic "Expenses this month" -- the month
+                shown here always follows currentMonth (the same </> month-
+                nav state driving the whole dashboard), so it stays correct
+                automatically as you switch months, no separate picker
+                needed. */}
+            <h2>Regular Expenses for {monthLabel(currentMonth)}</h2>
             {monthExpenses.length === 0 ? (
               <div className="empty">No one-off expenses logged for this month yet.</div>
             ) : isMobile ? (
@@ -5363,13 +5458,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <p><strong>Fixed Expenses</strong> -- for recurring bills, loans, EMIs, and rent. Set a Start date, an optional End date, and how often it repeats (Monthly, Alternate month, Quarterly, Half-yearly, Once a year). Every field auto-saves as you edit -- there's no Save button to click. Set a Due date to get an in-app reminder starting 3 days before it's due, and an email reminder if it's set up. It has the same optional note + attachment icons as Regular Expenses -- handy for keeping a loan agreement or lease document attached to the bill itself.</p>
               <p><strong>Notes &amp; Attachments</strong> -- the note (<StickyNote size={11} style={{ verticalAlign: -2 }} />) and paperclip (<Paperclip size={11} style={{ verticalAlign: -2 }} />) icons sit right before the Add button on Income, Fixed Expenses, Regular Expenses, and Savings. Once a row has a saved document, its paperclip icon shows up in two places for convenience -- under the Description/Name cell, and again next to that row's delete icon -- either one opens the same viewer, where you can see the document on screen, open it in a compatible app on your device, or share it by email or WhatsApp.</p>
               <p><strong>Savings</strong> -- set how much you'd like to set aside for the month, e.g. "Emergency fund" or "Investment". Works exactly like Income: entered fresh per month with no auto-rollover, since the amount you're able to save can change month to month -- add a new row each month, or edit an existing row's Month field forward. Since money you set aside is no longer available to spend, it's treated the same as an expense: it's counted in "Spent so far" and "Combined expenses", and subtracted in "Remaining" and "Net", in addition to getting its own page in the PDF report so you can see planned savings build up over time. It has the same optional note + attachment icons as Regular Expenses.</p>
-              <p><strong>Expenses this month</strong> is visible below whichever tab (Income, Fixed Expenses, Regular Expenses, Savings) you're on, so you can see what's been logged without switching tabs. It also auto-saves. It's hidden on Home, which shows only the dashboard and the Explore section instead.</p>
+              <p><strong>Regular Expenses for [month]</strong> (labelled with whichever month you're viewing) is visible below whichever tab (Income, Fixed Expenses, Regular Expenses, Savings) you're on, so you can see what's been logged without switching tabs. It also auto-saves. It's hidden on Home, which shows only the dashboard and the Explore section instead.</p>
               <p><strong>Spending by category</strong> chart -- toggle between Pie, Bar, Pareto, and Treemap. The Pie groups smaller categories into "Other" to stay readable; Bar and Treemap show every category individually. The totals cards above show your combined income, combined expenses (split into Regular, Fixed, and Savings), and what's left of your budget and income after all three are accounted for.</p>
               <p><strong>AI Insights</strong> -- tap Generate below the chart for a short AI-written summary of the month you're viewing (spending patterns, whether you're over budget, and a couple of concrete suggestions). It only runs when you tap the button -- never automatically -- and Refresh regenerates it if your numbers have changed.</p>
               <p><strong>Budget Coach</strong> -- unlike AI Insights (one month at a time), Coach looks across your last 6 months for patterns: a category that keeps going over budget, spending trending up or down, or a savings goal that no longer looks realistic. It only ever writes out suggestions -- it never changes your Settings for you.</p>
               <p><strong>Chat BoT</strong> -- the round chat bubble in the corner (drag it anywhere on screen) answers questions about your household's own numbers across every tab -- Income, Fixed Expenses, Savings, one-off spending, and who's in the household -- and can also answer "how do I..." questions about the app itself and give suggestions when asked. It can only see the data already in the app -- nothing outside it.</p>
               <p><strong>Report</strong> -- generate a PDF for any date range, then view it on screen, download it, or email it. Each topic gets its own page -- Income, Expenses, Fixed Expenses, Savings, Spend Analysis (Pareto chart), and Recommendations -- except the Category Breakdown bar chart and the Summary table, which share one page by default and only split onto two once the chart itself grows long enough to need the room. Every table also auto-shrinks its text to try to fit on one page first, and only flows onto a second page if the list is too long even at a readable size. The last page closes with a data & privacy note.</p>
-              <p><strong>Settings</strong> -- has its own sub-tabs. App Settings covers household name and currency. Smart Budget always follows whichever month you're viewing on the dashboard (change the Month field there to set or review a different month instead) and covers your overall monthly cap for that month, plus an optional "Budget for Per Category" section below it and how this month's spending compares to those caps (you'll get a notification in the bell icon if you go over). Add Category adds, renames, or removes categories. Users (owners only) covers household members and invites -- see below. Admin Console (owners only) covers members and invites. Every field auto-saves as you edit -- there's no Save button to click.</p>
+              <p><strong>Settings</strong> -- has its own sub-tabs. Currency covers your household's chosen currency (renaming the app/household name itself happens right in the header now -- click the title next to the logo, owners only). Smart Budget always follows whichever month you're viewing on the dashboard (change the Month field there to set or review a different month instead) and covers your overall monthly cap for that month, plus an optional "Budget for Per Category" section below it and how this month's spending compares to those caps (you'll get a notification in the bell icon if you go over). Add Category adds, renames, or removes categories. Users (owners only) covers household members and invites -- see below. Admin Console (owners only) covers members and invites. Every field auto-saves as you edit -- there's no Save button to click.</p>
               <p><strong>Notifications</strong> -- the bell icon next to Help (top-right) replaces the old always-on red banners. It shows a count of unread items -- over-total-budget, over a category's budget, or a bill due soon -- and opening it lists them and marks them read.</p>
               <p><strong>Users</strong> -- see who's active in the household and who's been invited but hasn't joined yet, with full Name/Email/Phone/Location. Owners can invite new members (which also sends them a notification email), fill in or fix anyone's Name/Phone/Location, and edit their own details under "My details" -- handy for accounts created before these fields existed. Reachable from Settings' Users sub-tab. The Admin console (if you have access) is separate and never visible to other household members.</p>
               <p>All figures use your household's chosen currency, set in Settings. Your data is confidential and private to your household -- it's never shared with anyone outside it.</p>
@@ -5494,7 +5589,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                     className={`btn-teal ${settingsSubTab === 'app' ? '' : 'secondary'}`}
                     onClick={() => setSettingsSubTab('app')}
                   >
-                    App Settings
+                    Currency
                   </button>
                   <button
                     className={`btn-teal ${settingsSubTab === 'budgeting' ? '' : 'secondary'}`}
@@ -5663,21 +5758,10 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 </>
                 ) : (
                 <>
-                <div className="field" style={{ marginBottom: 12, maxWidth: 340 }}>
-                  <label>Household name</label>
-                  {isOwner ? (
-                    <input
-                      type="text"
-                      value={householdNameDraft}
-                      onChange={(e) => setHouseholdNameDraft(e.target.value)}
-                      onBlur={(e) => commitHouseholdName(e.target.value)}
-                    />
-                  ) : (
-                    <div className="muted-small" style={{ padding: '9px 0' }}>
-                      {household.name || 'Hearth'} <span style={{ opacity: .75 }}>(only the owner can rename)</span>
-                    </div>
-                  )}
-                </div>
+                {/* Household name/app-title editing moved to the header
+                    itself (click the title next to the logo, owners only) --
+                    it no longer has a separate field here, so there's one
+                    place to rename it instead of two. */}
                 <div className="row" style={{ marginBottom: 12 }}>
                   <div className="field">
                     <label>Currency</label>

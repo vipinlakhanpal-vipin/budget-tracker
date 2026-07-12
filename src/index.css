@@ -520,9 +520,23 @@ button, input, select, textarea { font-family: inherit; }
    can never be silently shrunk by a narrower-screen h1 override: a class
    selector always beats a same-or-lower-specificity tag selector
    regardless of media query or source order. Also covers "wherever user
-   changes" the household name (renaming it in Settings) -- the size here
-   is independent of the text content/length, so renaming never changes it. */
+   changes" the household name (now renamed right here in the header,
+   owners only -- see .app-title-input below) -- the size here is
+   independent of the text content/length, so renaming never changes it. */
 .app-title-purple { color: #7c3aed; font-size: 35px; }
+/* The owner-only editable version of the title above -- same visual size/
+   color/weight as the plain <h1>, but as a real <input> so it can be typed
+   into directly instead of only through a separate Settings field. Strip
+   all the browser's default input chrome (border/background/padding) so it
+   reads as plain text until you actually click into it; a soft underline on
+   hover/focus is the only hint that it's editable. */
+.app-title-input {
+  border: none; background: transparent; padding: 0; margin: 0;
+  font-family: inherit; font-weight: inherit;
+  border-bottom: 1px dashed transparent;
+}
+.app-title-input:hover { border-bottom-color: rgba(124, 58, 237, 0.35); }
+.app-title-input:focus { outline: none; border-bottom-color: #7c3aed; }
 /* Shared animation set for the gold heart-outline logo mark -- used at two
    sizes: the small HearthMark in the header (Dashboard.jsx) and the much
    larger version in the splash screen (Splash.jsx). Same three effects at
