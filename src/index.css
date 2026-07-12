@@ -428,6 +428,48 @@ button, input, select, textarea { font-family: inherit; }
 }
 .link-btn:hover { text-decoration: underline; }
 
+/* Note/attachment icons on the Add-expense and Fixed Expenses forms (task:
+   note + document attachment). Outline style matches the existing "Scan a
+   receipt" secondary button family, but square/icon-only since there's no
+   label text to size around. "active" (a note typed, or a file chosen)
+   swaps to the accent color so it's obvious at a glance the field isn't
+   empty, even while collapsed. */
+.icon-btn-outline {
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1.5px solid var(--border); border-radius: 9px; background: #fff;
+  color: var(--muted); cursor: pointer; transition: border-color .15s ease, color .15s ease;
+}
+.icon-btn-outline:hover { border-color: #a9d9d5; color: var(--text); }
+.icon-btn-outline.active { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+.field textarea {
+  padding: 9px 11px; border: 1.5px solid var(--border); border-radius: 9px; font-size: 13px;
+  background: #fff; color: var(--text); font-family: inherit; resize: vertical; width: 100%;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.field textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
+.attachment-chip {
+  display: inline-flex; align-items: center; gap: 5px; background: var(--accent-light);
+  color: var(--accent); padding: 4px 8px; border-radius: 999px; font-weight: 600;
+}
+.attachment-chip-remove {
+  display: inline-flex; border: none; background: none; color: inherit; cursor: pointer;
+  padding: 2px; margin-left: 2px; border-radius: 50%;
+}
+.attachment-chip-remove:hover { background: rgba(0,0,0,.08); }
+/* Small view-only note/attachment indicators shown next to a saved row's
+   Name/Description once it has a note and/or attachment -- desktop table
+   version is a clickable icon (note = alert with the text, attachment =
+   opens a signed download link), mobile transaction-row version is a
+   plain (non-clickable) hint since tapping the whole row already opens the
+   edit sheet, which shows the same info. */
+.row-attach-icons { display: flex; gap: 4px; margin-top: 4px; }
+.row-icon-btn {
+  display: inline-flex; align-items: center; justify-content: center; border: none;
+  background: var(--bg); color: var(--muted); cursor: pointer; padding: 3px; border-radius: 6px;
+}
+.row-icon-btn:hover { color: var(--accent); background: var(--accent-light); }
+.row-attach-hint { color: var(--muted); margin-left: 5px; vertical-align: -1px; }
+
 .confidentiality-note {
   margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border);
   font-size: 11px; color: var(--muted); line-height: 1.5;

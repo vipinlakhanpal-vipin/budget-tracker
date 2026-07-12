@@ -12,8 +12,20 @@ import { formatVersionBadge } from '../version.js';
 import {
   Home, Plus, FileText, Users as UsersIcon, Settings as SettingsIcon,
   Pencil, Trash2, X, ChevronLeft, ChevronRight, Camera, MessageCircle, Sparkles, User,
-  Palette, Check,
+  Palette, Check, StickyNote, Paperclip,
 } from 'lucide-react';
+
+// Max size for a note/fixed-expense attachment (images or PDF only). Kept as
+// a constant so the Add-expense form, Fixed Expenses form, and the shared
+// upload helper all enforce exactly the same limit.
+const ATTACHMENT_MAX_BYTES = 5 * 1024 * 1024; // 5MB
+const ATTACHMENT_ACCEPT = 'image/*,application/pdf';
+
+function isAllowedAttachment(file) {
+  if (!file) return true;
+  if (file.size > ATTACHMENT_MAX_BYTES) return false;
+  return file.type.startsWith('image/') || file.type === 'application/pdf';
+}
 
 // Small reusable "AI powered" pill -- a magic-wand sparkle + label used next
 // to every AI feature (auto-categorize, receipt scan, AI Insights, Budget
@@ -697,8 +709,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     dueDate: '',
     paymentSource: 'Cash',
     paymentBank: '',
+    notes: '',
   });
   const [recurringDrafts, setRecurringDrafts] = useState({});
+  // Same note/attachment pattern as the one-off expense form above.
+  const [showRecurringNotes, setShowRecurringNotes] = useState(false);
+  const [recurringFile, setRecurringFile] = useState(null);
+  const recurringFileInputRef = useRef(null);
 
   // Savings goals -- how much the household wants to set aside each month.
   // Entered per month on purpose, exactly like Income (no auto-rollover) --
@@ -1129,6 +1146,58 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   const paretoFontSize = paretoData.length > 14 ? 7 : paretoData.length > 9 ? 8 : 9;
   const paretoMaxNameLen = paretoData.length > 14 ? 6 : paretoData.length > 9 ? 9 : 14;
 
+  // Shared by the one-off expense form and the Fixed Expenses form. Uploads
+  // to the private "attachments" Storage bucket under a
+  // {household_id}/{table}-{row_id}-{filename} path -- the RLS policies on
+  // storage.objects check that the first path segment is a household this
+  // signed-in user belongs to (via my_household_ids()), so nobody outside
+  // the household can read/write another household's files even though the
+  // bucket itself is shared. Runs AFTER the row insert, since the path needs
+  // the new row's own id, then patches attachment_url/attachment_name onto
+  // that same row.
+  async function uploadAttachmentForRow(table, rowId, file) {
+    if (!file) return;
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const path = `${householdId}/${table}-${rowId}-${Date.now()}-${safeName}`;
+    const { error: uploadError } = await supabase.storage.from('attachments').upload(path, file, {
+      contentType: file.type || undefined,
+      upsert: false,
+    });
+    if (uploadError) {
+      alert('Saved, but the attachment could not be uploaded: ' + uploadError.message);
+      return;
+    }
+    const { error: patchError } = await supabase.from(table).update({
+      attachment_url: path,
+      attachment_name: file.name,
+    }).eq('id', rowId);
+    if (patchError) {
+      alert('Saved, but the attachment could not be linked: ' + patchError.message);
+    }
+  }
+
+  // The bucket is private, so viewing/downloading a saved attachment needs a
+  // short-lived signed URL generated on demand -- the stored attachment_url
+  // is just the storage path, never a public link.
+  async function viewAttachment(path) {
+    if (!path) return;
+    const { data, error } = await supabase.storage.from('attachments').createSignedUrl(path, 120);
+    if (error || !data?.signedUrl) {
+      alert('Could not open attachment: ' + (error?.message || 'unknown error'));
+      return;
+    }
+    window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+  }
+
+  function handleAttachmentPick(file, setFileFn) {
+    if (!file) return;
+    if (!isAllowedAttachment(file)) {
+      alert('Attachments must be an image or PDF, 5MB or smaller.');
+      return;
+    }
+    setFileFn(file);
+  }
+
   async function handleAddExpense(e) {
     e.preventDefault();
     const amount = parseFloat(form.amount);
@@ -1136,7 +1205,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       alert('Please choose a category and enter a valid amount.');
       return;
     }
-    const { error } = await supabase.from('expenses').insert({
+    const { data: inserted, error } = await supabase.from('expenses').insert({
       household_id: householdId,
       expense_date: form.date,
       category_id: form.categoryId,
@@ -1144,16 +1213,23 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       amount,
       payment_source: form.paymentSource || null,
       payment_bank: form.paymentSource === 'Cash' ? null : (form.paymentBank || null),
+      notes: form.notes.trim() || null,
       created_by: session.user.id,
       created_by_email: session.user.email,
-    });
+    }).select().single();
     if (error) {
       alert('Could not save expense: ' + error.message);
       return;
     }
+    if (expenseFile && inserted?.id) {
+      await uploadAttachmentForRow('expenses', inserted.id, expenseFile);
+    }
     const d = new Date(form.date + 'T00:00:00');
     setCurrentMonth(new Date(d.getFullYear(), d.getMonth(), 1));
-    setForm((f) => ({ ...f, description: '', amount: '' }));
+    setForm((f) => ({ ...f, description: '', amount: '', notes: '' }));
+    setShowExpenseNotes(false);
+    setExpenseFile(null);
+    if (expenseFileInputRef.current) expenseFileInputRef.current.value = '';
     loadAll();
   }
 
@@ -1645,7 +1721,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       alert('Please fill in name, category, amount, and start date.');
       return;
     }
-    const { error } = await supabase.from('recurring_expenses').insert({
+    const { data: inserted, error } = await supabase.from('recurring_expenses').insert({
       household_id: householdId,
       name: newRecurring.name.trim(),
       category_id: newRecurring.categoryId,
@@ -1656,13 +1732,20 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       due_date: newRecurring.dueDate || null,
       payment_source: newRecurring.paymentSource || null,
       payment_bank: CARD_PAYMENT_SOURCES.includes(newRecurring.paymentSource) ? (newRecurring.paymentBank || null) : null,
+      notes: newRecurring.notes.trim() || null,
       created_by: session.user.id,
-    });
+    }).select().single();
     if (error) {
       alert('Could not save fixed expense: ' + error.message);
       return;
     }
-    setNewRecurring((r) => ({ ...r, name: '', amount: '', endDate: '', dueDate: '' }));
+    if (recurringFile && inserted?.id) {
+      await uploadAttachmentForRow('recurring_expenses', inserted.id, recurringFile);
+    }
+    setNewRecurring((r) => ({ ...r, name: '', amount: '', endDate: '', dueDate: '', notes: '' }));
+    setShowRecurringNotes(false);
+    setRecurringFile(null);
+    if (recurringFileInputRef.current) recurringFileInputRef.current.value = '';
     loadAll();
   }
 
@@ -3044,7 +3127,62 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   />
                 </div>
               </div>
+              {/* Note + Attach icons -- per explicit request, a small note
+                  symbol reveals a textarea for a longer free-text description
+                  (separate from the short Description field above), and a
+                  paperclip lets you attach one image or PDF (5MB cap) related
+                  to this expense. Both are optional and collapsed by default
+                  so most expenses (which need neither) stay a single quick row. */}
+              <div className="field" style={{ flex: '0 0 auto' }}>
+                <label style={{ visibility: 'hidden' }}>Note</label>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button
+                    type="button"
+                    className={`icon-btn-outline ${form.notes ? 'active' : ''}`}
+                    title="Add a note"
+                    onClick={() => setShowExpenseNotes((s) => !s)}
+                    style={{ height: 40, width: 40 }}
+                  >
+                    <StickyNote size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    className={`icon-btn-outline ${expenseFile ? 'active' : ''}`}
+                    title="Attach a document"
+                    onClick={() => expenseFileInputRef.current?.click()}
+                    style={{ height: 40, width: 40 }}
+                  >
+                    <Paperclip size={16} />
+                  </button>
+                  <input
+                    type="file"
+                    accept={ATTACHMENT_ACCEPT}
+                    ref={expenseFileInputRef}
+                    style={{ display: 'none' }}
+                    onChange={(e) => handleAttachmentPick(e.target.files?.[0], setExpenseFile)}
+                  />
+                </div>
+              </div>
             </div>
+            {showExpenseNotes && (
+              <div className="field" style={{ marginTop: 8 }}>
+                <label>Note (optional, long description)</label>
+                <textarea
+                  rows={2}
+                  placeholder="Any extra detail about this expense..."
+                  value={form.notes}
+                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                />
+              </div>
+            )}
+            {expenseFile && (
+              <div className="muted-small attachment-chip" style={{ marginTop: 6 }}>
+                <Paperclip size={12} /> {expenseFile.name}
+                <button type="button" className="attachment-chip-remove" onClick={() => { setExpenseFile(null); if (expenseFileInputRef.current) expenseFileInputRef.current.value = ''; }}>
+                  <X size={12} />
+                </button>
+              </div>
+            )}
             {/* Payment source sits on its own row, below the main fields --
                 keeping it out of the first row avoids cramming a 5th/6th
                 field into a row already tight on width (the exact pattern
@@ -3499,6 +3637,40 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   </select>
                 </div>
               )}
+              {/* Same note/attach pair as the one-off expense form above --
+                  optional long description + one image/PDF attachment
+                  (5MB cap), useful here for loan agreements, EMI schedules,
+                  or lease documents. */}
+              <div className="field" style={{ flex: '0 0 auto' }}>
+                <label style={{ visibility: 'hidden' }}>Note</label>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button
+                    type="button"
+                    className={`icon-btn-outline ${newRecurring.notes ? 'active' : ''}`}
+                    title="Add a note"
+                    onClick={() => setShowRecurringNotes((s) => !s)}
+                    style={{ height: 40, width: 40 }}
+                  >
+                    <StickyNote size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    className={`icon-btn-outline ${recurringFile ? 'active' : ''}`}
+                    title="Attach a document"
+                    onClick={() => recurringFileInputRef.current?.click()}
+                    style={{ height: 40, width: 40 }}
+                  >
+                    <Paperclip size={16} />
+                  </button>
+                  <input
+                    type="file"
+                    accept={ATTACHMENT_ACCEPT}
+                    ref={recurringFileInputRef}
+                    style={{ display: 'none' }}
+                    onChange={(e) => handleAttachmentPick(e.target.files?.[0], setRecurringFile)}
+                  />
+                </div>
+              </div>
               {/* Add sits right next to Payment Source (and Bank, when it's
                   showing) in this same row, instead of on its own line below.
                   Same invisible-label trick as Income's Add button so its
@@ -3508,6 +3680,25 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 <button className="btn" type="submit" style={{ height: 40 }}>Add</button>
               </div>
             </div>
+            {showRecurringNotes && (
+              <div className="field" style={{ marginTop: 8 }}>
+                <label>Note (optional, long description)</label>
+                <textarea
+                  rows={2}
+                  placeholder="Any extra detail about this fixed expense..."
+                  value={newRecurring.notes}
+                  onChange={(e) => setNewRecurring({ ...newRecurring, notes: e.target.value })}
+                />
+              </div>
+            )}
+            {recurringFile && (
+              <div className="muted-small attachment-chip" style={{ marginTop: 6 }}>
+                <Paperclip size={12} /> {recurringFile.name}
+                <button type="button" className="attachment-chip-remove" onClick={() => { setRecurringFile(null); if (recurringFileInputRef.current) recurringFileInputRef.current.value = ''; }}>
+                  <X size={12} />
+                </button>
+              </div>
+            )}
             </form>
           </div>
           {/* Data entry (above) and the list of what's already been entered
@@ -3552,7 +3743,11 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         {title.charAt(0).toUpperCase()}
                       </span>
                       <span className="mobile-txn-mid">
-                        <span className="mobile-txn-title">{title}</span>
+                        <span className="mobile-txn-title">
+                          {title}
+                          {r.notes && <StickyNote size={11} className="row-attach-hint" />}
+                          {r.attachment_url && <Paperclip size={11} className="row-attach-hint" />}
+                        </span>
                         <span className="mobile-txn-sub">{catName} &middot; {freqLabel}</span>
                       </span>
                       <span className="mobile-txn-amount"><Amt value={r.amount} /></span>
@@ -3604,6 +3799,20 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           onChange={(e) => updateRecurringDraftField(r.id, 'name', e.target.value)}
                           onBlur={(e) => commitRecurringField(r.id, 'name', e.target.value)}
                         />
+                        {(r.notes || r.attachment_url) && (
+                          <div className="row-attach-icons">
+                            {r.notes && (
+                              <button type="button" className="row-icon-btn" title={r.notes} onClick={() => alert(r.notes)}>
+                                <StickyNote size={11} />
+                              </button>
+                            )}
+                            {r.attachment_url && (
+                              <button type="button" className="row-icon-btn" title={r.attachment_name || 'View attachment'} onClick={() => viewAttachment(r.attachment_url)}>
+                                <Paperclip size={11} />
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </td>
                       <td data-label="Category">
                         <select
@@ -3729,6 +3938,16 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       </button>
                     </div>
                     <h2 style={{ margin: '0 0 12px' }}>Edit fixed expense</h2>
+                    {(r.notes || r.attachment_url) && (
+                      <div className="muted-small" style={{ marginBottom: 10 }}>
+                        {r.notes && <div style={{ marginBottom: 4 }}><StickyNote size={12} style={{ marginRight: 4, verticalAlign: -2 }} />{r.notes}</div>}
+                        {r.attachment_url && (
+                          <button type="button" className="link-btn" style={{ padding: 0 }} onClick={() => viewAttachment(r.attachment_url)}>
+                            <Paperclip size={12} style={{ marginRight: 4, verticalAlign: -2 }} />View {r.attachment_name || 'attachment'}
+                          </button>
+                        )}
+                      </div>
+                    )}
                     <div className="field" style={{ marginBottom: 10 }}>
                       <label>Name</label>
                       <input
@@ -4065,7 +4284,11 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         {catName.charAt(0).toUpperCase()}
                       </span>
                       <span className="mobile-txn-mid">
-                        <span className="mobile-txn-title">{title}</span>
+                        <span className="mobile-txn-title">
+                          {title}
+                          {e.notes && <StickyNote size={11} className="row-attach-hint" />}
+                          {e.attachment_url && <Paperclip size={11} className="row-attach-hint" />}
+                        </span>
                         <span className="mobile-txn-sub">{catName} &middot; {fmtDate(e.expense_date)}</span>
                       </span>
                       <span className="mobile-txn-amount"><Amt value={e.amount} /></span>
@@ -4115,6 +4338,20 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           onChange={(ev) => updateExpenseDraftField(e.id, 'description', ev.target.value)}
                           onBlur={(ev) => commitExpenseField(e.id, 'description', ev.target.value)}
                         />
+                        {(e.notes || e.attachment_url) && (
+                          <div className="row-attach-icons">
+                            {e.notes && (
+                              <button type="button" className="row-icon-btn" title={e.notes} onClick={() => alert(e.notes)}>
+                                <StickyNote size={11} />
+                              </button>
+                            )}
+                            {e.attachment_url && (
+                              <button type="button" className="row-icon-btn" title={e.attachment_name || 'View attachment'} onClick={() => viewAttachment(e.attachment_url)}>
+                                <Paperclip size={11} />
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </td>
                       <td data-label="Amount">
                         <div className="amount-field-wrap tight">
@@ -4191,6 +4428,16 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                     </button>
                   </div>
                   <h2 style={{ margin: '0 0 12px' }}>Edit expense</h2>
+                  {(e.notes || e.attachment_url) && (
+                    <div className="muted-small" style={{ marginBottom: 10 }}>
+                      {e.notes && <div style={{ marginBottom: 4 }}><StickyNote size={12} style={{ marginRight: 4, verticalAlign: -2 }} />{e.notes}</div>}
+                      {e.attachment_url && (
+                        <button type="button" className="link-btn" style={{ padding: 0 }} onClick={() => viewAttachment(e.attachment_url)}>
+                          <Paperclip size={12} style={{ marginRight: 4, verticalAlign: -2 }} />View {e.attachment_name || 'attachment'}
+                        </button>
+                      )}
+                    </div>
+                  )}
                   <div className="field" style={{ marginBottom: 10 }}>
                     <label>Date</label>
                     <input
@@ -4735,10 +4982,10 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           <div className="panel" ref={panelRef}>
             <h2>How to use this app</h2>
             <div className="muted-small" style={{ lineHeight: 1.6 }}>
-              <p><strong>Add an expense</strong> -- log one-off spending (groceries, dining, shopping). Pick the date, category, a short description, and the amount, then Add. It appears under "Expenses this month" and is always editable there -- just type into a field and it saves.</p>
+              <p><strong>Add an expense</strong> -- log one-off spending (groceries, dining, shopping). Pick the date, category, a short description, and the amount, then Add. It appears under "Expenses this month" and is always editable there -- just type into a field and it saves. The note icon (<StickyNote size={11} style={{ verticalAlign: -2 }} />) next to Amount opens a spot for a longer free-text description, and the paperclip (<Paperclip size={11} style={{ verticalAlign: -2 }} />) lets you attach one photo or PDF (5MB max) -- a receipt, warranty, or anything else worth keeping with that expense. Both are optional. Once saved, a small icon appears next to the expense if it has a note or attachment -- click it to read the note or open the file.</p>
               <p><strong>Scan a receipt</strong> -- below the Add-an-expense form, upload a photo of a receipt (or a screenshot/sheet listing several expenses) and Claude will read it for you. You'll see an editable review list first -- fix anything that looks wrong, untick what you don't want, then add only what you confirm. Nothing is saved automatically.</p>
               <p><strong>Income</strong> -- add each income source per month (e.g. Salary). Income does NOT roll over automatically -- since pay can change month to month (deductions, advances, etc.), add a fresh row each month with that month's actual amount, or edit an existing row's Month field forward. Every field auto-saves.</p>
-              <p><strong>Fixed Expenses</strong> -- for recurring bills, loans, EMIs, and rent. Set a Start date, an optional End date, and how often it repeats (Monthly, Alternate month, Quarterly, Half-yearly, Once a year). Every field auto-saves as you edit -- there's no Save button to click. Set a Due date to get an in-app reminder starting 3 days before it's due, and an email reminder if it's set up.</p>
+              <p><strong>Fixed Expenses</strong> -- for recurring bills, loans, EMIs, and rent. Set a Start date, an optional End date, and how often it repeats (Monthly, Alternate month, Quarterly, Half-yearly, Once a year). Every field auto-saves as you edit -- there's no Save button to click. Set a Due date to get an in-app reminder starting 3 days before it's due, and an email reminder if it's set up. It has the same optional note + attachment icons as Add an expense -- handy for keeping a loan agreement or lease document attached to the bill itself.</p>
               <p><strong>Savings</strong> -- set how much you'd like to set aside for the month, e.g. "Emergency fund" or "Investment". Works exactly like Income: entered fresh per month with no auto-rollover, since the amount you're able to save can change month to month -- add a new row each month, or edit an existing row's Month field forward. Since money you set aside is no longer available to spend, it's treated the same as an expense: it's counted in "Spent so far" and "Combined expenses", and subtracted in "Remaining" and "Net", in addition to getting its own page in the PDF report so you can see planned savings build up over time.</p>
               <p><strong>Expenses this month</strong> is always visible below the tabs so you can see what's been logged without switching tabs. It also auto-saves.</p>
               <p><strong>Spending by category</strong> chart -- toggle between Pie, Bar, Pareto, and Treemap. The Pie groups smaller categories into "Other" to stay readable; Bar and Treemap show every category individually. The totals cards above show your combined income, combined expenses (split into Regular, Fixed, and Savings), and what's left of your budget and income after all three are accounted for.</p>
