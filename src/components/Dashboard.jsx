@@ -3511,17 +3511,26 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 longer has its own separate "Household name" field for this,
                 since it would just be a second way to edit the same value. */}
             {isOwner ? (
-              <input
-                type="text"
-                className="app-title-purple app-title-input"
-                value={householdNameDraft}
-                onChange={(e) => setHouseholdNameDraft(e.target.value)}
-                onBlur={(e) => commitHouseholdName(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
-                placeholder="Expense Management"
-                title="Click to rename -- saves automatically"
-                style={{ width: Math.max(120, (householdNameDraft?.length || 8) * 21) + 'px' }}
-              />
+              <>
+                <input
+                  type="text"
+                  className="app-title-purple app-title-input"
+                  value={householdNameDraft}
+                  onChange={(e) => setHouseholdNameDraft(e.target.value)}
+                  onBlur={(e) => commitHouseholdName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
+                  placeholder="Expense Management"
+                  title="Click to rename -- saves automatically"
+                  style={{ width: Math.max(120, (householdNameDraft?.length || 8) * 21) + 'px' }}
+                />
+                {/* Light-grey hint telling the owner they can (and should)
+                    give the app its own name -- only shown while the field
+                    is still empty, so it disappears the moment they save
+                    a real title and never nags again after that. */}
+                {!householdNameDraft && (
+                  <span className="title-hint-text">add a title here</span>
+                )}
+              </>
             ) : (
               <h1 className="app-title-purple">{household.name || 'Hearth'}</h1>
             )}

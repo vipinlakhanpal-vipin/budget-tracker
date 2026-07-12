@@ -540,6 +540,17 @@ button, input, select, textarea { font-family: inherit; }
 }
 .app-title-input:hover { border-bottom-color: rgba(124, 58, 237, 0.35); }
 .app-title-input:focus { outline: none; border-bottom-color: #7c3aed; }
+/* Light-grey nudge shown next to the title input only while it's still
+   empty -- tells a first-time owner the title is theirs to set, without
+   looking like an error or a permanent label. Disappears for good once
+   they type and save a real name. */
+.title-hint-text {
+  color: #9ca3af;
+  font-size: 12px;
+  font-weight: 400;
+  margin-left: 8px;
+  white-space: nowrap;
+}
 /* Shared animation set for the gold heart-outline logo mark -- used at two
    sizes: the small HearthMark in the header (Dashboard.jsx) and the much
    larger version in the splash screen (Splash.jsx). Same three effects at
