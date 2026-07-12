@@ -1058,6 +1058,15 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     setTotalBudgetDraft(row ? String(row.total_budget) : '');
   }, [budgetMonthDraft, monthlyBudgets]);
 
+  // Follow the dashboard's own month navigation (the < / > arrows) so the
+  // Smart Budget tab's Month field always shows whichever month is
+  // currently selected -- previously it only picked up the current month
+  // the moment the tab was first opened, so switching months with the tab
+  // already open (or already visited) kept showing the stale month.
+  useEffect(() => {
+    setBudgetMonthDraft(monthKey(currentMonth));
+  }, [currentMonth]);
+
   const recurringForMonth = useMemo(() => {
     const key = monthKey(currentMonth);
     return recurringExpenses.filter((r) => recurringOccursInMonth(r, key));
@@ -5226,7 +5235,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <p><strong>Budget Coach</strong> -- unlike AI Insights (one month at a time), Coach looks across your last 6 months for patterns: a category that keeps going over budget, spending trending up or down, or a savings goal that no longer looks realistic. It only ever writes out suggestions -- it never changes your Settings for you.</p>
               <p><strong>Chat BoT</strong> -- the round chat bubble in the corner (drag it anywhere on screen) answers questions about your household's own numbers across every tab -- Income, Fixed Expenses, Savings, one-off spending, and who's in the household -- and can also answer "how do I..." questions about the app itself and give suggestions when asked. It can only see the data already in the app -- nothing outside it.</p>
               <p><strong>Report</strong> -- generate a PDF for any date range, then view it on screen, download it, or email it. Each topic gets its own page -- Income, Expenses, Fixed Expenses, Savings, Spend Analysis (Pareto chart), and Recommendations -- except the Category Breakdown bar chart and the Summary table, which share one page by default and only split onto two once the chart itself grows long enough to need the room. Every table also auto-shrinks its text to try to fit on one page first, and only flows onto a second page if the list is too long even at a readable size. The last page closes with a data & privacy note.</p>
-              <p><strong>Settings</strong> -- has its own sub-tabs. App Settings covers household name and currency. Budgeting defaults to the current month (change the Month field to set or review a different month) and covers your overall monthly cap for that month, plus an optional "Budget for Per Category" section below it and how this month's spending compares to those caps (you'll get a notification in the bell icon if you go over). Add Category adds, renames, or removes categories. Admin Console (owners only) covers members and invites. Every field auto-saves as you edit -- there's no Save button to click.</p>
+              <p><strong>Settings</strong> -- has its own sub-tabs. App Settings covers household name and currency. Smart Budget always follows whichever month you're viewing on the dashboard (change the Month field there to set or review a different month instead) and covers your overall monthly cap for that month, plus an optional "Budget for Per Category" section below it and how this month's spending compares to those caps (you'll get a notification in the bell icon if you go over). Add Category adds, renames, or removes categories. Admin Console (owners only) covers members and invites. Every field auto-saves as you edit -- there's no Save button to click.</p>
               <p><strong>Notifications</strong> -- the bell icon next to Help (top-right) replaces the old always-on red banners. It shows a count of unread items -- over-total-budget, over a category's budget, or a bill due soon -- and opening it lists them and marks them read.</p>
               <p><strong>Users</strong> -- see who's active in the household and who's been invited but hasn't joined yet, with full Name/Email/Phone/Location. Owners can invite new members (which also sends them a notification email), fill in or fix anyone's Name/Phone/Location, and edit their own details under "My details" -- handy for accounts created before these fields existed. The Admin console (if you have access) is separate and never visible to other household members.</p>
               <p>All figures use your household's chosen currency, set in Settings. Your data is confidential and private to your household -- it's never shared with anyone outside it.</p>
@@ -5357,7 +5366,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                     className={`btn-teal ${settingsSubTab === 'budgeting' ? '' : 'secondary'}`}
                     onClick={() => { setBudgetMonthDraft(monthKey(currentMonth)); setSettingsSubTab('budgeting'); }}
                   >
-                    Budgeting
+                    Smart Budget
                   </button>
                   <button
                     className={`btn-teal ${settingsSubTab === 'category' ? '' : 'secondary'}`}
@@ -5379,12 +5388,12 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   <AdminConsole embedded onClose={() => setSettingsSubTab('app')} />
                 ) : settingsSubTab === 'budgeting' ? (
                 <>
-                {/* Budgeting tab -- Monthly Budget and per-category Budget
-                    merged into one tab, per explicit request. Month defaults
-                    to the dashboard's currently selected month every time
-                    this tab is opened (see the "Budgeting" button's onClick),
-                    and can be changed here to set/review a different month's
-                    figure without it affecting the rest of the dashboard. */}
+                {/* Smart Budget tab -- Monthly Budget and per-category Budget
+                    merged into one tab, per explicit request. Month always
+                    follows the dashboard's currently selected month (see the
+                    currentMonth-keyed useEffect above), and can be changed
+                    here to set/review a different month's figure without it
+                    affecting the rest of the dashboard. */}
                 <div className="row" style={{ marginBottom: 12 }}>
                   <div className="field" style={{ flex: '0 1 170px', minWidth: 150 }}>
                     <label>Month</label>
