@@ -180,6 +180,15 @@ button, input, select, textarea { font-family: inherit; }
   background: linear-gradient(180deg, #fb923c 0%, #c2410c 55%, #7c2d12 100%);
   -webkit-background-clip: text; background-clip: text; color: transparent;
 }
+/* Sized in em, not px, so it scales exactly with .splash-top-tagline's own
+   clamp()-driven font-size at any screen width -- a fixed px size would
+   look mismatched once the text shrinks on a narrow phone. Inline (not
+   flex) so it flows naturally as part of the text and stays glued to the
+   front of "Hearth" even if the line wraps. */
+.splash-top-tagline-icon {
+  width: .8em; height: .8em; display: inline-block;
+  vertical-align: -.1em; margin-right: .15em;
+}
 .splash-orb {
   position: absolute; border-radius: 50%; filter: blur(40px); opacity: .35;
 }

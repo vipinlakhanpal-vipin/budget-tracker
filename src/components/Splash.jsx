@@ -127,7 +127,18 @@ export default function Splash() {
           map/orbs get busy, per explicit request ("slightly down on plain
           teal solid background"), rather than competing with the main
           logo/text block anchored at the bottom. */}
-      <div className="splash-top-tagline">Hearth &mdash; Spend smart. Save better. Live happier.</div>
+      <div className="splash-top-tagline">
+        {/* Same 4-point AI sparkle glyph used everywhere else in the app
+            (see .splash-ai-tag / Dashboard's AI-powered tags), sized in em
+            units so it always matches this line's own font-size exactly --
+            including its clamp()-driven shrink on narrow phone screens --
+            instead of a fixed px size that would look mismatched once the
+            text itself scales. */}
+        <svg className="splash-top-tagline-icon" viewBox="0 0 20 20" fill="none">
+          <path d="M10 1 L12.2 7.8 L19 10 L12.2 12.2 L10 19 L7.8 12.2 L1 10 L7.8 7.8 Z" fill="#eab308" />
+        </svg>
+        Hearth &mdash; Spend smart. Save better. Live happier.
+      </div>
 
       <div className="splash-orb splash-orb-1" />
       <div className="splash-orb splash-orb-2" />
