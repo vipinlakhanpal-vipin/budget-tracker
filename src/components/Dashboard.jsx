@@ -609,17 +609,23 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   // realigning the page: window.scrollTo always moves the real page scroll
   // position, regardless of what's currently stuck to the top.
   //
-  // Also deliberately deferred by two animation frames rather than called
-  // synchronously in the same click handler that flips inputTab/activePanel.
-  // Switching tabs changes which panels/tables are mounted, which can
-  // shrink or grow the page's total height a lot (e.g. Home hides every
-  // form and table). Calling scrollTo *before* React has re-rendered starts
-  // it against the OLD (taller or shorter) page, and if the resize lands
-  // mid-scroll the browser clamps the in-flight position to whatever the
-  // new max scroll position is instead of finishing the trip to 0 --
-  // landing partway down the page instead of at the top. Waiting two rAFs
-  // lets the resize settle first, so the scroll always starts from (and
-  // finishes at) the right place.
+  // Also deliberately deferred rather than called synchronously in the same
+  // click handler that flips inputTab/activePanel. Switching tabs changes
+  // which panels/tables are mounted, which can shrink or grow the page's
+  // total height a lot (e.g. Home hides every form and table). Calling
+  // scrollTo *before* React has re-rendered starts it against the OLD
+  // (taller or shorter) page, and if the resize lands mid-scroll the
+  // browser clamps the in-flight position to whatever the new max scroll
+  // position is instead of finishing the trip to 0 -- landing partway down
+  // the page instead of at the top.
+  //
+  // Uses setTimeout(..., 0) rather than requestAnimationFrame to do that
+  // deferring. rAF is the "correct" tool for this in most apps, but it
+  // ties the callback to the next paint -- and turned out to be unreliable
+  // to depend on here (it can end up simply not firing in some automated/
+  // background-tab contexts, silently dropping the scroll entirely).
+  // setTimeout only depends on the ordinary JS event loop finishing the
+  // current render/commit first, which is all we actually need.
   //
   // Uses behavior: 'auto' (instant), not 'smooth'. A 'smooth' scroll is an
   // animation spread over several frames -- if anything on the page nudges
@@ -629,11 +635,9 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   // for that to happen in, so it reliably lands exactly at the top every
   // time.
   function scrollToFrameA() {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        window.scrollTo({ top: 0, behavior: 'auto' });
-      });
-    });
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'auto' });
+    }, 0);
   }
   function goToAdd(tab) {
     setActivePanel(null);
@@ -650,24 +654,25 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     // app") right after the "scroll", leaving users looking at a header they
     // already had and not the section they just opened. Instead, compute
     // the sticky frame's real rendered height and land just below it.
-    // requestAnimationFrame gives the panel (which only mounts once
-    // activePanel matches) one tick to actually be in the DOM/laid out
-    // before measuring it.
+    // Deferred with setTimeout (not requestAnimationFrame) for the same
+    // reliability reason as scrollToFrameA above -- rAF turned out to
+    // silently never fire in some contexts, dropping the scroll entirely
+    // (which is exactly what made Report/Settings/Help look unresponsive).
+    // setTimeout still gives the panel (which only mounts once activePanel
+    // matches) a tick to actually be in the DOM/laid out before measuring
+    // it, without depending on the paint/compositor pipeline to run.
     //
-    // Uses behavior: 'auto' (instant) rather than 'smooth' -- same reason
-    // as scrollToFrameA above: a 'smooth' scroll can get clamped or
-    // silently cancelled if anything else nudges the page's layout during
-    // the animation window, which was exactly why opening Report/Settings/
-    // Help sometimes looked like it "did nothing" (the scroll fired, but
-    // never actually finished moving the page).
-    const raf = requestAnimationFrame(() => {
+    // Uses behavior: 'auto' (instant) rather than 'smooth' -- a 'smooth'
+    // scroll can get clamped or silently cancelled if anything else nudges
+    // the page's layout during the animation window.
+    const t = setTimeout(() => {
       if (!panelRef.current) return;
       const stickyHeight = stickyFrameRef.current?.offsetHeight || 0;
       const panelTop = panelRef.current.getBoundingClientRect().top + window.scrollY;
       const targetY = Math.max(panelTop - stickyHeight - 12, 0);
       window.scrollTo({ top: targetY, behavior: 'auto' });
-    });
-    return () => cancelAnimationFrame(raf);
+    }, 0);
+    return () => clearTimeout(t);
   }, [activePanel]);
   const [inputTab, setInputTab] = useState('expense');
   const [members, setMembers] = useState([]);
