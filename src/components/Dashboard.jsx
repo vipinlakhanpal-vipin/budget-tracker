@@ -577,18 +577,30 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
   function goToOverview() {
     setActivePanel(null);
+    setInputTab(null);
     setAddSheetOpen(false);
     closeAllMobileEditSheets();
-    topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    scrollToFrameA();
   }
-  // Scrolls the sticky header/month-nav/summary-cards block ("Frame A")
-  // back into view -- called whenever one of the header row's own tabs
-  // (Income/Fixed/Regular/Savings/Report/Settings/Help) is clicked, so
-  // switching tabs always re-anchors back at Frame A instead of leaving the
-  // page wherever it happened to be scrolled to (e.g. after exploring the
+  // Scrolls all the way back to the top of the page -- called whenever one
+  // of the header row's own tabs (Home/Income/Fixed/Regular/Savings/Report/
+  // Settings/Help) is clicked, so switching tabs always re-anchors back at
+  // the top instead of leaving the page wherever it happened to be scrolled
+  // to (e.g. after reading through a long Expenses table, or exploring the
   // Home tab's larger chart section further down the page).
+  //
+  // NOTE: this deliberately uses window.scrollTo rather than
+  // topRef.current.scrollIntoView(...) (the original approach). Frame A
+  // (.sticky-dashboard-frame, which topRef points into) is `position:
+  // sticky; top: 0`, so once the page is scrolled down even a little, that
+  // element is already sitting at the top of the viewport from the
+  // browser's point of view -- scrollIntoView sees it as "already in view"
+  // and does nothing, silently no-op'ing every single time this was called
+  // from anywhere below the fold. That was the actual bug behind tabs not
+  // realigning the page: window.scrollTo always moves the real page scroll
+  // position, regardless of what's currently stuck to the top.
   function scrollToFrameA() {
-    topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
   function goToAdd(tab) {
     setActivePanel(null);
@@ -3329,7 +3341,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             <button
               type="button"
               className={`btn-teal header-tab-btn ${!inputTab && !activePanel ? 'header-tab-btn-active' : ''}`}
-              onClick={() => { setActivePanel(null); setInputTab(null); }}
+              onClick={() => { setActivePanel(null); setInputTab(null); scrollToFrameA(); }}
               title="Show just the dashboard"
             >
               <Home size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
