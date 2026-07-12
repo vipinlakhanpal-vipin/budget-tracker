@@ -3259,7 +3259,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               const totalSpent = pieData.reduce((s, d) => s + d.value, 0);
               const top5 = sortedPie.slice(0, 5);
               return (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 28, marginBottom: 18, paddingBottom: 16, borderBottom: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 28, marginBottom: 4 }}>
                   <div style={{ flex: '0 0 150px' }}>
                     <div className="muted-small" style={{ textTransform: 'uppercase', letterSpacing: 0.4 }}>Total spent</div>
                     <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}><Amt value={totalSpent} /></div>
@@ -3291,14 +3291,21 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             })()}
             <div style={{ display: 'flex', gap: 20, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
               <div style={{ flex: '1 1 300px', minWidth: 0, maxWidth: big ? 640 : 'none' }}>
+                {/* No divider line above the chart -- just a tight gap so the
+                    pie sits right under the summary block instead of feeling
+                    separated from it. Top margin trimmed and cy pulled up
+                    slightly (46% -> 40%) to shift the circle upward into
+                    that reclaimed space, with a bit more radius (160 -> 172)
+                    since there's now room for it without spilling past the
+                    card -- per explicit request. */}
                 <ResponsiveContainer width="100%" height={big ? 560 : 360}>
-                  <PieChart margin={{ top: 20, right: 20, bottom: 0, left: 20 }}>
+                  <PieChart margin={{ top: 4, right: 20, bottom: 0, left: 20 }}>
                     <Pie
                       data={chartPieData}
                       dataKey="value"
                       nameKey="name"
-                      cy="46%"
-                      outerRadius={big ? 160 : 95}
+                      cy={big ? '40%' : '46%'}
+                      outerRadius={big ? 172 : 95}
                       isAnimationActive={false}
                       label={({ percent }) => (percent >= 0.04 ? `${Math.round(percent * 100)}%` : '')}
                       labelLine={false}
@@ -3356,8 +3363,23 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               </Bar>
             </BarChart>
           </ResponsiveContainer>
-        ) : chartType === 'bar' ? (
-          <div style={{ maxHeight: big ? 760 : 520, overflowY: pieData.length > (big ? 30 : 17) ? 'auto' : 'visible' }}>
+        ) : chartType === 'bar' ? (() => {
+          // Fixed a real overlap bug here: the wrapper below used to decide
+          // scroll-vs-visible purely by category COUNT (>30 big / >17
+          // small), while separately capping the box at a fixed maxHeight
+          // (760/520). With a count under that threshold but a lot of
+          // categories (e.g. 27), the actual content height (27 * 32 =
+          // 864px) could still exceed the 760px cap -- and since overflow
+          // was 'visible' in that case, the chart's own SVG simply painted
+          // past the bottom of its box, bleeding into "Showing your top N"
+          // and the AI Insights card below it. Now the needed height is
+          // compared against the cap directly, so scrolling only turns
+          // itself off when the content actually fits inside it.
+          const barMaxHeight = big ? 760 : 520;
+          const barNeededHeight = Math.max(big ? 240 : 180, pieData.length * (big ? 32 : 30));
+          const barWillOverflow = barNeededHeight > barMaxHeight;
+          return (
+          <div style={{ maxHeight: barMaxHeight, overflowY: barWillOverflow ? 'auto' : 'visible', marginBottom: 4 }}>
             {/* Right margin narrowed a lot on the big view (55 -> 26) --
                 the rotated value label (DirhamBarLabelVerticalSideways)
                 shoots straight up off the bar's tip instead of trailing
@@ -3366,7 +3388,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 shorter per-row height (42 -> 32) is what actually lets the
                 plot area "cover more of the data elegantly": longer bars,
                 more categories visible per screen, per explicit request. */}
-            <ResponsiveContainer width="100%" height={Math.max(big ? 240 : 180, pieData.length * (big ? 32 : 30))}>
+            <ResponsiveContainer width="100%" height={barNeededHeight}>
               <BarChart data={pieData} layout="vertical" margin={{ top: 5, right: big ? 26 : 55, left: 10, bottom: 5 }} barCategoryGap={big ? '35%' : '30%'}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                 <XAxis type="number" tick={{ fontSize: big ? 11 : 8.5 }} hide />
@@ -3387,7 +3409,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               </BarChart>
             </ResponsiveContainer>
           </div>
-        ) : chartType === 'treemap' ? (
+          );
+        })() : chartType === 'treemap' ? (
           <ResponsiveContainer width="100%" height={big ? 560 : 360}>
             <Treemap
               data={pieData}
