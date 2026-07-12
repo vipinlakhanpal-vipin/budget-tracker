@@ -702,6 +702,34 @@ button, input, select, textarea { font-family: inherit; }
 }
 .notif-item:last-child { margin-bottom: 0; }
 .notif-empty { font-size: 13px; color: var(--muted); padding: 10px 6px; text-align: center; }
+
+/* Notes/Attachments header buttons -- reuse .theme-fab-wrap for the
+   relative-positioned dropdown anchor, but override the button itself to
+   look like the plain outlined bell icon rather than the theme picker's
+   colorful conic-gradient swatch (a plain note/paperclip icon in a rainbow
+   circle would read oddly, since there's no "color" concept here). */
+.notes-fab-btn {
+  background: #fff !important; color: var(--accent) !important;
+  border: 1.5px solid var(--accent) !important; width: 34px; height: 34px;
+}
+.notes-fab-btn:hover { background: var(--accent-light) !important; filter: none !important; }
+.notes-attach-dropdown {
+  width: 340px; max-width: min(88vw, 380px); max-height: 420px; overflow-y: auto;
+}
+.notes-attach-row {
+  border-bottom: 1px solid var(--border); padding: 8px 6px; margin-bottom: 2px;
+}
+.notes-attach-row:last-child { border-bottom: none; }
+.notes-attach-row-head { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.notes-attach-num { font-weight: 800; color: var(--accent); font-size: 12.5px; }
+.notes-attach-name { font-weight: 700; font-size: 13px; }
+.notes-attach-source {
+  font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em;
+  color: var(--muted); background: var(--bg); border-radius: 999px; padding: 1px 7px; margin-left: auto;
+}
+.notes-attach-meta { margin: 2px 0 4px; }
+.notes-attach-text { font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; }
+.notes-attach-view { font-size: 12.5px; font-weight: 600; }
 .corner-version-badge {
   font-size: 10.5px; font-weight: 700; color: var(--muted);
   background: var(--bg); border: 1px solid var(--border); border-radius: 999px;

@@ -504,6 +504,31 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     document.addEventListener('mousedown', onDocClick);
     return () => document.removeEventListener('mousedown', onDocClick);
   }, [themeMenuOpen]);
+  // Notes/Attachments header buttons -- an aggregated, numbered view of
+  // every note and every attached document across Income, Fixed Expenses,
+  // Regular Expenses, and Savings, per explicit request, so nothing needs
+  // hunting through each tab separately. Same open/outside-click pattern as
+  // the theme picker and notification bell above.
+  const [notesMenuOpen, setNotesMenuOpen] = useState(false);
+  const notesMenuRef = useRef(null);
+  useEffect(() => {
+    if (!notesMenuOpen) return;
+    function onDocClick(e) {
+      if (notesMenuRef.current && !notesMenuRef.current.contains(e.target)) setNotesMenuOpen(false);
+    }
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [notesMenuOpen]);
+  const [attachMenuOpen, setAttachMenuOpen] = useState(false);
+  const attachMenuRef = useRef(null);
+  useEffect(() => {
+    if (!attachMenuOpen) return;
+    function onDocClick(e) {
+      if (attachMenuRef.current && !attachMenuRef.current.contains(e.target)) setAttachMenuOpen(false);
+    }
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [attachMenuOpen]);
   function markNotifsSeen(ids) {
     setSeenNotifIds((cur) => {
       const next = new Set(cur);
@@ -726,8 +751,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     name: '',
     amount: '',
     month: monthKey(new Date()),
+    notes: '',
   });
   const [savingsDrafts, setSavingsDrafts] = useState({});
+  // Same note/attachment pattern as the expense forms.
+  const [showSavingNotes, setShowSavingNotes] = useState(false);
+  const [savingFile, setSavingFile] = useState(null);
+  const savingFileInputRef = useRef(null);
 
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRelation, setInviteRelation] = useState('Spouse');
@@ -739,8 +769,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     memberEmail: session.user.email,
     amount: '',
     month: monthKey(new Date()),
+    notes: '',
   });
   const [incomeDrafts, setIncomeDrafts] = useState({});
+  // Same note/attachment pattern as the expense forms.
+  const [showIncomeNotes, setShowIncomeNotes] = useState(false);
+  const [incomeFile, setIncomeFile] = useState(null);
+  const incomeFileInputRef = useRef(null);
 
   // Report panel state -- generates a PDF for a chosen date range covering
   // Expenses this month / Income / Fixed Expenses. Kept as a data URI in
@@ -1107,6 +1142,43 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       .filter((c) => c.monthly_budget > 0 && (byCategory[c.name] || 0) > c.monthly_budget)
       .map((c) => c.name);
   }, [categories, byCategory]);
+
+  // Aggregated across ALL FOUR entry types (not just the currently viewed
+  // month) so the Notes/Attachments header buttons show everything that was
+  // ever saved, not just this month's. Sorted oldest-first so the numbering
+  // in those windows (1st, 2nd, 3rd...) reads as "in the order they were
+  // added" rather than jumping around.
+  const notesAndAttachments = useMemo(() => {
+    const rows = [];
+    function collect(table, sourceLabel, list, dateField, nameField) {
+      list.forEach((r) => {
+        if (r.notes || r.attachment_url) {
+          rows.push({
+            key: `${table}-${r.id}`,
+            table,
+            source: sourceLabel,
+            date: r[dateField],
+            name: (r[nameField] || sourceLabel).trim ? (r[nameField] || sourceLabel).trim() : (r[nameField] || sourceLabel),
+            amount: r.amount,
+            notes: r.notes,
+            attachment_url: r.attachment_url,
+            attachment_name: r.attachment_name,
+          });
+        }
+      });
+    }
+    collect('expenses', 'Regular Expense', expenses, 'expense_date', 'description');
+    collect('recurring_expenses', 'Fixed Expense', recurringExpenses, 'start_date', 'name');
+    collect('incomes', 'Income', incomes, 'start_date', 'name');
+    collect('savings_goals', 'Savings', savingsGoals, 'start_date', 'name');
+    rows.sort((a, b) => {
+      const d = new Date(a.date || 0) - new Date(b.date || 0);
+      return d !== 0 ? d : String(a.key).localeCompare(String(b.key));
+    });
+    return rows;
+  }, [expenses, recurringExpenses, incomes, savingsGoals]);
+  const notesList = notesAndAttachments.filter((r) => r.notes);
+  const attachmentsList = notesAndAttachments.filter((r) => r.attachment_url);
 
   const pieData = Object.entries(byCategory).map(([name, value]) => ({ name, value }));
 
@@ -1794,19 +1866,26 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       alert('Please fill in a name, amount, and month.');
       return;
     }
-    const { error } = await supabase.from('savings_goals').insert({
+    const { data: inserted, error } = await supabase.from('savings_goals').insert({
       household_id: householdId,
       name: newSaving.name.trim(),
       amount,
       start_date: newSaving.month + '-01',
       end_date: null,
+      notes: newSaving.notes.trim() || null,
       created_by: session.user.id,
-    });
+    }).select().single();
     if (error) {
       alert('Could not save: ' + error.message);
       return;
     }
-    setNewSaving((s) => ({ ...s, name: '', amount: '' }));
+    if (savingFile && inserted?.id) {
+      await uploadAttachmentForRow('savings_goals', inserted.id, savingFile);
+    }
+    setNewSaving((s) => ({ ...s, name: '', amount: '', notes: '' }));
+    setShowSavingNotes(false);
+    setSavingFile(null);
+    if (savingFileInputRef.current) savingFileInputRef.current.value = '';
     loadAll();
   }
 
@@ -1935,20 +2014,27 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       alert('Please fill in a name, amount, and month.');
       return;
     }
-    const { error } = await supabase.from('incomes').insert({
+    const { data: inserted, error } = await supabase.from('incomes').insert({
       household_id: householdId,
       name: newIncome.name.trim(),
       member_email: newIncome.memberEmail,
       amount,
       start_date: newIncome.month + '-01',
       end_date: null,
+      notes: newIncome.notes.trim() || null,
       created_by: session.user.id,
-    });
+    }).select().single();
     if (error) {
       alert('Could not save income: ' + error.message);
       return;
     }
-    setNewIncome((i) => ({ ...i, name: '', amount: '' }));
+    if (incomeFile && inserted?.id) {
+      await uploadAttachmentForRow('incomes', inserted.id, incomeFile);
+    }
+    setNewIncome((i) => ({ ...i, name: '', amount: '', notes: '' }));
+    setShowIncomeNotes(false);
+    setIncomeFile(null);
+    if (incomeFileInputRef.current) incomeFileInputRef.current.value = '';
     loadAll();
   }
 
@@ -2763,7 +2849,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               className={`btn-teal header-tab-btn ${inputTab === 'expense' ? 'header-tab-btn-active' : ''}`}
               onClick={() => setInputTab('expense')}
             >
-              Add an expense
+              Regular Expenses
             </button>
             <button
               type="button"
@@ -2816,6 +2902,84 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       {theme === t.id && <Check size={14} style={{ marginLeft: 'auto' }} />}
                     </button>
                   ))}
+                </div>
+              )}
+            </div>
+            {/* Notes + Attachments header buttons -- per explicit request, a
+                combined, numbered view of every note and every attached
+                document saved anywhere (Income, Fixed Expenses, Regular
+                Expenses, Savings), oldest first, so nothing needs hunting
+                through each tab individually. Same dropdown pattern as the
+                theme picker/bell/profile menus above, just wider/scrollable
+                since the list can get long. */}
+            <div className="theme-fab-wrap" ref={notesMenuRef}>
+              <button
+                type="button"
+                className="theme-fab-btn notes-fab-btn"
+                title="Notes"
+                onClick={() => setNotesMenuOpen((o) => !o)}
+              >
+                <StickyNote size={16} />
+              </button>
+              {notesMenuOpen && (
+                <div className="theme-dropdown notes-attach-dropdown">
+                  <div className="theme-dropdown-title">Notes ({notesList.length})</div>
+                  {notesList.length === 0 ? (
+                    <div className="notif-empty">No notes saved yet.</div>
+                  ) : (
+                    notesList.map((r, idx) => (
+                      <div className="notes-attach-row" key={r.key}>
+                        <div className="notes-attach-row-head">
+                          <span className="notes-attach-num">{idx + 1}.</span>
+                          <span className="notes-attach-name">{r.name}</span>
+                          <span className="notes-attach-source">{r.source}</span>
+                        </div>
+                        <div className="muted-small notes-attach-meta">
+                          {fmtDate(r.date)}{r.amount != null && <> &middot; <Amt value={r.amount} /></>}
+                        </div>
+                        <div className="notes-attach-text">{r.notes}</div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="theme-fab-wrap" ref={attachMenuRef}>
+              <button
+                type="button"
+                className="theme-fab-btn notes-fab-btn"
+                title="Attachments"
+                onClick={() => setAttachMenuOpen((o) => !o)}
+              >
+                <Paperclip size={16} />
+              </button>
+              {attachMenuOpen && (
+                <div className="theme-dropdown notes-attach-dropdown">
+                  <div className="theme-dropdown-title">Attachments ({attachmentsList.length})</div>
+                  {attachmentsList.length === 0 ? (
+                    <div className="notif-empty">No documents attached yet.</div>
+                  ) : (
+                    attachmentsList.map((r, idx) => (
+                      <div className="notes-attach-row" key={r.key}>
+                        <div className="notes-attach-row-head">
+                          <span className="notes-attach-num">{idx + 1}.</span>
+                          <span className="notes-attach-name">{r.name}</span>
+                          <span className="notes-attach-source">{r.source}</span>
+                        </div>
+                        <div className="muted-small notes-attach-meta">
+                          {fmtDate(r.date)}{r.amount != null && <> &middot; <Amt value={r.amount} /></>}
+                        </div>
+                        <button
+                          type="button"
+                          className="link-btn notes-attach-view"
+                          onClick={() => viewAttachment(r.attachment_url)}
+                        >
+                          <Paperclip size={12} style={{ marginRight: 4, verticalAlign: -2 }} />
+                          View {r.attachment_name || 'document'}
+                        </button>
+                      </div>
+                    ))
+                  )}
                 </div>
               )}
             </div>
@@ -2949,7 +3113,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   <div className="chat-messages" ref={chatMessagesRef}>
                     {chatMessages.length === 0 && (
                       <div className="chat-empty">
-                        Ask about any tab -- Income, Fixed Expenses, Add an expense, Savings, or how a feature works -- and ask for suggestions too, e.g. "how much did I spend on dining this month?", "how do fixed expenses work?", or "any suggestions to lower my spending?". I can only see the numbers already in your household's data, nothing outside it.
+                        Ask about any tab -- Income, Fixed Expenses, Regular Expenses, Savings, or how a feature works -- and ask for suggestions too, e.g. "how much did I spend on dining this month?", "how do fixed expenses work?", or "any suggestions to lower my spending?". I can only see the numbers already in your household's data, nothing outside it.
                       </div>
                     )}
                     {chatMessages.map((m, i) => (
@@ -3070,7 +3234,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               className={`btn small ${inputTab === 'expense' ? '' : 'secondary'}`}
               onClick={() => setInputTab('expense')}
             >
-              Add an expense
+              Regular Expenses
             </button>
             <button
               className={`btn small ${inputTab === 'savings' ? '' : 'secondary'}`}
@@ -3082,7 +3246,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
           {inputTab === 'expense' && (
           <div className="panel">
-            <h2>Add an expense</h2>
+            <h2>Regular Expenses</h2>
             <form onSubmit={handleAddExpense}>
             <div className="row">
               <div className="field">
@@ -3114,34 +3278,36 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                     content instead closes the dead space now that the box
                     itself is exactly as wide as the typed value. */}
                 <label>Amount</label>
-                <div className="amount-field-wrap">
-                  <span className="currency-prefix"><CurrencyPrefix /></span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="0.00"
-                    style={{ '--amt-px': formAmountPx(form.amount) + 'px' }}
-                    value={form.amount}
-                    onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                  />
-                </div>
-              </div>
-              {/* Note + Attach icons -- per explicit request, a small note
-                  symbol reveals a textarea for a longer free-text description
-                  (separate from the short Description field above), and a
-                  paperclip lets you attach one image or PDF (5MB cap) related
-                  to this expense. Both are optional and collapsed by default
-                  so most expenses (which need neither) stay a single quick row. */}
-              <div className="field" style={{ flex: '0 0 auto' }}>
-                <label style={{ visibility: 'hidden' }}>Note</label>
-                <div style={{ display: 'flex', gap: 6 }}>
+                {/* Note + Attach icons live in the SAME flex item as Amount
+                    (not a separate .field next to it) -- per explicit
+                    feedback that they looked "distant" from Amount. As a
+                    separate .field in this wrapping row, they could drop to
+                    the next line on their own, landing far from Amount;
+                    nesting them here keeps them pinned right next to it no
+                    matter how the row wraps. A note symbol reveals a
+                    textarea for a longer free-text description (separate
+                    from the short Description field above), and a paperclip
+                    lets you attach one image or PDF (5MB cap). Both optional
+                    and collapsed by default. */}
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <div className="amount-field-wrap">
+                    <span className="currency-prefix"><CurrencyPrefix /></span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="0.00"
+                      style={{ '--amt-px': formAmountPx(form.amount) + 'px' }}
+                      value={form.amount}
+                      onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                    />
+                  </div>
                   <button
                     type="button"
                     className={`icon-btn-outline ${form.notes ? 'active' : ''}`}
                     title="Add a note"
                     onClick={() => setShowExpenseNotes((s) => !s)}
-                    style={{ height: 40, width: 40 }}
+                    style={{ height: 40, width: 40, flex: '0 0 auto' }}
                   >
                     <StickyNote size={16} />
                   </button>
@@ -3150,7 +3316,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                     className={`icon-btn-outline ${expenseFile ? 'active' : ''}`}
                     title="Attach a document"
                     onClick={() => expenseFileInputRef.current?.click()}
-                    style={{ height: 40, width: 40 }}
+                    style={{ height: 40, width: 40, flex: '0 0 auto' }}
                   >
                     <Paperclip size={16} />
                   </button>
@@ -3338,16 +3504,46 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                     and the Month field next to it. Sizing to content instead
                     (like the Add button field) closes that gap. */}
                 <label>Amount / month</label>
-                <div className="amount-field-wrap">
-                  <span className="currency-prefix"><CurrencyPrefix /></span>
+                {/* Note + Attach icons in the same flex item as Amount --
+                    same fix applied to the expense forms so these can't drift
+                    away from Amount when the row wraps. */}
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <div className="amount-field-wrap">
+                    <span className="currency-prefix"><CurrencyPrefix /></span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="0.00"
+                      style={{ '--amt-px': formAmountPx(newIncome.amount) + 'px' }}
+                      value={newIncome.amount}
+                      onChange={(e) => setNewIncome({ ...newIncome, amount: e.target.value })}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className={`icon-btn-outline ${newIncome.notes ? 'active' : ''}`}
+                    title="Add a note"
+                    onClick={() => setShowIncomeNotes((s) => !s)}
+                    style={{ height: 40, width: 40, flex: '0 0 auto' }}
+                  >
+                    <StickyNote size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    className={`icon-btn-outline ${incomeFile ? 'active' : ''}`}
+                    title="Attach a document"
+                    onClick={() => incomeFileInputRef.current?.click()}
+                    style={{ height: 40, width: 40, flex: '0 0 auto' }}
+                  >
+                    <Paperclip size={16} />
+                  </button>
                   <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="0.00"
-                    style={{ '--amt-px': formAmountPx(newIncome.amount) + 'px' }}
-                    value={newIncome.amount}
-                    onChange={(e) => setNewIncome({ ...newIncome, amount: e.target.value })}
+                    type="file"
+                    accept={ATTACHMENT_ACCEPT}
+                    ref={incomeFileInputRef}
+                    style={{ display: 'none' }}
+                    onChange={(e) => handleAttachmentPick(e.target.files?.[0], setIncomeFile)}
                   />
                 </div>
               </div>
@@ -3369,6 +3565,25 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 <button className="btn" type="submit" style={{ height: 40 }}>Add</button>
               </div>
             </div>
+            {showIncomeNotes && (
+              <div className="field" style={{ marginTop: 8 }}>
+                <label>Note (optional, long description)</label>
+                <textarea
+                  rows={2}
+                  placeholder="Any extra detail about this income..."
+                  value={newIncome.notes}
+                  onChange={(e) => setNewIncome({ ...newIncome, notes: e.target.value })}
+                />
+              </div>
+            )}
+            {incomeFile && (
+              <div className="muted-small attachment-chip" style={{ marginTop: 6 }}>
+                <Paperclip size={12} /> {incomeFile.name}
+                <button type="button" className="attachment-chip-remove" onClick={() => { setIncomeFile(null); if (incomeFileInputRef.current) incomeFileInputRef.current.value = ''; }}>
+                  <X size={12} />
+                </button>
+              </div>
+            )}
             </form>
             <div className="muted-small" style={{ marginTop: 6 }}>
               Income is entered per month on purpose -- it won't automatically carry over. The list below only shows entries for {monthLabel(currentMonth)}; add a new row for each new month.
@@ -3391,7 +3606,11 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         {title.charAt(0).toUpperCase()}
                       </span>
                       <span className="mobile-txn-mid">
-                        <span className="mobile-txn-title">{title}</span>
+                        <span className="mobile-txn-title">
+                          {title}
+                          {i.notes && <StickyNote size={11} className="row-attach-hint" />}
+                          {i.attachment_url && <Paperclip size={11} className="row-attach-hint" />}
+                        </span>
                         <span className="mobile-txn-sub">{displayNameForEmail(i.member_email)}</span>
                       </span>
                       <span className="mobile-txn-amount"><Amt value={i.amount} /></span>
@@ -3425,6 +3644,20 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           onChange={(e) => updateIncomeDraftField(i.id, 'name', e.target.value)}
                           onBlur={(e) => commitIncomeField(i.id, 'name', e.target.value)}
                         />
+                        {(i.notes || i.attachment_url) && (
+                          <div className="row-attach-icons">
+                            {i.notes && (
+                              <button type="button" className="row-icon-btn" title={i.notes} onClick={() => alert(i.notes)}>
+                                <StickyNote size={11} />
+                              </button>
+                            )}
+                            {i.attachment_url && (
+                              <button type="button" className="row-icon-btn" title={i.attachment_name || 'View attachment'} onClick={() => viewAttachment(i.attachment_url)}>
+                                <Paperclip size={11} />
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </td>
                       <td className="muted-small" data-label="Member">{displayNameForEmail(i.member_email)}</td>
                       <td data-label="Amount">
@@ -3564,16 +3797,46 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                     content instead closes the dead space now that the box
                     itself is exactly as wide as the typed value. */}
                 <label>Amount / month</label>
-                <div className="amount-field-wrap">
-                  <span className="currency-prefix"><CurrencyPrefix /></span>
+                {/* Note + Attach icons live in the SAME flex item as Amount
+                    (not a separate field further down the row) -- per
+                    explicit feedback that they looked too far from Amount. */}
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <div className="amount-field-wrap">
+                    <span className="currency-prefix"><CurrencyPrefix /></span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="0.00"
+                      style={{ '--amt-px': formAmountPx(newRecurring.amount) + 'px' }}
+                      value={newRecurring.amount}
+                      onChange={(e) => setNewRecurring({ ...newRecurring, amount: e.target.value })}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className={`icon-btn-outline ${newRecurring.notes ? 'active' : ''}`}
+                    title="Add a note"
+                    onClick={() => setShowRecurringNotes((s) => !s)}
+                    style={{ height: 40, width: 40, flex: '0 0 auto' }}
+                  >
+                    <StickyNote size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    className={`icon-btn-outline ${recurringFile ? 'active' : ''}`}
+                    title="Attach a document"
+                    onClick={() => recurringFileInputRef.current?.click()}
+                    style={{ height: 40, width: 40, flex: '0 0 auto' }}
+                  >
+                    <Paperclip size={16} />
+                  </button>
                   <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="0.00"
-                    style={{ '--amt-px': formAmountPx(newRecurring.amount) + 'px' }}
-                    value={newRecurring.amount}
-                    onChange={(e) => setNewRecurring({ ...newRecurring, amount: e.target.value })}
+                    type="file"
+                    accept={ATTACHMENT_ACCEPT}
+                    ref={recurringFileInputRef}
+                    style={{ display: 'none' }}
+                    onChange={(e) => handleAttachmentPick(e.target.files?.[0], setRecurringFile)}
                   />
                 </div>
               </div>
@@ -4079,16 +4342,46 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                     content instead closes the dead space now that the box
                     itself is exactly as wide as the typed value. */}
                 <label>Amount / month</label>
-                <div className="amount-field-wrap">
-                  <span className="currency-prefix"><CurrencyPrefix /></span>
+                {/* Note + Attach icons in the same flex item as Amount --
+                    same fix applied to the other forms so these can't drift
+                    away from Amount when the row wraps. */}
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <div className="amount-field-wrap">
+                    <span className="currency-prefix"><CurrencyPrefix /></span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="0.00"
+                      style={{ '--amt-px': formAmountPx(newSaving.amount) + 'px' }}
+                      value={newSaving.amount}
+                      onChange={(e) => setNewSaving({ ...newSaving, amount: e.target.value })}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className={`icon-btn-outline ${newSaving.notes ? 'active' : ''}`}
+                    title="Add a note"
+                    onClick={() => setShowSavingNotes((s) => !s)}
+                    style={{ height: 40, width: 40, flex: '0 0 auto' }}
+                  >
+                    <StickyNote size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    className={`icon-btn-outline ${savingFile ? 'active' : ''}`}
+                    title="Attach a document"
+                    onClick={() => savingFileInputRef.current?.click()}
+                    style={{ height: 40, width: 40, flex: '0 0 auto' }}
+                  >
+                    <Paperclip size={16} />
+                  </button>
                   <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="0.00"
-                    style={{ '--amt-px': formAmountPx(newSaving.amount) + 'px' }}
-                    value={newSaving.amount}
-                    onChange={(e) => setNewSaving({ ...newSaving, amount: e.target.value })}
+                    type="file"
+                    accept={ATTACHMENT_ACCEPT}
+                    ref={savingFileInputRef}
+                    style={{ display: 'none' }}
+                    onChange={(e) => handleAttachmentPick(e.target.files?.[0], setSavingFile)}
                   />
                 </div>
               </div>
@@ -4110,6 +4403,25 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 <button className="btn" type="submit" style={{ height: 40 }}>Add</button>
               </div>
             </div>
+            {showSavingNotes && (
+              <div className="field" style={{ marginTop: 8 }}>
+                <label>Note (optional, long description)</label>
+                <textarea
+                  rows={2}
+                  placeholder="Any extra detail about this savings goal..."
+                  value={newSaving.notes}
+                  onChange={(e) => setNewSaving({ ...newSaving, notes: e.target.value })}
+                />
+              </div>
+            )}
+            {savingFile && (
+              <div className="muted-small attachment-chip" style={{ marginTop: 6 }}>
+                <Paperclip size={12} /> {savingFile.name}
+                <button type="button" className="attachment-chip-remove" onClick={() => { setSavingFile(null); if (savingFileInputRef.current) savingFileInputRef.current.value = ''; }}>
+                  <X size={12} />
+                </button>
+              </div>
+            )}
             </form>
             <div className="muted-small" style={{ marginTop: 6 }}>
               Savings is entered per month on purpose -- it won't automatically carry over, exactly like Income. The list below only shows entries for {monthLabel(currentMonth)}; add a new row for each new month. Since it's money leaving your income, it's included in "Spent so far" and "Combined expenses" above and reduces "Remaining"/"Net" -- it also gets its own report page.
@@ -4132,7 +4444,11 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         {title.charAt(0).toUpperCase()}
                       </span>
                       <span className="mobile-txn-mid">
-                        <span className="mobile-txn-title">{title}</span>
+                        <span className="mobile-txn-title">
+                          {title}
+                          {s.notes && <StickyNote size={11} className="row-attach-hint" />}
+                          {s.attachment_url && <Paperclip size={11} className="row-attach-hint" />}
+                        </span>
                         <span className="mobile-txn-sub">{monthLabel(currentMonth)}</span>
                       </span>
                       <span className="mobile-txn-amount"><Amt value={s.amount} /></span>
@@ -4160,6 +4476,20 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                           onChange={(e) => updateSavingDraftField(s.id, 'name', e.target.value)}
                           onBlur={(e) => commitSavingField(s.id, 'name', e.target.value)}
                         />
+                        {(s.notes || s.attachment_url) && (
+                          <div className="row-attach-icons">
+                            {s.notes && (
+                              <button type="button" className="row-icon-btn" title={s.notes} onClick={() => alert(s.notes)}>
+                                <StickyNote size={11} />
+                              </button>
+                            )}
+                            {s.attachment_url && (
+                              <button type="button" className="row-icon-btn" title={s.attachment_name || 'View attachment'} onClick={() => viewAttachment(s.attachment_url)}>
+                                <Paperclip size={11} />
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </td>
                       <td data-label="Amount">
                         <div className="amount-field-wrap tight">
@@ -4557,7 +4887,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           <div className="panel">
             <h2 style={{ margin: '0 0 4px' }}>Spending by category</h2>
             {pieData.length === 0 ? (
-              <div className="empty">Add an expense to see the breakdown.</div>
+              <div className="empty">Add a regular expense to see the breakdown.</div>
             ) : chartType === 'pie' ? (
               // Capped to the top PIE_TOP_N categories (see pieChartData) --
               // with everything else folded into one "Other" slice -- since a
@@ -4705,7 +5035,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               </button>
             </div>
             {pieData.length === 0 ? (
-              <div className="empty">Add an expense to get insights on this month.</div>
+              <div className="empty">Add a regular expense to get insights on this month.</div>
             ) : aiDigest && aiDigestMonthKey === monthKey(currentMonth) ? (
               <div className="muted-small" style={{ lineHeight: 1.6, whiteSpace: 'pre-line', color: 'var(--text)' }}>
                 {aiDigest}
@@ -4982,18 +5312,19 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           <div className="panel" ref={panelRef}>
             <h2>How to use this app</h2>
             <div className="muted-small" style={{ lineHeight: 1.6 }}>
-              <p><strong>Add an expense</strong> -- log one-off spending (groceries, dining, shopping). Pick the date, category, a short description, and the amount, then Add. It appears under "Expenses this month" and is always editable there -- just type into a field and it saves. The note icon (<StickyNote size={11} style={{ verticalAlign: -2 }} />) next to Amount opens a spot for a longer free-text description, and the paperclip (<Paperclip size={11} style={{ verticalAlign: -2 }} />) lets you attach one photo or PDF (5MB max) -- a receipt, warranty, or anything else worth keeping with that expense. Both are optional. Once saved, a small icon appears next to the expense if it has a note or attachment -- click it to read the note or open the file.</p>
-              <p><strong>Scan a receipt</strong> -- below the Add-an-expense form, upload a photo of a receipt (or a screenshot/sheet listing several expenses) and Claude will read it for you. You'll see an editable review list first -- fix anything that looks wrong, untick what you don't want, then add only what you confirm. Nothing is saved automatically.</p>
-              <p><strong>Income</strong> -- add each income source per month (e.g. Salary). Income does NOT roll over automatically -- since pay can change month to month (deductions, advances, etc.), add a fresh row each month with that month's actual amount, or edit an existing row's Month field forward. Every field auto-saves.</p>
-              <p><strong>Fixed Expenses</strong> -- for recurring bills, loans, EMIs, and rent. Set a Start date, an optional End date, and how often it repeats (Monthly, Alternate month, Quarterly, Half-yearly, Once a year). Every field auto-saves as you edit -- there's no Save button to click. Set a Due date to get an in-app reminder starting 3 days before it's due, and an email reminder if it's set up. It has the same optional note + attachment icons as Add an expense -- handy for keeping a loan agreement or lease document attached to the bill itself.</p>
-              <p><strong>Savings</strong> -- set how much you'd like to set aside for the month, e.g. "Emergency fund" or "Investment". Works exactly like Income: entered fresh per month with no auto-rollover, since the amount you're able to save can change month to month -- add a new row each month, or edit an existing row's Month field forward. Since money you set aside is no longer available to spend, it's treated the same as an expense: it's counted in "Spent so far" and "Combined expenses", and subtracted in "Remaining" and "Net", in addition to getting its own page in the PDF report so you can see planned savings build up over time.</p>
+              <p><strong>Regular Expenses</strong> -- log one-off spending (groceries, dining, shopping). Pick the date, category, a short description, and the amount, then Add. It appears under "Expenses this month" and is always editable there -- just type into a field and it saves. The note icon (<StickyNote size={11} style={{ verticalAlign: -2 }} />) next to Amount opens a spot for a longer free-text description, and the paperclip (<Paperclip size={11} style={{ verticalAlign: -2 }} />) lets you attach one photo or PDF (5MB max) -- a receipt, warranty, or anything else worth keeping with that expense. Both are optional. Once saved, a small icon appears next to the entry if it has a note or attachment -- click it to read the note or open the file.</p>
+              <p><strong>Scan a receipt</strong> -- below the Regular Expenses form, upload a photo of a receipt (or a screenshot/sheet listing several expenses) and Claude will read it for you. You'll see an editable review list first -- fix anything that looks wrong, untick what you don't want, then add only what you confirm. Nothing is saved automatically.</p>
+              <p><strong>Income</strong> -- add each income source per month (e.g. Salary). Income does NOT roll over automatically -- since pay can change month to month (deductions, advances, etc.), add a fresh row each month with that month's actual amount, or edit an existing row's Month field forward. Every field auto-saves. It has the same optional note + attachment icons as Regular Expenses.</p>
+              <p><strong>Fixed Expenses</strong> -- for recurring bills, loans, EMIs, and rent. Set a Start date, an optional End date, and how often it repeats (Monthly, Alternate month, Quarterly, Half-yearly, Once a year). Every field auto-saves as you edit -- there's no Save button to click. Set a Due date to get an in-app reminder starting 3 days before it's due, and an email reminder if it's set up. It has the same optional note + attachment icons as Regular Expenses -- handy for keeping a loan agreement or lease document attached to the bill itself.</p>
+              <p><strong>Notes &amp; Attachments</strong> -- the note (<StickyNote size={11} style={{ verticalAlign: -2 }} />) and paperclip (<Paperclip size={11} style={{ verticalAlign: -2 }} />) buttons in the header open a combined, numbered view of every note and every attached document across Income, Fixed Expenses, Regular Expenses, and Savings -- in the order they were added, oldest first -- so you don't have to hunt through each tab to find one.</p>
+              <p><strong>Savings</strong> -- set how much you'd like to set aside for the month, e.g. "Emergency fund" or "Investment". Works exactly like Income: entered fresh per month with no auto-rollover, since the amount you're able to save can change month to month -- add a new row each month, or edit an existing row's Month field forward. Since money you set aside is no longer available to spend, it's treated the same as an expense: it's counted in "Spent so far" and "Combined expenses", and subtracted in "Remaining" and "Net", in addition to getting its own page in the PDF report so you can see planned savings build up over time. It has the same optional note + attachment icons as Regular Expenses.</p>
               <p><strong>Expenses this month</strong> is always visible below the tabs so you can see what's been logged without switching tabs. It also auto-saves.</p>
               <p><strong>Spending by category</strong> chart -- toggle between Pie, Bar, Pareto, and Treemap. The Pie groups smaller categories into "Other" to stay readable; Bar and Treemap show every category individually. The totals cards above show your combined income, combined expenses (split into Regular, Fixed, and Savings), and what's left of your budget and income after all three are accounted for.</p>
               <p><strong>AI Insights</strong> -- tap Generate below the chart for a short AI-written summary of the month you're viewing (spending patterns, whether you're over budget, and a couple of concrete suggestions). It only runs when you tap the button -- never automatically -- and Refresh regenerates it if your numbers have changed.</p>
               <p><strong>Budget Coach</strong> -- unlike AI Insights (one month at a time), Coach looks across your last 6 months for patterns: a category that keeps going over budget, spending trending up or down, or a savings goal that no longer looks realistic. It only ever writes out suggestions -- it never changes your Settings for you.</p>
               <p><strong>Chat BoT</strong> -- the round chat bubble in the corner (drag it anywhere on screen) answers questions about your household's own numbers across every tab -- Income, Fixed Expenses, Savings, one-off spending, and who's in the household -- and can also answer "how do I..." questions about the app itself and give suggestions when asked. It can only see the data already in the app -- nothing outside it.</p>
               <p><strong>Report</strong> -- generate a PDF for any date range, then view it on screen, download it, or email it. Each topic gets its own page -- Income, Expenses, Fixed Expenses, Savings, Spend Analysis (Pareto chart), and Recommendations -- except the Category Breakdown bar chart and the Summary table, which share one page by default and only split onto two once the chart itself grows long enough to need the room. Every table also auto-shrinks its text to try to fit on one page first, and only flows onto a second page if the list is too long even at a readable size. The last page closes with a data & privacy note.</p>
-              <p><strong>Settings</strong> -- set your total monthly budget, currency, add/rename categories, and set optional per-category budget caps (you'll get a notification in the bell icon if you go over). Every field auto-saves as you edit -- there's no Save button to click.</p>
+              <p><strong>Settings</strong> -- has its own sub-tabs. App Settings covers household name and currency. Monthly Budget sets your overall monthly cap. Budget sets optional per-category budget caps and shows how this month's spending compares to them (you'll get a notification in the bell icon if you go over). Add Category adds, renames, or removes categories. Admin Console (owners only) covers members and invites. Every field auto-saves as you edit -- there's no Save button to click.</p>
               <p><strong>Notifications</strong> -- the bell icon next to Help (top-right) replaces the old always-on red banners. It shows a count of unread items -- over-total-budget, over a category's budget, or a bill due soon -- and opening it lists them and marks them read.</p>
               <p><strong>Users</strong> -- see who's active in the household and who's been invited but hasn't joined yet, with full Name/Email/Phone/Location. Owners can invite new members (which also sends them a notification email), fill in or fix anyone's Name/Phone/Location, and edit their own details under "My details" -- handy for accounts created before these fields existed. The Admin console (if you have access) is separate and never visible to other household members.</p>
               <p>All figures use your household's chosen currency, set in Settings. Your data is confidential and private to your household -- it's never shared with anyone outside it.</p>
@@ -5120,6 +5451,24 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   >
                     App Settings
                   </button>
+                  <button
+                    className={`btn-teal ${settingsSubTab === 'monthlyBudget' ? '' : 'secondary'}`}
+                    onClick={() => setSettingsSubTab('monthlyBudget')}
+                  >
+                    Monthly Budget
+                  </button>
+                  <button
+                    className={`btn-teal ${settingsSubTab === 'budget' ? '' : 'secondary'}`}
+                    onClick={() => setSettingsSubTab('budget')}
+                  >
+                    Budget
+                  </button>
+                  <button
+                    className={`btn-teal ${settingsSubTab === 'category' ? '' : 'secondary'}`}
+                    onClick={() => setSettingsSubTab('category')}
+                  >
+                    Add Category
+                  </button>
                   {isAdmin && (
                     <button
                       className={`btn-teal ${settingsSubTab === 'admin' ? '' : 'secondary'}`}
@@ -5132,23 +5481,12 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
                 {settingsSubTab === 'admin' && isAdmin ? (
                   <AdminConsole embedded onClose={() => setSettingsSubTab('app')} />
-                ) : (
+                ) : settingsSubTab === 'monthlyBudget' ? (
                 <>
-                <div className="field" style={{ marginBottom: 12, maxWidth: 340 }}>
-                  <label>Household name</label>
-                  {isOwner ? (
-                    <input
-                      type="text"
-                      value={householdNameDraft}
-                      onChange={(e) => setHouseholdNameDraft(e.target.value)}
-                      onBlur={(e) => commitHouseholdName(e.target.value)}
-                    />
-                  ) : (
-                    <div className="muted-small" style={{ padding: '9px 0' }}>
-                      {household.name || 'Hearth'} <span style={{ opacity: .75 }}>(only the owner can rename)</span>
-                    </div>
-                  )}
-                </div>
+                {/* Monthly Budget tab -- split out on its own, separate from
+                    the per-category "Budget" tab, per explicit request. Just
+                    the single overall monthly cap that "Remaining"/"Net" on
+                    the dashboard are measured against. */}
                 <div className="row" style={{ marginBottom: 12 }}>
                   <div className="field">
                     <label>Total monthly budget</label>
@@ -5165,51 +5503,15 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       />
                     </div>
                   </div>
-                  <div className="field">
-                    <label>Currency</label>
-                    <select value={currencyDraft} onChange={(e) => commitCurrency(e.target.value)}>
-                      {CURRENCIES.map((c) => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
-                    </select>
-                  </div>
                 </div>
-                <div className="muted-small" style={{ marginBottom: 12 }}>Changes save automatically as you edit -- there's no Save button to click.</div>
-
-                <div className="field">
-                  <label>Add category</label>
-                  <div className="row">
-                    <input
-                      type="text"
-                      placeholder="Category name"
-                      style={{ flex: 1 }}
-                      value={newCategoryName}
-                      onChange={(e) => setNewCategoryName(e.target.value)}
-                    />
-                    <button className="btn secondary small" onClick={handleAddCategory}>Add</button>
-                  </div>
-                </div>
-
-                <div className="muted-small" style={{ marginBottom: 6 }}>Category names (click to rename)</div>
-                <div className="cat-list">
-                  {categories.map((c) => (
-                    <div className="cat-chip" key={c.id}>
-                      <input
-                        value={categoryNameDrafts[c.id] ?? c.name}
-                        onChange={(e) => setCategoryNameDrafts({ ...categoryNameDrafts, [c.id]: e.target.value })}
-                        onBlur={() => handleRenameCategory(c.id)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
-                        style={{
-                          border: 'none', background: 'transparent', color: 'inherit', fontWeight: 600,
-                          fontSize: 12, width: Math.max(50, (categoryNameDrafts[c.id]?.length || c.name.length) * 7),
-                        }}
-                      />
-                      <button onClick={() => handleRemoveCategory(c.id, c.name)} title="Remove category"><Trash2 size={12} /></button>
-                    </div>
-                  ))}
-                </div>
-
-                <div style={{ marginTop: 16 }}>
+                <div className="muted-small">Changes save automatically as you edit -- there's no Save button to click.</div>
+                </>
+                ) : settingsSubTab === 'budget' ? (
+                <>
+                {/* Budget tab -- per-category caps + how this month's actual
+                    spending compares to them. Total monthly budget lives in
+                    its own "Monthly Budget" tab (see above), not here. */}
+                <div style={{ marginTop: 4 }}>
                   <label className="muted-small">Per-category budgets (optional)</label>
                   {categories.map((c) => (
                     <div className="cat-budget-row" key={c.id}>
@@ -5231,6 +5533,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                     </div>
                   ))}
                 </div>
+                <div className="muted-small" style={{ marginTop: 8 }}>Changes save automatically as you edit -- there's no Save button to click.</div>
 
                 {categories.some((c) => c.monthly_budget > 0) && (
                   <div style={{ marginTop: 18 }}>
@@ -5251,6 +5554,73 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                     })}
                   </div>
                 )}
+                </>
+                ) : settingsSubTab === 'category' ? (
+                <>
+                {/* Add Category tab -- split out on its own, separate from
+                    App Settings, per explicit request. Adding, renaming, and
+                    removing categories all live here now. */}
+                <div className="field">
+                  <label>Add category</label>
+                  <div className="row">
+                    <input
+                      type="text"
+                      placeholder="Category name"
+                      style={{ flex: 1 }}
+                      value={newCategoryName}
+                      onChange={(e) => setNewCategoryName(e.target.value)}
+                    />
+                    <button className="btn secondary small" onClick={handleAddCategory}>Add</button>
+                  </div>
+                </div>
+
+                <div className="muted-small" style={{ margin: '10px 0 6px' }}>Category names (click to rename)</div>
+                <div className="cat-list">
+                  {categories.map((c) => (
+                    <div className="cat-chip" key={c.id}>
+                      <input
+                        value={categoryNameDrafts[c.id] ?? c.name}
+                        onChange={(e) => setCategoryNameDrafts({ ...categoryNameDrafts, [c.id]: e.target.value })}
+                        onBlur={() => handleRenameCategory(c.id)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
+                        style={{
+                          border: 'none', background: 'transparent', color: 'inherit', fontWeight: 600,
+                          fontSize: 12, width: Math.max(50, (categoryNameDrafts[c.id]?.length || c.name.length) * 7),
+                        }}
+                      />
+                      <button onClick={() => handleRemoveCategory(c.id, c.name)} title="Remove category"><Trash2 size={12} /></button>
+                    </div>
+                  ))}
+                </div>
+                </>
+                ) : (
+                <>
+                <div className="field" style={{ marginBottom: 12, maxWidth: 340 }}>
+                  <label>Household name</label>
+                  {isOwner ? (
+                    <input
+                      type="text"
+                      value={householdNameDraft}
+                      onChange={(e) => setHouseholdNameDraft(e.target.value)}
+                      onBlur={(e) => commitHouseholdName(e.target.value)}
+                    />
+                  ) : (
+                    <div className="muted-small" style={{ padding: '9px 0' }}>
+                      {household.name || 'Hearth'} <span style={{ opacity: .75 }}>(only the owner can rename)</span>
+                    </div>
+                  )}
+                </div>
+                <div className="row" style={{ marginBottom: 12 }}>
+                  <div className="field">
+                    <label>Currency</label>
+                    <select value={currencyDraft} onChange={(e) => commitCurrency(e.target.value)}>
+                      {CURRENCIES.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="muted-small">Changes save automatically as you edit -- there's no Save button to click.</div>
                 </>
                 )}
               </div>
@@ -5277,8 +5647,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       <button
         className="mobile-fab"
         onClick={() => goToAdd('expense')}
-        aria-label="Add an expense"
-        title="Add an expense"
+        aria-label="Add a regular expense"
+        title="Add a regular expense"
       >
         <Plus size={26} strokeWidth={2.5} />
       </button>
