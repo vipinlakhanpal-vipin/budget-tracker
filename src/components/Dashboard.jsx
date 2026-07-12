@@ -2751,7 +2751,20 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               </button>
               {profileMenuOpen && (
                 <div className="profile-dropdown">
-                  <div className="profile-dropdown-email">{session.user.email}</div>
+                  {/* Per explicit request: a clear "Signed in as {name}
+                      ({email})" line, plus role and account-created date --
+                      everything else (phone/location) is already editable
+                      just below this, so this line is purely identity
+                      context, not another editable field. */}
+                  <div className="profile-dropdown-email">
+                    Signed in as {myDetailsDraft.name || 'you'} ({session.user.email})
+                  </div>
+                  <div className="muted-small" style={{ marginTop: -6, marginBottom: 10 }}>
+                    {isOwner ? 'Owner' : 'User'}
+                    {session.user.created_at && (
+                      <> &middot; Member since {new Date(session.user.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</>
+                    )}
+                  </div>
                   <div className="field" style={{ marginBottom: 10 }}>
                     <label>Full name</label>
                     <input
