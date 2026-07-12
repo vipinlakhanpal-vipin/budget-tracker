@@ -151,10 +151,19 @@ button, input, select, textarea { font-family: inherit; }
    part of that stack, per explicit request to place it "slightly down" from
    the top edge instead of alongside the main logo block. */
 .splash-top-tagline {
-  position: absolute; top: max(28px, env(safe-area-inset-top)); left: 50%;
-  transform: translateX(-50%); z-index: 2;
+  /* Centered with left:0/right:0 + margin-inline:auto, NOT
+     left:50%+transform:translateX(-50%) -- .splash-pop below (used for this
+     element's pop-in animation) animates the `transform` property too, and
+     its final keyframe ("scale(1) translateY(0)") silently clobbers any
+     static transform set here, which is exactly why the centering trick
+     wasn't actually taking effect (text was pinned to left:50% with no
+     offset, reading as pushed toward the right half). Auto margins don't
+     touch transform at all, so they keep working regardless of the
+     animation. */
+  position: absolute; top: max(28px, env(safe-area-inset-top));
+  left: 0; right: 0; margin-inline: auto; z-index: 2;
   width: max-content; max-width: 92vw;
-  font-size: 25px; font-weight: 700; letter-spacing: .02em;
+  font-size: 35px; font-weight: 700; letter-spacing: .02em;
   text-align: center;
   animation: splash-pop .5s ease .15s both;
   /* Same amber-copper gradient as the heart-outline logo/"Hearth" title
