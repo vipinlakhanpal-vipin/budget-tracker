@@ -3278,77 +3278,20 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                     content instead closes the dead space now that the box
                     itself is exactly as wide as the typed value. */}
                 <label>Amount</label>
-                {/* Note + Attach icons live in the SAME flex item as Amount
-                    (not a separate .field next to it) -- per explicit
-                    feedback that they looked "distant" from Amount. As a
-                    separate .field in this wrapping row, they could drop to
-                    the next line on their own, landing far from Amount;
-                    nesting them here keeps them pinned right next to it no
-                    matter how the row wraps. A note symbol reveals a
-                    textarea for a longer free-text description (separate
-                    from the short Description field above), and a paperclip
-                    lets you attach one image or PDF (5MB cap). Both optional
-                    and collapsed by default. */}
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                  <div className="amount-field-wrap">
-                    <span className="currency-prefix"><CurrencyPrefix /></span>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="0.00"
-                      style={{ '--amt-px': formAmountPx(form.amount) + 'px' }}
-                      value={form.amount}
-                      onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    className={`icon-btn-outline ${form.notes ? 'active' : ''}`}
-                    title="Add a note"
-                    onClick={() => setShowExpenseNotes((s) => !s)}
-                    style={{ height: 40, width: 40, flex: '0 0 auto' }}
-                  >
-                    <StickyNote size={16} />
-                  </button>
-                  <button
-                    type="button"
-                    className={`icon-btn-outline ${expenseFile ? 'active' : ''}`}
-                    title="Attach a document"
-                    onClick={() => expenseFileInputRef.current?.click()}
-                    style={{ height: 40, width: 40, flex: '0 0 auto' }}
-                  >
-                    <Paperclip size={16} />
-                  </button>
+                <div className="amount-field-wrap">
+                  <span className="currency-prefix"><CurrencyPrefix /></span>
                   <input
-                    type="file"
-                    accept={ATTACHMENT_ACCEPT}
-                    ref={expenseFileInputRef}
-                    style={{ display: 'none' }}
-                    onChange={(e) => handleAttachmentPick(e.target.files?.[0], setExpenseFile)}
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    style={{ '--amt-px': formAmountPx(form.amount) + 'px' }}
+                    value={form.amount}
+                    onChange={(e) => setForm({ ...form, amount: e.target.value })}
                   />
                 </div>
               </div>
             </div>
-            {showExpenseNotes && (
-              <div className="field" style={{ marginTop: 8 }}>
-                <label>Note (optional, long description)</label>
-                <textarea
-                  rows={2}
-                  placeholder="Any extra detail about this expense..."
-                  value={form.notes}
-                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                />
-              </div>
-            )}
-            {expenseFile && (
-              <div className="muted-small attachment-chip" style={{ marginTop: 6 }}>
-                <Paperclip size={12} /> {expenseFile.name}
-                <button type="button" className="attachment-chip-remove" onClick={() => { setExpenseFile(null); if (expenseFileInputRef.current) expenseFileInputRef.current.value = ''; }}>
-                  <X size={12} />
-                </button>
-              </div>
-            )}
             {/* Payment source sits on its own row, below the main fields --
                 keeping it out of the first row avoids cramming a 5th/6th
                 field into a row already tight on width (the exact pattern
@@ -3399,9 +3342,55 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               </div>
               <div className="field" style={{ flex: '0 0 auto' }}>
                 <label style={{ visibility: 'hidden' }}>Add</label>
-                <button className="btn" type="submit" style={{ height: 40 }}>Add</button>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <button
+                    type="button"
+                    className={`icon-btn-outline ${form.notes ? 'active' : ''}`}
+                    title="Add a note"
+                    onClick={() => setShowExpenseNotes((s) => !s)}
+                    style={{ height: 40, width: 40, flex: '0 0 auto' }}
+                  >
+                    <StickyNote size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    className={`icon-btn-outline ${expenseFile ? 'active' : ''}`}
+                    title="Attach a document"
+                    onClick={() => expenseFileInputRef.current?.click()}
+                    style={{ height: 40, width: 40, flex: '0 0 auto' }}
+                  >
+                    <Paperclip size={16} />
+                  </button>
+                  <input
+                    type="file"
+                    accept={ATTACHMENT_ACCEPT}
+                    ref={expenseFileInputRef}
+                    style={{ display: 'none' }}
+                    onChange={(e) => handleAttachmentPick(e.target.files?.[0], setExpenseFile)}
+                  />
+                  <button className="btn" type="submit" style={{ height: 40, flex: '0 0 auto' }}>Add</button>
+                </div>
               </div>
             </div>
+            {showExpenseNotes && (
+              <div className="field" style={{ marginTop: 8 }}>
+                <label>Note (optional, long description)</label>
+                <textarea
+                  rows={2}
+                  placeholder="Any extra detail about this expense..."
+                  value={form.notes}
+                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                />
+              </div>
+            )}
+            {expenseFile && (
+              <div className="muted-small attachment-chip" style={{ marginTop: 6 }}>
+                <Paperclip size={12} /> {expenseFile.name}
+                <button type="button" className="attachment-chip-remove" onClick={() => { setExpenseFile(null); if (expenseFileInputRef.current) expenseFileInputRef.current.value = ''; }}>
+                  <X size={12} />
+                </button>
+              </div>
+            )}
             </form>
 
             <div className="scan-receipt-block">
@@ -3504,22 +3493,33 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                     and the Month field next to it. Sizing to content instead
                     (like the Add button field) closes that gap. */}
                 <label>Amount / month</label>
-                {/* Note + Attach icons in the same flex item as Amount --
-                    same fix applied to the expense forms so these can't drift
-                    away from Amount when the row wraps. */}
+                <div className="amount-field-wrap">
+                  <span className="currency-prefix"><CurrencyPrefix /></span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    style={{ '--amt-px': formAmountPx(newIncome.amount) + 'px' }}
+                    value={newIncome.amount}
+                    onChange={(e) => setNewIncome({ ...newIncome, amount: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="field" style={{ flex: '0 1 150px', minWidth: 130 }}>
+                <label>Month</label>
+                <input
+                  type="month"
+                  value={newIncome.month}
+                  onChange={(e) => setNewIncome({ ...newIncome, month: e.target.value })}
+                />
+              </div>
+              {/* Note + Attach + Add live together in ONE flex item, in that
+                  order, immediately before Add -- per explicit request that
+                  these icons sit right before the Add button on every tab. */}
+              <div className="field" style={{ flex: '0 0 auto' }}>
+                <label style={{ visibility: 'hidden' }}>Add</label>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                  <div className="amount-field-wrap">
-                    <span className="currency-prefix"><CurrencyPrefix /></span>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="0.00"
-                      style={{ '--amt-px': formAmountPx(newIncome.amount) + 'px' }}
-                      value={newIncome.amount}
-                      onChange={(e) => setNewIncome({ ...newIncome, amount: e.target.value })}
-                    />
-                  </div>
                   <button
                     type="button"
                     className={`icon-btn-outline ${newIncome.notes ? 'active' : ''}`}
@@ -3545,24 +3545,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                     style={{ display: 'none' }}
                     onChange={(e) => handleAttachmentPick(e.target.files?.[0], setIncomeFile)}
                   />
+                  <button className="btn" type="submit" style={{ height: 40, flex: '0 0 auto' }}>Add</button>
                 </div>
-              </div>
-              <div className="field" style={{ flex: '0 1 150px', minWidth: 130 }}>
-                <label>Month</label>
-                <input
-                  type="month"
-                  value={newIncome.month}
-                  onChange={(e) => setNewIncome({ ...newIncome, month: e.target.value })}
-                />
-              </div>
-              {/* Add sits right next to Month, in the same row, instead of on
-                  its own line below -- the invisible label above it matches
-                  every other field's label height so the button's own 40px
-                  height still lines up on the same baseline as the inputs
-                  next to it (the row is align-items:flex-end). */}
-              <div className="field" style={{ flex: '0 0 auto' }}>
-                <label style={{ visibility: 'hidden' }}>Add</label>
-                <button className="btn" type="submit" style={{ height: 40 }}>Add</button>
               </div>
             </div>
             {showIncomeNotes && (
@@ -3797,46 +3781,16 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                     content instead closes the dead space now that the box
                     itself is exactly as wide as the typed value. */}
                 <label>Amount / month</label>
-                {/* Note + Attach icons live in the SAME flex item as Amount
-                    (not a separate field further down the row) -- per
-                    explicit feedback that they looked too far from Amount. */}
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                  <div className="amount-field-wrap">
-                    <span className="currency-prefix"><CurrencyPrefix /></span>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="0.00"
-                      style={{ '--amt-px': formAmountPx(newRecurring.amount) + 'px' }}
-                      value={newRecurring.amount}
-                      onChange={(e) => setNewRecurring({ ...newRecurring, amount: e.target.value })}
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    className={`icon-btn-outline ${newRecurring.notes ? 'active' : ''}`}
-                    title="Add a note"
-                    onClick={() => setShowRecurringNotes((s) => !s)}
-                    style={{ height: 40, width: 40, flex: '0 0 auto' }}
-                  >
-                    <StickyNote size={16} />
-                  </button>
-                  <button
-                    type="button"
-                    className={`icon-btn-outline ${recurringFile ? 'active' : ''}`}
-                    title="Attach a document"
-                    onClick={() => recurringFileInputRef.current?.click()}
-                    style={{ height: 40, width: 40, flex: '0 0 auto' }}
-                  >
-                    <Paperclip size={16} />
-                  </button>
+                <div className="amount-field-wrap">
+                  <span className="currency-prefix"><CurrencyPrefix /></span>
                   <input
-                    type="file"
-                    accept={ATTACHMENT_ACCEPT}
-                    ref={recurringFileInputRef}
-                    style={{ display: 'none' }}
-                    onChange={(e) => handleAttachmentPick(e.target.files?.[0], setRecurringFile)}
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    style={{ '--amt-px': formAmountPx(newRecurring.amount) + 'px' }}
+                    value={newRecurring.amount}
+                    onChange={(e) => setNewRecurring({ ...newRecurring, amount: e.target.value })}
                   />
                 </div>
               </div>
@@ -3900,19 +3854,25 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   </select>
                 </div>
               )}
-              {/* Same note/attach pair as the one-off expense form above --
-                  optional long description + one image/PDF attachment
-                  (5MB cap), useful here for loan agreements, EMI schedules,
-                  or lease documents. */}
+              {/* Note + Attach + Add now live together in ONE flex item, in
+                  that order, immediately before Add -- per explicit request
+                  that these icons sit right before the Add button on every
+                  tab. Keeping all three in a single field (instead of Note/
+                  Attach as their own field next to a separate Add field)
+                  guarantees they can never separate from each other or from
+                  Add when the row wraps on a narrower screen -- the exact
+                  "why do these appear in two different places" bug that
+                  happened here before (a leftover duplicate copy of this
+                  block used to sit further up the row too). */}
               <div className="field" style={{ flex: '0 0 auto' }}>
-                <label style={{ visibility: 'hidden' }}>Note</label>
-                <div style={{ display: 'flex', gap: 6 }}>
+                <label style={{ visibility: 'hidden' }}>Add</label>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                   <button
                     type="button"
                     className={`icon-btn-outline ${newRecurring.notes ? 'active' : ''}`}
                     title="Add a note"
                     onClick={() => setShowRecurringNotes((s) => !s)}
-                    style={{ height: 40, width: 40 }}
+                    style={{ height: 40, width: 40, flex: '0 0 auto' }}
                   >
                     <StickyNote size={16} />
                   </button>
@@ -3921,7 +3881,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                     className={`icon-btn-outline ${recurringFile ? 'active' : ''}`}
                     title="Attach a document"
                     onClick={() => recurringFileInputRef.current?.click()}
-                    style={{ height: 40, width: 40 }}
+                    style={{ height: 40, width: 40, flex: '0 0 auto' }}
                   >
                     <Paperclip size={16} />
                   </button>
@@ -3932,15 +3892,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                     style={{ display: 'none' }}
                     onChange={(e) => handleAttachmentPick(e.target.files?.[0], setRecurringFile)}
                   />
+                  <button className="btn" type="submit" style={{ height: 40, flex: '0 0 auto' }}>Add</button>
                 </div>
-              </div>
-              {/* Add sits right next to Payment Source (and Bank, when it's
-                  showing) in this same row, instead of on its own line below.
-                  Same invisible-label trick as Income's Add button so its
-                  40px height still lines up with the row's other fields. */}
-              <div className="field" style={{ flex: '0 0 auto' }}>
-                <label style={{ visibility: 'hidden' }}>Add</label>
-                <button className="btn" type="submit" style={{ height: 40 }}>Add</button>
               </div>
             </div>
             {showRecurringNotes && (
@@ -4342,22 +4295,33 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                     content instead closes the dead space now that the box
                     itself is exactly as wide as the typed value. */}
                 <label>Amount / month</label>
-                {/* Note + Attach icons in the same flex item as Amount --
-                    same fix applied to the other forms so these can't drift
-                    away from Amount when the row wraps. */}
+                <div className="amount-field-wrap">
+                  <span className="currency-prefix"><CurrencyPrefix /></span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    style={{ '--amt-px': formAmountPx(newSaving.amount) + 'px' }}
+                    value={newSaving.amount}
+                    onChange={(e) => setNewSaving({ ...newSaving, amount: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="field" style={{ flex: '0 1 150px', minWidth: 130 }}>
+                <label>Month</label>
+                <input
+                  type="month"
+                  value={newSaving.month}
+                  onChange={(e) => setNewSaving({ ...newSaving, month: e.target.value })}
+                />
+              </div>
+              {/* Note + Attach + Add live together in ONE flex item, in that
+                  order, immediately before Add -- per explicit request that
+                  these icons sit right before the Add button on every tab. */}
+              <div className="field" style={{ flex: '0 0 auto' }}>
+                <label style={{ visibility: 'hidden' }}>Add</label>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                  <div className="amount-field-wrap">
-                    <span className="currency-prefix"><CurrencyPrefix /></span>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="0.00"
-                      style={{ '--amt-px': formAmountPx(newSaving.amount) + 'px' }}
-                      value={newSaving.amount}
-                      onChange={(e) => setNewSaving({ ...newSaving, amount: e.target.value })}
-                    />
-                  </div>
                   <button
                     type="button"
                     className={`icon-btn-outline ${newSaving.notes ? 'active' : ''}`}
@@ -4383,24 +4347,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                     style={{ display: 'none' }}
                     onChange={(e) => handleAttachmentPick(e.target.files?.[0], setSavingFile)}
                   />
+                  <button className="btn" type="submit" style={{ height: 40, flex: '0 0 auto' }}>Add</button>
                 </div>
-              </div>
-              <div className="field" style={{ flex: '0 1 150px', minWidth: 130 }}>
-                <label>Month</label>
-                <input
-                  type="month"
-                  value={newSaving.month}
-                  onChange={(e) => setNewSaving({ ...newSaving, month: e.target.value })}
-                />
-              </div>
-              {/* Add now sits inline right after Month, in the same row,
-                  instead of on its own line below -- matching the Income/
-                  Fixed Expenses/Add-expense pattern (invisible label keeps
-                  the button's 40px height on the same baseline as the row's
-                  other fields, since the row is align-items:flex-end). */}
-              <div className="field" style={{ flex: '0 0 auto' }}>
-                <label style={{ visibility: 'hidden' }}>Add</label>
-                <button className="btn" type="submit" style={{ height: 40 }}>Add</button>
               </div>
             </div>
             {showSavingNotes && (
