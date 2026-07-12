@@ -122,6 +122,13 @@ export default function Splash() {
         )}
       </svg>
 
+      {/* Standalone brand line near the top -- deliberately just below the
+          very top edge, on the plain solid-teal strip above where the world
+          map/orbs get busy, per explicit request ("slightly down on plain
+          teal solid background"), rather than competing with the main
+          logo/text block anchored at the bottom. */}
+      <div className="splash-top-tagline">Hearth &mdash; Spend smart. Save better. Live happier.</div>
+
       <div className="splash-orb splash-orb-1" />
       <div className="splash-orb splash-orb-2" />
       <div className="splash-orb splash-orb-3" />
