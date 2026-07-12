@@ -54,7 +54,17 @@ button, input, select, textarea { font-family: inherit; }
    never lingers as an invisible-but-still-there click-blocker. */
 .splash-screen {
   position: fixed; inset: 0; z-index: 999999; overflow: hidden;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  display: flex; flex-direction: column; align-items: center;
+  /* Anchored to the BOTTOM of the screen (not vertically centered) per
+     explicit request -- the logo/text block should sit low, right above
+     the "Conceptualised, Designed and Created by" credit line, rather than
+     mid-screen. The padding-bottom below is the actual gap-control knob:
+     it reserves just enough room for .splash-credit (which sits
+     max(24px, safe-area-inset-bottom) from the true bottom edge, plus its
+     own ~17px line height) so the illustration block lands right above it
+     with a small visible gap, not touching/overlapping it. */
+  justify-content: flex-end;
+  padding-bottom: calc(58px + env(safe-area-inset-bottom, 0px));
   /* A radial glow centered where the logo sits (rather than a flat
      top-to-bottom linear fade) keeps the middle of the screen bright and
      warm. Darkened a step further than before, per explicit request, so
@@ -149,23 +159,9 @@ button, input, select, textarea { font-family: inherit; }
   position: relative; z-index: 2;
   display: flex; flex-direction: column; align-items: center; gap: 6px;
   animation: splash-pop .6s cubic-bezier(.34, 1.56, .64, 1) both;
-  /* Nudged down from dead-center, per explicit request -- the background's
-     radial gradient (see .splash-screen) is brightest/lightest right around
-     its 50% 38% center, which is roughly where the logo sat before this
-     shift, washing out contrast against the amber-copper mark. Moving the
-     whole block down lands the logo in the flatter, more solidly-teal
-     #0b5a52/#063b34 band further from that bright center, without touching
-     .splash-credit (bottom-anchored separately, so it's unaffected). Capped
-     lower on short screens so it never crowds the credit line.
-     Deliberately margin-top, NOT transform: the splash-pop keyframes below
-     already animate transform on this exact element (ending at
-     "scale(1) translateY(0)"), so a static transform here gets silently
-     clobbered by the animation's own end state -- margin doesn't collide
-     with it and actually shows up. */
-  margin-top: 6vh;
-}
-@media (max-height: 700px) {
-  .splash-center { margin-top: 2.5vh; }
+  /* Positioning is now handled by .splash-screen (justify-content: flex-end
+     + padding-bottom) so this whole block sits right above the credit
+     line -- no offset needed here directly on top of that. */
 }
 .splash-illustration { width: 360px; max-width: 92vw; filter: drop-shadow(0 18px 30px rgba(0, 0, 0, .24)); }
 .splash-illustration svg { width: 100%; height: auto; display: block; }
