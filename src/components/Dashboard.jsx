@@ -599,8 +599,24 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   // from anywhere below the fold. That was the actual bug behind tabs not
   // realigning the page: window.scrollTo always moves the real page scroll
   // position, regardless of what's currently stuck to the top.
+  //
+  // Also deliberately deferred by two animation frames rather than called
+  // synchronously in the same click handler that flips inputTab/activePanel.
+  // Switching tabs changes which panels/tables are mounted, which can
+  // shrink or grow the page's total height a lot (e.g. Home hides every
+  // form and table). Calling scrollTo('smooth') *before* React has
+  // re-rendered starts the animation against the OLD (taller) page, and if
+  // the resize lands mid-animation the browser clamps the in-flight scroll
+  // to whatever the new max scroll position is instead of finishing the
+  // trip to 0 -- landing partway down the page instead of at the top.
+  // Waiting two rAFs lets the resize settle first, so the scroll always
+  // starts from (and finishes at) the right place.
   function scrollToFrameA() {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    });
   }
   function goToAdd(tab) {
     setActivePanel(null);
