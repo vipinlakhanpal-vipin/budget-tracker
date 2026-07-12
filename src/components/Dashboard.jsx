@@ -12,7 +12,7 @@ import { formatVersionBadge } from '../version.js';
 import {
   Home, Plus, FileText, Users as UsersIcon, Settings as SettingsIcon,
   Pencil, Trash2, X, ChevronLeft, ChevronRight, Camera, MessageCircle, Sparkles, User,
-  Palette, Check, StickyNote, Paperclip,
+  Palette, Check, StickyNote, Paperclip, ExternalLink, Mail,
 } from 'lucide-react';
 
 // Max size for a note/fixed-expense attachment (images or PDF only). Kept as
@@ -387,7 +387,14 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   const [expenses, setExpenses] = useState([]);
   const [recurringExpenses, setRecurringExpenses] = useState([]);
   const [incomes, setIncomes] = useState([]);
-  const [totalBudget, setTotalBudget] = useState(0);
+  // Total monthly budget now lives per-calendar-month (one row per month, in
+  // the monthly_budgets table), exactly like Income/Savings, instead of one
+  // flat number that applied to every month forever. `totalBudget` below is
+  // derived from this list for whichever month is currently selected, so
+  // every existing calculation that reads `totalBudget` (Remaining, the
+  // over-budget banner, the PDF report, AI insights, etc.) automatically
+  // reflects the right month's figure without changing at every call site.
+  const [monthlyBudgets, setMonthlyBudgets] = useState([]);
   const [currency, setCurrency] = useState('AED');
   const [currencyDraft, setCurrencyDraft] = useState('AED');
   // Self-service household rename (owner-only) -- previously the name
@@ -504,31 +511,11 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     document.addEventListener('mousedown', onDocClick);
     return () => document.removeEventListener('mousedown', onDocClick);
   }, [themeMenuOpen]);
-  // Notes/Attachments header buttons -- an aggregated, numbered view of
-  // every note and every attached document across Income, Fixed Expenses,
-  // Regular Expenses, and Savings, per explicit request, so nothing needs
-  // hunting through each tab separately. Same open/outside-click pattern as
-  // the theme picker and notification bell above.
-  const [notesMenuOpen, setNotesMenuOpen] = useState(false);
-  const notesMenuRef = useRef(null);
-  useEffect(() => {
-    if (!notesMenuOpen) return;
-    function onDocClick(e) {
-      if (notesMenuRef.current && !notesMenuRef.current.contains(e.target)) setNotesMenuOpen(false);
-    }
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
-  }, [notesMenuOpen]);
-  const [attachMenuOpen, setAttachMenuOpen] = useState(false);
-  const attachMenuRef = useRef(null);
-  useEffect(() => {
-    if (!attachMenuOpen) return;
-    function onDocClick(e) {
-      if (attachMenuRef.current && !attachMenuRef.current.contains(e.target)) setAttachMenuOpen(false);
-    }
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
-  }, [attachMenuOpen]);
+  // Attachment viewer modal -- opened from every place a document can be
+  // viewed (aggregated Attachments dropdown, each table's row icon, each
+  // mobile edit sheet). Holds the signed URL + name of whichever attachment
+  // is currently open, so one modal + one set of handlers covers all of them.
+  const [attachmentViewer, setAttachmentViewer] = useState(null);
   function markNotifsSeen(ids) {
     setSeenNotifIds((cur) => {
       const next = new Set(cur);
@@ -722,6 +709,11 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   const [newCategoryName, setNewCategoryName] = useState('');
   const [categoryNameDrafts, setCategoryNameDrafts] = useState({});
   const [categoryBudgetDrafts, setCategoryBudgetDrafts] = useState({});
+  // Which month the "Budgeting" settings tab is currently editing -- defaults
+  // to the dashboard's current month every time that tab is opened (see the
+  // "Budgeting" button's onClick), can be changed via its own Month field to
+  // set/review a different month's budget without leaving the tab.
+  const [budgetMonthDraft, setBudgetMonthDraft] = useState(() => monthKey(currentMonth));
   const [totalBudgetDraft, setTotalBudgetDraft] = useState('');
 
   const [newRecurring, setNewRecurring] = useState({
@@ -934,7 +926,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   // as soon as they tabbed from one field to the next.
   async function loadAll(isInitial = false) {
     if (isInitial) setLoading(true);
-    const [{ data: cats }, { data: exps }, { data: settings }, { data: recur }, { data: mem }, { data: invites }, { data: inc }, { data: savings }] = await Promise.all([
+    const [{ data: cats }, { data: exps }, { data: settings }, { data: recur }, { data: mem }, { data: invites }, { data: inc }, { data: savings }, { data: mBudgets }] = await Promise.all([
       supabase.from('categories').select('*').eq('household_id', householdId).order('name'),
       // Secondary sort by id is required, not cosmetic -- Postgres doesn't
       // guarantee a stable order for rows that tie on expense_date (very
@@ -952,6 +944,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       supabase.from('household_invites').select('*').eq('household_id', householdId).eq('status', 'pending'),
       supabase.from('incomes').select('*').eq('household_id', householdId).order('start_date').order('id'),
       supabase.from('savings_goals').select('*').eq('household_id', householdId).order('start_date').order('id'),
+      supabase.from('monthly_budgets').select('*').eq('household_id', householdId).order('month'),
     ]);
     setCategories(cats || []);
     setExpenses(exps || []);
@@ -972,8 +965,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       iDrafts[i.id] = { name: i.name, amount: String(i.amount), month: i.start_date.slice(0, 7) };
     });
     setIncomeDrafts(iDrafts);
-    setTotalBudget(settings?.total_monthly_budget || 0);
-    setTotalBudgetDraft(String(settings?.total_monthly_budget || ''));
+    setMonthlyBudgets(mBudgets || []);
     setCurrency(settings?.currency || 'AED');
     setCurrencyDraft(settings?.currency || 'AED');
     const drafts = {};
@@ -1035,6 +1027,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       .on('postgres_changes', { event: '*', schema: 'public', table: 'household_invites', filter: `household_id=eq.${householdId}` }, refresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'incomes', filter: `household_id=eq.${householdId}` }, refresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'savings_goals', filter: `household_id=eq.${householdId}` }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'monthly_budgets', filter: `household_id=eq.${householdId}` }, refresh)
       .subscribe();
     return () => supabase.removeChannel(channel);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1044,6 +1037,26 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     const key = monthKey(currentMonth);
     return expenses.filter((e) => e.expense_date.slice(0, 7) === key);
   }, [expenses, currentMonth]);
+
+  // Whichever month the dashboard is currently showing -- see the
+  // monthlyBudgets state declaration above for why this replaced the old
+  // flat totalBudget value. Falls back to 0 (same as before) if no budget
+  // has been set for this particular month yet.
+  const totalBudget = useMemo(() => {
+    const key = monthKey(currentMonth);
+    const row = monthlyBudgets.find((b) => b.month === key);
+    return row ? Number(row.total_budget) : 0;
+  }, [monthlyBudgets, currentMonth]);
+
+  // Keeps the Budgeting tab's Amount field in sync with whichever month its
+  // own Month field is set to (budgetMonthDraft), separate from the
+  // dashboard's currentMonth -- so reviewing/editing a past or future
+  // month's budget there doesn't also flip which month the rest of the
+  // dashboard (charts, tables, Remaining) is showing.
+  useEffect(() => {
+    const row = monthlyBudgets.find((b) => b.month === budgetMonthDraft);
+    setTotalBudgetDraft(row ? String(row.total_budget) : '');
+  }, [budgetMonthDraft, monthlyBudgets]);
 
   const recurringForMonth = useMemo(() => {
     const key = monthKey(currentMonth);
@@ -1143,43 +1156,6 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       .map((c) => c.name);
   }, [categories, byCategory]);
 
-  // Aggregated across ALL FOUR entry types (not just the currently viewed
-  // month) so the Notes/Attachments header buttons show everything that was
-  // ever saved, not just this month's. Sorted oldest-first so the numbering
-  // in those windows (1st, 2nd, 3rd...) reads as "in the order they were
-  // added" rather than jumping around.
-  const notesAndAttachments = useMemo(() => {
-    const rows = [];
-    function collect(table, sourceLabel, list, dateField, nameField) {
-      list.forEach((r) => {
-        if (r.notes || r.attachment_url) {
-          rows.push({
-            key: `${table}-${r.id}`,
-            table,
-            source: sourceLabel,
-            date: r[dateField],
-            name: (r[nameField] || sourceLabel).trim ? (r[nameField] || sourceLabel).trim() : (r[nameField] || sourceLabel),
-            amount: r.amount,
-            notes: r.notes,
-            attachment_url: r.attachment_url,
-            attachment_name: r.attachment_name,
-          });
-        }
-      });
-    }
-    collect('expenses', 'Regular Expense', expenses, 'expense_date', 'description');
-    collect('recurring_expenses', 'Fixed Expense', recurringExpenses, 'start_date', 'name');
-    collect('incomes', 'Income', incomes, 'start_date', 'name');
-    collect('savings_goals', 'Savings', savingsGoals, 'start_date', 'name');
-    rows.sort((a, b) => {
-      const d = new Date(a.date || 0) - new Date(b.date || 0);
-      return d !== 0 ? d : String(a.key).localeCompare(String(b.key));
-    });
-    return rows;
-  }, [expenses, recurringExpenses, incomes, savingsGoals]);
-  const notesList = notesAndAttachments.filter((r) => r.notes);
-  const attachmentsList = notesAndAttachments.filter((r) => r.attachment_url);
-
   const pieData = Object.entries(byCategory).map(([name, value]) => ({ name, value }));
 
   // The pie chart specifically (not Bar/Pareto/Treemap) gets capped to its
@@ -1249,16 +1225,50 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   }
 
   // The bucket is private, so viewing/downloading a saved attachment needs a
-  // short-lived signed URL generated on demand -- the stored attachment_url
-  // is just the storage path, never a public link.
-  async function viewAttachment(path) {
+  // signed URL generated on demand -- the stored attachment_url is just the
+  // storage path, never a public link. This opens the attachment-viewer
+  // modal (used from every table row, mobile edit sheet, etc.) rather than
+  // navigating away directly, so the same "view inline / open / share" set
+  // of options is available everywhere a document can be attached.
+  async function openAttachmentViewer(path, name) {
     if (!path) return;
-    const { data, error } = await supabase.storage.from('attachments').createSignedUrl(path, 120);
+    setAttachmentViewer({ loading: true, path, name: name || 'Attachment', url: null });
+    const { data, error } = await supabase.storage.from('attachments').createSignedUrl(path, 3600);
     if (error || !data?.signedUrl) {
       alert('Could not open attachment: ' + (error?.message || 'unknown error'));
+      setAttachmentViewer(null);
       return;
     }
-    window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+    setAttachmentViewer({ loading: false, path, name: name || 'Attachment', url: data.signedUrl });
+  }
+
+  function isImageAttachment(name) {
+    return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(name || '');
+  }
+  function isPdfAttachment(name) {
+    return /\.pdf$/i.test(name || '');
+  }
+
+  // Share generates its OWN fresh, longer-lived link (24h) rather than
+  // reusing the viewer's 1-hour link -- the recipient on the other end of an
+  // email/WhatsApp message may not open it right away, so the share link
+  // needs more runway than the in-app viewer does.
+  async function shareAttachment(path, name, via) {
+    const { data, error } = await supabase.storage.from('attachments').createSignedUrl(path, 86400);
+    if (error || !data?.signedUrl) {
+      alert('Could not create a shareable link: ' + (error?.message || 'unknown error'));
+      return;
+    }
+    const link = data.signedUrl;
+    const label = name || 'attachment';
+    if (via === 'email') {
+      const subject = encodeURIComponent(`Hearth document: ${label}`);
+      const body = encodeURIComponent(`Sharing a document from Hearth: ${label}\n\n${link}\n\n(This link expires in 24 hours.)`);
+      window.open(`mailto:?subject=${subject}&body=${body}`, '_blank');
+    } else if (via === 'whatsapp') {
+      const text = encodeURIComponent(`${label}: ${link}\n(link expires in 24 hours)`);
+      window.open(`https://wa.me/?text=${text}`, '_blank');
+    }
   }
 
   function handleAttachmentPick(file, setFileFn) {
@@ -1724,14 +1734,16 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   // instead of a single "Save settings" button -- each field commits on its
   // own blur/change, so nothing is lost if someone edits one field and
   // navigates away without touching the others.
-  async function commitTotalBudget(value) {
+  // The monthly budget is now one row per household+month (upsert on the
+  // unique constraint), same as Income/Savings, instead of one flat number
+  // on "settings" -- see the monthlyBudgets state declaration for why.
+  async function commitMonthlyBudget(monthStr, value) {
     const total = parseFloat(value);
     const { error } = await supabase
-      .from('settings')
-      .update({ total_monthly_budget: isNaN(total) ? 0 : total })
-      .eq('household_id', householdId);
+      .from('monthly_budgets')
+      .upsert({ household_id: householdId, month: monthStr, total_budget: isNaN(total) ? 0 : total }, { onConflict: 'household_id,month' });
     if (error) {
-      alert('Could not update total monthly budget: ' + error.message);
+      alert('Could not update the budget for that month: ' + error.message);
       return;
     }
     loadAll();
@@ -2905,84 +2917,6 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 </div>
               )}
             </div>
-            {/* Notes + Attachments header buttons -- per explicit request, a
-                combined, numbered view of every note and every attached
-                document saved anywhere (Income, Fixed Expenses, Regular
-                Expenses, Savings), oldest first, so nothing needs hunting
-                through each tab individually. Same dropdown pattern as the
-                theme picker/bell/profile menus above, just wider/scrollable
-                since the list can get long. */}
-            <div className="theme-fab-wrap" ref={notesMenuRef}>
-              <button
-                type="button"
-                className="theme-fab-btn notes-fab-btn"
-                title="Notes"
-                onClick={() => setNotesMenuOpen((o) => !o)}
-              >
-                <StickyNote size={16} />
-              </button>
-              {notesMenuOpen && (
-                <div className="theme-dropdown notes-attach-dropdown">
-                  <div className="theme-dropdown-title">Notes ({notesList.length})</div>
-                  {notesList.length === 0 ? (
-                    <div className="notif-empty">No notes saved yet.</div>
-                  ) : (
-                    notesList.map((r, idx) => (
-                      <div className="notes-attach-row" key={r.key}>
-                        <div className="notes-attach-row-head">
-                          <span className="notes-attach-num">{idx + 1}.</span>
-                          <span className="notes-attach-name">{r.name}</span>
-                          <span className="notes-attach-source">{r.source}</span>
-                        </div>
-                        <div className="muted-small notes-attach-meta">
-                          {fmtDate(r.date)}{r.amount != null && <> &middot; <Amt value={r.amount} /></>}
-                        </div>
-                        <div className="notes-attach-text">{r.notes}</div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
-            <div className="theme-fab-wrap" ref={attachMenuRef}>
-              <button
-                type="button"
-                className="theme-fab-btn notes-fab-btn"
-                title="Attachments"
-                onClick={() => setAttachMenuOpen((o) => !o)}
-              >
-                <Paperclip size={16} />
-              </button>
-              {attachMenuOpen && (
-                <div className="theme-dropdown notes-attach-dropdown">
-                  <div className="theme-dropdown-title">Attachments ({attachmentsList.length})</div>
-                  {attachmentsList.length === 0 ? (
-                    <div className="notif-empty">No documents attached yet.</div>
-                  ) : (
-                    attachmentsList.map((r, idx) => (
-                      <div className="notes-attach-row" key={r.key}>
-                        <div className="notes-attach-row-head">
-                          <span className="notes-attach-num">{idx + 1}.</span>
-                          <span className="notes-attach-name">{r.name}</span>
-                          <span className="notes-attach-source">{r.source}</span>
-                        </div>
-                        <div className="muted-small notes-attach-meta">
-                          {fmtDate(r.date)}{r.amount != null && <> &middot; <Amt value={r.amount} /></>}
-                        </div>
-                        <button
-                          type="button"
-                          className="link-btn notes-attach-view"
-                          onClick={() => viewAttachment(r.attachment_url)}
-                        >
-                          <Paperclip size={12} style={{ marginRight: 4, verticalAlign: -2 }} />
-                          View {r.attachment_name || 'document'}
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
             {/* Profile icon replaces the old standalone Sign out button --
                 clicking it shows the signed-in email plus the same
                 self-editable Name/Phone/Location fields as "My details" in
@@ -3636,7 +3570,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                               </button>
                             )}
                             {i.attachment_url && (
-                              <button type="button" className="row-icon-btn" title={i.attachment_name || 'View attachment'} onClick={() => viewAttachment(i.attachment_url)}>
+                              <button type="button" className="row-icon-btn" title={i.attachment_name || 'View attachment'} onClick={() => openAttachmentViewer(i.attachment_url, i.attachment_name)}>
                                 <Paperclip size={11} />
                               </button>
                             )}
@@ -3694,6 +3628,16 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       </button>
                     </div>
                     <h2 style={{ margin: '0 0 12px' }}>Edit income</h2>
+                    {(i.notes || i.attachment_url) && (
+                      <div className="muted-small" style={{ marginBottom: 10 }}>
+                        {i.notes && <div style={{ marginBottom: 4 }}><StickyNote size={12} style={{ marginRight: 4, verticalAlign: -2 }} />{i.notes}</div>}
+                        {i.attachment_url && (
+                          <button type="button" className="link-btn" style={{ padding: 0 }} onClick={() => openAttachmentViewer(i.attachment_url, i.attachment_name)}>
+                            <Paperclip size={12} style={{ marginRight: 4, verticalAlign: -2 }} />View {i.attachment_name || 'attachment'}
+                          </button>
+                        )}
+                      </div>
+                    )}
                     <div className="field" style={{ marginBottom: 10 }}>
                       <label>Source</label>
                       <input
@@ -4023,7 +3967,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                               </button>
                             )}
                             {r.attachment_url && (
-                              <button type="button" className="row-icon-btn" title={r.attachment_name || 'View attachment'} onClick={() => viewAttachment(r.attachment_url)}>
+                              <button type="button" className="row-icon-btn" title={r.attachment_name || 'View attachment'} onClick={() => openAttachmentViewer(r.attachment_url, r.attachment_name)}>
                                 <Paperclip size={11} />
                               </button>
                             )}
@@ -4158,7 +4102,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       <div className="muted-small" style={{ marginBottom: 10 }}>
                         {r.notes && <div style={{ marginBottom: 4 }}><StickyNote size={12} style={{ marginRight: 4, verticalAlign: -2 }} />{r.notes}</div>}
                         {r.attachment_url && (
-                          <button type="button" className="link-btn" style={{ padding: 0 }} onClick={() => viewAttachment(r.attachment_url)}>
+                          <button type="button" className="link-btn" style={{ padding: 0 }} onClick={() => openAttachmentViewer(r.attachment_url, r.attachment_name)}>
                             <Paperclip size={12} style={{ marginRight: 4, verticalAlign: -2 }} />View {r.attachment_name || 'attachment'}
                           </button>
                         )}
@@ -4432,7 +4376,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                               </button>
                             )}
                             {s.attachment_url && (
-                              <button type="button" className="row-icon-btn" title={s.attachment_name || 'View attachment'} onClick={() => viewAttachment(s.attachment_url)}>
+                              <button type="button" className="row-icon-btn" title={s.attachment_name || 'View attachment'} onClick={() => openAttachmentViewer(s.attachment_url, s.attachment_name)}>
                                 <Paperclip size={11} />
                               </button>
                             )}
@@ -4489,6 +4433,16 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       </button>
                     </div>
                     <h2 style={{ margin: '0 0 12px' }}>Edit savings</h2>
+                    {(s.notes || s.attachment_url) && (
+                      <div className="muted-small" style={{ marginBottom: 10 }}>
+                        {s.notes && <div style={{ marginBottom: 4 }}><StickyNote size={12} style={{ marginRight: 4, verticalAlign: -2 }} />{s.notes}</div>}
+                        {s.attachment_url && (
+                          <button type="button" className="link-btn" style={{ padding: 0 }} onClick={() => openAttachmentViewer(s.attachment_url, s.attachment_name)}>
+                            <Paperclip size={12} style={{ marginRight: 4, verticalAlign: -2 }} />View {s.attachment_name || 'attachment'}
+                          </button>
+                        )}
+                      </div>
+                    )}
                     <div className="field" style={{ marginBottom: 10 }}>
                       <label>Name</label>
                       <input
@@ -4624,7 +4578,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                               </button>
                             )}
                             {e.attachment_url && (
-                              <button type="button" className="row-icon-btn" title={e.attachment_name || 'View attachment'} onClick={() => viewAttachment(e.attachment_url)}>
+                              <button type="button" className="row-icon-btn" title={e.attachment_name || 'View attachment'} onClick={() => openAttachmentViewer(e.attachment_url, e.attachment_name)}>
                                 <Paperclip size={11} />
                               </button>
                             )}
@@ -4710,7 +4664,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                     <div className="muted-small" style={{ marginBottom: 10 }}>
                       {e.notes && <div style={{ marginBottom: 4 }}><StickyNote size={12} style={{ marginRight: 4, verticalAlign: -2 }} />{e.notes}</div>}
                       {e.attachment_url && (
-                        <button type="button" className="link-btn" style={{ padding: 0 }} onClick={() => viewAttachment(e.attachment_url)}>
+                        <button type="button" className="link-btn" style={{ padding: 0 }} onClick={() => openAttachmentViewer(e.attachment_url, e.attachment_name)}>
                           <Paperclip size={12} style={{ marginRight: 4, verticalAlign: -2 }} />View {e.attachment_name || 'attachment'}
                         </button>
                       )}
@@ -5264,7 +5218,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <p><strong>Scan a receipt</strong> -- below the Regular Expenses form, upload a photo of a receipt (or a screenshot/sheet listing several expenses) and Claude will read it for you. You'll see an editable review list first -- fix anything that looks wrong, untick what you don't want, then add only what you confirm. Nothing is saved automatically.</p>
               <p><strong>Income</strong> -- add each income source per month (e.g. Salary). Income does NOT roll over automatically -- since pay can change month to month (deductions, advances, etc.), add a fresh row each month with that month's actual amount, or edit an existing row's Month field forward. Every field auto-saves. It has the same optional note + attachment icons as Regular Expenses.</p>
               <p><strong>Fixed Expenses</strong> -- for recurring bills, loans, EMIs, and rent. Set a Start date, an optional End date, and how often it repeats (Monthly, Alternate month, Quarterly, Half-yearly, Once a year). Every field auto-saves as you edit -- there's no Save button to click. Set a Due date to get an in-app reminder starting 3 days before it's due, and an email reminder if it's set up. It has the same optional note + attachment icons as Regular Expenses -- handy for keeping a loan agreement or lease document attached to the bill itself.</p>
-              <p><strong>Notes &amp; Attachments</strong> -- the note (<StickyNote size={11} style={{ verticalAlign: -2 }} />) and paperclip (<Paperclip size={11} style={{ verticalAlign: -2 }} />) buttons in the header open a combined, numbered view of every note and every attached document across Income, Fixed Expenses, Regular Expenses, and Savings -- in the order they were added, oldest first -- so you don't have to hunt through each tab to find one.</p>
+              <p><strong>Notes &amp; Attachments</strong> -- the note (<StickyNote size={11} style={{ verticalAlign: -2 }} />) and paperclip (<Paperclip size={11} style={{ verticalAlign: -2 }} />) icons sit right before the Add button on Income, Fixed Expenses, Regular Expenses, and Savings. Tapping a saved paperclip icon (in a table row or an edit sheet) opens a viewer where you can see the document on screen, open it in a compatible app on your device, or share it by email or WhatsApp.</p>
               <p><strong>Savings</strong> -- set how much you'd like to set aside for the month, e.g. "Emergency fund" or "Investment". Works exactly like Income: entered fresh per month with no auto-rollover, since the amount you're able to save can change month to month -- add a new row each month, or edit an existing row's Month field forward. Since money you set aside is no longer available to spend, it's treated the same as an expense: it's counted in "Spent so far" and "Combined expenses", and subtracted in "Remaining" and "Net", in addition to getting its own page in the PDF report so you can see planned savings build up over time. It has the same optional note + attachment icons as Regular Expenses.</p>
               <p><strong>Expenses this month</strong> is always visible below the tabs so you can see what's been logged without switching tabs. It also auto-saves.</p>
               <p><strong>Spending by category</strong> chart -- toggle between Pie, Bar, Pareto, and Treemap. The Pie groups smaller categories into "Other" to stay readable; Bar and Treemap show every category individually. The totals cards above show your combined income, combined expenses (split into Regular, Fixed, and Savings), and what's left of your budget and income after all three are accounted for.</p>
@@ -5272,7 +5226,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <p><strong>Budget Coach</strong> -- unlike AI Insights (one month at a time), Coach looks across your last 6 months for patterns: a category that keeps going over budget, spending trending up or down, or a savings goal that no longer looks realistic. It only ever writes out suggestions -- it never changes your Settings for you.</p>
               <p><strong>Chat BoT</strong> -- the round chat bubble in the corner (drag it anywhere on screen) answers questions about your household's own numbers across every tab -- Income, Fixed Expenses, Savings, one-off spending, and who's in the household -- and can also answer "how do I..." questions about the app itself and give suggestions when asked. It can only see the data already in the app -- nothing outside it.</p>
               <p><strong>Report</strong> -- generate a PDF for any date range, then view it on screen, download it, or email it. Each topic gets its own page -- Income, Expenses, Fixed Expenses, Savings, Spend Analysis (Pareto chart), and Recommendations -- except the Category Breakdown bar chart and the Summary table, which share one page by default and only split onto two once the chart itself grows long enough to need the room. Every table also auto-shrinks its text to try to fit on one page first, and only flows onto a second page if the list is too long even at a readable size. The last page closes with a data & privacy note.</p>
-              <p><strong>Settings</strong> -- has its own sub-tabs. App Settings covers household name and currency. Monthly Budget sets your overall monthly cap. Budget sets optional per-category budget caps and shows how this month's spending compares to them (you'll get a notification in the bell icon if you go over). Add Category adds, renames, or removes categories. Admin Console (owners only) covers members and invites. Every field auto-saves as you edit -- there's no Save button to click.</p>
+              <p><strong>Settings</strong> -- has its own sub-tabs. App Settings covers household name and currency. Budgeting defaults to the current month (change the Month field to set or review a different month) and covers your overall monthly cap for that month, plus an optional "Budget for Per Category" section below it and how this month's spending compares to those caps (you'll get a notification in the bell icon if you go over). Add Category adds, renames, or removes categories. Admin Console (owners only) covers members and invites. Every field auto-saves as you edit -- there's no Save button to click.</p>
               <p><strong>Notifications</strong> -- the bell icon next to Help (top-right) replaces the old always-on red banners. It shows a count of unread items -- over-total-budget, over a category's budget, or a bill due soon -- and opening it lists them and marks them read.</p>
               <p><strong>Users</strong> -- see who's active in the household and who's been invited but hasn't joined yet, with full Name/Email/Phone/Location. Owners can invite new members (which also sends them a notification email), fill in or fix anyone's Name/Phone/Location, and edit their own details under "My details" -- handy for accounts created before these fields existed. The Admin console (if you have access) is separate and never visible to other household members.</p>
               <p>All figures use your household's chosen currency, set in Settings. Your data is confidential and private to your household -- it's never shared with anyone outside it.</p>
@@ -5400,16 +5354,10 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                     App Settings
                   </button>
                   <button
-                    className={`btn-teal ${settingsSubTab === 'monthlyBudget' ? '' : 'secondary'}`}
-                    onClick={() => setSettingsSubTab('monthlyBudget')}
+                    className={`btn-teal ${settingsSubTab === 'budgeting' ? '' : 'secondary'}`}
+                    onClick={() => { setBudgetMonthDraft(monthKey(currentMonth)); setSettingsSubTab('budgeting'); }}
                   >
-                    Monthly Budget
-                  </button>
-                  <button
-                    className={`btn-teal ${settingsSubTab === 'budget' ? '' : 'secondary'}`}
-                    onClick={() => setSettingsSubTab('budget')}
-                  >
-                    Budget
+                    Budgeting
                   </button>
                   <button
                     className={`btn-teal ${settingsSubTab === 'category' ? '' : 'secondary'}`}
@@ -5429,13 +5377,23 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
                 {settingsSubTab === 'admin' && isAdmin ? (
                   <AdminConsole embedded onClose={() => setSettingsSubTab('app')} />
-                ) : settingsSubTab === 'monthlyBudget' ? (
+                ) : settingsSubTab === 'budgeting' ? (
                 <>
-                {/* Monthly Budget tab -- split out on its own, separate from
-                    the per-category "Budget" tab, per explicit request. Just
-                    the single overall monthly cap that "Remaining"/"Net" on
-                    the dashboard are measured against. */}
+                {/* Budgeting tab -- Monthly Budget and per-category Budget
+                    merged into one tab, per explicit request. Month defaults
+                    to the dashboard's currently selected month every time
+                    this tab is opened (see the "Budgeting" button's onClick),
+                    and can be changed here to set/review a different month's
+                    figure without it affecting the rest of the dashboard. */}
                 <div className="row" style={{ marginBottom: 12 }}>
+                  <div className="field" style={{ flex: '0 1 170px', minWidth: 150 }}>
+                    <label>Month</label>
+                    <input
+                      type="month"
+                      value={budgetMonthDraft}
+                      onChange={(e) => setBudgetMonthDraft(e.target.value)}
+                    />
+                  </div>
                   <div className="field">
                     <label>Total monthly budget</label>
                     <div className="amount-field-wrap">
@@ -5447,20 +5405,18 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         style={{ '--amt-px': formAmountPx(totalBudgetDraft) + 'px' }}
                         value={totalBudgetDraft}
                         onChange={(e) => setTotalBudgetDraft(e.target.value)}
-                        onBlur={(e) => commitTotalBudget(e.target.value)}
+                        onBlur={(e) => commitMonthlyBudget(budgetMonthDraft, e.target.value)}
                       />
                     </div>
                   </div>
                 </div>
                 <div className="muted-small">Changes save automatically as you edit -- there's no Save button to click.</div>
-                </>
-                ) : settingsSubTab === 'budget' ? (
-                <>
-                {/* Budget tab -- per-category caps + how this month's actual
-                    spending compares to them. Total monthly budget lives in
-                    its own "Monthly Budget" tab (see above), not here. */}
-                <div style={{ marginTop: 4 }}>
-                  <label className="muted-small">Per-category budgets (optional)</label>
+
+                {/* Per-category caps + how this month's actual spending
+                    compares to them. Optional -- the overall monthly budget
+                    above is all that's required. */}
+                <div style={{ marginTop: 22 }}>
+                  <label className="muted-small" style={{ fontWeight: 700 }}>Budget for Per Category (optional)</label>
                   {categories.map((c) => (
                     <div className="cat-budget-row" key={c.id}>
                       <span>{c.name}</span>
@@ -5624,6 +5580,67 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           <span>Settings</span>
         </button>
       </nav>
+
+      {/* Attachment viewer -- opened from every row/edit-sheet that has a
+          document attached (Regular Expenses, Fixed Expenses, Income,
+          Savings, desktop tables and mobile edit sheets alike). Shows the
+          document inline where the browser can render it (image or PDF),
+          plus buttons to open it in whatever app the device considers the
+          right handler for that file type, and to share the document link
+          by email or WhatsApp. */}
+      {attachmentViewer && (
+        <div className="attachment-viewer-overlay" onClick={() => setAttachmentViewer(null)}>
+          <div className="attachment-viewer-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="attachment-viewer-head">
+              <span className="attachment-viewer-title">{attachmentViewer.name}</span>
+              <button type="button" className="mobile-sheet-close" onClick={() => setAttachmentViewer(null)} aria-label="Close">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="attachment-viewer-body">
+              {attachmentViewer.loading ? (
+                <div className="muted-small" style={{ padding: 24, textAlign: 'center' }}>Loading document...</div>
+              ) : isImageAttachment(attachmentViewer.name) ? (
+                <img src={attachmentViewer.url} alt={attachmentViewer.name} className="attachment-viewer-img" />
+              ) : isPdfAttachment(attachmentViewer.name) ? (
+                <iframe src={attachmentViewer.url} title={attachmentViewer.name} className="attachment-viewer-frame" />
+              ) : (
+                <div className="muted-small" style={{ padding: 24, textAlign: 'center' }}>
+                  A preview isn't available for this file type here -- tap Open to view it in a compatible app on your device.
+                </div>
+              )}
+            </div>
+            {!attachmentViewer.loading && (
+              <div className="attachment-viewer-actions">
+                <button
+                  type="button"
+                  className="btn small secondary"
+                  onClick={() => window.open(attachmentViewer.url, '_blank', 'noopener,noreferrer')}
+                >
+                  <ExternalLink size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
+                  Open
+                </button>
+                <button
+                  type="button"
+                  className="btn small secondary"
+                  onClick={() => shareAttachment(attachmentViewer.path, attachmentViewer.name, 'email')}
+                >
+                  <Mail size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
+                  Share via Email
+                </button>
+                <button
+                  type="button"
+                  className="btn small secondary"
+                  onClick={() => shareAttachment(attachmentViewer.path, attachmentViewer.name, 'whatsapp')}
+                >
+                  <MessageCircle size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
+                  Share via WhatsApp
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
     </div>
   );

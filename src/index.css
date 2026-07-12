@@ -1595,3 +1595,41 @@ td.amount { font-weight: 600; text-align: right; }
 .theme-swatch-row:hover { background: var(--bg); }
 .theme-swatch-row.active { background: var(--accent2-light); }
 .theme-swatch-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; box-shadow: inset 0 0 0 1.5px rgba(0,0,0,.08); }
+
+/* Attachment viewer -- a centered modal (works identically on desktop and
+   mobile) opened from every place a document can be viewed: desktop table
+   row icons, mobile edit sheets. Shows the file inline when the browser can
+   render it (image/PDF), otherwise falls back to an "Open" button so the
+   OS/browser can hand it to whatever app is registered for that file type.
+   Share buttons build a mailto: / wa.me link around a fresh signed URL. */
+.attachment-viewer-overlay {
+  position: fixed; inset: 0; z-index: 60;
+  background: rgba(15, 42, 46, .55);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.attachment-viewer-modal {
+  width: 100%; max-width: 560px; max-height: 88vh;
+  background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(15, 42, 46, .3);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.attachment-viewer-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 12px 14px; border-bottom: 1px solid var(--border);
+}
+.attachment-viewer-title {
+  font-weight: 800; font-size: 14px; color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.attachment-viewer-body {
+  flex: 1; overflow: auto; background: var(--bg);
+  display: flex; align-items: center; justify-content: center; min-height: 160px;
+}
+.attachment-viewer-img { max-width: 100%; max-height: 65vh; display: block; }
+.attachment-viewer-frame { width: 100%; height: 65vh; border: none; display: block; }
+.attachment-viewer-actions {
+  display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 14px;
+  border-top: 1px solid var(--border);
+}
+.attachment-viewer-actions .btn { flex: 1 1 auto; justify-content: center; display: inline-flex; align-items: center; }
