@@ -163,7 +163,13 @@ button, input, select, textarea { font-family: inherit; }
   position: absolute; top: max(28px, env(safe-area-inset-top));
   left: 0; right: 0; margin-inline: auto; z-index: 2;
   width: max-content; max-width: 92vw;
-  font-size: 35px; font-weight: 700; letter-spacing: .02em;
+  /* 40px on larger screens (per explicit request), but scaled down via vw
+     on narrow ones so it never overflows or forces awkward wrapping on a
+     phone -- clamp(min, preferred-vw, max) caps out at 40px on tablet/
+     desktop widths and shrinks smoothly toward 22px on small phone
+     viewports, answering "will you auto reduce to fit for phone users":
+     yes, automatically, no separate media query needed. */
+  font-size: clamp(22px, 6vw, 40px); font-weight: 800; letter-spacing: .02em;
   text-align: center;
   animation: splash-pop .5s ease .15s both;
   /* Same amber-copper gradient as the heart-outline logo/"Hearth" title
@@ -449,7 +455,16 @@ button, input, select, textarea { font-family: inherit; }
    of the Profile dropdown right in this row. */
 .header-title-row { display: flex; align-items: center; gap: 8px; }
 .header-title-row h1 { margin: 0; }
-.app-title-purple { color: #7c3aed; }
+/* Fixed at 35px in all contexts, per explicit request -- deliberately set
+   here (a class selector, specificity 0,1,0) rather than relying on the
+   plain-tag "h1 { font-size: ... }" rules elsewhere (specificity 0,0,1,
+   including the one inside the mobile breakpoint), so this title's size
+   can never be silently shrunk by a narrower-screen h1 override: a class
+   selector always beats a same-or-lower-specificity tag selector
+   regardless of media query or source order. Also covers "wherever user
+   changes" the household name (renaming it in Settings) -- the size here
+   is independent of the text content/length, so renaming never changes it. */
+.app-title-purple { color: #7c3aed; font-size: 35px; }
 /* Shared animation set for the gold heart-outline logo mark -- used at two
    sizes: the small HearthMark in the header (Dashboard.jsx) and the much
    larger version in the splash screen (Splash.jsx). Same three effects at
