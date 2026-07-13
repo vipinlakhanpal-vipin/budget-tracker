@@ -200,6 +200,27 @@ function monthsBetween(fromDateStr, toDateStr) {
 // strokes) isn't in a shipped Unicode font yet, so it can't be typed as plain
 // text. Since Recharts renders to inline SVG, we draw a vector approximation
 // directly so it displays correctly everywhere without relying on any font.
+// Renders one chip per picked-but-not-yet-uploaded file on the Income/Fixed
+// Expenses/Regular Expenses/Savings add-forms, each with its own remove
+// button -- replaces the old single "one file" chip now that a row can carry
+// more than one attachment (per explicit request). `files` is a plain array
+// of File objects; `onRemove(index)` drops just that one from the list.
+function PendingAttachmentChips({ files, onRemove }) {
+  if (!files || files.length === 0) return null;
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+      {files.map((f, i) => (
+        <div key={`${f.name}-${i}`} className="muted-small attachment-chip">
+          <Paperclip size={12} /> {f.name}
+          <button type="button" className="attachment-chip-remove" onClick={() => onRemove(i)}>
+            <X size={12} />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function DirhamBarLabel(props) {
   const { x, y, width, height, value } = props;
   const cy = y + height / 2;
@@ -572,6 +593,25 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   // mobile edit sheet). Holds the signed URL + name of whichever attachment
   // is currently open, so one modal + one set of handlers covers all of them.
   const [attachmentViewer, setAttachmentViewer] = useState(null);
+  // Multiple-attachments-per-row support: rowAttachments maps
+  // "{table}:{rowId}" -> array of { id, storage_path, file_name, created_at },
+  // loaded in bulk in loadAll() from the row_attachments join table (see
+  // migration_multi_attachments.sql) rather than a single attachment_url
+  // column per row. attachmentListModal holds which row's list is currently
+  // open (table/rowId/label) -- clicking an item in that list opens the
+  // existing single-file attachmentViewer above, unchanged, so the
+  // view/email/WhatsApp actions work exactly as before per attachment.
+  const [rowAttachments, setRowAttachments] = useState({});
+  const [attachmentListModal, setAttachmentListModal] = useState(null);
+  function rowAttachmentKey(table, rowId) {
+    return `${table}:${rowId}`;
+  }
+  function getRowAttachments(table, rowId) {
+    return rowAttachments[rowAttachmentKey(table, rowId)] || [];
+  }
+  function openAttachmentList(table, rowId, label) {
+    setAttachmentListModal({ table, rowId, label: label || 'Attachments' });
+  }
   function markNotifsSeen(ids) {
     setSeenNotifIds((cur) => {
       const next = new Set(cur);
@@ -746,8 +786,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   // uploaded until the expense is actually saved, since the upload path
   // needs the new row's own id (see uploadAttachment/handleAddExpense).
   const [showExpenseNotes, setShowExpenseNotes] = useState(false);
-  const [expenseFile, setExpenseFile] = useState(null);
-  const expenseFileInputRef = useRef(null);
+  const [expenseFiles, setExpenseFiles] = useState([]);
+  const expenseFilesInputRef = useRef(null);
   // AI feature #1 (auto-categorization): a small hint shown next to the
   // Category field right after the AI picks one for you, so it's clear the
   // dropdown got auto-filled rather than silently changing. Purely
@@ -844,8 +884,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   const [recurringDrafts, setRecurringDrafts] = useState({});
   // Same note/attachment pattern as the one-off expense form above.
   const [showRecurringNotes, setShowRecurringNotes] = useState(false);
-  const [recurringFile, setRecurringFile] = useState(null);
-  const recurringFileInputRef = useRef(null);
+  const [recurringFiles, setRecurringFiles] = useState([]);
+  const recurringFilesInputRef = useRef(null);
 
   // Savings goals -- how much the household wants to set aside each month.
   // Entered per month on purpose, exactly like Income (no auto-rollover) --
@@ -861,8 +901,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   const [savingsDrafts, setSavingsDrafts] = useState({});
   // Same note/attachment pattern as the expense forms.
   const [showSavingNotes, setShowSavingNotes] = useState(false);
-  const [savingFile, setSavingFile] = useState(null);
-  const savingFileInputRef = useRef(null);
+  const [savingFiles, setSavingFiles] = useState([]);
+  const savingFilesInputRef = useRef(null);
 
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRelation, setInviteRelation] = useState('Spouse');
@@ -879,8 +919,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   const [incomeDrafts, setIncomeDrafts] = useState({});
   // Same note/attachment pattern as the expense forms.
   const [showIncomeNotes, setShowIncomeNotes] = useState(false);
-  const [incomeFile, setIncomeFile] = useState(null);
-  const incomeFileInputRef = useRef(null);
+  const [incomeFiles, setIncomeFiles] = useState([]);
+  const incomeFilesInputRef = useRef(null);
 
   // Report panel state -- generates a PDF for a chosen date range covering
   // Expenses this month / Income / Fixed Expenses. Kept as a data URI in
@@ -1039,7 +1079,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   // as soon as they tabbed from one field to the next.
   async function loadAll(isInitial = false) {
     if (isInitial) setLoading(true);
-    const [{ data: cats }, { data: exps }, { data: settings }, { data: recur }, { data: mem }, { data: invites }, { data: inc }, { data: savings }, { data: mBudgets }] = await Promise.all([
+    const [{ data: cats }, { data: exps }, { data: settings }, { data: recur }, { data: mem }, { data: invites }, { data: inc }, { data: savings }, { data: mBudgets }, { data: rowAtts }] = await Promise.all([
       supabase.from('categories').select('*').eq('household_id', householdId).order('name'),
       // Secondary sort by id is required, not cosmetic -- Postgres doesn't
       // guarantee a stable order for rows that tie on expense_date (very
@@ -1058,7 +1098,17 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       supabase.from('incomes').select('*').eq('household_id', householdId).order('start_date').order('id'),
       supabase.from('savings_goals').select('*').eq('household_id', householdId).order('start_date').order('id'),
       supabase.from('monthly_budgets').select('*').eq('household_id', householdId).order('month'),
+      supabase.from('row_attachments').select('*').eq('household_id', householdId).order('created_at'),
     ]);
+    // Build the "{table}:{rowId}" -> [attachments] map once per load, in
+    // created_at order, so the list modal always shows attachments in the
+    // order they were added without needing to re-sort per row on click.
+    const raMap = {};
+    (rowAtts || []).forEach((a) => {
+      const k = rowAttachmentKey(a.table_name, a.row_id);
+      (raMap[k] = raMap[k] || []).push(a);
+    });
+    setRowAttachments(raMap);
     setCategories(cats || []);
     setExpenses(exps || []);
     const eDrafts = {};
@@ -1141,6 +1191,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       .on('postgres_changes', { event: '*', schema: 'public', table: 'incomes', filter: `household_id=eq.${householdId}` }, refresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'savings_goals', filter: `household_id=eq.${householdId}` }, refresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'monthly_budgets', filter: `household_id=eq.${householdId}` }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'row_attachments', filter: `household_id=eq.${householdId}` }, refresh)
       .subscribe();
     return () => supabase.removeChannel(channel);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1323,34 +1374,47 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   const paretoFontSize = paretoData.length > 14 ? 7 : paretoData.length > 9 ? 8 : 9;
   const paretoMaxNameLen = paretoData.length > 14 ? 6 : paretoData.length > 9 ? 9 : 14;
 
-  // Shared by the one-off expense form and the Fixed Expenses form. Uploads
-  // to the private "attachments" Storage bucket under a
+  // Shared by the one-off expense form, Income, Fixed Expenses, and Savings
+  // forms. Uploads to the private "attachments" Storage bucket under a
   // {household_id}/{table}-{row_id}-{filename} path -- the RLS policies on
   // storage.objects check that the first path segment is a household this
   // signed-in user belongs to (via my_household_ids()), so nobody outside
   // the household can read/write another household's files even though the
   // bucket itself is shared. Runs AFTER the row insert, since the path needs
-  // the new row's own id, then patches attachment_url/attachment_name onto
-  // that same row.
-  async function uploadAttachmentForRow(table, rowId, file) {
-    if (!file) return;
-    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const path = `${householdId}/${table}-${rowId}-${Date.now()}-${safeName}`;
-    const { error: uploadError } = await supabase.storage.from('attachments').upload(path, file, {
-      contentType: file.type || undefined,
-      upsert: false,
-    });
-    if (uploadError) {
-      alert('Saved, but the attachment could not be uploaded: ' + uploadError.message);
-      return;
+  // the new row's own id.
+  //
+  // Takes an ARRAY of files (not a single file) and inserts one row per file
+  // into the row_attachments join table (see migration_multi_attachments.sql)
+  // instead of patching a single attachment_url/attachment_name column --
+  // this is what lets a row carry more than one attachment. Each file
+  // uploads/inserts independently so one bad file doesn't block the rest.
+  async function uploadAttachmentsForRow(table, rowId, files) {
+    const list = (files || []).filter(Boolean);
+    if (list.length === 0) return;
+    for (const file of list) {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const path = `${householdId}/${table}-${rowId}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}-${safeName}`;
+      const { error: uploadError } = await supabase.storage.from('attachments').upload(path, file, {
+        contentType: file.type || undefined,
+        upsert: false,
+      });
+      if (uploadError) {
+        alert(`Saved, but "${file.name}" could not be uploaded: ` + uploadError.message);
+        continue;
+      }
+      const { error: insertError } = await supabase.from('row_attachments').insert({
+        household_id: householdId,
+        table_name: table,
+        row_id: rowId,
+        storage_path: path,
+        file_name: file.name,
+        created_by: session.user.id,
+      });
+      if (insertError) {
+        alert(`Saved and uploaded, but "${file.name}" could not be linked: ` + insertError.message);
+      }
     }
-    const { error: patchError } = await supabase.from(table).update({
-      attachment_url: path,
-      attachment_name: file.name,
-    }).eq('id', rowId);
-    if (patchError) {
-      alert('Saved, but the attachment could not be linked: ' + patchError.message);
-    }
+    loadAll();
   }
 
   // The bucket is private, so viewing/downloading a saved attachment needs a
@@ -1400,13 +1464,30 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     }
   }
 
-  function handleAttachmentPick(file, setFileFn) {
-    if (!file) return;
-    if (!isAllowedAttachment(file)) {
-      alert('Attachments must be an image or PDF, 5MB or smaller.');
-      return;
+  // Now takes a FileList/array (was a single file) so more than one document
+  // can be attached to the same row -- per explicit request. Valid files are
+  // APPENDED to whatever's already picked (not replaced), so picking again
+  // adds more rather than starting over; each invalid file is skipped with
+  // one combined alert rather than one popup per bad file.
+  function handleAttachmentPick(files, setFilesFn) {
+    const list = Array.from(files || []);
+    if (list.length === 0) return;
+    const valid = [];
+    let rejected = 0;
+    for (const file of list) {
+      if (isAllowedAttachment(file)) valid.push(file);
+      else rejected++;
     }
-    setFileFn(file);
+    if (rejected > 0) {
+      alert(`${rejected} file${rejected === 1 ? '' : 's'} skipped -- attachments must be an image or PDF, 5MB or smaller.`);
+    }
+    if (valid.length > 0) {
+      setFilesFn((cur) => [...(cur || []), ...valid]);
+    }
+  }
+
+  function removeAttachmentAt(setFilesFn, index) {
+    setFilesFn((cur) => (cur || []).filter((_, i) => i !== index));
   }
 
   async function handleAddExpense(e) {
@@ -1432,15 +1513,15 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       alert('Could not save expense: ' + error.message);
       return;
     }
-    if (expenseFile && inserted?.id) {
-      await uploadAttachmentForRow('expenses', inserted.id, expenseFile);
+    if (expenseFiles.length > 0 && inserted?.id) {
+      await uploadAttachmentsForRow('expenses', inserted.id, expenseFiles);
     }
     const d = new Date(form.date + 'T00:00:00');
     setCurrentMonth(new Date(d.getFullYear(), d.getMonth(), 1));
     setForm((f) => ({ ...f, description: '', amount: '', notes: '' }));
     setShowExpenseNotes(false);
-    setExpenseFile(null);
-    if (expenseFileInputRef.current) expenseFileInputRef.current.value = '';
+    setExpenseFiles([]);
+    if (expenseFilesInputRef.current) expenseFilesInputRef.current.value = '';
     loadAll();
   }
 
@@ -1952,13 +2033,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       alert('Could not save fixed expense: ' + error.message);
       return;
     }
-    if (recurringFile && inserted?.id) {
-      await uploadAttachmentForRow('recurring_expenses', inserted.id, recurringFile);
+    if (recurringFiles.length > 0 && inserted?.id) {
+      await uploadAttachmentsForRow('recurring_expenses', inserted.id, recurringFiles);
     }
     setNewRecurring((r) => ({ ...r, name: '', amount: '', endDate: '', dueDate: '', notes: '' }));
     setShowRecurringNotes(false);
-    setRecurringFile(null);
-    if (recurringFileInputRef.current) recurringFileInputRef.current.value = '';
+    setRecurringFiles([]);
+    if (recurringFilesInputRef.current) recurringFilesInputRef.current.value = '';
     loadAll();
   }
 
@@ -2020,13 +2101,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       alert('Could not save: ' + error.message);
       return;
     }
-    if (savingFile && inserted?.id) {
-      await uploadAttachmentForRow('savings_goals', inserted.id, savingFile);
+    if (savingFiles.length > 0 && inserted?.id) {
+      await uploadAttachmentsForRow('savings_goals', inserted.id, savingFiles);
     }
     setNewSaving((s) => ({ ...s, name: '', amount: '', notes: '' }));
     setShowSavingNotes(false);
-    setSavingFile(null);
-    if (savingFileInputRef.current) savingFileInputRef.current.value = '';
+    setSavingFiles([]);
+    if (savingFilesInputRef.current) savingFilesInputRef.current.value = '';
     loadAll();
   }
 
@@ -2169,13 +2250,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       alert('Could not save income: ' + error.message);
       return;
     }
-    if (incomeFile && inserted?.id) {
-      await uploadAttachmentForRow('incomes', inserted.id, incomeFile);
+    if (incomeFiles.length > 0 && inserted?.id) {
+      await uploadAttachmentsForRow('incomes', inserted.id, incomeFiles);
     }
     setNewIncome((i) => ({ ...i, name: '', amount: '', notes: '' }));
     setShowIncomeNotes(false);
-    setIncomeFile(null);
-    if (incomeFileInputRef.current) incomeFileInputRef.current.value = '';
+    setIncomeFiles([]);
+    if (incomeFilesInputRef.current) incomeFilesInputRef.current.value = '';
     loadAll();
   }
 
@@ -4085,9 +4166,9 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   </button>
                   <button
                     type="button"
-                    className={`icon-btn-outline ${expenseFile ? 'active' : ''}`}
-                    title="Attach a document"
-                    onClick={() => expenseFileInputRef.current?.click()}
+                    className={`icon-btn-outline ${expenseFiles.length > 0 ? 'active' : ''}`}
+                    title="Attach documents"
+                    onClick={() => expenseFilesInputRef.current?.click()}
                     style={{ height: 40, width: 40, flex: '0 0 auto' }}
                   >
                     <Paperclip size={16} />
@@ -4095,9 +4176,10 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   <input
                     type="file"
                     accept={ATTACHMENT_ACCEPT}
-                    ref={expenseFileInputRef}
+                    ref={expenseFilesInputRef}
+                    multiple
                     style={{ display: 'none' }}
-                    onChange={(e) => handleAttachmentPick(e.target.files?.[0], setExpenseFile)}
+                    onChange={(e) => handleAttachmentPick(e.target.files, setExpenseFiles)}
                   />
                   <button className="btn" type="submit" style={{ height: 40, flex: '0 0 auto' }}>Add</button>
                 </div>
@@ -4114,14 +4196,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 />
               </div>
             )}
-            {expenseFile && (
-              <div className="muted-small attachment-chip" style={{ marginTop: 6 }}>
-                <Paperclip size={12} /> {expenseFile.name}
-                <button type="button" className="attachment-chip-remove" onClick={() => { setExpenseFile(null); if (expenseFileInputRef.current) expenseFileInputRef.current.value = ''; }}>
-                  <X size={12} />
-                </button>
-              </div>
-            )}
+            <PendingAttachmentChips files={expenseFiles} onRemove={(i) => removeAttachmentAt(setExpenseFiles, i)} />
             </form>
 
             <div className="scan-receipt-block">
@@ -4262,9 +4337,9 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   </button>
                   <button
                     type="button"
-                    className={`icon-btn-outline ${incomeFile ? 'active' : ''}`}
-                    title="Attach a document"
-                    onClick={() => incomeFileInputRef.current?.click()}
+                    className={`icon-btn-outline ${incomeFiles.length > 0 ? 'active' : ''}`}
+                    title="Attach documents"
+                    onClick={() => incomeFilesInputRef.current?.click()}
                     style={{ height: 40, width: 40, flex: '0 0 auto' }}
                   >
                     <Paperclip size={16} />
@@ -4272,9 +4347,10 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   <input
                     type="file"
                     accept={ATTACHMENT_ACCEPT}
-                    ref={incomeFileInputRef}
+                    ref={incomeFilesInputRef}
+                    multiple
                     style={{ display: 'none' }}
-                    onChange={(e) => handleAttachmentPick(e.target.files?.[0], setIncomeFile)}
+                    onChange={(e) => handleAttachmentPick(e.target.files, setIncomeFiles)}
                   />
                   <button className="btn" type="submit" style={{ height: 40, flex: '0 0 auto' }}>Add</button>
                 </div>
@@ -4291,14 +4367,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 />
               </div>
             )}
-            {incomeFile && (
-              <div className="muted-small attachment-chip" style={{ marginTop: 6 }}>
-                <Paperclip size={12} /> {incomeFile.name}
-                <button type="button" className="attachment-chip-remove" onClick={() => { setIncomeFile(null); if (incomeFileInputRef.current) incomeFileInputRef.current.value = ''; }}>
-                  <X size={12} />
-                </button>
-              </div>
-            )}
+            <PendingAttachmentChips files={incomeFiles} onRemove={(i) => removeAttachmentAt(setIncomeFiles, i)} />
             </form>
             <div className="muted-small" style={{ marginTop: 6 }}>
               Income is entered per month on purpose -- it won't automatically carry over. The list below only shows entries for {monthLabel(currentMonth)}; add a new row for each new month.
@@ -4324,7 +4393,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         <span className="mobile-txn-title">
                           {title}
                           {i.notes && <StickyNote size={11} className="row-attach-hint" />}
-                          {i.attachment_url && <Paperclip size={11} className="row-attach-hint" />}
+                          {getRowAttachments('incomes', i.id).length > 0 && <Paperclip size={11} className="row-attach-hint" />}
                         </span>
                         <span className="mobile-txn-sub">{displayNameForEmail(i.member_email)}</span>
                       </span>
@@ -4397,8 +4466,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       </td>
                       <td>
                         <div className="row-actions">
-                          {i.attachment_url && (
-                            <button type="button" className="row-icon-btn" title={i.attachment_name || 'View attachment'} onClick={() => openAttachmentViewer(i.attachment_url, i.attachment_name)}>
+                          {getRowAttachments('incomes', i.id).length > 0 && (
+                            <button type="button" className="row-icon-btn" title="View attachments" onClick={() => openAttachmentList('incomes', i.id, i.name)}>
                               <Paperclip size={12} />
                             </button>
                           )}
@@ -4432,12 +4501,12 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       </button>
                     </div>
                     <h2 style={{ margin: '0 0 12px' }}>Edit income</h2>
-                    {(i.notes || i.attachment_url) && (
+                    {(i.notes || getRowAttachments('incomes', i.id).length > 0) && (
                       <div className="muted-small" style={{ marginBottom: 10 }}>
                         {i.notes && <div style={{ marginBottom: 4 }}><StickyNote size={12} style={{ marginRight: 4, verticalAlign: -2 }} />{i.notes}</div>}
-                        {i.attachment_url && (
-                          <button type="button" className="link-btn" style={{ padding: 0 }} onClick={() => openAttachmentViewer(i.attachment_url, i.attachment_name)}>
-                            <Paperclip size={12} style={{ marginRight: 4, verticalAlign: -2 }} />View {i.attachment_name || 'attachment'}
+                        {getRowAttachments('incomes', i.id).length > 0 && (
+                          <button type="button" className="link-btn" style={{ padding: 0 }} onClick={() => openAttachmentList('incomes', i.id, i.name)}>
+                            <Paperclip size={12} style={{ marginRight: 4, verticalAlign: -2 }} />View attachments ({getRowAttachments('incomes', i.id).length})
                           </button>
                         )}
                       </div>
@@ -4626,9 +4695,9 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   </button>
                   <button
                     type="button"
-                    className={`icon-btn-outline ${recurringFile ? 'active' : ''}`}
-                    title="Attach a document"
-                    onClick={() => recurringFileInputRef.current?.click()}
+                    className={`icon-btn-outline ${recurringFiles.length > 0 ? 'active' : ''}`}
+                    title="Attach documents"
+                    onClick={() => recurringFilesInputRef.current?.click()}
                     style={{ height: 40, width: 40, flex: '0 0 auto' }}
                   >
                     <Paperclip size={16} />
@@ -4636,9 +4705,10 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   <input
                     type="file"
                     accept={ATTACHMENT_ACCEPT}
-                    ref={recurringFileInputRef}
+                    ref={recurringFilesInputRef}
+                    multiple
                     style={{ display: 'none' }}
-                    onChange={(e) => handleAttachmentPick(e.target.files?.[0], setRecurringFile)}
+                    onChange={(e) => handleAttachmentPick(e.target.files, setRecurringFiles)}
                   />
                   <button className="btn" type="submit" style={{ height: 40, flex: '0 0 auto' }}>Add</button>
                 </div>
@@ -4655,14 +4725,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 />
               </div>
             )}
-            {recurringFile && (
-              <div className="muted-small attachment-chip" style={{ marginTop: 6 }}>
-                <Paperclip size={12} /> {recurringFile.name}
-                <button type="button" className="attachment-chip-remove" onClick={() => { setRecurringFile(null); if (recurringFileInputRef.current) recurringFileInputRef.current.value = ''; }}>
-                  <X size={12} />
-                </button>
-              </div>
-            )}
+            <PendingAttachmentChips files={recurringFiles} onRemove={(i) => removeAttachmentAt(setRecurringFiles, i)} />
             </form>
           </div>
           {/* Data entry (above) and the list of what's already been entered
@@ -4710,7 +4773,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         <span className="mobile-txn-title">
                           {title}
                           {r.notes && <StickyNote size={11} className="row-attach-hint" />}
-                          {r.attachment_url && <Paperclip size={11} className="row-attach-hint" />}
+                          {getRowAttachments('recurring_expenses', r.id).length > 0 && <Paperclip size={11} className="row-attach-hint" />}
                         </span>
                         <span className="mobile-txn-sub">{catName} &middot; {freqLabel}</span>
                       </span>
@@ -4871,8 +4934,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       </td>
                       <td>
                         <div className="row-actions">
-                          {r.attachment_url && (
-                            <button type="button" className="row-icon-btn" title={r.attachment_name || 'View attachment'} onClick={() => openAttachmentViewer(r.attachment_url, r.attachment_name)}>
+                          {getRowAttachments('recurring_expenses', r.id).length > 0 && (
+                            <button type="button" className="row-icon-btn" title="View attachments" onClick={() => openAttachmentList('recurring_expenses', r.id, r.name)}>
                               <Paperclip size={12} />
                             </button>
                           )}
@@ -4909,12 +4972,12 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       </button>
                     </div>
                     <h2 style={{ margin: '0 0 12px' }}>Edit fixed expense</h2>
-                    {(r.notes || r.attachment_url) && (
+                    {(r.notes || getRowAttachments('recurring_expenses', r.id).length > 0) && (
                       <div className="muted-small" style={{ marginBottom: 10 }}>
                         {r.notes && <div style={{ marginBottom: 4 }}><StickyNote size={12} style={{ marginRight: 4, verticalAlign: -2 }} />{r.notes}</div>}
-                        {r.attachment_url && (
-                          <button type="button" className="link-btn" style={{ padding: 0 }} onClick={() => openAttachmentViewer(r.attachment_url, r.attachment_name)}>
-                            <Paperclip size={12} style={{ marginRight: 4, verticalAlign: -2 }} />View {r.attachment_name || 'attachment'}
+                        {getRowAttachments('recurring_expenses', r.id).length > 0 && (
+                          <button type="button" className="link-btn" style={{ padding: 0 }} onClick={() => openAttachmentList('recurring_expenses', r.id, r.name)}>
+                            <Paperclip size={12} style={{ marginRight: 4, verticalAlign: -2 }} />View attachments ({getRowAttachments('recurring_expenses', r.id).length})
                           </button>
                         )}
                       </div>
@@ -5088,9 +5151,9 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   </button>
                   <button
                     type="button"
-                    className={`icon-btn-outline ${savingFile ? 'active' : ''}`}
-                    title="Attach a document"
-                    onClick={() => savingFileInputRef.current?.click()}
+                    className={`icon-btn-outline ${savingFiles.length > 0 ? 'active' : ''}`}
+                    title="Attach documents"
+                    onClick={() => savingFilesInputRef.current?.click()}
                     style={{ height: 40, width: 40, flex: '0 0 auto' }}
                   >
                     <Paperclip size={16} />
@@ -5098,9 +5161,10 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   <input
                     type="file"
                     accept={ATTACHMENT_ACCEPT}
-                    ref={savingFileInputRef}
+                    ref={savingFilesInputRef}
+                    multiple
                     style={{ display: 'none' }}
-                    onChange={(e) => handleAttachmentPick(e.target.files?.[0], setSavingFile)}
+                    onChange={(e) => handleAttachmentPick(e.target.files, setSavingFiles)}
                   />
                   <button className="btn" type="submit" style={{ height: 40, flex: '0 0 auto' }}>Add</button>
                 </div>
@@ -5117,14 +5181,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 />
               </div>
             )}
-            {savingFile && (
-              <div className="muted-small attachment-chip" style={{ marginTop: 6 }}>
-                <Paperclip size={12} /> {savingFile.name}
-                <button type="button" className="attachment-chip-remove" onClick={() => { setSavingFile(null); if (savingFileInputRef.current) savingFileInputRef.current.value = ''; }}>
-                  <X size={12} />
-                </button>
-              </div>
-            )}
+            <PendingAttachmentChips files={savingFiles} onRemove={(i) => removeAttachmentAt(setSavingFiles, i)} />
             </form>
             <div className="muted-small" style={{ marginTop: 6 }}>
               Savings is entered per month on purpose -- it won't automatically carry over, exactly like Income. The list below only shows entries for {monthLabel(currentMonth)}; add a new row for each new month. Since it's money leaving your income, it's included in "Spent so far" and "Combined expenses" above and reduces "Remaining"/"Net" -- it also gets its own report page.
@@ -5150,7 +5207,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         <span className="mobile-txn-title">
                           {title}
                           {s.notes && <StickyNote size={11} className="row-attach-hint" />}
-                          {s.attachment_url && <Paperclip size={11} className="row-attach-hint" />}
+                          {getRowAttachments('savings_goals', s.id).length > 0 && <Paperclip size={11} className="row-attach-hint" />}
                         </span>
                         <span className="mobile-txn-sub">{monthLabel(currentMonth)}</span>
                       </span>
@@ -5216,8 +5273,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       </td>
                       <td>
                         <div className="row-actions">
-                          {s.attachment_url && (
-                            <button type="button" className="row-icon-btn" title={s.attachment_name || 'View attachment'} onClick={() => openAttachmentViewer(s.attachment_url, s.attachment_name)}>
+                          {getRowAttachments('savings_goals', s.id).length > 0 && (
+                            <button type="button" className="row-icon-btn" title="View attachments" onClick={() => openAttachmentList('savings_goals', s.id, s.name)}>
                               <Paperclip size={12} />
                             </button>
                           )}
@@ -5251,12 +5308,12 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       </button>
                     </div>
                     <h2 style={{ margin: '0 0 12px' }}>Edit savings</h2>
-                    {(s.notes || s.attachment_url) && (
+                    {(s.notes || getRowAttachments('savings_goals', s.id).length > 0) && (
                       <div className="muted-small" style={{ marginBottom: 10 }}>
                         {s.notes && <div style={{ marginBottom: 4 }}><StickyNote size={12} style={{ marginRight: 4, verticalAlign: -2 }} />{s.notes}</div>}
-                        {s.attachment_url && (
-                          <button type="button" className="link-btn" style={{ padding: 0 }} onClick={() => openAttachmentViewer(s.attachment_url, s.attachment_name)}>
-                            <Paperclip size={12} style={{ marginRight: 4, verticalAlign: -2 }} />View {s.attachment_name || 'attachment'}
+                        {getRowAttachments('savings_goals', s.id).length > 0 && (
+                          <button type="button" className="link-btn" style={{ padding: 0 }} onClick={() => openAttachmentList('savings_goals', s.id, s.name)}>
+                            <Paperclip size={12} style={{ marginRight: 4, verticalAlign: -2 }} />View attachments ({getRowAttachments('savings_goals', s.id).length})
                           </button>
                         )}
                       </div>
@@ -5347,7 +5404,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         <span className="mobile-txn-title">
                           {title}
                           {e.notes && <StickyNote size={11} className="row-attach-hint" />}
-                          {e.attachment_url && <Paperclip size={11} className="row-attach-hint" />}
+                          {getRowAttachments('expenses', e.id).length > 0 && <Paperclip size={11} className="row-attach-hint" />}
                         </span>
                         <span className="mobile-txn-sub">{catName} &middot; {fmtDate(e.expense_date)}</span>
                       </span>
@@ -5456,8 +5513,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                       <td data-label="By" className="muted-small" style={{ textAlign: 'center' }}>{displayNameForEmail(e.created_by_email)}</td>
                       <td>
                         <div className="row-actions">
-                          {e.attachment_url && (
-                            <button type="button" className="row-icon-btn" title={e.attachment_name || 'View attachment'} onClick={() => openAttachmentViewer(e.attachment_url, e.attachment_name)}>
+                          {getRowAttachments('expenses', e.id).length > 0 && (
+                            <button type="button" className="row-icon-btn" title="View attachments" onClick={() => openAttachmentList('expenses', e.id, expenseDrafts[e.id]?.description || 'Expense')}>
                               <Paperclip size={12} />
                             </button>
                           )}
@@ -5496,12 +5553,12 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                     </button>
                   </div>
                   <h2 style={{ margin: '0 0 12px' }}>Edit expense</h2>
-                  {(e.notes || e.attachment_url) && (
+                  {(e.notes || getRowAttachments('expenses', e.id).length > 0) && (
                     <div className="muted-small" style={{ marginBottom: 10 }}>
                       {e.notes && <div style={{ marginBottom: 4 }}><StickyNote size={12} style={{ marginRight: 4, verticalAlign: -2 }} />{e.notes}</div>}
-                      {e.attachment_url && (
-                        <button type="button" className="link-btn" style={{ padding: 0 }} onClick={() => openAttachmentViewer(e.attachment_url, e.attachment_name)}>
-                          <Paperclip size={12} style={{ marginRight: 4, verticalAlign: -2 }} />View {e.attachment_name || 'attachment'}
+                      {getRowAttachments('expenses', e.id).length > 0 && (
+                        <button type="button" className="link-btn" style={{ padding: 0 }} onClick={() => openAttachmentList('expenses', e.id, expenseDrafts[e.id]?.description || 'Expense')}>
+                          <Paperclip size={12} style={{ marginRight: 4, verticalAlign: -2 }} />View attachments ({getRowAttachments('expenses', e.id).length})
                         </button>
                       )}
                     </div>
@@ -6055,6 +6112,52 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           <span>Settings</span>
         </button>
       </nav>
+
+      {/* Attachment LIST modal -- opened by tapping a row's paperclip icon
+          when it now has one or more documents (rows can carry more than one
+          attachment, per explicit request). Lists every file for that row in
+          the order it was uploaded (rowAttachments is already sorted by
+          created_at from loadAll's query); tapping one closes this list and
+          opens the existing single-file attachmentViewer modal below for
+          that exact file, so View/Open/Email/WhatsApp all keep working
+          per-attachment without any duplicated logic. */}
+      {attachmentListModal && (() => {
+        const list = getRowAttachments(attachmentListModal.table, attachmentListModal.rowId);
+        return (
+          <div className="attachment-viewer-overlay" onClick={() => setAttachmentListModal(null)}>
+            <div className="attachment-viewer-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
+              <div className="attachment-viewer-head">
+                <span className="attachment-viewer-title">Attachments -- {attachmentListModal.label}</span>
+                <button type="button" className="mobile-sheet-close" onClick={() => setAttachmentListModal(null)} aria-label="Close">
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="attachment-list-body">
+                {list.length === 0 ? (
+                  <div className="muted-small" style={{ padding: 16, textAlign: 'center' }}>No attachments left on this entry.</div>
+                ) : (
+                  list.map((a, idx) => (
+                    <button
+                      key={a.id}
+                      type="button"
+                      className="attachment-list-item"
+                      onClick={() => {
+                        setAttachmentListModal(null);
+                        openAttachmentViewer(a.storage_path, a.file_name);
+                      }}
+                    >
+                      <span className="attachment-list-item-order">{idx + 1}</span>
+                      <Paperclip size={14} style={{ flexShrink: 0, color: 'var(--muted)' }} />
+                      <span className="attachment-list-item-name">{a.file_name}</span>
+                      <ChevronDown size={14} style={{ flexShrink: 0, transform: 'rotate(-90deg)', color: 'var(--muted)' }} />
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Attachment viewer -- opened from every row/edit-sheet that has a
           document attached (Regular Expenses, Fixed Expenses, Income,

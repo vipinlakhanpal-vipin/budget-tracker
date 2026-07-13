@@ -1754,3 +1754,28 @@ td.amount { font-weight: 600; text-align: right; }
   border-top: 1px solid var(--border);
 }
 .attachment-viewer-actions .btn { flex: 1 1 auto; justify-content: center; display: inline-flex; align-items: center; }
+
+/* Attachment LIST modal -- opened by tapping the paperclip icon on a row that
+   now has one or more documents attached (rows can have more than one, per
+   explicit request). Shows every file for that row in upload order; tapping
+   one closes this list and opens the existing attachment-viewer modal above
+   for that specific file, so View/Open/Email/WhatsApp all still work
+   per-attachment without duplicating any of that logic. */
+.attachment-list-body {
+  flex: 1; overflow: auto; padding: 6px; display: flex; flex-direction: column; gap: 4px;
+}
+.attachment-list-item {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 10px 12px; border: none; border-radius: 10px; background: transparent;
+  cursor: pointer; text-align: left; font-family: inherit; color: var(--text);
+}
+.attachment-list-item:hover { background: var(--bg); }
+.attachment-list-item-name {
+  flex: 1; font-size: 13px; font-weight: 700;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.attachment-list-item-order {
+  flex: 0 0 auto; width: 22px; height: 22px; border-radius: 50%;
+  background: var(--accent-light); color: var(--accent);
+  font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center;
+}
