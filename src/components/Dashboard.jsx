@@ -13,6 +13,7 @@ import {
   Home, Plus, FileText, Users as UsersIcon, Settings as SettingsIcon,
   Pencil, Trash2, X, ChevronLeft, ChevronRight, ChevronDown, Camera, MessageCircle, Sparkles, User,
   Palette, Check, StickyNote, Paperclip, ExternalLink, Mail, Lightbulb,
+  Wallet, CalendarClock, ShoppingCart, PiggyBank, HelpCircle,
 } from 'lucide-react';
 
 // Max size for a note/fixed-expense attachment (images or PDF only). Kept as
@@ -3959,6 +3960,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               className={`btn-teal header-tab-btn ${inputTab === 'income' ? 'header-tab-btn-active' : ''}`}
               onClick={() => { setInputTab('income'); scrollToFrameA(); }}
             >
+              <Wallet size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
               Income
             </button>
             <button
@@ -3966,6 +3968,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               className={`btn-teal header-tab-btn ${inputTab === 'fixed' ? 'header-tab-btn-active' : ''}`}
               onClick={() => { setInputTab('fixed'); scrollToFrameA(); }}
             >
+              <CalendarClock size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
               Fixed Expenses
             </button>
             <button
@@ -3974,6 +3977,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               className={`btn-teal header-tab-btn ${inputTab === 'expense' ? 'header-tab-btn-active' : ''}`}
               onClick={() => { setInputTab('expense'); scrollToFrameA(); }}
             >
+              <ShoppingCart size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
               Regular Expenses
             </button>
             <button
@@ -3981,6 +3985,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               className={`btn-teal header-tab-btn ${inputTab === 'savings' ? 'header-tab-btn-active' : ''}`}
               onClick={() => { setInputTab('savings'); scrollToFrameA(); }}
             >
+              <PiggyBank size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
               Savings
             </button>
             {/* Report/Settings/Help deliberately do NOT call scrollToFrameA()
@@ -3993,15 +3998,18 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 correctly, which is why opening Report/Settings/Help looked
                 like it stopped doing anything. */}
             <button className="btn-teal" onClick={() => togglePanel('report')}>
+              <FileText size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
               {activePanel === 'report' ? 'Hide report' : 'Report'}
             </button>
             <button className="btn-teal" data-tour="nav-settings" onClick={() => togglePanel('settings')}>
+              <SettingsIcon size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
               {activePanel === 'settings' ? 'Hide settings' : 'Settings'}
             </button>
             {/* Standalone "Users" button removed from this row -- Users
                 management now lives under Settings > Users instead, so
                 there's one way to reach it, not two. */}
             <button className="btn-teal" data-tour="nav-help" onClick={() => togglePanel('help')}>
+              <HelpCircle size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
               {activePanel === 'help' ? 'Hide help' : 'Help'}
             </button>
             {/* Color theme picker -- deliberately styled as a multi-color
