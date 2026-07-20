@@ -13,7 +13,7 @@ import {
   Home, Plus, FileText, Users as UsersIcon, Settings as SettingsIcon,
   Pencil, Trash2, X, ChevronLeft, ChevronRight, ChevronDown, Camera, MessageCircle, Sparkles, User,
   Palette, Check, StickyNote, Paperclip, ExternalLink, Mail, Lightbulb,
-  Wallet, CalendarClock, ShoppingCart, PiggyBank, HelpCircle,
+  Wallet, CalendarClock, ShoppingCart, PiggyBank, HelpCircle, Filter,
 } from 'lucide-react';
 
 // Max size for a note/fixed-expense attachment (images or PDF only). Kept as
@@ -1501,6 +1501,113 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   }, [incomes, currentMonth]);
   const totalIncome = useMemo(() => incomeForMonth.reduce((s, i) => s + Number(i.amount), 0), [incomeForMonth]);
   const netCombined = totalIncome - combinedOutflow;
+
+  // ---- Filters for the 4 month-scoped lists below (Regular Expenses, Fixed
+  // Expenses, Income, Savings). These only narrow what's rendered on screen --
+  // every total, chart, and the PDF report keep reading the original
+  // (unfiltered) monthExpenses/recurringForMonth/incomeForMonth/savingsForMonth
+  // arrays above, so an active filter never skews a number, only which rows
+  // are visible. Each section gets its own state/open/ref trio, following the
+  // same click-to-open, click-outside-to-close pattern as the theme picker
+  // (themeMenuOpen/themeMenuRef above).
+  const [expenseFilter, setExpenseFilter] = useState({ category: '', payment: '', bank: '' });
+  const [expenseFilterOpen, setExpenseFilterOpen] = useState(false);
+  const expenseFilterRef = useRef(null);
+  useEffect(() => {
+    if (!expenseFilterOpen) return;
+    function onDocClick(e) {
+      if (expenseFilterRef.current && !expenseFilterRef.current.contains(e.target)) setExpenseFilterOpen(false);
+    }
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [expenseFilterOpen]);
+  const expenseFilterActive = !!(expenseFilter.category || expenseFilter.payment || expenseFilter.bank);
+  const filteredMonthExpenses = useMemo(() => {
+    return monthExpenses.filter((e) => {
+      if (expenseFilter.category && e.category_id !== expenseFilter.category) return false;
+      if (expenseFilter.payment && (e.payment_source || 'Cash') !== expenseFilter.payment) return false;
+      if (expenseFilter.bank && (e.payment_bank || '') !== expenseFilter.bank) return false;
+      return true;
+    });
+  }, [monthExpenses, expenseFilter]);
+
+  const [recurringFilter, setRecurringFilter] = useState({ category: '', payment: '', bank: '' });
+  const [recurringFilterOpen, setRecurringFilterOpen] = useState(false);
+  const recurringFilterRef = useRef(null);
+  useEffect(() => {
+    if (!recurringFilterOpen) return;
+    function onDocClick(e) {
+      if (recurringFilterRef.current && !recurringFilterRef.current.contains(e.target)) setRecurringFilterOpen(false);
+    }
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [recurringFilterOpen]);
+  const recurringFilterActive = !!(recurringFilter.category || recurringFilter.payment || recurringFilter.bank);
+  const filteredRecurringForMonth = useMemo(() => {
+    return recurringForMonth.filter((r) => {
+      if (recurringFilter.category && r.category_id !== recurringFilter.category) return false;
+      if (recurringFilter.payment && (r.payment_source || 'Cash') !== recurringFilter.payment) return false;
+      if (recurringFilter.bank && (r.payment_bank || '') !== recurringFilter.bank) return false;
+      return true;
+    });
+  }, [recurringForMonth, recurringFilter]);
+
+  const [incomeFilter, setIncomeFilter] = useState({ source: '', member: '' });
+  const [incomeFilterOpen, setIncomeFilterOpen] = useState(false);
+  const incomeFilterRef = useRef(null);
+  useEffect(() => {
+    if (!incomeFilterOpen) return;
+    function onDocClick(e) {
+      if (incomeFilterRef.current && !incomeFilterRef.current.contains(e.target)) setIncomeFilterOpen(false);
+    }
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [incomeFilterOpen]);
+  const incomeFilterActive = !!(incomeFilter.source || incomeFilter.member);
+  // Income has no category/payment fields (see Source/Member/Amount/Month
+  // columns), so it's filtered on what it actually has instead -- distinct
+  // Source names and Members actually present this month, not every source
+  // ever entered across all months.
+  const incomeSourceOptions = useMemo(
+    () => Array.from(new Set(incomeForMonth.map((i) => (i.name || '').trim()).filter(Boolean))).sort(),
+    [incomeForMonth]
+  );
+  const incomeMemberOptions = useMemo(
+    () => Array.from(new Set(incomeForMonth.map((i) => i.member_email).filter(Boolean))).sort(),
+    [incomeForMonth]
+  );
+  const filteredIncomeForMonth = useMemo(() => {
+    return incomeForMonth.filter((i) => {
+      if (incomeFilter.source && (i.name || '').trim() !== incomeFilter.source) return false;
+      if (incomeFilter.member && i.member_email !== incomeFilter.member) return false;
+      return true;
+    });
+  }, [incomeForMonth, incomeFilter]);
+
+  const [savingsFilter, setSavingsFilter] = useState({ name: '' });
+  const [savingsFilterOpen, setSavingsFilterOpen] = useState(false);
+  const savingsFilterRef = useRef(null);
+  useEffect(() => {
+    if (!savingsFilterOpen) return;
+    function onDocClick(e) {
+      if (savingsFilterRef.current && !savingsFilterRef.current.contains(e.target)) setSavingsFilterOpen(false);
+    }
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [savingsFilterOpen]);
+  const savingsFilterActive = !!savingsFilter.name;
+  // Savings only has a Name field to filter on (see Name/Amount/Month
+  // columns) -- distinct names actually present this month.
+  const savingsNameOptions = useMemo(
+    () => Array.from(new Set(savingsForMonth.map((s) => (s.name || '').trim()).filter(Boolean))).sort(),
+    [savingsForMonth]
+  );
+  const filteredSavingsForMonth = useMemo(() => {
+    return savingsForMonth.filter((s) => {
+      if (savingsFilter.name && (s.name || '').trim() !== savingsFilter.name) return false;
+      return true;
+    });
+  }, [savingsForMonth, savingsFilter]);
 
   // Bills/rent due soon -- an in-app pop-up style banner starting N days
   // before the due date (default 3) and continuing to show until the due
@@ -4645,15 +4752,68 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             )}
             <PendingAttachmentChips files={incomeFiles} onRemove={(i) => removeAttachmentAt(setIncomeFiles, i)} />
             </form>
-            <div className="muted-small" style={{ marginTop: 6 }}>
-              Income is entered per month on purpose -- it won't automatically carry over. The list below only shows entries for {monthLabel(currentMonth)}; add a new row for each new month.
+            <div className="panel-heading-row" style={{ alignItems: 'flex-start', marginTop: 6, marginBottom: 0 }}>
+              <div className="muted-small">
+                Income is entered per month on purpose -- it won't automatically carry over. The list below only shows entries for {monthLabel(currentMonth)}; add a new row for each new month.
+              </div>
+              <div className="filter-wrap" ref={incomeFilterRef}>
+                <button
+                  type="button"
+                  className={`filter-btn ${incomeFilterActive ? 'active' : ''}`}
+                  onClick={() => setIncomeFilterOpen((o) => !o)}
+                >
+                  <Filter size={13} />
+                  Filter
+                  {incomeFilterActive && <span className="filter-active-dot" />}
+                </button>
+                {incomeFilterOpen && (
+                  <div className="filter-dropdown">
+                    <div className="filter-dropdown-title">Filter Income</div>
+                    <div className="filter-field">
+                      <label>Source</label>
+                      <select
+                        value={incomeFilter.source}
+                        onChange={(e) => setIncomeFilter({ ...incomeFilter, source: e.target.value })}
+                      >
+                        <option value="">All sources</option>
+                        {incomeSourceOptions.map((s) => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="filter-field">
+                      <label>Member</label>
+                      <select
+                        value={incomeFilter.member}
+                        onChange={(e) => setIncomeFilter({ ...incomeFilter, member: e.target.value })}
+                      >
+                        <option value="">All members</option>
+                        {incomeMemberOptions.map((m) => (
+                          <option key={m} value={m}>{displayNameForEmail(m)}</option>
+                        ))}
+                      </select>
+                    </div>
+                    {incomeFilterActive && (
+                      <button
+                        type="button"
+                        className="filter-clear-btn"
+                        onClick={() => setIncomeFilter({ source: '', member: '' })}
+                      >
+                        Clear filters
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             {incomeForMonth.length === 0 ? (
               <div className="empty">No income added for {monthLabel(currentMonth)} yet.</div>
+            ) : filteredIncomeForMonth.length === 0 ? (
+              <div className="empty">No income matches the current filter.</div>
             ) : isMobile ? (
               <div className="mobile-txn-list">
-                {incomeForMonth.map((i) => {
+                {filteredIncomeForMonth.map((i) => {
                   const title = (incomeDrafts[i.id]?.name || i.name || 'Income').trim();
                   return (
                     <button
@@ -4694,7 +4854,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   <tr><th>Source</th><th>Member</th><th>Amount</th><th>Month</th><th></th></tr>
                 </thead>
                 <tbody>
-                  {incomeForMonth.map((i) => (
+                  {filteredIncomeForMonth.map((i) => (
                     <tr key={i.id}>
                       <td data-label="Source">
                         <input
@@ -5010,7 +5170,78 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               -- makes it visually clear where you type a NEW fixed expense
               versus where you review/edit the ones you've already added. */}
           <div className="panel">
-            <h2 style={{ marginBottom: 14 }}>Your fixed expenses</h2>
+            <div className="panel-heading-row">
+              <h2 style={{ marginBottom: 0 }}>Your fixed expenses</h2>
+              <div className="filter-wrap" ref={recurringFilterRef}>
+                <button
+                  type="button"
+                  className={`filter-btn ${recurringFilterActive ? 'active' : ''}`}
+                  onClick={() => setRecurringFilterOpen((o) => !o)}
+                >
+                  <Filter size={13} />
+                  Filter
+                  {recurringFilterActive && <span className="filter-active-dot" />}
+                </button>
+                {recurringFilterOpen && (
+                  <div className="filter-dropdown">
+                    <div className="filter-dropdown-title">Filter Fixed Expenses</div>
+                    <div className="filter-field">
+                      <label>Category</label>
+                      <select
+                        value={recurringFilter.category}
+                        onChange={(e) => setRecurringFilter({ ...recurringFilter, category: e.target.value })}
+                      >
+                        <option value="">All categories</option>
+                        {categories.map((c) => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="filter-field">
+                      <label>Payment type</label>
+                      <select
+                        value={recurringFilter.payment}
+                        onChange={(e) =>
+                          setRecurringFilter({
+                            ...recurringFilter,
+                            payment: e.target.value,
+                            bank: CARD_PAYMENT_SOURCES.includes(e.target.value) ? recurringFilter.bank : '',
+                          })
+                        }
+                      >
+                        <option value="">All payment types</option>
+                        {RECURRING_PAYMENT_SOURCES.map((p) => (
+                          <option key={p} value={p}>{p}</option>
+                        ))}
+                      </select>
+                    </div>
+                    {CARD_PAYMENT_SOURCES.includes(recurringFilter.payment) && (
+                      <div className="filter-field">
+                        <label>Bank</label>
+                        <select
+                          value={recurringFilter.bank}
+                          onChange={(e) => setRecurringFilter({ ...recurringFilter, bank: e.target.value })}
+                        >
+                          <option value="">All banks</option>
+                          {BANKS.map((b) => (
+                            <option key={b} value={b}>{b}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                    {recurringFilterActive && (
+                      <button
+                        type="button"
+                        className="filter-clear-btn"
+                        onClick={() => setRecurringFilter({ category: '', payment: '', bank: '' })}
+                      >
+                        Clear filters
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
             {recurringExpenses.length === 0 ? (
               <div className="empty">No loans, EMIs, or fixed monthly bills added yet.</div>
             ) : recurringForMonth.length === 0 ? (
@@ -5027,9 +5258,11 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                  what makes the visible rows finally match the selected
                  month. */
               <div className="empty">No fixed expenses apply to {monthLabel(currentMonth)}.</div>
+            ) : filteredRecurringForMonth.length === 0 ? (
+              <div className="empty">No fixed expenses match the current filter.</div>
             ) : isMobile ? (
               <div className="mobile-txn-list">
-                {recurringForMonth.map((r) => {
+                {filteredRecurringForMonth.map((r) => {
                   const catIdx = categories.findIndex((c) => c.id === r.category_id);
                   const catColor = COLORS[(catIdx >= 0 ? catIdx : 0) % COLORS.length];
                   const catName = categoryNameById[r.category_id] || 'Uncategorized';
@@ -5092,7 +5325,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   <tr><th>Name</th><th>Category</th><th>Amount</th><th>Start</th><th>End</th><th>Repeats</th><th>Due date</th><th>Payment</th><th></th></tr>
                 </thead>
                 <tbody>
-                  {recurringForMonth.map((r) => (
+                  {filteredRecurringForMonth.map((r) => (
                     <tr key={r.id}>
                       <td data-label="Name">
                         <input
@@ -5459,15 +5692,56 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             )}
             <PendingAttachmentChips files={savingFiles} onRemove={(i) => removeAttachmentAt(setSavingFiles, i)} />
             </form>
-            <div className="muted-small" style={{ marginTop: 6 }}>
-              Savings is entered per month on purpose -- it won't automatically carry over, exactly like Income. The list below only shows entries for {monthLabel(currentMonth)}; add a new row for each new month. Since it's money leaving your income, it's included in "Spent so far" and "Combined expenses" above and reduces "Remaining"/"Net" -- it also gets its own report page.
+            <div className="panel-heading-row" style={{ alignItems: 'flex-start', marginTop: 6, marginBottom: 0 }}>
+              <div className="muted-small">
+                Savings is entered per month on purpose -- it won't automatically carry over, exactly like Income. The list below only shows entries for {monthLabel(currentMonth)}; add a new row for each new month. Since it's money leaving your income, it's included in "Spent so far" and "Combined expenses" above and reduces "Remaining"/"Net" -- it also gets its own report page.
+              </div>
+              <div className="filter-wrap" ref={savingsFilterRef}>
+                <button
+                  type="button"
+                  className={`filter-btn ${savingsFilterActive ? 'active' : ''}`}
+                  onClick={() => setSavingsFilterOpen((o) => !o)}
+                >
+                  <Filter size={13} />
+                  Filter
+                  {savingsFilterActive && <span className="filter-active-dot" />}
+                </button>
+                {savingsFilterOpen && (
+                  <div className="filter-dropdown">
+                    <div className="filter-dropdown-title">Filter Savings</div>
+                    <div className="filter-field">
+                      <label>Name</label>
+                      <select
+                        value={savingsFilter.name}
+                        onChange={(e) => setSavingsFilter({ ...savingsFilter, name: e.target.value })}
+                      >
+                        <option value="">All names</option>
+                        {savingsNameOptions.map((n) => (
+                          <option key={n} value={n}>{n}</option>
+                        ))}
+                      </select>
+                    </div>
+                    {savingsFilterActive && (
+                      <button
+                        type="button"
+                        className="filter-clear-btn"
+                        onClick={() => setSavingsFilter({ name: '' })}
+                      >
+                        Clear filters
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             {savingsForMonth.length === 0 ? (
               <div className="empty">No savings added for {monthLabel(currentMonth)} yet.</div>
+            ) : filteredSavingsForMonth.length === 0 ? (
+              <div className="empty">No savings match the current filter.</div>
             ) : isMobile ? (
               <div className="mobile-txn-list">
-                {savingsForMonth.map((s) => {
+                {filteredSavingsForMonth.map((s) => {
                   const title = (savingsDrafts[s.id]?.name || s.name || 'Savings').trim();
                   return (
                     <button
@@ -5502,7 +5776,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   <tr><th>Name</th><th>Amount</th><th>Month</th><th></th></tr>
                 </thead>
                 <tbody>
-                  {savingsForMonth.map((s) => (
+                  {filteredSavingsForMonth.map((s) => (
                     <tr key={s.id}>
                       <td data-label="Name">
                         <input
@@ -5649,9 +5923,82 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 nav state driving the whole dashboard), so it stays correct
                 automatically as you switch months, no separate picker
                 needed. */}
-            <h2>Regular Expenses for {monthLabel(currentMonth)}</h2>
+            <div className="panel-heading-row">
+              <h2>Regular Expenses for {monthLabel(currentMonth)}</h2>
+              <div className="filter-wrap" ref={expenseFilterRef}>
+                <button
+                  type="button"
+                  className={`filter-btn ${expenseFilterActive ? 'active' : ''}`}
+                  onClick={() => setExpenseFilterOpen((o) => !o)}
+                >
+                  <Filter size={13} />
+                  Filter
+                  {expenseFilterActive && <span className="filter-active-dot" />}
+                </button>
+                {expenseFilterOpen && (
+                  <div className="filter-dropdown">
+                    <div className="filter-dropdown-title">Filter Regular Expenses</div>
+                    <div className="filter-field">
+                      <label>Category</label>
+                      <select
+                        value={expenseFilter.category}
+                        onChange={(e) => setExpenseFilter({ ...expenseFilter, category: e.target.value })}
+                      >
+                        <option value="">All categories</option>
+                        {categories.map((c) => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="filter-field">
+                      <label>Payment type</label>
+                      <select
+                        value={expenseFilter.payment}
+                        onChange={(e) =>
+                          setExpenseFilter({
+                            ...expenseFilter,
+                            payment: e.target.value,
+                            bank: CARD_PAYMENT_SOURCES.includes(e.target.value) ? expenseFilter.bank : '',
+                          })
+                        }
+                      >
+                        <option value="">All payment types</option>
+                        {PAYMENT_SOURCES.map((p) => (
+                          <option key={p} value={p}>{p}</option>
+                        ))}
+                      </select>
+                    </div>
+                    {CARD_PAYMENT_SOURCES.includes(expenseFilter.payment) && (
+                      <div className="filter-field">
+                        <label>Bank</label>
+                        <select
+                          value={expenseFilter.bank}
+                          onChange={(e) => setExpenseFilter({ ...expenseFilter, bank: e.target.value })}
+                        >
+                          <option value="">All banks</option>
+                          {BANKS.map((b) => (
+                            <option key={b} value={b}>{b}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                    {expenseFilterActive && (
+                      <button
+                        type="button"
+                        className="filter-clear-btn"
+                        onClick={() => setExpenseFilter({ category: '', payment: '', bank: '' })}
+                      >
+                        Clear filters
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
             {monthExpenses.length === 0 ? (
               <div className="empty">No one-off expenses logged for this month yet.</div>
+            ) : filteredMonthExpenses.length === 0 ? (
+              <div className="empty">No expenses match the current filter.</div>
             ) : isMobile ? (
               // Mobile gets a clean, read-at-a-glance transaction list --
               // colored category icon, description, category + date, and a
@@ -5661,7 +6008,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               // "Add", pre-filled for editing, reusing the exact same
               // commitExpenseField/handleDeleteExpense logic desktop uses.
               <div className="mobile-txn-list">
-                {monthExpenses.map((e) => {
+                {filteredMonthExpenses.map((e) => {
                   const catIdx = categories.findIndex((c) => c.id === e.category_id);
                   const catColor = COLORS[(catIdx >= 0 ? catIdx : 0) % COLORS.length];
                   const catName = categoryNameById[e.category_id] || 'Uncategorized';
@@ -5701,7 +6048,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   <tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th><th>Payment</th><th style={{ textAlign: 'center' }}>By</th><th></th></tr>
                 </thead>
                 <tbody>
-                  {monthExpenses.map((e) => (
+                  {filteredMonthExpenses.map((e) => (
                     <tr key={e.id}>
                       <td data-label="Date">
                         <input

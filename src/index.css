@@ -893,6 +893,53 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
 .panel { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 20px; }
 .panel h2 { font-size: 15px; margin: 0 0 14px 0; }
 
+/* Filter buttons/dropdowns -- Regular Expenses, Fixed Expenses, Income, and
+   Savings each get one, sitting next to that section's own heading (or, for
+   Income/Savings which don't have a dedicated list heading, next to the
+   "entered per month" note right above the list). Same click-to-open,
+   click-outside-to-close pattern as the theme picker (.theme-fab-wrap/
+   .theme-dropdown), but styled as a plain outlined pill with a text label
+   (like .icon-btn-outline) since there's no color swatch to show here.
+   Filtering only narrows what's rendered in these lists -- every total,
+   chart, and the PDF report keep reading the full unfiltered data. */
+.panel-heading-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin-bottom: 14px;
+}
+.panel-heading-row h2 { margin: 0; }
+.filter-wrap { position: relative; flex-shrink: 0; }
+.filter-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1.5px solid var(--border); border-radius: 9px; background: #fff;
+  color: var(--muted); font-size: 12px; font-weight: 700; cursor: pointer;
+  padding: 7px 12px; white-space: nowrap; transition: border-color .15s ease, color .15s ease;
+}
+.filter-btn:hover { border-color: #a9d9d5; color: var(--text); }
+.filter-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+.filter-active-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.filter-dropdown {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 30;
+  width: 220px; background: var(--card); border: 1px solid var(--border);
+  border-radius: 14px; box-shadow: 0 10px 30px rgba(15, 42, 46, .18);
+  padding: 12px; display: flex; flex-direction: column; gap: 10px;
+}
+.filter-dropdown-title {
+  font-size: 11px; font-weight: 800; color: var(--muted); text-transform: uppercase;
+  letter-spacing: .4px;
+}
+.filter-field { display: flex; flex-direction: column; gap: 4px; }
+.filter-field label { font-size: 11px; font-weight: 700; color: var(--text); }
+.filter-field select {
+  padding: 7px 9px; border: 1.5px solid var(--border); border-radius: 8px;
+  font-size: 12px; background: #fff; color: var(--text); font-family: inherit;
+}
+.filter-field select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
+.filter-clear-btn {
+  border: none; background: none; color: var(--accent); font-size: 12px; font-weight: 700;
+  cursor: pointer; text-align: left; padding: 2px 0;
+}
+.filter-clear-btn:hover { text-decoration: underline; }
+
 /* Help panel accordion -- each topic is a rounded row with a bold title
    button; tapping it reveals just that topic's description below it. */
 .help-accordion { display: flex; flex-direction: column; gap: 8px; }
