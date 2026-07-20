@@ -646,10 +646,21 @@ button, input, select, textarea { font-family: inherit; }
    into directly instead of only through a separate Settings field. Strip
    all the browser's default input chrome (border/background/padding) so it
    reads as plain text until you actually click into it; a soft underline on
-   hover/focus is the only hint that it's editable. */
+   hover/focus is the only hint that it's editable.
+   IMPORTANT: this used to also set `font-weight: inherit`, which was the
+   actual reason the title never looked bold for owners (everyone else sees
+   the plain <h1> with only .app-title-purple applied, which was fine) --
+   this <input> carries BOTH classes, and `inherit` here doesn't mean "use
+   whatever .app-title-purple sets on this same element", it means "use
+   whatever this element's DOM PARENT computes to", which was the page's
+   base Nunito Light (300) weight. Since .app-title-input is declared after
+   .app-title-purple with the same specificity, that inherited 300 silently
+   won every time, no matter how bold .app-title-purple's own font-weight
+   was set to. Simply not overriding it here lets .app-title-purple's own
+   font-weight cascade through untouched. */
 .app-title-input {
   border: none; background: transparent; padding: 0; margin: 0;
-  font-family: inherit; font-weight: inherit;
+  font-family: inherit;
   border-bottom: 1px dashed transparent;
 }
 .app-title-input:hover { border-bottom-color: color-mix(in srgb, var(--accent) 35%, transparent); }
