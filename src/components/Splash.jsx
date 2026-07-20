@@ -84,17 +84,6 @@ function polarPoint(cx, cy, r, angleDeg) {
   const a = (angleDeg * Math.PI) / 180;
   return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
 }
-function arcPath(cx, cy, r, startDeg, endDeg) {
-  const p1 = polarPoint(cx, cy, r, startDeg);
-  const p2 = polarPoint(cx, cy, r, endDeg);
-  const largeArc = Math.abs(endDeg - startDeg) > 180 ? 1 : 0;
-  return `M ${p1.x} ${p1.y} A ${r} ${r} 0 ${largeArc} 1 ${p2.x} ${p2.y}`;
-}
-// Curved path the title text rides along -- spans the top of the ring only
-// (200deg to 340deg, in the same clockwise-from-3-o'clock convention used
-// by polarPoint/arcPath throughout this file).
-const PLATFORM_TITLE_ARC = arcPath(PLATFORM_CENTER.x, PLATFORM_CENTER.y, 196, 200, 340);
-
 // Angles chosen so all 8 icons land in symmetric pairs (two near the top,
 // two near the bottom, two on each side) -- the same rhythm as the
 // reference platform diagram -- while mapping 1:1 onto Hearth's real
@@ -289,6 +278,12 @@ export default function Splash() {
       <div className="splash-dust splash-dust-5" />
 
       <div className="splash-center">
+        {/* Standalone, plainly centered heading -- deliberately a normal
+            HTML heading rather than curved SVG textPath, per explicit
+            request to "lift it" off the ring and center it properly (a
+            straight, centered line reads far more clearly than text bent
+            around a circle). */}
+        <div className="splash-platform-title">Smart Expense Management Platform</div>
         <div className="splash-illustration-wrap">
         <div className="splash-illustration splash-illustration-platform">
           <svg viewBox="0 0 440 472" xmlns="http://www.w3.org/2000/svg">
@@ -302,7 +297,6 @@ export default function Splash() {
                 <stop offset="48%" stopColor="#33509f" />
                 <stop offset="100%" stopColor="#0e1a3f" />
               </radialGradient>
-              <path id="platformTitleArc" d={PLATFORM_TITLE_ARC} fill="none" />
               <clipPath id="platformSphereClip">
                 <circle cx={PLATFORM_CENTER.x} cy={PLATFORM_CENTER.y} r={PLATFORM_SPHERE_RADIUS} />
               </clipPath>
@@ -319,56 +313,25 @@ export default function Splash() {
             {/* Light-blue middle band that the tab icons sit on. */}
             <circle cx={PLATFORM_CENTER.x} cy={PLATFORM_CENTER.y} r={PLATFORM_RING_INNER} fill="#eaf3fc" />
 
-            {/* Curved app-name title riding the top of the ring. */}
-            <text className="platform-title-text">
-              <textPath href="#platformTitleArc" startOffset="50%" textAnchor="middle">
-                Hearth Household Budget Platform
-              </textPath>
-            </text>
-
-            {/* Three descriptor words on the ring itself -- Hearth's own
-                equivalent of the reference's COMPLIANCE / SUSTAINABILITY /
-                EXTENSIBILITY -- privacy, security and simplicity being the
-                three things this app actually promises. */}
-            <text
-              className="platform-side-label"
-              x={PLATFORM_CENTER.x} y={PLATFORM_CENTER.y + PLATFORM_RING_OUTER - 11}
-              textAnchor="middle"
-            >
-              SIMPLE
-            </text>
-            <text
-              className="platform-side-label"
-              x={PLATFORM_CENTER.x - PLATFORM_RING_OUTER + 15} y={PLATFORM_CENTER.y}
-              textAnchor="middle"
-              transform={`rotate(-90 ${PLATFORM_CENTER.x - PLATFORM_RING_OUTER + 15} ${PLATFORM_CENTER.y})`}
-            >
-              PRIVATE
-            </text>
-            <text
-              className="platform-side-label"
-              x={PLATFORM_CENTER.x + PLATFORM_RING_OUTER - 15} y={PLATFORM_CENTER.y}
-              textAnchor="middle"
-              transform={`rotate(90 ${PLATFORM_CENTER.x + PLATFORM_RING_OUTER - 15} ${PLATFORM_CENTER.y})`}
-            >
-              SECURE
-            </text>
-
             {/* One spoke per real header tab -- icon + label, evenly ringed
                 around the center, each popping in with a staggered delay. */}
             {PLATFORM_TABS.map((tab, i) => {
               const pos = polarPoint(PLATFORM_CENTER.x, PLATFORM_CENTER.y, PLATFORM_ICON_RADIUS, tab.angle);
               return (
-                <g
-                  key={tab.label}
-                  className="platform-tab-icon"
-                  style={{ animationDelay: `${0.7 + i * 0.09}s` }}
-                  transform={`translate(${pos.x - 12} ${pos.y - 22})`}
-                >
-                  <g stroke="#1b2a5e" strokeWidth="1.7" fill="none" strokeLinecap="round" strokeLinejoin="round">
-                    <PlatformIcon type={tab.icon} />
+                // Position (SVG transform attribute) and the pop-in
+                // animation (CSS transform: scale, via .platform-tab-icon)
+                // are deliberately split across two nested <g>s -- a CSS
+                // `transform` completely replaces an element's own SVG
+                // `transform` attribute rather than combining with it, so
+                // putting both on one node silently drops the translate
+                // and stacks every icon on top of each other at (0,0).
+                <g key={tab.label} transform={`translate(${pos.x - 12} ${pos.y - 22})`}>
+                  <g className="platform-tab-icon" style={{ animationDelay: `${0.7 + i * 0.09}s` }}>
+                    <g stroke="#1b2a5e" strokeWidth="1.7" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                      <PlatformIcon type={tab.icon} />
+                    </g>
+                    <text x="12" y="34" textAnchor="middle" className="platform-tab-label">{tab.label}</text>
                   </g>
-                  <text x="12" y="34" textAnchor="middle" className="platform-tab-label">{tab.label}</text>
                 </g>
               );
             })}

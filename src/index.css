@@ -220,15 +220,15 @@ button, input, select, textarea { font-family: inherit; }
    spokes, and the center "AI POWERED" sphere. All text sizes are tuned in
    the SVG's own viewBox units (not real px), same convention as the old
    .geo-label above. */
-.platform-title-text {
-  fill: #ffffff; font-family: 'Nunito', sans-serif; font-size: 16px;
-  font-weight: 800; letter-spacing: 1px; text-transform: uppercase;
-  animation: splash-pop .5s ease .2s both;
-}
-.platform-side-label {
-  fill: #dbe8fd; font-family: 'Nunito', sans-serif; font-size: 12.5px;
-  font-weight: 800; letter-spacing: 2px;
-  animation: splash-pop .5s ease .3s both;
+/* Standalone centered heading above the diagram -- replaces the earlier
+   curved ring text per explicit feedback that bent text was hard to read;
+   a plain centered line is unambiguous at any screen width. */
+.splash-platform-title {
+  color: #ffffff; font-size: clamp(15px, 4.2vw, 21px); font-weight: 800;
+  letter-spacing: .015em; text-align: center; max-width: 92vw;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, .35);
+  margin-bottom: 4px;
+  animation: splash-pop .5s ease .15s both;
 }
 .platform-tab-label {
   fill: #16224a; font-family: 'Nunito', sans-serif; font-size: 12px; font-weight: 800;
