@@ -215,8 +215,30 @@ function PlatformIcon({ type }) {
   }
 }
 
-export default function Splash() {
+// Time-of-day greeting -- purely based on the visitor's own device clock
+// (new Date().getHours()), so it's automatically correct for whatever
+// timezone the browser itself is set to, no IP lookup or timezone library
+// needed. Boundaries are the common-sense ones: morning starts at 5am,
+// afternoon at noon, evening at 5pm, night from 9pm through the small
+// hours.
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h >= 5 && h < 12) return 'Good Morning';
+  if (h >= 12 && h < 17) return 'Good Afternoon';
+  if (h >= 17 && h < 21) return 'Good Evening';
+  return 'Good Night';
+}
+
+export default function Splash({ session }) {
   const [geo, setGeo] = useState(null);
+  // First name only ("Vipin" out of "Vipin Lakhanpal") -- pulled from the
+  // same user_metadata.full_name set at signup (see Login.jsx) that
+  // Dashboard's "My details"/profile dropdown already reads. Session can
+  // still be null here: the splash shows immediately on load, sometimes
+  // before Supabase's own getSession() resolves in the background -- in
+  // that case the greeting just quietly drops the name rather than
+  // showing a placeholder or blocking on auth.
+  const firstName = session?.user?.user_metadata?.full_name?.trim().split(/\s+/)[0] || null;
 
   useEffect(() => {
     let cancelled = false;
@@ -270,6 +292,16 @@ export default function Splash() {
           </g>
         )}
       </svg>
+
+      {/* Personal greeting -- the true top-of-screen element now (the
+          brand tagline below this one moved down to the bottom a while
+          back, see .splash-top-tagline's own comment). Name comes from
+          the signed-in user's profile (falls back to no name if session
+          hasn't resolved yet); the "Good X" half is always shown, driven
+          purely by the visitor's own device clock via getGreeting(). */}
+      <div className="splash-greeting">
+        {firstName ? `Hello ${firstName}, ` : ''}{getGreeting()}
+      </div>
 
       {/* Standalone brand line near the top -- deliberately just below the
           very top edge, on the plain solid-teal strip above where the world
@@ -415,8 +447,16 @@ export default function Splash() {
         </div>
         </div>
 
-        <div className="splash-tagline">The heart of your home&rsquo;s finances.</div>
-        <div className="splash-version">{formatVersionBadge()}</div>
+        {/* Grouped in their own wrapper with a tight gap (see
+            .splash-tagline-group) -- the parent .splash-center's own gap
+            is generous by design (breathing room between the big circle
+            diagram and the text below it), but that same gap looked too
+            loose between these two short lines sitting right on top of
+            each other, per explicit request to join them more closely. */}
+        <div className="splash-tagline-group">
+          <div className="splash-tagline">The heart of your home&rsquo;s finances.</div>
+          <div className="splash-version">{formatVersionBadge()}</div>
+        </div>
       </div>
 
       <div className="splash-credit">Conceptualised, Designed and Created by &ndash;Vipin Lakhanpal</div>

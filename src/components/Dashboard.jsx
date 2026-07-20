@@ -41,73 +41,33 @@ function AiTag({ style }) {
   );
 }
 
-// A small header-sized version of the splash screen's own hearth motif
-// (roofline + layered flame) -- reuses the exact same gradients/paths as
-// Splash.jsx, just without the surrounding scene (glow ellipses, coin,
-// wallet, piggy bank, receipt) that only make sense at splash size. Sits
-// above the household name in the top bar so the app's own mark, not just
-// plain text, anchors the header.
-function HearthMark({ size = 32 }) {
-  // v4 of this mark: rebuilt to match the gold "heart-shaped roofline +
-  // house + chimney with rising hearts" logo the user provided as a
-  // reference (family silhouette + full wordmark version lives at splash
-  // size in Splash.jsx -- there's no room for that level of detail at a
-  // 30-ish px header icon, so this keeps just the heart outline, the small
-  // roof peak nested inside it, and the chimney with a single tiny rising
-  // heart above it). Gold throughout now, replacing the red filled heart
-  // from the previous version, to match that reference. The heart outline
-  // has a brighter, blurred "glow chase" copy animating its dash-offset
-  // around the perimeter (.heart-glow-chase in index.css) -- the same
-  // traveling-shimmer technique used on the big splash version, rather than
-  // a plain scale pulse, so the two read as the same animated mark at two
-  // sizes instead of two different effects.
+// Header logo -- replaces the old gold heart-outline mark with a small,
+// resized copy of the splash screen's own circular "platform" badge (navy
+// ring + glowing blue sphere + "AI POWERED Hearth" text), per explicit
+// request to use that ring as the app's logo everywhere rather than two
+// different marks. Trimmed down from the full splash version to just the
+// ring + sphere + text -- the 7 tab icons and the curved outer tagline
+// only read clearly at splash size; shrunk to a header icon they'd blur
+// into noise, so this keeps only the part that's still legible small.
+function HearthMark({ size = 56 }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <svg width={size} height={size} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <linearGradient id="hdrHeartGold" x1="0" y1="1" x2="0" y2="0">
-          <stop offset="0" stopColor="#5c3a06" />
-          <stop offset="1" stopColor="#b45309" />
-        </linearGradient>
+        {/* Same 3-stop blue gradient as the splash sphere (Splash.jsx's
+            platformSphere) -- own id since this and the splash badge can
+            both be mounted at once (the splash overlays on top of the
+            already-loaded Dashboard for its first 6 seconds), and SVG
+            gradient ids must be unique across the whole page. */}
+        <radialGradient id="headerBadgeSphere" cx="34%" cy="28%" r="78%">
+          <stop offset="0" stopColor="#7fabf7" />
+          <stop offset="48%" stopColor="#33509f" />
+          <stop offset="100%" stopColor="#0e1a3f" />
+        </radialGradient>
       </defs>
-      {/* Darkened per explicit follow-up ("keep it gold, just darken the
-          lines") -- the first version's gradient ran up to a pale
-          #fde68a top stop, which is exactly the shade that disappears
-          against this header's light background. Both stops here are now
-          solidly dark/mid amber-brown, so the outline stays clearly
-          visible the whole way around rather than fading out at the top. */}
-      <path
-        className="heart-outline-draw"
-        d="M32 54 C32 54 9 35 9 22 C9 12 17 7 25 10 C29 11.5 31 15 32 18 C33 15 35 11.5 39 10 C47 7 55 12 55 22 C55 35 32 54 32 54 Z"
-        fill="none" stroke="url(#hdrHeartGold)" strokeWidth="3.4" strokeLinejoin="round"
-      />
-      <path
-        className="heart-glow-chase"
-        d="M32 54 C32 54 9 35 9 22 C9 12 17 7 25 10 C29 11.5 31 15 32 18 C33 15 35 11.5 39 10 C47 7 55 12 55 22 C55 35 32 54 32 54 Z"
-        fill="none" stroke="#eab308" strokeWidth="2.2" strokeLinejoin="round"
-      />
-      <path
-        className="hearth-roof"
-        d="M20 32 L32 19 L44 32"
-        stroke="#5c3a06" strokeWidth="2.8" fill="none" strokeLinecap="round" strokeLinejoin="round"
-      />
-      <rect x="41" y="15" width="5" height="11" fill="url(#hdrHeartGold)" />
-      <g className="mini-rising-heart">
-        <path
-          d="M43.5,10.1l-.44-.4C41.6,8.3,40.6,7.4,40.6,6.2c0-.9.7-1.6,1.6-1.6.5,0,1,.24,1.3.62.3-.38.8-.62,1.3-.62.9,0,1.6.7,1.6,1.6,0,1.2-1,2.1-2.5,3.5l-.4.38Z"
-          fill="#fde68a"
-        />
-      </g>
-      {/* Smallest possible hint of the splash version's family silhouette --
-          three plain dots (two "parents" + a smaller "child" in front)
-          rather than actual head+shoulder shapes, since any finer detail
-          just anti-aliases into a blob at this size (the exact problem the
-          original fine-line heart had). Sized/positioned so the mark's
-          overall footprint (viewBox, size prop) doesn't change at all. */}
-      <g fill="#2a1608">
-        <circle cx="27.5" cy="39.5" r="3" />
-        <circle cx="36.5" cy="39.5" r="3" />
-        <circle cx="32" cy="43.5" r="2.3" />
-      </g>
+      <circle cx="50" cy="50" r="43" fill="none" stroke="#16224a" strokeWidth="10" />
+      <circle className="platform-sphere-pulse" cx="50" cy="50" r="38" fill="url(#headerBadgeSphere)" />
+      <text x="50" y="36" textAnchor="middle" className="header-badge-kicker">AI POWERED</text>
+      <text x="50" y="54" textAnchor="middle" className="header-badge-brand">Hearth</text>
     </svg>
   );
 }
@@ -3885,7 +3845,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       <div className="top-bar" ref={topRef}>
         <div className="top-bar-row">
           <div className="header-title-row" data-tour="brand">
-            <HearthMark size={34} />
+            <HearthMark size={56} />
             {/* The page title is now editable right here, in place, instead
                 of only through Settings > App Settings -- typing here and
                 clicking away (auto-saves, same commitHouseholdName as

@@ -177,7 +177,7 @@ export default function App() {
   return (
     <>
       {mainContent}
-      {showSplash && <Splash />}
+      {showSplash && <Splash session={session} />}
     </>
   );
 }

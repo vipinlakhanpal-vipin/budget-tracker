@@ -144,6 +144,21 @@ button, input, select, textarea { font-family: inherit; }
    gradient background feel alive/premium instead of static. Three orbs at
    different sizes/speeds/positions so the motion doesn't read as
    mechanically repeating. */
+/* Personal greeting -- now the actual top-of-screen element (the brand
+   line below this one moved down to the bottom a while back). Name +
+   "Good X" text is built in Splash.jsx (getGreeting()); this just styles
+   it. 50px per explicit request, clamped down on narrow phones so it
+   doesn't force a line-wrap/overflow at the small end. */
+.splash-greeting {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + 28px);
+  left: 0; right: 0; margin-inline: auto; z-index: 2;
+  width: max-content; max-width: 92vw;
+  text-align: center; color: #ffffff; font-weight: 800;
+  font-size: clamp(26px, 9vw, 50px); line-height: 1.1;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, .35);
+  animation: splash-pop .5s ease .05s both;
+}
 /* Standalone brand line -- moved from the top of the splash down to sit
    just above the credit line at the very bottom, per explicit request
    (was originally at the top "slightly down" from the top edge; now
@@ -282,17 +297,6 @@ button, input, select, textarea { font-family: inherit; }
    title/tagline/etc. stacked below it in .splash-center. */
 .splash-illustration-wrap { position: relative; display: flex; align-items: center; justify-content: center; }
 
-/* The roofline draws itself in like a single pen stroke as the splash
-   opens -- stroke-dasharray/dashoffset animated from fully hidden to fully
-   revealed, a small but premium-feeling detail before the fire ignites. */
-.hearth-roof {
-  stroke-dasharray: 300; stroke-dashoffset: 300;
-  animation: roof-draw-in 1s cubic-bezier(.34, 1.56, .64, 1) .1s forwards;
-}
-@keyframes roof-draw-in {
-  to { stroke-dashoffset: 0; }
-}
-
 /* The flame itself: three layered teardrops (outer/mid/inner) each with
    their own independent flicker -- different durations/offsets so the
    whole flame reads as one continuously-alive fire rather than a single
@@ -425,6 +429,16 @@ button, input, select, textarea { font-family: inherit; }
   from { opacity: 0; transform: scale(.3); }
   to { opacity: 1; transform: scale(1); }
 }
+/* Wrapper for the tagline + version/date line -- its own small gap (6px)
+   keeps these two short lines reading as one closely-joined unit, separate
+   from .splash-center's own wider 20px gap (which stays generous between
+   the big circle diagram and this whole text block). Previously these two
+   were plain siblings inside .splash-center, so the 20px flex gap plus
+   .splash-version's own margin-top pushed them further apart than
+   intended. */
+.splash-tagline-group {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
 .splash-tagline {
   color: rgba(255, 255, 255, .88); font-size: 13px; font-weight: 600;
   animation: splash-pop .5s ease .35s both;
@@ -448,7 +462,7 @@ button, input, select, textarea { font-family: inherit; }
   animation: splash-pop .5s ease .42s both, hearth-family-breathe 2.4s ease-in-out 1s infinite;
 }
 .splash-version {
-  margin-top: 4px; color: rgba(255, 255, 255, .7); font-size: 11px; font-weight: 700; letter-spacing: .02em;
+  color: rgba(255, 255, 255, .7); font-size: 11px; font-weight: 700; letter-spacing: .02em;
   animation: splash-pop .5s ease .45s both;
 }
 .splash-credit {
@@ -627,93 +641,30 @@ button, input, select, textarea { font-family: inherit; }
   margin-left: 8px;
   white-space: nowrap;
 }
-/* Shared animation set for the gold heart-outline logo mark -- used at two
-   sizes: the small HearthMark in the header (Dashboard.jsx) and the much
-   larger version in the splash screen (Splash.jsx). Same three effects at
-   both sizes so the mark reads as "the same animated logo, just resized"
-   rather than two different treatments:
-   1. .heart-outline-draw / .hearth-roof -- the heart and the small roof
-      peak nested inside it each draw themselves in like a single pen
-      stroke as the mark appears (stroke-dasharray/dashoffset), the same
-      technique the old roofline-only mark used.
-   2. .heart-glow-chase -- a brighter, blurred duplicate of the heart
-      outline with a short dash and a long gap, whose dash-offset animates
-      continuously around the path -- reads as a traveling shimmer chasing
-      around the heart's perimeter (this is the effect visible in the
-      reference logo's animation frames, not a scale pulse).
-   3. .mini-rising-heart / .rising-heart -- tiny heart(s) drifting up out of
-      the chimney and fading, looping. */
-@keyframes heart-draw-in {
-  to { stroke-dashoffset: 0; }
+/* Header logo text -- the header's HearthMark (Dashboard.jsx) now reuses
+   the splash's own circular ring+sphere badge instead of the old gold
+   heart-outline mark, so these two text styles (and the shared
+   .platform-sphere-pulse breathing animation, still driven by
+   @keyframes hearth-family-breathe below) are the only badge-specific
+   rules left -- everything else about the ring is drawn inline in
+   Dashboard.jsx to match Splash.jsx's own styling. Sizes are scaled down
+   from the splash version's .platform-center-kicker/.platform-center-brand
+   by the same ratio as the sphere itself shrank (82 -> 38 radius). */
+.header-badge-kicker {
+  fill: #ffffff; font-family: 'Nunito', sans-serif; font-weight: 800;
+  font-size: 7px; letter-spacing: .6px;
 }
-.heart-outline-draw {
-  stroke-dasharray: 230; stroke-dashoffset: 230;
-  animation: heart-draw-in 1.1s cubic-bezier(.34, 1.56, .64, 1) .1s forwards;
+.header-badge-brand {
+  fill: #ffd88a; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 19px;
 }
-@keyframes heart-glow-move {
-  0% { stroke-dashoffset: 0; opacity: 0; }
-  8%, 92% { opacity: .95; }
-  100% { stroke-dashoffset: -230; opacity: 0; }
-}
-.heart-glow-chase {
-  stroke-dasharray: 34 230;
-  filter: blur(1.6px) drop-shadow(0 0 4px rgba(253, 230, 138, .85));
-  animation: heart-glow-move 3.2s linear 1.1s infinite;
-}
-@keyframes mini-heart-rise {
-  0% { opacity: 0; transform: translateY(0) scale(.5); }
-  15% { opacity: 1; }
-  100% { opacity: 0; transform: translateY(-11px) scale(1.05); }
-}
-.mini-rising-heart {
-  opacity: 0; transform-box: fill-box; transform-origin: center;
-  animation: mini-heart-rise 2.2s ease-in 1s infinite;
-}
-
-/* Splash-size versions of the same draw-in/glow-chase pair -- identical
-   technique to the header's, just a bigger stroke-dasharray tuned to this
-   much longer path so the draw-in and the chasing dash both cover the
-   whole outline correctly. */
-.heart-outline-draw-lg {
-  stroke-dasharray: 900; stroke-dashoffset: 900;
-  animation: heart-draw-in 1.3s cubic-bezier(.34, 1.56, .64, 1) .1s forwards;
-}
-@keyframes heart-glow-move-lg {
-  0% { stroke-dashoffset: 0; opacity: 0; }
-  8%, 92% { opacity: .95; }
-  100% { stroke-dashoffset: -900; opacity: 0; }
-}
-.heart-glow-chase-lg {
-  stroke-dasharray: 110 900;
-  filter: blur(3px) drop-shadow(0 0 8px rgba(253, 230, 138, .85));
-  animation: heart-glow-move-lg 3.6s linear 1.3s infinite;
-}
-/* Warm light behind the family silhouette gently brightens/dims and
-   breathes outward, like the reference logo's inner glow, rather than
-   sitting static. */
+/* Gentle breathing pulse on the badge's center sphere -- shared by both
+   the header logo (.platform-sphere-pulse on HearthMark's <circle>) and
+   the splash's own larger sphere (Splash.jsx), so the two read as the
+   same animated mark at two sizes. */
 @keyframes hearth-family-breathe {
   0%, 100% { opacity: .55; transform: scale(1); }
   50% { opacity: .85; transform: scale(1.08); }
 }
-.hearth-family-glow {
-  transform-box: fill-box; transform-origin: center;
-  animation: hearth-family-breathe 3s ease-in-out infinite;
-}
-/* Three tiny hearts drifting up out of the chimney and fading, staggered so
-   they don't rise in lockstep -- the splash-size equivalent of
-   .mini-rising-heart in the header. */
-@keyframes rising-heart-float {
-  0% { opacity: 0; transform: translateY(0) scale(.6); }
-  15% { opacity: 1; }
-  100% { opacity: 0; transform: translateY(-46px) scale(1.1); }
-}
-.rising-heart {
-  opacity: 0; transform-box: fill-box; transform-origin: center;
-  animation: rising-heart-float 2.8s ease-in infinite;
-}
-.rising-heart-1 { animation-delay: 1.1s; }
-.rising-heart-2 { animation-delay: 1.9s; }
-.rising-heart-3 { animation-delay: 2.6s; }
 .top-bar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .input-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
 /* This original in-content Income/Fixed Expenses/Add an expense/Savings
