@@ -301,7 +301,11 @@ button, input, select, textarea { font-family: inherit; }
   animation: splash-pop .5s ease .55s both;
 }
 .platform-center-brand {
-  fill: #ffd88a; font-family: 'Nunito', sans-serif; font-size: 40px; font-weight: 800;
+  /* Darkened from the original pale #ffd88a cream-yellow to a richer,
+     more saturated amber/gold -- reads more clearly against the blue
+     sphere behind it, per explicit feedback that the pale version was
+     too washed out. */
+  fill: #f2a91a; font-family: 'Nunito', sans-serif; font-size: 40px; font-weight: 800;
   animation: splash-pop .5s ease .6s both;
 }
 .platform-center-stat {
@@ -690,7 +694,9 @@ button, input, select, textarea { font-family: inherit; }
   font-size: 7px; letter-spacing: .6px;
 }
 .header-badge-brand {
-  fill: #ffd88a; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 19px;
+  /* Matches .platform-center-brand's darker, more saturated amber --
+     same "Hearth" wordmark, same fix for the same washed-out pale color. */
+  fill: #f2a91a; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 19px;
 }
 /* Gentle breathing pulse on the badge's center sphere -- shared by both
    the header logo (.platform-sphere-pulse on HearthMark's <circle>) and
@@ -849,7 +855,13 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
 .muted-small { color: var(--muted); font-size: 12px; }
 
 .month-nav { display: flex; align-items: center; gap: 12px; margin: 16px 0 20px; }
-.month-nav button {
+/* ">" child combinator, not a plain descendant selector -- the </> arrow
+   buttons are direct children of .month-nav, but the new date-range Filter
+   button is nested one level deeper inside .filter-wrap. A descendant
+   selector here was matching that button too, squashing it into this same
+   32x32 fixed box and clipping its "Full month"/date-range text outside the
+   visible white background. */
+.month-nav > button {
   background: var(--card); border: 1px solid var(--border); border-radius: 8px;
   width: 32px; height: 32px; cursor: pointer; font-size: 16px;
 }

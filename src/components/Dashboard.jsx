@@ -4387,18 +4387,34 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           </div>
         </div>
 
-      {/* Only shown on the Home tab itself (inputTab and activePanel both
-          null -- the same condition the header's Dashboard button uses to
-          highlight itself) so every tab shows its own name as a big centered
-          title at the top, matching whichever header button was clicked. */}
+      {/* Every header tab shows its own name as a big centered title at the
+          top, matching whichever button was clicked. Dashboard uses inputTab
+          and activePanel both being null (the same condition the header's
+          Dashboard button uses to highlight itself); Report/Settings/Help
+          used to render this same title cramped inside their own narrow
+          content-grid column further down -- moved up here instead so they
+          get the same full-width treatment. */}
       {!inputTab && !activePanel && (
         <h2 className="panel-title-themed" style={{ marginBottom: 4 }}>Dashboard</h2>
+      )}
+      {activePanel === 'report' && (
+        <h2 className="panel-title-themed" style={{ marginBottom: 4 }}>Report</h2>
+      )}
+      {activePanel === 'settings' && (
+        <h2 className="panel-title-themed" style={{ marginBottom: 4 }}>Settings</h2>
+      )}
+      {activePanel === 'help' && (
+        <h2 className="panel-title-themed" style={{ marginBottom: 4 }}>Help</h2>
       )}
 
       <div className="month-nav">
         <button onClick={() => setCurrentMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))}>&lsaquo;</button>
         <div className="label">{monthLabel(currentMonth)}</div>
         <button onClick={() => setCurrentMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))}>&rsaquo;</button>
+        {/* No date range on Settings/Help -- neither shows any spending data,
+            so narrowing "this month" to a sub-range has nothing to act on
+            there. */}
+        {activePanel !== 'settings' && activePanel !== 'help' && (
         <div className="filter-wrap" ref={rangeRef}>
           <button
             type="button"
@@ -4451,6 +4467,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             </div>
           )}
         </div>
+        )}
       </div>
 
       <div className="grid">
@@ -6444,8 +6461,12 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             ];
             return (
             <div className="panel" ref={panelRef}>
-              <h2 className="panel-title-themed">Help</h2>
-              <div className="muted-small" style={{ textAlign: 'center', marginTop: -6, marginBottom: 10 }}>How to use this app -- tap any topic below to open its description.</div>
+              {/* "Help" itself now renders as a page-level centered title
+                  next to the Dashboard/Report/Settings ones (see the
+                  !inputTab block up near the month nav) instead of cramped
+                  inside this narrow content-grid column, so it gets the same
+                  full-width treatment as every other tab's title. */}
+              <div className="muted-small" style={{ textAlign: 'center', marginBottom: 10 }}>How to use this app -- tap any topic below to open its description.</div>
               {/* Replays the same first-run spotlight tour that auto-showed
                   once for this browser -- lets anyone (a returning user who
                   wants a refresher, or someone who skipped it the first
@@ -6489,7 +6510,9 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
           {activePanel === 'report' && (
           <div className="panel" ref={panelRef}>
-            <h2 className="panel-title-themed">Report</h2>
+            {/* "Report" itself renders as a page-level centered title (see
+                the !inputTab block near the month nav) instead of cramped
+                inside this narrow content-grid column. */}
             <div className="muted-small" style={{ marginBottom: 12 }}>
               Generate a PDF for a date range, then view it on screen, download it, or email it. Category Breakdown and Summary share a page unless the chart runs long; Income, Expenses, Fixed Expenses, Savings, Spend Analysis, and Recommendations each get their own dedicated page. Tables auto-shrink to try to fit one page before flowing onto a second.
             </div>
@@ -6597,7 +6620,9 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           {activePanel === 'settings' && (
           <div className="panel" ref={panelRef}>
               <div>
-                <h2 className="panel-title-themed">Settings</h2>
+                {/* "Settings" itself renders as a page-level centered title
+                    (see the !inputTab block near the month nav) instead of
+                    cramped inside this narrow content-grid column. */}
                 <div className="row" style={{ gap: 8, marginBottom: 16 }}>
                   <button
                     className={`btn-teal ${settingsSubTab === 'app' ? '' : 'secondary'}`}
