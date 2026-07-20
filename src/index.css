@@ -490,6 +490,7 @@ button, input, select, textarea { font-family: inherit; }
 .app-footer {
   text-align: center; font-size: 11px; color: var(--muted); padding: 18px 0 6px;
 }
+.app-footer-link { color: var(--accent); font-weight: 700; text-decoration: underline; }
 
 .wrap { max-width: 1520px; margin: 0 auto; padding: 24px; }
 /* Frozen to the top of the viewport while the page scrolls -- now wraps the
@@ -1402,6 +1403,11 @@ td.amount { font-weight: 600; text-align: right; }
   .card .v { font-size: 15px; margin-top: 3px; }
   .card .muted-small { display: none; }
   .panel { padding: 14px; }
+  /* Home's explore frame is its own class (not .panel), so it needs its own
+     mobile override -- its 24px desktop padding was eating ~48px of a
+     ~390px-wide phone screen (over a tenth of the width) before the chart
+     inside it even started, on top of the chart's own internal margins. */
+  .home-explore-frame { padding: 14px; }
   .row { gap: 8px; }
   .field { min-width: 100%; }
   .field.half { min-width: calc(50% - 4px); }
@@ -1778,4 +1784,44 @@ td.amount { font-weight: 600; text-align: right; }
   flex: 0 0 auto; width: 22px; height: 22px; border-radius: 50%;
   background: var(--accent-light); color: var(--accent);
   font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center;
+}
+
+/* First-time spotlight tour (#301). .tour-overlay itself is transparent and
+   just a positioning context -- the actual dark backdrop lives on
+   .tour-highlight's box-shadow (the classic "hole cut in an overlay" CSS
+   trick: a transparent box exactly the target's size, ringed by an enormous
+   box-shadow that covers the rest of the viewport). That means the backdrop
+   automatically tracks wherever the target rect is/moves to on
+   resize/scroll -- no separate SVG mask to keep in sync. Sits above
+   everything else in the app (the sticky header is z-index 60, attachment
+   viewers are 60) since a tour step can need to highlight header elements
+   while they're behind other content. */
+.tour-overlay {
+  position: fixed; inset: 0; z-index: 500; pointer-events: none;
+}
+.tour-highlight {
+  position: fixed;
+  box-shadow: 0 0 0 9999px rgba(15, 42, 46, .6);
+  border: 2px solid var(--accent);
+  transition: top .2s ease, left .2s ease, width .2s ease, height .2s ease;
+  pointer-events: none;
+}
+.tour-tooltip {
+  position: fixed;
+  background: var(--card); border-radius: 14px;
+  padding: 16px 18px; box-shadow: 0 10px 30px rgba(15, 42, 46, .3);
+  pointer-events: auto;
+  transition: top .2s ease, left .2s ease;
+}
+.tour-tooltip-title { font-size: 15px; font-weight: 800; color: var(--text); margin-bottom: 6px; }
+.tour-tooltip-body { font-size: 13px; color: var(--text); line-height: 1.45; margin-bottom: 14px; }
+.tour-tooltip-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.tour-skip-link {
+  background: none; border: none; color: var(--muted); font-size: 12px;
+  font-weight: 600; cursor: pointer; padding: 4px 0; text-decoration: underline;
+}
+.tour-tooltip-actions { display: flex; align-items: center; gap: 8px; }
+.tour-step-count { font-size: 11px; color: var(--muted); font-weight: 700; white-space: nowrap; }
+@media (max-width: 640px) {
+  .tour-tooltip { padding: 14px 16px; }
 }

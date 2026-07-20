@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, LabelList,
@@ -299,6 +299,145 @@ function TreemapTile(props) {
         <text x={x + 6} y={y + 30} fontSize={9} fill="#fff" fillOpacity={0.9}>{fmt(value)}</text>
       )}
     </g>
+  );
+}
+
+// First-time-user spotlight tour -- a short, dismissible walkthrough of the
+// handful of things a brand-new household member most needs to find (the
+// title/logo, Home, adding an expense, the spending chart, Settings, the
+// notification bell, and Help). Each step's `selector` is a data-tour="..."
+// attribute already sitting on the real, live button/element -- desktop and
+// mobile intentionally share the SAME data-tour value on their respective
+// versions of "the same" action (e.g. the desktop header's Home button and
+// the mobile bottom-nav's Home button both carry data-tour="nav-home"), so
+// this one step list works unmodified on both layouts: querySelectorAll
+// picks whichever of the two is actually visible (offsetParent !== null)
+// rather than needing an isMobile branch here. No SVG mask/cutout -- the
+// "hole" in the dark backdrop is the classic CSS trick of a transparent box
+// exactly the target's size with an enormous box-shadow around it, which
+// naturally follows the target's real rect (no separate math to keep two
+// shapes in sync as the page scrolls/resizes).
+const TOUR_STEPS = [
+  {
+    selector: '[data-tour="brand"]',
+    title: 'Welcome to Hearth',
+    body: 'A quick 30-second look around -- skip anytime, or replay this later from Help.',
+  },
+  {
+    selector: '[data-tour="nav-home"]',
+    title: 'Home',
+    body: 'Your dashboard: budget, spending, and income at a glance, plus a bigger Explore view with the chart, AI Insights, and Budget Coach.',
+  },
+  {
+    selector: '[data-tour="nav-add"]',
+    title: 'Add an expense',
+    body: 'Log a regular expense here -- Income, Fixed Expenses, and Savings all work the same way and auto-save as you type.',
+  },
+  {
+    selector: '[data-tour="chart-toggle"]',
+    title: 'Spending by category',
+    body: 'Switch between Pie, Bar, Pareto, and Treemap to see where your money is going.',
+    ensureView: 'home',
+  },
+  {
+    selector: '[data-tour="nav-settings"]',
+    title: 'Smart Budget',
+    body: 'Set a monthly budget per category here -- go over, and you’ll get a heads-up in the bell icon next.',
+  },
+  {
+    selector: '[data-tour="notif-bell"]',
+    title: 'Notifications',
+    body: 'Over-budget categories and bills due soon show up here, with an unread count.',
+  },
+  {
+    selector: '[data-tour="nav-help"]',
+    title: 'Need more?',
+    body: 'Help has a full guide to every feature, and you can replay this tour anytime from there.',
+  },
+];
+
+function SpotlightTour({ stepIndex, onNext, onPrev, onSkip }) {
+  const [rect, setRect] = useState(null);
+  const step = TOUR_STEPS[stepIndex];
+
+  useLayoutEffect(() => {
+    if (!step) return;
+    let cancelled = false;
+    const measure = () => {
+      if (cancelled) return;
+      const candidates = Array.from(document.querySelectorAll(step.selector));
+      const el = candidates.find((c) => c.offsetParent !== null) || candidates[0];
+      if (el) {
+        el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        // Small delay lets the smooth scroll settle before measuring the
+        // final on-screen position -- measuring immediately would capture
+        // the pre-scroll rect and place the highlight/tooltip in the wrong
+        // spot for a frame or two.
+        setTimeout(() => {
+          if (cancelled) return;
+          setRect(el.getBoundingClientRect());
+        }, 260);
+      } else {
+        setRect(null);
+      }
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    window.addEventListener('scroll', measure, true);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('resize', measure);
+      window.removeEventListener('scroll', measure, true);
+    };
+  }, [stepIndex, step]);
+
+  if (!step) return null;
+  const pad = 8;
+  const highlightStyle = rect
+    ? {
+        position: 'fixed',
+        top: rect.top - pad,
+        left: rect.left - pad,
+        width: rect.width + pad * 2,
+        height: rect.height + pad * 2,
+        borderRadius: 12,
+      }
+    : null;
+  // Tooltip prefers sitting below the target; flips above if there isn't
+  // room, and always stays clamped within the viewport horizontally so it
+  // never runs off the left/right edge on a narrow phone screen.
+  const tooltipWidth = 300;
+  let tooltipTop = rect ? rect.bottom + pad + 10 : 100;
+  let flipAbove = false;
+  if (rect && tooltipTop + 160 > window.innerHeight) {
+    tooltipTop = Math.max(10, rect.top - pad - 10 - 160);
+    flipAbove = true;
+  }
+  let tooltipLeft = rect ? Math.min(Math.max(10, rect.left + rect.width / 2 - tooltipWidth / 2), window.innerWidth - tooltipWidth - 10) : 20;
+
+  return (
+    <div className="tour-overlay">
+      {highlightStyle && <div className="tour-highlight" style={highlightStyle} />}
+      <div
+        className={`tour-tooltip ${flipAbove ? 'tour-tooltip-above' : ''}`}
+        style={{ top: tooltipTop, left: tooltipLeft, width: tooltipWidth }}
+      >
+        <div className="tour-tooltip-title">{step.title}</div>
+        <div className="tour-tooltip-body">{step.body}</div>
+        <div className="tour-tooltip-foot">
+          <button type="button" className="tour-skip-link" onClick={onSkip}>Skip tour</button>
+          <div className="tour-tooltip-actions">
+            <span className="tour-step-count">{stepIndex + 1} / {TOUR_STEPS.length}</span>
+            {stepIndex > 0 && (
+              <button type="button" className="btn small secondary" onClick={onPrev}>Back</button>
+            )}
+            <button type="button" className="btn small" onClick={onNext}>
+              {stepIndex === TOUR_STEPS.length - 1 ? 'Done' : 'Next'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -657,6 +796,51 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);
   }, []);
+
+  // First-time-user spotlight tour (#301) -- shows once automatically for
+  // someone who's never seen it (a localStorage flag, not a DB column: this
+  // is a "have I personally clicked through this once" per-browser thing,
+  // not household data every member should share), and can be replayed
+  // anytime from a link in the Help panel below.
+  const TOUR_SEEN_KEY = 'hearth-tour-seen-v1';
+  const [tourStep, setTourStep] = useState(null); // null = not currently running
+  useEffect(() => {
+    if (!household?.id) return;
+    if (localStorage.getItem(TOUR_SEEN_KEY)) return;
+    // Small delay so the tour's first highlight lands on a settled layout
+    // (post-data-load) instead of racing the initial render/scroll.
+    const t = setTimeout(() => startTour(), 900);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [household?.id]);
+
+  function startTour() {
+    setActivePanel(null);
+    setInputTab(null);
+    setTourStep(0);
+  }
+  function finishTour() {
+    localStorage.setItem(TOUR_SEEN_KEY, '1');
+    setTourStep(null);
+  }
+  function tourNext() {
+    setTourStep((s) => {
+      const next = s + 1;
+      if (next >= TOUR_STEPS.length) {
+        localStorage.setItem(TOUR_SEEN_KEY, '1');
+        return null;
+      }
+      if (TOUR_STEPS[next].ensureView === 'home') {
+        setActivePanel(null);
+        setInputTab(null);
+      }
+      return next;
+    });
+  }
+  function tourPrev() {
+    setTourStep((s) => Math.max(0, s - 1));
+  }
+
   const [editingExpenseId, setEditingExpenseId] = useState(null);
   // Same tap-to-edit pattern as Expenses, applied to Income / Fixed
   // Expenses / Savings so all four mobile lists behave consistently.
@@ -3267,7 +3451,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   // normal (narrow, next to the data-entry tabs) and Home-tab ("big
   // explore") layouts, since it's the same chartType state either way.
   const chartTypeToggle = (
-    <div className="input-tabs">
+    <div className="input-tabs" data-tour="chart-toggle">
       <button
         className={`btn small ${chartType === 'pie' ? '' : 'secondary'}`}
         onClick={() => setChartType('pie')}
@@ -3360,14 +3544,23 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                     )}
                   </div>
                   <div style={{ flex: '1 1 320px', minWidth: 0, maxWidth: 480 }}>
-                    <ResponsiveContainer width="100%" height={480}>
+                    {/* Radius and container height drop on phones (isMobile,
+                        <=640px) -- a fixed 150px radius needed a ~320px-wide
+                        plot area to avoid clipping its outer percent labels,
+                        which a phone's Home explore column (full width minus
+                        the frame's own padding) doesn't reliably have. 85px
+                        comfortably fits a ~300px-wide phone with room for
+                        labels either side; height shrinks to match so the
+                        chart doesn't force an oversized scroll on a small
+                        screen. Desktop's original 480/150 is untouched. */}
+                    <ResponsiveContainer width="100%" height={isMobile ? 320 : 480}>
                       <PieChart margin={{ top: 4, right: 10, bottom: 0, left: 10 }}>
                         <Pie
                           data={chartPieData}
                           dataKey="value"
                           nameKey="name"
                           cy="42%"
-                          outerRadius={150}
+                          outerRadius={isMobile ? 85 : 150}
                           isAnimationActive={false}
                           label={({ percent }) => (percent >= 0.04 ? `${Math.round(percent * 100)}%` : '')}
                           labelLine={false}
@@ -3436,14 +3629,19 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           // (angled so longer names don't overlap), value goes up the
           // Y-axis -- the more familiar "bar chart" look, available on
           // Home's wider canvas.
-          <ResponsiveContainer width="100%" height={big ? 480 : 340}>
+          <ResponsiveContainer width="100%" height={big ? (isMobile ? 340 : 480) : 340}>
             {/* Top margin widened (20 -> 46, big only) to leave room for the
                 rotated value label poking up above each column -- see
                 DirhamBarLabelVerticalColumn. Bar itself narrowed (28 -> 20,
                 big only) so more categories fit before the chart feels
                 crowded, per explicit request to shrink bars for denser,
-                more "elegant" coverage. */}
-            <BarChart data={pieData} layout="horizontal" margin={{ top: big ? 46 : 20, right: 20, left: 0, bottom: 70 }} barCategoryGap={big ? '20%' : '25%'}>
+                more "elegant" coverage. On phones (isMobile), the big
+                column-bar drops back to the same height as the small panel
+                version and narrows further (14px) since a 390px-wide screen
+                can't give each of, say, 8+ standing columns the room a
+                480px-tall/20px-wide desktop layout assumes -- otherwise bars
+                and their rotated labels start overlapping each other. */}
+            <BarChart data={pieData} layout="horizontal" margin={{ top: big ? (isMobile ? 24 : 46) : 20, right: 20, left: 0, bottom: 70 }} barCategoryGap={big ? '20%' : '25%'}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis
                 type="category"
@@ -3457,7 +3655,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               />
               <YAxis type="number" tick={{ fontSize: 11 }} />
               <Tooltip formatter={(v) => fmt(v)} />
-              <Bar dataKey="value" barSize={big ? 20 : 28} radius={[3, 3, 0, 0]} isAnimationActive={false}>
+              <Bar dataKey="value" barSize={big ? (isMobile ? 14 : 20) : 28} radius={[3, 3, 0, 0]} isAnimationActive={false}>
                 {pieData.map((_, i) => (
                   <Cell key={i} fill={COLORS[i % COLORS.length]} />
                 ))}
@@ -3477,8 +3675,15 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           // and the AI Insights card below it. Now the needed height is
           // compared against the cap directly, so scrolling only turns
           // itself off when the content actually fits inside it.
-          const barMaxHeight = big ? 760 : 520;
-          const barNeededHeight = Math.max(big ? 240 : 180, pieData.length * (big ? 32 : 30));
+          // On phones, the big view's per-row height/max height fall back to
+          // the small-panel numbers (rather than the desktop-tuned 32/760)
+          // so a long category list doesn't force an extremely tall chart
+          // that dwarfs the rest of the Home explore section -- the same
+          // internal scroll (barWillOverflow) still kicks in once content
+          // exceeds the (now shorter) cap.
+          const barMaxHeight = big ? (isMobile ? 520 : 760) : 520;
+          const barRowHeight = big ? (isMobile ? 30 : 32) : 30;
+          const barNeededHeight = Math.max(big ? 240 : 180, pieData.length * barRowHeight);
           const barWillOverflow = barNeededHeight > barMaxHeight;
           return (
           <div style={{ maxHeight: barMaxHeight, overflowY: barWillOverflow ? 'auto' : 'visible', marginBottom: 4 }}>
@@ -3497,9 +3702,9 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 <YAxis
                   type="category"
                   dataKey="name"
-                  width={big ? 140 : 95}
+                  width={big ? (isMobile ? 95 : 140) : 95}
                   tick={{ fontSize: big ? 11 : 8.5 }}
-                  tickFormatter={(name) => (name.length > (big ? 20 : 13) ? name.slice(0, big ? 20 : 13) + '…' : name)}
+                  tickFormatter={(name) => (name.length > (big ? (isMobile ? 13 : 20) : 13) ? name.slice(0, big ? (isMobile ? 13 : 20) : 13) + '…' : name)}
                 />
                 <Tooltip formatter={(v) => fmt(v)} />
                 <Bar dataKey="value" barSize={big ? 10 : 9} radius={[0, 3, 3, 0]} isAnimationActive={false}>
@@ -3513,7 +3718,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           </div>
           );
         })() : chartType === 'treemap' ? (
-          <ResponsiveContainer width="100%" height={big ? 560 : 360}>
+          <ResponsiveContainer width="100%" height={big ? (isMobile ? 400 : 560) : 360}>
             <Treemap
               data={pieData}
               dataKey="value"
@@ -3525,12 +3730,12 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             </Treemap>
           </ResponsiveContainer>
         ) : (
-          <ResponsiveContainer width="100%" height={big ? 520 : 340}>
+          <ResponsiveContainer width="100%" height={big ? (isMobile ? 380 : 520) : 340}>
             <ComposedChart data={paretoData} margin={{ top: 20, right: 30, left: 0, bottom: 60 }}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
                 dataKey="name"
-                tick={{ fontSize: big ? 12 : paretoFontSize }}
+                tick={{ fontSize: big ? (isMobile ? paretoFontSize : 12) : paretoFontSize }}
                 interval={0}
                 angle={-50}
                 textAnchor="end"
@@ -3549,7 +3754,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <Tooltip
                 formatter={(v, key) => (key === 'cumulative' ? v + '%' : fmt(v))}
               />
-              <Bar yAxisId="left" dataKey="value" barSize={big ? paretoBarSize + 6 : paretoBarSize} isAnimationActive={false}>
+              <Bar yAxisId="left" dataKey="value" barSize={big ? (isMobile ? paretoBarSize : paretoBarSize + 6) : paretoBarSize} isAnimationActive={false}>
                 {paretoData.map((_, i) => (
                   <Cell key={i} fill={COLORS[i % COLORS.length]} />
                 ))}
@@ -3643,7 +3848,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       <div className="sticky-dashboard-frame" ref={stickyFrameRef}>
       <div className="top-bar" ref={topRef}>
         <div className="top-bar-row">
-          <div className="header-title-row">
+          <div className="header-title-row" data-tour="brand">
             <HearthMark size={34} />
             {/* The page title is now editable right here, in place, instead
                 of only through Settings > App Settings -- typing here and
@@ -3706,6 +3911,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 again, the same way it always did. */}
             <button
               type="button"
+              data-tour="nav-home"
               className={`btn-teal header-tab-btn ${!inputTab && !activePanel ? 'header-tab-btn-active' : ''}`}
               onClick={() => { setActivePanel(null); setInputTab(null); scrollToFrameA(); }}
               title="Show just the dashboard"
@@ -3729,6 +3935,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             </button>
             <button
               type="button"
+              data-tour="nav-add"
               className={`btn-teal header-tab-btn ${inputTab === 'expense' ? 'header-tab-btn-active' : ''}`}
               onClick={() => { setInputTab('expense'); scrollToFrameA(); }}
             >
@@ -3753,13 +3960,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             <button className="btn-teal" onClick={() => togglePanel('report')}>
               {activePanel === 'report' ? 'Hide report' : 'Report'}
             </button>
-            <button className="btn-teal" onClick={() => togglePanel('settings')}>
+            <button className="btn-teal" data-tour="nav-settings" onClick={() => togglePanel('settings')}>
               {activePanel === 'settings' ? 'Hide settings' : 'Settings'}
             </button>
             {/* Standalone "Users" button removed from this row -- Users
                 management now lives under Settings > Users instead, so
                 there's one way to reach it, not two. */}
-            <button className="btn-teal" onClick={() => togglePanel('help')}>
+            <button className="btn-teal" data-tour="nav-help" onClick={() => togglePanel('help')}>
               {activePanel === 'help' ? 'Hide help' : 'Help'}
             </button>
             {/* Color theme picker -- deliberately styled as a multi-color
@@ -3859,6 +4066,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             <div className="notif-bell-wrap" ref={notifBellRef}>
               <button
                 type="button"
+                data-tour="notif-bell"
                 className="notif-bell-btn"
                 title="Notifications"
                 onClick={() => {
@@ -5699,11 +5907,24 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               { key: 'settings', title: 'Settings', body: <>Has its own sub-tabs. Currency covers your household's chosen currency (renaming the app/household name itself happens right in the header now -- click the title next to the logo, owners only). Smart Budget always follows whichever month you're viewing on the dashboard (change the Month field there to set or review a different month instead) and covers your overall monthly cap for that month, plus an optional "Budget for Per Category" section below it and how this month's spending compares to those caps (you'll get a notification in the bell icon if you go over). Add Category adds, renames, or removes categories. Users (owners only) covers household members and invites -- see below. Admin Console (owners only) covers members and invites. Every field auto-saves as you edit -- there's no Save button to click.</> },
               { key: 'notifications', title: 'Notifications', body: <>The bell icon next to Help (top-right) replaces the old always-on red banners. It shows a count of unread items -- over-total-budget, over a category's budget, or a bill due soon -- and opening it lists them and marks them read.</> },
               { key: 'users', title: 'Users', body: <>See who's active in the household and who's been invited but hasn't joined yet, with full Name/Email/Phone/Location. Owners can invite new members (which also sends them a notification email), fill in or fix anyone's Name/Phone/Location, and edit their own details under "My details" -- handy for accounts created before these fields existed. Reachable from Settings' Users sub-tab. The Admin console (if you have access) is separate and never visible to other household members.</> },
+              { key: 'privacy', title: 'Privacy Policy', body: <>Covers what's collected, where it's stored, and how the AI features use your data. Also linked at the very bottom of every page. <a href="/privacy.html" target="_blank" rel="noopener noreferrer">Read the full Privacy Policy</a>.</> },
             ];
             return (
             <div className="panel" ref={panelRef}>
               <h2>How to use this app</h2>
               <div className="muted-small" style={{ marginBottom: 10 }}>Tap any topic below to open its description.</div>
+              {/* Replays the same first-run spotlight tour that auto-showed
+                  once for this browser -- lets anyone (a returning user who
+                  wants a refresher, or someone who skipped it the first
+                  time) walk through it again on demand. */}
+              <button
+                type="button"
+                className="btn small secondary"
+                style={{ marginBottom: 14 }}
+                onClick={() => { setActivePanel(null); startTour(); }}
+              >
+                Take the tour again
+              </button>
               <div className="help-accordion">
                 {helpTopics.map((t) => {
                   const open = helpOpenTopic === t.key;
@@ -6061,7 +6282,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       )}
 
       <div className="app-footer">
-        Your data is confidential and private to this household. It is never shared with anyone outside it.
+        Your data is confidential and private to this household. It is never shared with anyone outside it.{' '}
+        <a href="/privacy.html" target="_blank" rel="noopener noreferrer" className="app-footer-link">Privacy Policy</a>
       </div>
 
       {addSheetOpen && (
@@ -6093,11 +6315,11 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
         </button>
       )}
       <nav className="mobile-bottom-nav">
-        <button className={!activePanel && !addSheetOpen ? 'active' : ''} onClick={goToOverview}>
+        <button data-tour="nav-home" className={!activePanel && !addSheetOpen ? 'active' : ''} onClick={goToOverview}>
           <Home size={20} strokeWidth={2.2} />
           <span>Home</span>
         </button>
-        <button onClick={() => goToAdd(inputTab || 'expense')}>
+        <button data-tour="nav-add" onClick={() => goToAdd(inputTab || 'expense')}>
           <Plus size={20} strokeWidth={2.2} />
           <span>Add</span>
         </button>
@@ -6107,7 +6329,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
         </button>
         {/* Users button removed from here too -- reach it via Settings >
             Users now, same as desktop. */}
-        <button className={activePanel === 'settings' ? 'active' : ''} onClick={() => togglePanel('settings')}>
+        <button data-tour="nav-settings" className={activePanel === 'settings' ? 'active' : ''} onClick={() => togglePanel('settings')}>
           <SettingsIcon size={20} strokeWidth={2.2} />
           <span>Settings</span>
         </button>
@@ -6218,6 +6440,15 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             )}
           </div>
         </div>
+      )}
+
+      {tourStep !== null && (
+        <SpotlightTour
+          stepIndex={tourStep}
+          onNext={tourNext}
+          onPrev={tourPrev}
+          onSkip={finishTour}
+        />
       )}
 
     </div>

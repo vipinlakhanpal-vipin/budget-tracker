@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Privacy Policy -- Hearth</title>
+<meta name="description" content="Privacy Policy for Hearth, the household budget tracker." />
+<link rel="icon" href="/favicon.png" />
+<style>
+  :root {
+    --bg: #f0f9fb; --card: #fdf9f2; --text: #0f2a2e; --muted: #5b7c82;
+    --accent: #0d9488; --accent-light: #ccfbf1; --border: #d5ecec;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-weight: 300; line-height: 1.6;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 40px 20px 80px; }
+  .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .brand-mark {
+    width: 30px; height: 30px; border-radius: 8px; background: var(--accent);
+    display: flex; align-items: center; justify-content: center; color: #fff; font-size: 16px;
+  }
+  .brand-name { font-size: 20px; font-weight: 800; color: var(--accent); }
+  h1 { font-size: 26px; font-weight: 800; margin: 18px 0 4px; }
+  .updated { color: var(--muted); font-size: 13px; margin-bottom: 32px; }
+  h2 { font-size: 17px; font-weight: 800; margin: 30px 0 8px; }
+  p, li { font-size: 14.5px; }
+  ul { padding-left: 20px; margin: 8px 0; }
+  li { margin-bottom: 6px; }
+  a { color: var(--accent); }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 18px 22px; margin-top: 10px;
+  }
+  .back-link { display: inline-block; margin-top: 36px; font-size: 13px; color: var(--muted); text-decoration: none; }
+  .back-link:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <div class="brand-mark">&#9829;</div>
+    <div class="brand-name">Hearth</div>
+  </div>
+  <h1>Privacy Policy</h1>
+  <div class="updated">Last updated: July 20, 2026</div>
+
+  <div class="card">
+    <p>Hearth is a household budget tracker built for a single family or household to log income, expenses, fixed bills, and savings together. This page explains what data the app collects, how it's stored, who can see it, and how the app's AI features use it.</p>
+  </div>
+
+  <h2>1. Who this applies to</h2>
+  <p>This policy covers everyone who creates or joins a household in Hearth. A household is a private group (e.g. a family) -- data entered by one member is visible only to other members of that same household, never to any other household or the public.</p>
+
+  <h2>2. What we collect</h2>
+  <ul>
+    <li><strong>Account info:</strong> the email address and password you sign up with, and an optional name, phone number, and location if you choose to add them under "My details".</li>
+    <li><strong>Financial entries you choose to enter:</strong> income sources and amounts, one-off expenses, fixed/recurring bills, savings goals, categories, payment sources, and any notes you write.</li>
+    <li><strong>Attachments:</strong> any photo or PDF you optionally attach to an entry (e.g. a receipt, a lease, a loan agreement).</li>
+    <li><strong>Household settings:</strong> household name, currency, monthly/category budgets you set, and who else is invited or a member.</li>
+    <li><strong>Basic usage data:</strong> which browser tab options you've dismissed once (e.g. whether you've seen the first-time app tour) is remembered only on your own device/browser (not sent to us), so it can avoid repeating itself.</li>
+  </ul>
+  <p>We do not collect precise location, browsing history outside this app, or any data from other apps or accounts on your device.</p>
+
+  <h2>3. How your data is stored</h2>
+  <p>Hearth's data (your account, household, and every entry above) is stored in a Postgres database and file storage bucket hosted by <a href="https://supabase.com" target="_blank" rel="noopener noreferrer">Supabase</a>, a third-party infrastructure provider. The app itself is hosted by <a href="https://vercel.com" target="_blank" rel="noopener noreferrer">Vercel</a>. Neither Supabase nor Vercel are given permission to use your data for anything other than storing and serving it back to Hearth -- they don't see it as "their" data or use it for advertising.</p>
+  <p>Access to your household's data is enforced at the database level (row-level security): a request for any entry only succeeds if it's coming from a signed-in member of that same household. Other Hearth households, and anyone not signed in, cannot read or write your data.</p>
+
+  <h2>4. Household confidentiality</h2>
+  <p>Everything you enter is private to your household. It is never shared with, or made visible to, anyone outside the household you're a member of -- not other Hearth users, not the public, and not us for marketing or analytics purposes.</p>
+
+  <h2>5. AI features</h2>
+  <p>Hearth includes a few optional AI-powered features (auto-categorizing an expense, a monthly spending summary, Budget Coach suggestions, receipt scanning, and the in-app Chat BoT assistant). These features send only the specific data needed to answer that request (e.g. your expense descriptions and amounts for that month, or the receipt image you chose to scan) to Anthropic's Claude API to generate a response. This only happens when you actively use one of these features (tapping "Generate", uploading a receipt, or sending a chat message) -- never automatically or in the background. Anthropic processes this data to return a result to the app and does not use it to train its models, per Anthropic's own API terms.</p>
+
+  <h2>6. Email</h2>
+  <p>If a household owner sets up email sending, Hearth can send: an invite notification when someone is invited to a household, and reminders for upcoming bills. These emails are sent via Gmail SMTP and contain only the specific information relevant to that notification (e.g. which bill is due).</p>
+
+  <h2>7. Your choices</h2>
+  <ul>
+    <li>You can edit or delete any entry, attachment, or your own profile details at any time from within the app.</li>
+    <li>You can ask to have your account and household data deleted entirely -- see Contact below.</li>
+    <li>Notes, attachments, and AI features are all optional; the app works without using any of them.</li>
+  </ul>
+
+  <h2>8. Children's privacy</h2>
+  <p>Hearth is intended for household budgeting by adults and is not directed at children. We do not knowingly collect data from children.</p>
+
+  <h2>9. Changes to this policy</h2>
+  <p>If this policy changes in a meaningful way, the "Last updated" date above will change to reflect it.</p>
+
+  <h2>10. Contact</h2>
+  <p>Questions about this policy or a request to delete your data can be sent to the household owner who manages your Hearth household, or to the address you originally received your invite from.</p>
+
+  <a class="back-link" href="/">&larr; Back to Hearth</a>
+</div>
+</body>
+</html>
