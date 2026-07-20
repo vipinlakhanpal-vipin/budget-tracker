@@ -66,6 +66,142 @@ const COUNTRY_SHORT_NAMES = { ae: 'UAE' };
 
 const COUNTRY_CENTROIDS = JSON.parse('{"_somaliland":[519.8,505.8],"ae":[534.4,467.2],"af":[560.8,439.9],"al":[452.4,422.7],"am":[507.7,424],"ao":[449.8,559.4],"ar":[261.6,642],"at":[436.7,403.1],"au":[718.5,623.6],"az":[513.7,423.1],"ba":[446.4,414.3],"bd":[621.1,465.3],"be":[417.2,394.4],"bf":[403.5,499.7],"bg":[463,417.7],"bi":[480.3,540.3],"bj":[412.9,508.1],"bn":[688.1,516.9],"bo":[253.6,576.1],"br":[275,569.3],"bs":[225.4,463.8],"bt":[619,454.2],"bw":[465.2,588.7],"by":[465.6,382.6],"bz":[193.4,484.1],"ca":[218.9,333.3],"cd":[460.8,542.2],"cf":[458.6,513.8],"cg":[443.2,533.2],"ch":[424.9,406],"ci":[393.3,513.4],"cl":[251.2,636.9],"cm":[437.6,512.8],"cn":[635.1,419.2],"co":[228,520.7],"cr":[201.1,506.3],"cu":[217.4,473.4],"cv":[352,493.9],"cy":[482.6,439.7],"cz":[440.3,396.6],"de":[429.8,392.7],"dk":[428.4,375.5],"dj":[510.2,500.1],"dm":[256.5,486.8],"do":[238.4,481],"dz":[411.4,458.9],"ec":[202,537.2],"ee":[456.5,366.2],"eg":[478.6,461.9],"er":[503.1,491.9],"es":[389.4,437.9],"et":[505.9,508.5],"fi":[457.1,342.9],"fk":[281.3,679.7],"fr":[397,491.3],"ga":[435.1,534.3],"gb":[400.6,382],"ge":[501.7,417.6],"gh":[403.4,511.7],"gl":[342.1,312.7],"gm":[369.8,497],"gn":[378.1,506.2],"gq":[430.7,525],"gr":[460.2,430.8],"gt":[188.6,488.7],"gw":[370.5,502.6],"gy":[263.3,520.1],"hn":[198.3,493.3],"hr":[442.8,413.3],"ht":[231.7,480.5],"hu":[450.1,404.2],"id":[695.3,537.9],"ie":[389.1,384.8],"il":[486.9,449.7],"in":[601.9,472.6],"iq":[507.9,443.8],"ir":[530.8,445],"is":[370.3,346],"it":[435.3,420.7],"jm":[220.9,482.1],"jo":[491.4,450.5],"jp":[723.1,403.7],"ke":[499.6,530],"kg":[573.7,415.4],"kh":[660.1,495.5],"km":[515.7,560.7],"kp":[692.6,404.3],"kr":[698.2,417.4],"kw":[517.6,454.4],"kz":[550.6,394.4],"la":[656.4,478.6],"lb":[487.8,442.3],"lc":[259.3,494.5],"lk":[605.2,509.7],"lr":[382.9,516],"ls":[473.2,607.5],"lt":[456.1,378.7],"lu":[421.3,397],"lv":[457.4,372.3],"ly":[447.9,463.3],"ma":[384.6,458.7],"md":[468,403.9],"me":[449.9,418.3],"mg":[520.8,579.2],"mk":[455.9,421.1],"ml":[397.3,486.9],"mm":[636.8,476],"mn":[631.7,389.5],"mr":[379.8,478.6],"mt":[440.3,439.5],"mu":[545.1,585.8],"mv":[584.2,522.4],"mw":[491.2,565.5],"mx":[166.7,462.1],"my":[673.5,519.7],"mz":[493.8,578.7],"na":[450.7,590.3],"nc":[801.6,606.6],"ne":[427,485.9],"ng":[427.6,508.8],"ni":[200.4,496.9],"nl":[418.3,388.8],"no":[439.6,324.5],"np":[604.5,452.2],"nz":[791.8,678],"om":[540.7,476.7],"pa":[212.2,508.7],"pe":[224.3,558],"pg":[766.6,554.2],"ph":[704.2,494.1],"pk":[569,447.7],"pl":[447.9,388.7],"pr":[247.2,482.6],"pt":[363.7,433.8],"py":[268.3,594.7],"qa":[528.3,464.9],"ro":[462.4,408],"rs":[452.6,413.3],"ru":[619.3,330.7],"rw":[480.4,535.3],"sa":[513.2,468.3],"sb":[792.3,561.6],"sc":[540.1,546],"sd":[480.2,490.2],"se":[440.9,354],"sg":[659.4,527.4],"si":[439.6,407.4],"sk":[449.7,399.9],"sl":[377,510.7],"sn":[372.5,495.4],"so":[519.4,517.6],"sr":[270.6,522],"ss":[479.4,512.1],"st":[423.9,529.5],"sv":[191.3,495],"sy":[494.6,440.1],"sz":[482.1,599.2],"td":[451.4,492.3],"tg":[409.5,510.4],"th":[650.2,493.7],"tj":[568.5,423.4],"tm":[541,425],"tn":[429.9,443.3],"tr":[485.5,428.4],"tt":[258.6,504.5],"tw":[694.1,458.7],"tz":[492.7,546.7],"ua":[474.7,399],"ug":[486.4,528.2],"us":[145.3,361.9],"uy":[279.6,619.3],"uz":[550.2,417.4],"vc":[258.3,498.9],"ve":[245.2,515.3],"vn":[661.2,485.2],"vu":[812.4,590.7],"ye":[524,491.2],"za":[464.8,605.6],"zm":[474,564.8],"zw":[477.3,579.6]}');
 
+// Circular "platform" diagram for the intro/splash screen -- replaces the
+// earlier hearth/family illustration with a Coupa-style "total platform"
+// ring: a navy outer ring carrying the app's own name as a curved title,
+// a light-blue band of icons for every one of the app's real header tabs
+// (same order as the header itself, Home -> Help), and a glowing blue
+// center sphere calling out "AI POWERED". Every label/order below is real
+// -- not filler -- so this reads as an honest map of what's actually in
+// the app, not a generic marketing graphic.
+const PLATFORM_CENTER = { x: 220, y: 236 };
+const PLATFORM_ICON_RADIUS = 150;
+const PLATFORM_RING_OUTER = 210;
+const PLATFORM_RING_INNER = 182;
+const PLATFORM_SPHERE_RADIUS = 82;
+
+function polarPoint(cx, cy, r, angleDeg) {
+  const a = (angleDeg * Math.PI) / 180;
+  return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
+}
+function arcPath(cx, cy, r, startDeg, endDeg) {
+  const p1 = polarPoint(cx, cy, r, startDeg);
+  const p2 = polarPoint(cx, cy, r, endDeg);
+  const largeArc = Math.abs(endDeg - startDeg) > 180 ? 1 : 0;
+  return `M ${p1.x} ${p1.y} A ${r} ${r} 0 ${largeArc} 1 ${p2.x} ${p2.y}`;
+}
+// Curved path the title text rides along -- spans the top of the ring only
+// (200deg to 340deg, in the same clockwise-from-3-o'clock convention used
+// by polarPoint/arcPath throughout this file).
+const PLATFORM_TITLE_ARC = arcPath(PLATFORM_CENTER.x, PLATFORM_CENTER.y, 196, 200, 340);
+
+// Angles chosen so all 8 icons land in symmetric pairs (two near the top,
+// two near the bottom, two on each side) -- the same rhythm as the
+// reference platform diagram -- while mapping 1:1 onto Hearth's real
+// header tab order, read clockwise starting at the top-left.
+const PLATFORM_TABS = [
+  { label: 'Home', icon: 'home', angle: 247.5 },
+  { label: 'Income', icon: 'income', angle: 292.5 },
+  { label: 'Fixed Expenses', icon: 'fixed', angle: 337.5 },
+  { label: 'Regular Expenses', icon: 'regular', angle: 22.5 },
+  { label: 'Savings', icon: 'savings', angle: 67.5 },
+  { label: 'Report', icon: 'report', angle: 112.5 },
+  { label: 'Smart Budget', icon: 'settings', angle: 157.5 },
+  { label: 'Help', icon: 'help', angle: 202.5 },
+];
+
+// Faint "network" decoration inside the center sphere -- an outer ring of
+// nodes plus a hub wired to a few of them, echoing the connected-data globe
+// look of the reference image without needing an actual force-graph lib.
+const PLATFORM_NETWORK_DOTS = [
+  { x: -46, y: -38, r: 3 }, { x: -10, y: -58, r: 2.4 }, { x: 30, y: -50, r: 3.4 },
+  { x: 54, y: -14, r: 2.6 }, { x: 50, y: 26, r: 3 }, { x: 14, y: 52, r: 2.4 },
+  { x: -28, y: 46, r: 3.2 }, { x: -56, y: 10, r: 2.6 }, { x: -6, y: 4, r: 2 },
+];
+const PLATFORM_NETWORK_LINES = [
+  [-46, -38, -10, -58], [-10, -58, 30, -50], [30, -50, 54, -14], [54, -14, 50, 26],
+  [50, 26, 14, 52], [14, 52, -28, 46], [-28, 46, -56, 10], [-56, 10, -46, -38],
+  [-6, 4, -46, -38], [-6, 4, 30, -50], [-6, 4, 50, 26], [-6, 4, -28, 46],
+];
+
+// Small hand-drawn line-icon per tab, each in its own local 24x24 box --
+// stroke/fill applied by the wrapping <g> in the icon spoke below, kept
+// deliberately simple (thin outline shapes) to match the reference
+// diagram's icon style rather than a detailed illustration.
+function PlatformIcon({ type }) {
+  switch (type) {
+    case 'home':
+      return (
+        <g>
+          <path d="M2 12 L12 3 L22 12" />
+          <path d="M5 10 V21 H19 V10" />
+          <rect x="10.5" y="14" width="3" height="7" />
+        </g>
+      );
+    case 'income':
+      return (
+        <g>
+          <rect x="2" y="6" width="20" height="14" rx="2.4" />
+          <path d="M2 10 H22" />
+          <circle cx="17" cy="14" r="1.6" fill="#1b2a5e" stroke="none" />
+        </g>
+      );
+    case 'fixed':
+      return (
+        <g>
+          <rect x="3" y="5" width="18" height="16" rx="2.2" />
+          <path d="M3 10 H21" />
+          <path d="M8 2 V6 M16 2 V6" />
+          <path d="M9 15 L11.5 17.5 L16 12.5" />
+        </g>
+      );
+    case 'regular':
+      return (
+        <g>
+          <path d="M2 3 H5 L7.4 15.2 A2 2 0 0 0 9.4 17 H18 A2 2 0 0 0 20 15.4 L22 7 H6" />
+          <circle cx="9.5" cy="20.5" r="1.4" fill="#1b2a5e" stroke="none" />
+          <circle cx="17.5" cy="20.5" r="1.4" fill="#1b2a5e" stroke="none" />
+        </g>
+      );
+    case 'savings':
+      return (
+        <g>
+          <ellipse cx="11" cy="13" rx="9" ry="6.4" />
+          <path d="M20 12 L23 9.5 L22 13.5 Z" />
+          <circle cx="18" cy="10.6" r="0.9" fill="#1b2a5e" stroke="none" />
+          <path d="M4 18.5 V21 M9 19.5 V22" />
+          <path d="M2 12 A2 2 0 0 1 2 8" />
+        </g>
+      );
+    case 'report':
+      return (
+        <g>
+          <path d="M2 21 H22" />
+          <rect x="4" y="13" width="4" height="8" />
+          <rect x="10" y="8" width="4" height="13" />
+          <rect x="16" y="4" width="4" height="17" />
+        </g>
+      );
+    case 'settings':
+      return (
+        <g>
+          <path d="M3 15 A9 9 0 0 1 21 15" />
+          <path d="M12 15 L17 8" />
+          <circle cx="12" cy="15" r="1.6" fill="#1b2a5e" stroke="none" />
+        </g>
+      );
+    case 'help':
+      return (
+        <g>
+          <circle cx="12" cy="12" r="10" />
+          <text x="12" y="16.5" textAnchor="middle" fontSize="12" fontWeight="800" fill="#1b2a5e" stroke="none" fontFamily="Nunito, sans-serif">?</text>
+        </g>
+      );
+    default:
+      return null;
+  }
+}
+
 export default function Splash() {
   const [geo, setGeo] = useState(null);
 
@@ -154,226 +290,119 @@ export default function Splash() {
 
       <div className="splash-center">
         <div className="splash-illustration-wrap">
-        <div className="splash-illustration splash-illustration-hearth">
-          <svg viewBox="0 0 380 300" xmlns="http://www.w3.org/2000/svg">
+        <div className="splash-illustration splash-illustration-platform">
+          <svg viewBox="0 0 440 472" xmlns="http://www.w3.org/2000/svg">
             <defs>
-              {/* Ambient white glow behind the whole scene -- given a touch
-                  more presence (opacity + radius) per explicit request for
-                  "darker teal and white slight touch" so the darkened
-                  background isn't flat, without turning it back into the
-                  earlier lighter teal. */}
-              <radialGradient id="glow" cx="50%" cy="58%" r="46%">
-                <stop offset="0" stopColor="#ffffff" stopOpacity="0.48" />
-                <stop offset="1" stopColor="#ffffff" stopOpacity="0" />
+              {/* Center sphere lit from the upper-left, deepening to navy at
+                  the edges -- same "glowing globe" read as the reference
+                  diagram's center, built from Hearth's own blue theme
+                  rather than the earlier teal. */}
+              <radialGradient id="platformSphere" cx="34%" cy="28%" r="78%">
+                <stop offset="0" stopColor="#7fabf7" />
+                <stop offset="48%" stopColor="#33509f" />
+                <stop offset="100%" stopColor="#0e1a3f" />
               </radialGradient>
-              <radialGradient id="familyGlow" cx="50%" cy="55%" r="55%">
-                <stop offset="0" stopColor="#ffd88a" stopOpacity="0.9" />
-                <stop offset="1" stopColor="#ffd88a" stopOpacity="0" />
-              </radialGradient>
-              {/* Rich amber-copper, picked from the sample set over the
-                  original paler warm-gold version. */}
-              <linearGradient id="heartGold" x1="0" y1="1" x2="0" y2="0">
-                <stop offset="0" stopColor="#7c2d12" />
-                <stop offset="1" stopColor="#fb923c" />
-              </linearGradient>
-              <linearGradient id="coinFace" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stopColor="#ffe27a" />
-                <stop offset="1" stopColor="#eab308" />
-              </linearGradient>
-              <linearGradient id="walletBody" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stopColor="#1bcbb4" />
-                <stop offset="1" stopColor="#0d9488" />
-              </linearGradient>
-              <linearGradient id="piggyBody" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stopColor="#f9a8d4" />
-                <stop offset="1" stopColor="#ec4899" />
-              </linearGradient>
-              <linearGradient id="receiptBody" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stopColor="#ffffff" />
-                <stop offset="1" stopColor="#e7f6f4" />
-              </linearGradient>
+              <path id="platformTitleArc" d={PLATFORM_TITLE_ARC} fill="none" />
+              <clipPath id="platformSphereClip">
+                <circle cx={PLATFORM_CENTER.x} cy={PLATFORM_CENTER.y} r={PLATFORM_SPHERE_RADIUS} />
+              </clipPath>
             </defs>
 
-            {/* soft ambient glow + ground shadow anchor the scene */}
-            <ellipse cx="190" cy="168" rx="150" ry="118" fill="url(#glow)" />
-            <ellipse cx="190" cy="262" rx="118" ry="12" fill="rgba(0,0,0,0.18)" />
-
-            {/* The gold heart-outline logo, matching the header HearthMark
-                exactly in technique (same two classes, just a bigger
-                dasharray tuned to this path's length): draws itself in like
-                a pen stroke as the splash opens, then a brighter blurred
-                duplicate chases around the same outline continuously,
-                reading as a traveling shimmer rather than a scale pulse. */}
-            <path
-              className="heart-outline-draw-lg"
-              d="M190 258 C190 258 82 178 82 108 C82 62 118 32 158 42 C172 46 182 58 190 72 C198 58 208 46 222 42 C262 32 298 62 298 108 C298 178 190 258 190 258 Z"
-              fill="none" stroke="url(#heartGold)" strokeWidth="7" strokeLinejoin="round"
+            {/* Outer navy ring -- drawn as one thick stroked circle rather
+                than a filled donut path, simplest way to get a clean ring
+                of a given thickness. */}
+            <circle
+              cx={PLATFORM_CENTER.x} cy={PLATFORM_CENTER.y}
+              r={(PLATFORM_RING_OUTER + PLATFORM_RING_INNER) / 2}
+              fill="none" stroke="#16224a" strokeWidth={PLATFORM_RING_OUTER - PLATFORM_RING_INNER}
             />
-            <path
-              className="heart-glow-chase-lg"
-              d="M190 258 C190 258 82 178 82 108 C82 62 118 32 158 42 C172 46 182 58 190 72 C198 58 208 46 222 42 C262 32 298 62 298 108 C298 178 190 258 190 258 Z"
-              fill="none" stroke="#fff3c4" strokeWidth="4"
+            {/* Light-blue middle band that the tab icons sit on. */}
+            <circle cx={PLATFORM_CENTER.x} cy={PLATFORM_CENTER.y} r={PLATFORM_RING_INNER} fill="#eaf3fc" />
+
+            {/* Curved app-name title riding the top of the ring. */}
+            <text className="platform-title-text">
+              <textPath href="#platformTitleArc" startOffset="50%" textAnchor="middle">
+                Hearth Household Budget Platform
+              </textPath>
+            </text>
+
+            {/* Three descriptor words on the ring itself -- Hearth's own
+                equivalent of the reference's COMPLIANCE / SUSTAINABILITY /
+                EXTENSIBILITY -- privacy, security and simplicity being the
+                three things this app actually promises. */}
+            <text
+              className="platform-side-label"
+              x={PLATFORM_CENTER.x} y={PLATFORM_CENTER.y + PLATFORM_RING_OUTER - 11}
+              textAnchor="middle"
+            >
+              SIMPLE
+            </text>
+            <text
+              className="platform-side-label"
+              x={PLATFORM_CENTER.x - PLATFORM_RING_OUTER + 15} y={PLATFORM_CENTER.y}
+              textAnchor="middle"
+              transform={`rotate(-90 ${PLATFORM_CENTER.x - PLATFORM_RING_OUTER + 15} ${PLATFORM_CENTER.y})`}
+            >
+              PRIVATE
+            </text>
+            <text
+              className="platform-side-label"
+              x={PLATFORM_CENTER.x + PLATFORM_RING_OUTER - 15} y={PLATFORM_CENTER.y}
+              textAnchor="middle"
+              transform={`rotate(90 ${PLATFORM_CENTER.x + PLATFORM_RING_OUTER - 15} ${PLATFORM_CENTER.y})`}
+            >
+              SECURE
+            </text>
+
+            {/* One spoke per real header tab -- icon + label, evenly ringed
+                around the center, each popping in with a staggered delay. */}
+            {PLATFORM_TABS.map((tab, i) => {
+              const pos = polarPoint(PLATFORM_CENTER.x, PLATFORM_CENTER.y, PLATFORM_ICON_RADIUS, tab.angle);
+              return (
+                <g
+                  key={tab.label}
+                  className="platform-tab-icon"
+                  style={{ animationDelay: `${0.7 + i * 0.09}s` }}
+                  transform={`translate(${pos.x - 12} ${pos.y - 22})`}
+                >
+                  <g stroke="#1b2a5e" strokeWidth="1.7" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                    <PlatformIcon type={tab.icon} />
+                  </g>
+                  <text x="12" y="34" textAnchor="middle" className="platform-tab-label">{tab.label}</text>
+                </g>
+              );
+            })}
+
+            {/* Center sphere -- gentle continuous pulse, plus a faint
+                network of nodes/lines clipped to its circle. */}
+            <circle
+              className="platform-sphere-pulse"
+              cx={PLATFORM_CENTER.x} cy={PLATFORM_CENTER.y} r={PLATFORM_SPHERE_RADIUS}
+              fill="url(#platformSphere)"
             />
-
-            {/* The house frame -- roof peak + both side posts drawn as one
-                continuous stroke (same drawn-in-like-a-pencil-stroke
-                technique as the old roofline-only version), nested inside
-                the heart outline rather than arching over it. */}
-            <path
-              className="hearth-roof"
-              d="M150 205 L150 150 L190 95 L230 150 L230 205"
-              stroke="url(#heartGold)" strokeWidth="5"
-              fill="none" strokeLinecap="round" strokeLinejoin="round"
-            />
-            {/* small 4-pane window under the peak */}
-            <rect x="178" y="112" width="24" height="20" rx="1" fill="none" stroke="url(#heartGold)" strokeWidth="2" />
-            <path d="M190 112 V132 M178 122 H202" stroke="url(#heartGold)" strokeWidth="2" />
-
-            {/* warm, gently breathing glow behind the family, then the
-                family itself -- two parents and a small child between them,
-                simple silhouette shapes rather than a photo (a photo would
-                need licensing and wouldn't match this vector scene). */}
-            <ellipse className="hearth-family-glow" cx="190" cy="182" rx="52" ry="58" fill="url(#familyGlow)" />
-            <g fill="#2a1608">
-              <circle cx="172" cy="163" r="14" />
-              <path d="M154 205 Q154 178 172 178 Q190 178 190 205 Z" />
-              <circle cx="210" cy="160" r="15" />
-              <path d="M190 205 Q190 176 210 176 Q230 176 230 205 Z" />
-              <circle cx="190" cy="182" r="10" />
-              <path d="M176 206 Q176 190 190 190 Q204 190 204 206 Z" />
+            <g clipPath="url(#platformSphereClip)" className="platform-network">
+              {PLATFORM_NETWORK_LINES.map(([x1, y1, x2, y2], i) => (
+                <line
+                  key={i}
+                  x1={PLATFORM_CENTER.x + x1} y1={PLATFORM_CENTER.y + y1}
+                  x2={PLATFORM_CENTER.x + x2} y2={PLATFORM_CENTER.y + y2}
+                  stroke="#ffffff" strokeWidth="0.7" opacity="0.28"
+                />
+              ))}
+              {PLATFORM_NETWORK_DOTS.map((d, i) => (
+                <circle key={i} cx={PLATFORM_CENTER.x + d.x} cy={PLATFORM_CENTER.y + d.y} r={d.r} fill="#ffffff" opacity="0.55" />
+              ))}
             </g>
 
-            {/* Leaf sprigs flanking the base of the heart. */}
-            <g stroke="#b8952f" strokeWidth="2" fill="#c9a83a" strokeLinejoin="round">
-              <path d="M112 232 L100 216" fill="none" />
-              <ellipse cx="102" cy="220" rx="7" ry="3.4" transform="rotate(-32 102 220)" />
-              <ellipse cx="94" cy="207" rx="6" ry="3" transform="rotate(-32 94 207)" />
-              <ellipse cx="112" cy="211" rx="6" ry="3" transform="rotate(-10 112 211)" />
-            </g>
-            <g stroke="#b8952f" strokeWidth="2" fill="#c9a83a" strokeLinejoin="round">
-              <path d="M268 232 L280 216" fill="none" />
-              <ellipse cx="278" cy="220" rx="7" ry="3.4" transform="rotate(32 278 220)" />
-              <ellipse cx="286" cy="207" rx="6" ry="3" transform="rotate(32 286 207)" />
-              <ellipse cx="268" cy="211" rx="6" ry="3" transform="rotate(10 268 211)" />
-            </g>
-
-            {/* Chimney, rising above the heart's right lobe, with three tiny
-                hearts drifting up out of it and fading, looping -- the
-                direct equivalent of the reference logo's animation. */}
-            <rect x="224" y="45" width="16" height="70" fill="url(#heartGold)" />
-            <g className="rising-heart rising-heart-1" transform="translate(232 30) scale(1.1)">
-              <path d="M0,4.3l-1-.9C-2.9,1.7-4,.7-4-.4c0-.9.7-1.6,1.6-1.6.5,0,1,.24,1.3.62.3-.38.8-.62,1.3-.62.9,0,1.6.7,1.6,1.6,0,1.1-1.1,2.1-3,3.8Z" fill="#fde68a" />
-            </g>
-            <g className="rising-heart rising-heart-2" transform="translate(220 14) scale(.85)">
-              <path d="M0,4.3l-1-.9C-2.9,1.7-4,.7-4-.4c0-.9.7-1.6,1.6-1.6.5,0,1,.24,1.3.62.3-.38.8-.62,1.3-.62.9,0,1.6.7,1.6,1.6,0,1.1-1.1,2.1-3,3.8Z" fill="#ffe27a" />
-            </g>
-            <g className="rising-heart rising-heart-3" transform="translate(238 0) scale(.7)">
-              <path d="M0,4.3l-1-.9C-2.9,1.7-4,.7-4-.4c0-.9.7-1.6,1.6-1.6.5,0,1,.24,1.3.62.3-.38.8-.62,1.3-.62.9,0,1.6.7,1.6,1.6,0,1.1-1.1,2.1-3,3.8Z" fill="#fffbe6" />
-            </g>
-
-            {/* AI sparkle accents -- the same twinkling 4-point stars used
-                for every "AI powered" tag elsewhere in the app, scattered
-                near the rising hearts instead of the old flame. */}
-            <g className="splash-sparkle splash-sparkle-1">
-              <path d="M0 -9 L2.2 -2.2 L9 0 L2.2 2.2 L0 9 L-2.2 2.2 L-9 0 L-2.2 -2.2 Z" fill="#eab308" transform="translate(256 40)" />
-            </g>
-            <g className="splash-sparkle splash-sparkle-2">
-              <path d="M0 -7 L1.7 -1.7 L7 0 L1.7 1.7 L0 7 L-1.7 1.7 L-7 0 L-1.7 -1.7 Z" fill="#ffe27a" transform="translate(210 24)" />
-            </g>
-            <g className="splash-sparkle splash-sparkle-3">
-              <path d="M0 -6 L1.5 -1.5 L6 0 L1.5 1.5 L0 6 L-1.5 1.5 L-6 0 L-1.5 -1.5 Z" fill="#ffffff" transform="translate(250 8)" />
-            </g>
-
-            {/* Left of the hearth: a spinning Dirham coin -- the app's own
-                real currency glyph (the same "D + two lines" mark used
-                throughout the app) minted onto a coin, rather than a
-                generic/mismatched "$", so the motif is actually Hearth's
-                own money, not a stock icon. A slow scaleX "flip" plus a
-                diagonal shine sweep gives it a genuine coin-spin feel
-                instead of just sitting there. */}
-            <g className="splash-float splash-float-coin">
-              <g className="coin-spin" transform="translate(50 168)">
-                <circle r="23" fill="url(#coinFace)" stroke="#c88a06" strokeWidth="2" />
-                <circle r="17" fill="none" stroke="#c88a06" strokeOpacity=".55" strokeWidth="1.4" />
-                <text x="-2" y="7" fontSize="19" fontWeight="800" fontFamily="Arial, sans-serif" fill="#8a5a04" textAnchor="middle">D</text>
-                <line x1="-10" y1="-2.6" x2="7" y2="-2.6" stroke="#8a5a04" strokeWidth="2" />
-                <line x1="-10" y1="2.6" x2="7" y2="2.6" stroke="#8a5a04" strokeWidth="2" />
-                <path className="coin-shine" d="M-23 -6 A23 23 0 0 1 -2 -22" stroke="#fff8e1" strokeOpacity=".8" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-              </g>
-            </g>
-
-            {/* Right of the hearth: a small rising trend line with bars --
-                the "your spending is on track" motif, orbiting slowly. */}
-            <g className="splash-float splash-float-chart" transform="translate(316 176)">
-              <rect x="-20" y="4" width="9" height="20" rx="2" fill="rgba(255,255,255,.85)" />
-              <rect x="-6" y="-6" width="9" height="30" rx="2" fill="rgba(255,255,255,.85)" />
-              <rect x="8" y="-16" width="9" height="40" rx="2" fill="#ffe27a" />
-              <path d="M-22 6 L-2 -10 L12 -2 L24 -24" stroke="#eab308" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M16 -24 L24 -24 L24 -16" stroke="#eab308" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-            </g>
-
-            {/* Lower-left: a simple wallet, anchoring the "budgeting"
-                theme a third way without crowding the flame itself. */}
-            <g className="splash-float splash-float-wallet" transform="translate(66 246)">
-              <rect x="-24" y="-15" width="48" height="32" rx="7" fill="url(#walletBody)" stroke="#0a4f48" strokeWidth="1.5" />
-              <path d="M-24 -3 H24" stroke="#0a4f48" strokeOpacity=".4" strokeWidth="1.5" />
-              <circle cx="14" cy="-3" r="4" fill="#ffe27a" />
-            </g>
-
-            {/* Lower-right, mirroring the wallet: a piggy bank for the
-                Savings side of the app, with its own small coin dropping
-                into the slot on a loop -- the literal "putting money
-                aside" motif, not just a generic icon. */}
-            <g className="splash-float splash-float-piggy" transform="translate(314 246)">
-              <ellipse cx="0" cy="4" rx="26" ry="17" fill="url(#piggyBody)" stroke="#9d174d" strokeWidth="1.5" />
-              <circle cx="20" cy="-6" r="7" fill="url(#piggyBody)" stroke="#9d174d" strokeWidth="1.5" />
-              <path d="M24 -10 L29 -15 L26 -6 Z" fill="url(#piggyBody)" stroke="#9d174d" strokeWidth="1.2" strokeLinejoin="round" />
-              <circle cx="22" cy="-7" r="1.3" fill="#5b1235" />
-              <ellipse cx="27" cy="-3" rx="3" ry="2" fill="#f472b6" stroke="#9d174d" strokeWidth="1" />
-              <circle cx="26" cy="-3.5" r=".5" fill="#5b1235" />
-              <circle cx="28" cy="-3.5" r=".5" fill="#5b1235" />
-              <path d="M-24 6 Q-29 12 -22 15" stroke="#9d174d" strokeWidth="2" fill="none" strokeLinecap="round" />
-              <rect x="-15" y="18" width="4" height="8" rx="1.5" fill="#9d174d" />
-              <rect x="9" y="18" width="4" height="8" rx="1.5" fill="#9d174d" />
-              <rect x="-5" y="-14" width="10" height="3" rx="1.5" fill="#7a1140" />
-              <circle className="piggy-coin-drop" cx="0" cy="-24" r="4.5" fill="url(#coinFace)" stroke="#c88a06" strokeWidth="1" />
-            </g>
-
-            {/* Upper-left: a small receipt with a teal checkmark badge --
-                "an expense, logged" -- the zigzag bottom edge is what reads
-                as "receipt" at a glance rather than a generic card/paper. */}
-            <g className="splash-float splash-float-receipt" transform="translate(82 92) rotate(-8)">
-              <path d="M-16 -22 H16 V20 L11 24 L5 20 L0 24 L-5 20 L-11 24 L-16 20 Z" fill="url(#receiptBody)" stroke="#0a4f48" strokeOpacity=".5" strokeWidth="1.3" />
-              <path d="M-10 -14 H10 M-10 -8 H10 M-10 -2 H4" stroke="#0d9488" strokeOpacity=".55" strokeWidth="2" strokeLinecap="round" />
-              <circle cx="8" cy="8" r="7" fill="#0d9488" />
-              <path d="M5 8 L7 10.5 L11 5.5" stroke="#ffffff" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-            </g>
+            <text x={PLATFORM_CENTER.x} y={PLATFORM_CENTER.y - 30} textAnchor="middle" className="platform-center-kicker">AI POWERED</text>
+            <text x={PLATFORM_CENTER.x} y={PLATFORM_CENTER.y + 8} textAnchor="middle" className="platform-center-brand">Hearth</text>
+            <text x={PLATFORM_CENTER.x} y={PLATFORM_CENTER.y + 29} textAnchor="middle" className="platform-center-stat">Income &middot; Bills &middot; Savings</text>
+            <text x={PLATFORM_CENTER.x} y={PLATFORM_CENTER.y + 42} textAnchor="middle" className="platform-center-stat">All In One Household View</text>
           </svg>
         </div>
         </div>
 
-        <div className="splash-title splash-title-gold">Hearth</div>
-        <div className="splash-ai-tag">
-          <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
-            <path d="M10 1 L12.2 7.8 L19 10 L12.2 12.2 L10 19 L7.8 12.2 L1 10 L7.8 7.8 Z" fill="#eab308" />
-          </svg>
-          AI-powered budgeting
-        </div>
         <div className="splash-tagline">The heart of your home&rsquo;s finances.</div>
-        {/* Matches the reference logo's own tagline treatment directly --
-            thin flanking rules either side of "A Happy Hearth", with a
-            small solid red heart underneath. */}
-        <div className="splash-happy-hearth">
-          <span className="splash-happy-rule" />
-          <span>A Happy Hearth</span>
-          <span className="splash-happy-rule" />
-        </div>
-        <svg className="splash-happy-heart" width="14" height="13" viewBox="0 0 24 22">
-          <path
-            d="M12,21.35l-1.45-1.32C5.4,15.36,2,12.28,2,8.5 C2,5.42,4.42,3,7.5,3c1.74,0,3.41,0.81,4.5,2.09C13.09,3.81,14.76,3,16.5,3 C19.58,3,22,5.42,22,8.5c0,3.78-3.4,6.86-8.55,11.54L12,21.35z"
-            fill="#ef4444"
-          />
-        </svg>
         <div className="splash-version">{formatVersionBadge()}</div>
       </div>
 

@@ -71,16 +71,12 @@ button, input, select, textarea { font-family: inherit; }
      with a small visible gap, not touching/overlapping it. */
   justify-content: flex-end;
   padding-bottom: calc(58px + env(safe-area-inset-bottom, 0px));
-  /* A radial glow centered where the logo sits (rather than a flat
-     top-to-bottom linear fade) keeps the middle of the screen bright and
-     warm. Darkened a step further than before, per explicit request, so
-     the gold heart/house/family mark reads with real contrast the way it
-     does against the reference logo's near-black backdrop -- still the
-     app's own teal, just a deeper, moodier version of it rather than
-     switching to literal black, so it stays "the same theme, darker"
-     instead of a different background altogether. */
+  /* Blue vignette -- replaces the earlier teal background entirely, to
+     match the blue theme of the circular platform diagram below (per
+     explicit request to remove teal here). Still a radial glow centered
+     where the diagram sits, just built from navy/blue stops instead. */
   background:
-    radial-gradient(circle at 50% 38%, #167f76 0%, #0b5a52 32%, #063b34 62%, #021512 100%);
+    radial-gradient(circle at 50% 38%, #2f4f9e 0%, #1c2f66 32%, #101a3e 62%, #050914 100%);
   pointer-events: none;
   animation: splash-fade-out .5s ease forwards;
   /* Splash is on screen for a full 6s (kept in sync with the setTimeout in
@@ -127,7 +123,7 @@ button, input, select, textarea { font-family: inherit; }
      COUNTRY_SHORT_NAMES in Splash.jsx) frees up room, and this value is
      tuned down so the label renders close to a true 10px. */
   fill: #ffffff; font-size: 5.5px; font-weight: 700; font-family: 'Nunito', sans-serif;
-  paint-order: stroke; stroke: #063d37; stroke-width: 1.2px; stroke-linejoin: round;
+  paint-order: stroke; stroke: #0d1a3d; stroke-width: 1.2px; stroke-linejoin: round;
   opacity: .95; letter-spacing: .01em;
 }
 /* Small twinkling points scattered across the background -- turns the
@@ -198,9 +194,9 @@ button, input, select, textarea { font-family: inherit; }
 .splash-orb {
   position: absolute; border-radius: 50%; filter: blur(40px); opacity: .35;
 }
-.splash-orb-1 { width: 260px; height: 260px; background: #5eead4; top: -60px; left: -60px; animation: splash-drift-a 9s ease-in-out infinite; }
+.splash-orb-1 { width: 260px; height: 260px; background: #60a5fa; top: -60px; left: -60px; animation: splash-drift-a 9s ease-in-out infinite; }
 .splash-orb-2 { width: 220px; height: 220px; background: #ffe27a; bottom: -50px; right: -40px; animation: splash-drift-b 11s ease-in-out infinite; }
-.splash-orb-3 { width: 180px; height: 180px; background: #99f6e4; top: 30%; right: 8%; animation: splash-drift-c 8s ease-in-out infinite; }
+.splash-orb-3 { width: 180px; height: 180px; background: #93c5fd; top: 30%; right: 8%; animation: splash-drift-c 8s ease-in-out infinite; }
 @keyframes splash-drift-a { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(30px, 40px); } }
 @keyframes splash-drift-b { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-25px, -30px); } }
 @keyframes splash-drift-c { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(15px, -20px) scale(1.12); } }
@@ -215,6 +211,59 @@ button, input, select, textarea { font-family: inherit; }
 }
 .splash-illustration { width: 360px; max-width: 92vw; filter: drop-shadow(0 18px 30px rgba(0, 0, 0, .24)); }
 .splash-illustration svg { width: 100%; height: auto; display: block; }
+/* The circular platform diagram carries 8 icon labels + 4 lines of ring/
+   center text, so it gets a bit more room than the old single-logo mark
+   did -- otherwise the small print gets too cramped to read. */
+.splash-illustration-platform { width: 410px; max-width: 96vw; }
+
+/* Circular platform diagram (intro/splash) -- ring title, per-tab icon
+   spokes, and the center "AI POWERED" sphere. All text sizes are tuned in
+   the SVG's own viewBox units (not real px), same convention as the old
+   .geo-label above. */
+.platform-title-text {
+  fill: #ffffff; font-family: 'Nunito', sans-serif; font-size: 16px;
+  font-weight: 800; letter-spacing: 1px; text-transform: uppercase;
+  animation: splash-pop .5s ease .2s both;
+}
+.platform-side-label {
+  fill: #dbe8fd; font-family: 'Nunito', sans-serif; font-size: 12.5px;
+  font-weight: 800; letter-spacing: 2px;
+  animation: splash-pop .5s ease .3s both;
+}
+.platform-tab-label {
+  fill: #16224a; font-family: 'Nunito', sans-serif; font-size: 12px; font-weight: 800;
+}
+/* Each tab spoke pops in with its own staggered delay (set inline per-icon
+   in Splash.jsx) rather than all at once, echoing the old float-in cast. */
+.platform-tab-icon {
+  opacity: 0; transform-box: fill-box; transform-origin: center;
+  animation: platform-icon-pop .45s ease forwards;
+}
+@keyframes platform-icon-pop {
+  from { opacity: 0; transform: scale(.5); }
+  to { opacity: 1; transform: scale(1); }
+}
+/* Reuses the family-glow "breathe" keyframe already defined below for a
+   slow, gentle pulse rather than a new animation. */
+.platform-sphere-pulse { transform-box: fill-box; transform-origin: center; animation: hearth-family-breathe 3.2s ease-in-out infinite; }
+.platform-network { animation: platform-network-fade 4s ease-in-out infinite; }
+@keyframes platform-network-fade {
+  0%, 100% { opacity: .55; }
+  50% { opacity: 1; }
+}
+.platform-center-kicker {
+  fill: #ffffff; font-family: 'Nunito', sans-serif; font-size: 15px;
+  font-weight: 800; letter-spacing: 2px;
+  animation: splash-pop .5s ease .55s both;
+}
+.platform-center-brand {
+  fill: #ffd88a; font-family: 'Nunito', sans-serif; font-size: 40px; font-weight: 800;
+  animation: splash-pop .5s ease .6s both;
+}
+.platform-center-stat {
+  fill: #cfe0fb; font-family: 'Nunito', sans-serif; font-size: 10.5px; font-weight: 700;
+  animation: splash-pop .5s ease .65s both;
+}
 
 /* Wraps the hearth illustration so it's centered independent of the
    title/tagline/etc. stacked below it in .splash-center. */
