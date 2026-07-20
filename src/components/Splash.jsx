@@ -350,14 +350,36 @@ export default function Splash() {
                 // `transform` attribute rather than combining with it, so
                 // putting both on one node silently drops the translate
                 // and stacks every icon on top of each other at (0,0).
-                <g key={tab.label} transform={`translate(${pos.x - 12} ${pos.y - 22})`}>
-                  <g className="platform-tab-icon" style={{ animationDelay: `${0.7 + i * 0.09}s` }}>
-                    <g stroke="#1b2a5e" strokeWidth="1.7" fill="none" strokeLinecap="round" strokeLinejoin="round">
-                      <PlatformIcon type={tab.icon} />
+                // Two-word labels ("Fixed Expenses", "Regular Expenses",
+                // "Smart Budget") are split onto two shorter lines instead
+                // of one long one -- the single-line version's horizontal
+                // width was what pushed right up against the ring for the
+                // labels sitting near the left/right side of the circle
+                // (where a label's x-extent adds directly toward the ring
+                // rather than being absorbed by empty vertical space), so
+                // wrapping cuts each line's width roughly in half and buys
+                // a large, unambiguous margin instead of a marginal one.
+                (() => {
+                  const words = tab.label.split(' ');
+                  const isTwoLine = words.length > 1;
+                  return (
+                    <g key={tab.label} transform={`translate(${pos.x - 12} ${pos.y - 22})`}>
+                      <g className="platform-tab-icon" style={{ animationDelay: `${0.7 + i * 0.09}s` }}>
+                        <g stroke="#1b2a5e" strokeWidth="1.7" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                          <PlatformIcon type={tab.icon} />
+                        </g>
+                        {isTwoLine ? (
+                          <text textAnchor="middle" className="platform-tab-label">
+                            <tspan x="12" y="31">{words[0]}</tspan>
+                            <tspan x="12" y="41">{words.slice(1).join(' ')}</tspan>
+                          </text>
+                        ) : (
+                          <text x="12" y="34" textAnchor="middle" className="platform-tab-label">{tab.label}</text>
+                        )}
+                      </g>
                     </g>
-                    <text x="12" y="34" textAnchor="middle" className="platform-tab-label">{tab.label}</text>
-                  </g>
-                </g>
+                  );
+                })()
               );
             })}
 

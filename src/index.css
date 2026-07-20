@@ -226,17 +226,23 @@ button, input, select, textarea { font-family: inherit; }
    curved ring text per explicit feedback that bent text was hard to read;
    a plain centered line is unambiguous at any screen width. */
 /* Tagline curved along the top of the ring -- brought back per explicit
-   request to have it "circled around the circle". Bumped up from 14px to
-   16px per explicit request for slightly larger text; still comfortably
-   inside the ring's own thickness at this size (checked against the
-   140deg arc it rides). */
+   request to have it "circled around the circle". Bumped 14px -> 16px,
+   then 16px -> 18px per two rounds of "increase the font size" -- at 34
+   characters (incl. spaces) and this weight/uppercase, the text still
+   spans well under the 140deg arc it rides (roughly 380 of ~480 available
+   units), so there's still room before it would start wrapping onto
+   itself at the ends. */
 .platform-title-text {
-  fill: #ffffff; font-family: 'Nunito', sans-serif; font-size: 16px;
+  fill: #ffffff; font-family: 'Nunito', sans-serif; font-size: 18px;
   font-weight: 800; letter-spacing: .2px; text-transform: uppercase;
   animation: splash-pop .5s ease .2s both;
 }
+/* Dropped 9.5px -> 9px alongside the two-line wrap of multi-word labels
+   (see Splash.jsx) -- between the smaller font and roughly half the
+   per-line width, every label now sits with a large, obvious gap before
+   the ring instead of a marginal one. */
 .platform-tab-label {
-  fill: #16224a; font-family: 'Nunito', sans-serif; font-size: 9.5px; font-weight: 800;
+  fill: #16224a; font-family: 'Nunito', sans-serif; font-size: 9px; font-weight: 800;
 }
 /* Each tab spoke pops in with its own staggered delay (set inline per-icon
    in Splash.jsx) rather than all at once, echoing the old float-in cast. */
