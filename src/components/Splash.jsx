@@ -29,6 +29,7 @@
 //    looks complete either way, there's just no dot.
 import { useEffect, useState } from 'react';
 import { formatVersionBadge } from '../version.js';
+import { supabase } from '../supabaseClient';
 
 // Free, no-API-key IP geolocation lookup with CORS enabled for browser
 // fetches -- confirmed working live before wiring this in. Deliberately
@@ -231,14 +232,36 @@ function getGreeting() {
 
 export default function Splash({ session }) {
   const [geo, setGeo] = useState(null);
-  // First name only ("Vipin" out of "Vipin Lakhanpal") -- pulled from the
-  // same user_metadata.full_name set at signup (see Login.jsx) that
-  // Dashboard's "My details"/profile dropdown already reads. Session can
-  // still be null here: the splash shows immediately on load, sometimes
-  // before Supabase's own getSession() resolves in the background -- in
-  // that case the greeting just quietly drops the name rather than
-  // showing a placeholder or blocking on auth.
-  const firstName = session?.user?.user_metadata?.full_name?.trim().split(/\s+/)[0] || null;
+  // First name only ("Vipin" out of "Vipin Lakhanpal"). Two sources,
+  // tried in order:
+  // 1. household_members.name -- the actual display name shown
+  //    everywhere else in the app (Dashboard's "My details"/profile
+  //    dropdown, the "By" column, etc.), editable after signup and so
+  //    the authoritative one whenever it's set.
+  // 2. session.user.user_metadata.full_name -- the name captured once at
+  //    signup (see Login.jsx), used as a fallback for the brief window
+  //    before a first-time signup has a household_members row at all.
+  // Session can still be null here (splash shows immediately on load,
+  // sometimes before Supabase's getSession() resolves) -- in that case
+  // the greeting just quietly drops the name instead of showing a
+  // placeholder or blocking on auth.
+  const [memberName, setMemberName] = useState(null);
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    let cancelled = false;
+    supabase
+      .from('household_members')
+      .select('name')
+      .eq('user_id', session.user.id)
+      .not('name', 'is', null)
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled && data?.name) setMemberName(data.name);
+      });
+    return () => { cancelled = true; };
+  }, [session?.user?.id]);
+  const firstName = (memberName || session?.user?.user_metadata?.full_name)?.trim().split(/\s+/)[0] || null;
 
   useEffect(() => {
     let cancelled = false;
