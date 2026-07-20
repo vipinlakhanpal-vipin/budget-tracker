@@ -81,7 +81,7 @@ const PLATFORM_CENTER = { x: 220, y: 236 };
 // the ring's inner edge would silently vanish against it (this is what
 // caused the earlier "S" of Smart Budget / trailing "s" of Expenses to
 // look cut off).
-const PLATFORM_ICON_RADIUS = 120;
+const PLATFORM_ICON_RADIUS = 112;
 const PLATFORM_RING_OUTER = 210;
 const PLATFORM_RING_INNER = 182;
 const PLATFORM_SPHERE_RADIUS = 82;

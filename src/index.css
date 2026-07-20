@@ -61,16 +61,13 @@ button, input, select, textarea { font-family: inherit; }
 .splash-screen {
   position: fixed; inset: 0; z-index: 999999; overflow: hidden;
   display: flex; flex-direction: column; align-items: center;
-  /* Anchored to the BOTTOM of the screen (not vertically centered) per
-     explicit request -- the logo/text block should sit low, right above
-     the "Conceptualised, Designed and Created by" credit line, rather than
-     mid-screen. The padding-bottom below is the actual gap-control knob:
-     it reserves just enough room for .splash-credit (which sits
-     max(24px, safe-area-inset-bottom) from the true bottom edge, plus its
-     own ~17px line height) so the illustration block lands right above it
-     with a small visible gap, not touching/overlapping it. */
-  justify-content: flex-end;
-  padding-bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+  /* Lifted to vertical center per explicit request -- the platform
+     diagram + the tagline/version summary beneath it (both inside
+     .splash-center) now sit in the middle of the screen instead of
+     anchored to the bottom. .splash-credit stays pinned to the true
+     bottom edge separately (it's absolutely positioned, not part of this
+     flex column), so it's unaffected by this. */
+  justify-content: center;
   /* Blue vignette -- replaces the earlier teal background entirely, to
      match the blue theme of the circular platform diagram below (per
      explicit request to remove teal here). Still a radial glow centered
@@ -231,7 +228,7 @@ button, input, select, textarea { font-family: inherit; }
   animation: splash-pop .5s ease .15s both;
 }
 .platform-tab-label {
-  fill: #16224a; font-family: 'Nunito', sans-serif; font-size: 10px; font-weight: 800;
+  fill: #16224a; font-family: 'Nunito', sans-serif; font-size: 9.5px; font-weight: 800;
 }
 /* Each tab spoke pops in with its own staggered delay (set inline per-icon
    in Splash.jsx) rather than all at once, echoing the old float-in cast. */
