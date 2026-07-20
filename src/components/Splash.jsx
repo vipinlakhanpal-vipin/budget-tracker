@@ -103,19 +103,21 @@ function arcPath(cx, cy, r, startDeg, endDeg) {
 // the tagline back on the ring itself.
 const PLATFORM_TITLE_ARC = arcPath(PLATFORM_CENTER.x, PLATFORM_CENTER.y, 196, 200, 340);
 
-// Angles chosen so all 8 icons land in symmetric pairs (two near the top,
-// two near the bottom, two on each side) -- the same rhythm as the
-// reference platform diagram -- while mapping 1:1 onto Hearth's real
-// header tab order, read clockwise starting at the top-left.
+// Dashboard (formerly "Home") deliberately isn't one of these spokes --
+// it's not a distinct feature so much as the summary/overview the whole
+// diagram itself already stands in for, so listing it as an 8th "function"
+// alongside Income/Savings/etc. was redundant. The remaining 7 real tabs
+// are spaced evenly around the full circle (360/7 apart), starting at the
+// bottom (90deg) so the layout stays visually balanced without needing an
+// even count.
 const PLATFORM_TABS = [
-  { label: 'Home', icon: 'home', angle: 247.5 },
-  { label: 'Income', icon: 'income', angle: 292.5 },
-  { label: 'Fixed Expenses', icon: 'fixed', angle: 337.5 },
-  { label: 'Regular Expenses', icon: 'regular', angle: 22.5 },
-  { label: 'Savings', icon: 'savings', angle: 67.5 },
-  { label: 'Report', icon: 'report', angle: 112.5 },
-  { label: 'Smart Budget', icon: 'settings', angle: 157.5 },
-  { label: 'Help', icon: 'help', angle: 202.5 },
+  { label: 'Income', icon: 'income', angle: 90 },
+  { label: 'Fixed Expenses', icon: 'fixed', angle: 90 + 360 / 7 },
+  { label: 'Regular Expenses', icon: 'regular', angle: 90 + (360 / 7) * 2 },
+  { label: 'Savings', icon: 'savings', angle: 90 + (360 / 7) * 3 },
+  { label: 'Report', icon: 'report', angle: 90 + (360 / 7) * 4 },
+  { label: 'Smart Budget', icon: 'settings', angle: 90 + (360 / 7) * 5 },
+  { label: 'Help', icon: 'help', angle: 90 + (360 / 7) * 6 },
 ];
 
 // Faint "network" decoration inside the center sphere -- an outer ring of

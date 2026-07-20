@@ -12,7 +12,7 @@ import { formatVersionBadge } from '../version.js';
 import {
   Home, Plus, FileText, Users as UsersIcon, Settings as SettingsIcon,
   Pencil, Trash2, X, ChevronLeft, ChevronRight, ChevronDown, Camera, MessageCircle, Sparkles, User,
-  Palette, Check, StickyNote, Paperclip, ExternalLink, Mail,
+  Palette, Check, StickyNote, Paperclip, ExternalLink, Mail, Lightbulb,
 } from 'lucide-react';
 
 // Max size for a note/fixed-expense attachment (images or PDF only). Kept as
@@ -325,7 +325,7 @@ const TOUR_STEPS = [
   },
   {
     selector: '[data-tour="nav-home"]',
-    title: 'Home',
+    title: 'Dashboard',
     body: 'Your dashboard: budget, spending, and income at a glance, plus a bigger Explore view with the chart, AI Insights, and Budget Coach.',
   },
   {
@@ -750,6 +750,41 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   }
   function openAttachmentList(table, rowId, label) {
     setAttachmentListModal({ table, rowId, label: label || 'Attachments' });
+  }
+  // Footer "Suggestion" form -- lets any signed-in user send product
+  // feedback straight to the app owner's inbox (see api/send-suggestion.js)
+  // without needing a whole feedback-tracking table. Pre-filled from the
+  // same name/location the user already saved under "My details" so most
+  // people can just add their message and submit.
+  const [suggestionModalOpen, setSuggestionModalOpen] = useState(false);
+  const [suggestionForm, setSuggestionForm] = useState({ name: '', email: '', location: '', message: '' });
+  const [suggestionStatus, setSuggestionStatus] = useState(''); // '', 'sending', 'sent', 'error'
+  function openSuggestionModal() {
+    setSuggestionForm({
+      name: myDetailsDraft.name || '',
+      email: session?.user?.email || '',
+      location: myDetailsDraft.location || '',
+      message: '',
+    });
+    setSuggestionStatus('');
+    setSuggestionModalOpen(true);
+  }
+  async function handleSubmitSuggestion(e) {
+    e.preventDefault();
+    if (!suggestionForm.name.trim() || !suggestionForm.message.trim()) return;
+    setSuggestionStatus('sending');
+    try {
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const res = await fetch('/api/send-suggestion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authSession?.access_token}` },
+        body: JSON.stringify(suggestionForm),
+      });
+      if (!res.ok) throw new Error('failed');
+      setSuggestionStatus('sent');
+    } catch {
+      setSuggestionStatus('error');
+    }
   }
   function markNotifsSeen(ids) {
     setSeenNotifIds((cur) => {
@@ -3917,7 +3952,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               title="Show just the dashboard"
             >
               <Home size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
-              Home
+              Dashboard
             </button>
             <button
               type="button"
@@ -5891,14 +5926,14 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             // how clicking Home/Regular Expenses/etc. in the header itself
             // jumps straight to that one thing.
             const helpTopics = [
-              { key: 'home', title: 'Home', body: <>Shows just the dashboard (summary cards and totals), nothing else. Below it, a bigger "Explore" section holds the same Spending by category chart (Pie/Bar/Pareto/Treemap), AI Insights, and Budget Coach, sized larger so there's more room to look through them. Clicking Income, Fixed Expenses, Regular Expenses, Savings, Report, Settings, or Help scrolls back up to the top and switches to that tab as usual.</> },
+              { key: 'home', title: 'Dashboard', body: <>Shows just the dashboard (summary cards and totals), nothing else. Below it, a bigger "Explore" section holds the same Spending by category chart (Pie/Bar/Pareto/Treemap), AI Insights, and Budget Coach, sized larger so there's more room to look through them. Clicking Income, Fixed Expenses, Regular Expenses, Savings, Report, Settings, or Help scrolls back up to the top and switches to that tab as usual.</> },
               { key: 'regular', title: 'Regular Expenses', body: <>Log one-off spending (groceries, dining, shopping). Pick the date, category, a short description, and the amount, then Add. It appears under "Expenses this month" and is always editable there -- just type into a field and it saves. The note icon (<StickyNote size={11} style={{ verticalAlign: -2 }} />) next to Amount opens a spot for a longer free-text description, and the paperclip (<Paperclip size={11} style={{ verticalAlign: -2 }} />) lets you attach one photo or PDF (5MB max) -- a receipt, warranty, or anything else worth keeping with that expense. Both are optional. Once saved, a small icon appears next to the entry if it has a note or attachment -- click it to read the note or open the file.</> },
               { key: 'scan', title: 'Scan a receipt', body: <>Below the Regular Expenses form, upload a photo of a receipt (or a screenshot/sheet listing several expenses) and Claude will read it for you. You'll see an editable review list first -- fix anything that looks wrong, untick what you don't want, then add only what you confirm. Nothing is saved automatically.</> },
               { key: 'income', title: 'Income', body: <>Add each income source per month (e.g. Salary). Income does NOT roll over automatically -- since pay can change month to month (deductions, advances, etc.), add a fresh row each month with that month's actual amount, or edit an existing row's Month field forward. Every field auto-saves. It has the same optional note + attachment icons as Regular Expenses.</> },
               { key: 'fixed', title: 'Fixed Expenses', body: <>For recurring bills, loans, EMIs, and rent. Set a Start date, an optional End date, and how often it repeats (Monthly, Alternate month, Quarterly, Half-yearly, Once a year). Every field auto-saves as you edit -- there's no Save button to click. Set a Due date to get an in-app reminder starting 3 days before it's due, and an email reminder if it's set up. It has the same optional note + attachment icons as Regular Expenses -- handy for keeping a loan agreement or lease document attached to the bill itself.</> },
               { key: 'notes', title: 'Notes & Attachments', body: <>The note (<StickyNote size={11} style={{ verticalAlign: -2 }} />) and paperclip (<Paperclip size={11} style={{ verticalAlign: -2 }} />) icons sit right before the Add button on Income, Fixed Expenses, Regular Expenses, and Savings. Once a row has a saved document, its paperclip icon shows up in two places for convenience -- under the Description/Name cell, and again next to that row's delete icon -- either one opens the same viewer, where you can see the document on screen, open it in a compatible app on your device, or share it by email or WhatsApp.</> },
               { key: 'savings', title: 'Savings', body: <>Set how much you'd like to set aside for the month, e.g. "Emergency fund" or "Investment". Works exactly like Income: entered fresh per month with no auto-rollover, since the amount you're able to save can change month to month -- add a new row each month, or edit an existing row's Month field forward. Since money you set aside is no longer available to spend, it's treated the same as an expense: it's counted in "Spent so far" and "Combined expenses", and subtracted in "Remaining" and "Net", in addition to getting its own page in the PDF report so you can see planned savings build up over time. It has the same optional note + attachment icons as Regular Expenses.</> },
-              { key: 'regmonth', title: 'Regular Expenses for [month]', body: <>Labelled with whichever month you're viewing, this is visible below whichever tab (Income, Fixed Expenses, Regular Expenses, Savings) you're on, so you can see what's been logged without switching tabs. It also auto-saves. It's hidden on Home, which shows only the dashboard and the Explore section instead.</> },
+              { key: 'regmonth', title: 'Regular Expenses for [month]', body: <>Labelled with whichever month you're viewing, this is visible below whichever tab (Income, Fixed Expenses, Regular Expenses, Savings) you're on, so you can see what's been logged without switching tabs. It also auto-saves. It's hidden on Dashboard, which shows only the summary and the Explore section instead.</> },
               { key: 'chart', title: 'Spending by category chart', body: <>Toggle between Pie, Bar, Pareto, and Treemap. The Pie groups smaller categories into "Other" to stay readable; Bar and Treemap show every category individually. The totals cards above show your combined income, combined expenses (split into Regular, Fixed, and Savings), and what's left of your budget and income after all three are accounted for.</> },
               { key: 'insights', title: 'AI Insights', body: <>Tap Generate below the chart for a short AI-written summary of the month you're viewing (spending patterns, whether you're over budget, and a couple of concrete suggestions). It only runs when you tap the button -- never automatically -- and Refresh regenerates it if your numbers have changed.</> },
               { key: 'coach', title: 'Budget Coach', body: <>Unlike AI Insights (one month at a time), Coach looks across your last 6 months for patterns: a category that keeps going over budget, spending trending up or down, or a savings goal that no longer looks realistic. It only ever writes out suggestions -- it never changes your Settings for you.</> },
@@ -6284,7 +6319,90 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       <div className="app-footer">
         Your data is confidential and private to this household. It is never shared with anyone outside it.{' '}
         <a href="/privacy.html" target="_blank" rel="noopener noreferrer" className="app-footer-link">Privacy Policy</a>
+        {' '}&middot;{' '}
+        <button type="button" className="app-footer-link app-footer-link-btn" onClick={openSuggestionModal}>
+          <Lightbulb size={12} style={{ marginRight: 3, verticalAlign: -2 }} />
+          Suggestion
+        </button>
       </div>
+
+      {/* Suggestion form -- any signed-in user can send product feedback
+          straight to the app owner's inbox from the footer link above.
+          Pre-filled from "My details" (name/location) and the signed-in
+          email; only the message itself needs to be typed. On success the
+          form is replaced with a short thank-you note instead of just
+          closing, so the person knows it actually went somewhere. */}
+      {suggestionModalOpen && (
+        <div className="attachment-viewer-overlay" onClick={() => setSuggestionModalOpen(false)}>
+          <div className="attachment-viewer-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
+            <div className="attachment-viewer-head">
+              <span className="attachment-viewer-title">
+                <Lightbulb size={15} style={{ marginRight: 6, verticalAlign: -3 }} />
+                Suggestion
+              </span>
+              <button type="button" className="mobile-sheet-close" onClick={() => setSuggestionModalOpen(false)} aria-label="Close">
+                <X size={18} />
+              </button>
+            </div>
+            {suggestionStatus === 'sent' ? (
+              <div style={{ padding: '28px 20px', textAlign: 'center' }}>
+                <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>Thank you for your suggestion.</div>
+                <div className="muted-small">We will review the suggestion and implement it if this helps the users across the globe.</div>
+                <button type="button" className="btn small secondary" style={{ marginTop: 18 }} onClick={() => setSuggestionModalOpen(false)}>
+                  Close
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmitSuggestion} style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div className="field">
+                  <label>Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={suggestionForm.name}
+                    onChange={(e) => setSuggestionForm((f) => ({ ...f, name: e.target.value }))}
+                  />
+                </div>
+                <div className="field">
+                  <label>Email Id</label>
+                  <input
+                    type="email"
+                    value={suggestionForm.email}
+                    onChange={(e) => setSuggestionForm((f) => ({ ...f, email: e.target.value }))}
+                  />
+                </div>
+                <div className="field">
+                  <label>Location</label>
+                  <input
+                    type="text"
+                    value={suggestionForm.location}
+                    onChange={(e) => setSuggestionForm((f) => ({ ...f, location: e.target.value }))}
+                  />
+                </div>
+                <div className="field">
+                  <label>Your suggestion</label>
+                  <textarea
+                    required
+                    rows={4}
+                    style={{ width: '100%', resize: 'vertical', fontFamily: 'inherit' }}
+                    value={suggestionForm.message}
+                    onChange={(e) => setSuggestionForm((f) => ({ ...f, message: e.target.value }))}
+                    placeholder="What would make Hearth more useful for you?"
+                  />
+                </div>
+                {suggestionStatus === 'error' && (
+                  <div className="muted-small" style={{ color: 'var(--danger, #dc2626)' }}>
+                    Couldn't send that just now -- please try again in a moment.
+                  </div>
+                )}
+                <button type="submit" className="btn small" disabled={suggestionStatus === 'sending'}>
+                  {suggestionStatus === 'sending' ? 'Sending...' : 'Submit'}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
 
       {addSheetOpen && (
         <div className="mobile-sheet-backdrop" onClick={() => setAddSheetOpen(false)} />
@@ -6317,7 +6435,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       <nav className="mobile-bottom-nav">
         <button data-tour="nav-home" className={!activePanel && !addSheetOpen ? 'active' : ''} onClick={goToOverview}>
           <Home size={20} strokeWidth={2.2} />
-          <span>Home</span>
+          <span>Dashboard</span>
         </button>
         <button data-tour="nav-add" onClick={() => goToAdd(inputTab || 'expense')}>
           <Plus size={20} strokeWidth={2.2} />

@@ -174,13 +174,12 @@ button, input, select, textarea { font-family: inherit; }
   font-size: clamp(16px, 6vw, 30px); font-weight: 800; letter-spacing: .02em;
   text-align: center;
   animation: splash-pop .5s ease .15s both;
-  /* Same amber-copper gradient as the heart-outline logo/"Hearth" title
-     (see #heartGold / .splash-title-gold), per explicit request to match
-     the logo's own color rather than plain white. background-clip:text is
-     the standard way to fill text with a gradient -- text-shadow doesn't
-     render meaningfully once color is transparent, so it's dropped here. */
-  background: linear-gradient(180deg, #fb923c 0%, #c2410c 55%, #7c2d12 100%);
-  -webkit-background-clip: text; background-clip: text; color: transparent;
+  /* Switched from the old amber-copper gradient to plain white per explicit
+     request, to match the new blue intro theme -- white reads cleanly
+     against the navy background and echoes the "AI POWERED" text already
+     used at the center of the circle, rather than clashing with it. */
+  color: #ffffff;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, .3);
 }
 /* Sized in em, not px, so it scales exactly with .splash-top-tagline's own
    clamp()-driven font-size at any screen width -- a fixed px size would
@@ -227,13 +226,13 @@ button, input, select, textarea { font-family: inherit; }
    curved ring text per explicit feedback that bent text was hard to read;
    a plain centered line is unambiguous at any screen width. */
 /* Tagline curved along the top of the ring -- brought back per explicit
-   request to have it "circled around the circle"; font kept modest (14px,
-   slightly smaller than the earlier 16px version) since this text is a
-   touch longer ("Smart Expense Management Platform" vs the old title),
-   and this exact arc/radius/white-bold combo already proved legible. */
+   request to have it "circled around the circle". Bumped up from 14px to
+   16px per explicit request for slightly larger text; still comfortably
+   inside the ring's own thickness at this size (checked against the
+   140deg arc it rides). */
 .platform-title-text {
-  fill: #ffffff; font-family: 'Nunito', sans-serif; font-size: 14px;
-  font-weight: 800; letter-spacing: .3px; text-transform: uppercase;
+  fill: #ffffff; font-family: 'Nunito', sans-serif; font-size: 16px;
+  font-weight: 800; letter-spacing: .2px; text-transform: uppercase;
   animation: splash-pop .5s ease .2s both;
 }
 .platform-tab-label {
@@ -546,6 +545,13 @@ button, input, select, textarea { font-family: inherit; }
   text-align: center; font-size: 11px; color: var(--muted); padding: 18px 0 6px;
 }
 .app-footer-link { color: var(--accent); font-weight: 700; text-decoration: underline; }
+/* The Suggestion link is a <button> (not an <a>, since it opens a modal
+   rather than navigating) -- reset native button chrome so it reads as an
+   inline text link identical to the Privacy Policy link beside it. */
+.app-footer-link-btn {
+  background: none; border: none; padding: 0; margin: 0; font: inherit;
+  cursor: pointer; display: inline-flex; align-items: center;
+}
 
 .wrap { max-width: 1520px; margin: 0 auto; padding: 24px; }
 /* Frozen to the top of the viewport while the page scrolls -- now wraps the
