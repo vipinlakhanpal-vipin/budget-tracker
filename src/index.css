@@ -893,6 +893,18 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
 .panel { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 20px; }
 .panel h2 { font-size: 15px; margin: 0 0 14px 0; }
 
+/* Big themed section titles -- the heading that opens each of Income, Fixed
+   Expenses, Regular Expenses, Savings, Report, and Settings (e.g. "Regular
+   Expenses for July 2026"). Deliberately its own class rather than a blanket
+   .panel h2 override, since edit-sheet titles ("Edit expense" etc.), the
+   Home dashboard's chart/Explore headings, and AI Insights/Budget Coach
+   titles all reuse .panel h2 too and should stay their original small
+   neutral size -- only the specific headings above got this class added in
+   the JSX. Color follows the active theme's accent (same variable the
+   active tab highlight and Expense Management title already use) so picking
+   a new theme recolors these too. */
+.panel-title-themed { font-size: 30px; color: var(--accent); }
+
 /* Filter buttons/dropdowns -- Regular Expenses, Fixed Expenses, Income, and
    Savings each get one, sitting next to that section's own heading (or, for
    Income/Savings which don't have a dedicated list heading, next to the

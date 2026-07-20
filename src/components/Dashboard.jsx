@@ -4441,7 +4441,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
           {inputTab === 'expense' && (
           <div className="panel">
-            <h2>Regular Expenses</h2>
+            <h2 className="panel-title-themed">Regular Expenses</h2>
             <form onSubmit={handleAddExpense}>
             <div className="row">
               <div className="field">
@@ -4651,7 +4651,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
           {inputTab === 'income' && (
           <div className="panel">
-            <h2>Income</h2>
+            <h2 className="panel-title-themed">Income</h2>
             <form onSubmit={handleAddIncome}>
             <div className="row">
               <div className="field" style={{ flex: 1.2 }}>
@@ -4994,7 +4994,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           {inputTab === 'fixed' && (
           <>
           <div className="panel">
-            <h2>Fixed Expenses (loans, EMIs, credit cards, rent)</h2>
+            <h2 className="panel-title-themed">Fixed Expenses (loans, EMIs, credit cards, rent)</h2>
             {/* With 7 fields, this form can wrap onto several lines on
                 narrower screens -- the Add button is kept on its own row
                 below (rather than inline at flex-end) so it never overlaps
@@ -5171,7 +5171,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               versus where you review/edit the ones you've already added. */}
           <div className="panel">
             <div className="panel-heading-row">
-              <h2 style={{ marginBottom: 0 }}>Your fixed expenses</h2>
+              <h2 className="panel-title-themed" style={{ marginBottom: 0 }}>Your fixed expenses</h2>
               <div className="filter-wrap" ref={recurringFilterRef}>
                 <button
                   type="button"
@@ -5604,7 +5604,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
           {inputTab === 'savings' && (
           <div className="panel">
-            <h2>Savings (how much you want to set aside each month)</h2>
+            <h2 className="panel-title-themed">Savings (how much you want to set aside each month)</h2>
             <form onSubmit={handleAddSaving}>
             <div className="row">
               <div className="field" style={{ flex: 1.4 }}>
@@ -5924,7 +5924,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 automatically as you switch months, no separate picker
                 needed. */}
             <div className="panel-heading-row">
-              <h2>Regular Expenses for {monthLabel(currentMonth)}</h2>
+              <h2 className="panel-title-themed">Regular Expenses for {monthLabel(currentMonth)}</h2>
               <div className="filter-wrap" ref={expenseFilterRef}>
                 <button
                   type="button"
@@ -6371,7 +6371,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
           {activePanel === 'report' && (
           <div className="panel" ref={panelRef}>
-            <h2>Report</h2>
+            <h2 className="panel-title-themed">Report</h2>
             <div className="muted-small" style={{ marginBottom: 12 }}>
               Generate a PDF for a date range, then view it on screen, download it, or email it. Category Breakdown and Summary share a page unless the chart runs long; Income, Expenses, Fixed Expenses, Savings, Spend Analysis, and Recommendations each get their own dedicated page. Tables auto-shrink to try to fit one page before flowing onto a second.
             </div>
@@ -6479,7 +6479,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           {activePanel === 'settings' && (
           <div className="panel" ref={panelRef}>
               <div>
-                <h2>Settings</h2>
+                <h2 className="panel-title-themed">Settings</h2>
                 <div className="row" style={{ gap: 8, marginBottom: 16 }}>
                   <button
                     className={`btn-teal ${settingsSubTab === 'app' ? '' : 'secondary'}`}
