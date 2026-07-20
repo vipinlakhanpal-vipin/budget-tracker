@@ -41,14 +41,13 @@ function AiTag({ style }) {
   );
 }
 
-// Header logo -- replaces the old gold heart-outline mark with a small,
-// resized copy of the splash screen's own circular "platform" badge (navy
-// ring + glowing blue sphere + "AI POWERED Hearth" text), per explicit
-// request to use that ring as the app's logo everywhere rather than two
-// different marks. Trimmed down from the full splash version to just the
-// ring + sphere + text -- the 7 tab icons and the curved outer tagline
-// only read clearly at splash size; shrunk to a header icon they'd blur
-// into noise, so this keeps only the part that's still legible small.
+// Header logo -- a small, resized copy of the splash screen's own circular
+// "platform" badge (glowing blue sphere + "AI POWERED Hearth" text), per
+// explicit request to use that badge as the app's logo everywhere rather
+// than two different marks. The dark navy ring that originally surrounded
+// the sphere was removed per explicit follow-up request ("dark blue ring
+// around the logo... can u remove that and keep the rest asis") -- sphere
+// + text are unchanged, just no outer ring stroke around them anymore.
 function HearthMark({ size = 56 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
@@ -64,7 +63,6 @@ function HearthMark({ size = 56 }) {
           <stop offset="100%" stopColor="#0e1a3f" />
         </radialGradient>
       </defs>
-      <circle cx="50" cy="50" r="43" fill="none" stroke="#16224a" strokeWidth="10" />
       <circle className="platform-sphere-pulse" cx="50" cy="50" r="38" fill="url(#headerBadgeSphere)" />
       <text x="50" y="36" textAnchor="middle" className="header-badge-kicker">AI POWERED</text>
       <text x="50" y="54" textAnchor="middle" className="header-badge-brand">Hearth</text>
@@ -3878,9 +3876,17 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <h1 className="app-title-purple">{household.name || 'Hearth'}</h1>
             )}
           </div>
-          <span className="corner-version-badge" title="This updates automatically -- if a change doesn't look right, reload the page.">
-            {formatVersionBadge()}
-          </span>
+          <div className="corner-badge-group">
+            <span className="corner-version-badge" title="This updates automatically -- if a change doesn't look right, reload the page.">
+              {formatVersionBadge()}
+            </span>
+            {/* Signed-in user's own display name, shown under the date+version
+                badge per explicit request -- reuses displayNameForEmail (same
+                household_members.name lookup already used for the "By"
+                column) rather than the raw email, so it reads "Vipin" not
+                "vipinlakhanpal". */}
+            <span className="corner-username-badge">{displayNameForEmail(session.user.email)}</span>
+          </div>
         </div>
           {/* Left-aligned, single row: the 4 data-entry tabs first, then the
               teal panel-toggle buttons, then the Profile icon, then the
@@ -4105,7 +4111,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 just above) instead of a free-floating draggable bubble --
                 per explicit request, this stays put next to the bell no
                 matter what else changes in the header. */}
-            <div className="chat-fab-wrap" ref={chatMenuRef}>
+            <div className="chat-fab-wrap chat-fab-wrap-spaced" ref={chatMenuRef}>
               <button
                 type="button"
                 className="chat-fab-btn"

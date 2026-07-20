@@ -14,6 +14,15 @@
      the app's own AI/purple accent stays recognizable no matter which
      accent theme is active. */
   --chat-accent: #7c3aed;
+  /* A darker shade of --accent, used only for the currently-selected header
+     tab's highlight (.header-tab-btn-active). Previously that highlight was
+     hardcoded to one dark-teal value no matter which color theme was picked,
+     so choosing e.g. "purple" recolored every other button but the active
+     tab kept showing teal -- per explicit bug report ("selected tab shows
+     teal color only... should also show same color as selected via theme
+     tab"). Each [data-theme] block below now also sets its own matching
+     --accent-active so the active-tab ring always tracks the chosen theme. */
+  --accent-active: #0f766e;
 }
 /* Color theme picker (see .theme-fab-btn / ThemeMenu in Dashboard.jsx):
    swaps only the two "accent" pairs that drive buttons, borders, tab
@@ -24,15 +33,19 @@
    one place here instead of being computed in JS. */
 [data-theme="ocean"] {
   --accent: #0369a1; --accent-light: #dbeafe; --accent2: #0ea5e9; --accent2-light: #e0f2fe;
+  --accent-active: #075985;
 }
 [data-theme="purple"] {
   --accent: #7c3aed; --accent-light: #ede9fe; --accent2: #a78bfa; --accent2-light: #f5f3ff;
+  --accent-active: #6d28d9;
 }
 [data-theme="rose"] {
   --accent: #db2777; --accent-light: #fce7f3; --accent2: #f472b6; --accent2-light: #fdf2f8;
+  --accent-active: #be185d;
 }
 [data-theme="forest"] {
   --accent: #15803d; --accent-light: #dcfce7; --accent2: #22c55e; --accent2-light: #f0fdf4;
+  --accent-active: #166534;
 }
 * { box-sizing: border-box; }
 html {
@@ -616,7 +629,7 @@ button, input, select, textarea { font-family: inherit; }
    Bolded (font-weight 800) per explicit request -- applies to both the
    owner's editable <input> and the plain <h1> everyone else sees, so the
    two don't look inconsistent with each other. */
-.app-title-purple { color: #7c3aed; font-size: 35px; font-weight: 800; }
+.app-title-purple { color: #7c3aed; font-size: 35px; font-weight: 900; }
 /* The owner-only editable version of the title above -- same visual size/
    color/weight as the plain <h1>, but as a real <input> so it can be typed
    into directly instead of only through a separate Settings field. Strip
@@ -692,13 +705,16 @@ button, input, select, textarea { font-family: inherit; }
   white-space: nowrap;
 }
 .btn-teal:hover { opacity: .88; }
-/* The 4 data-entry tabs are always solid teal + white now (no outline
+/* The 4 data-entry tabs are always solid --accent + white now (no outline
    "unselected" look) -- this just adds a subtle inset ring + slightly
    darker shade to the currently-open one so it's still distinguishable
-   from the other three, without breaking the "all teal, all white text"
-   look that was asked for. */
+   from the other three, without breaking the "all one color, all white
+   text" look that was asked for. Uses --accent-active (defined per
+   [data-theme] in the :root block above) instead of a hardcoded teal value,
+   so picking a different color theme also recolors the active tab instead
+   of leaving it stuck on teal -- per explicit bug report. */
 .header-tab-btn-active {
-  background: #0f766e;
+  background: var(--accent-active);
   box-shadow: inset 0 0 0 2px rgba(255,255,255,.55);
 }
 /* Outline variant for the "which sub-section" toggle inside Settings (App
@@ -796,6 +812,15 @@ button, input, select, textarea { font-family: inherit; }
   font-size: 10.5px; font-weight: 700; color: var(--muted);
   background: var(--bg); border: 1px solid var(--border); border-radius: 999px;
   padding: 3px 10px; white-space: nowrap;
+}
+/* Wraps the date+version pill and the signed-in user's name stacked right
+   under it, top-right corner -- per explicit request ("add user name under
+   the date and ver on top right corner"). */
+.corner-badge-group {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
+}
+.corner-username-badge {
+  font-size: 11px; font-weight: 700; color: var(--accent); white-space: nowrap;
 }
 h1 { font-size: 22px; margin: 0 0 4px 0; }
 .sub { color: var(--muted); font-size: 13px; }
@@ -1652,6 +1677,10 @@ td.amount { font-weight: 600; text-align: right; }
    the chat bubble can never again drift off and collide with the header
    (the recurring bug with the old free-floating, draggable version). */
 .chat-fab-wrap { position: relative; }
+/* Extra breathing room between the notification bell and this button --
+   the row's default 8px flex-gap read as too tight per explicit feedback
+   ("create a more space betwee reminder icon and chat BoT"). */
+.chat-fab-wrap-spaced { margin-left: 14px; }
 /* Filled purple color combo, per explicit correction (the original floating
    chat bubble was purple, not the sky-blue this was first restored to) --
    same purple as the "Expense Management" title (--chat-accent) so it reads
