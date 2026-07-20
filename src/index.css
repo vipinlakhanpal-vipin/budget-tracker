@@ -9,10 +9,13 @@
   --accent: #0d9488; --accent-light: #ccfbf1; --accent2: #0ea5e9; --accent2-light: #e0f2fe;
   --danger: #dc2626; --danger-bg: #fef2f2;
   --ok: #0d9488; --border: #d5ecec;
-  /* Fixed purple used by the "Expense Management" title and the Chat BoT
-     button -- deliberately NOT swapped by the color-theme picker below, so
-     the app's own AI/purple accent stays recognizable no matter which
-     accent theme is active. */
+  /* Fixed purple used only by the Chat BoT button now -- deliberately NOT
+     swapped by the color-theme picker below, so the app's own AI accent
+     stays recognizable no matter which theme is active. The "Expense
+     Management" title used to share this same fixed purple, but per
+     explicit request it now follows --accent instead (see
+     .app-title-purple below) so it recolors along with the rest of the
+     theme instead of staying purple forever. */
   --chat-accent: #7c3aed;
   /* A darker shade of --accent, used only for the currently-selected header
      tab's highlight (.header-tab-btn-active). Previously that highlight was
@@ -626,10 +629,18 @@ button, input, select, textarea { font-family: inherit; }
    changes" the household name (now renamed right here in the header,
    owners only -- see .app-title-input below) -- the size here is
    independent of the text content/length, so renaming never changes it.
-   Bolded (font-weight 800) per explicit request -- applies to both the
-   owner's editable <input> and the plain <h1> everyone else sees, so the
-   two don't look inconsistent with each other. */
-.app-title-purple { color: #7c3aed; font-size: 35px; font-weight: 900; }
+   Bolded per explicit request -- applies to both the owner's editable
+   <input> and the plain <h1> everyone else sees, so the two don't look
+   inconsistent with each other. */
+/* Class name kept as-is (renaming it would mean touching every call site
+   for no functional reason), but the color itself is no longer fixed
+   purple -- it now follows --accent so picking a different color theme
+   (see the [data-theme] blocks above) recolors this title too, per
+   explicit request. font-weight:900 only actually renders as true bold
+   now that Nunito's 900 weight is being fetched at all (see the Google
+   Fonts <link> in index.html) -- previously it silently fell back to a
+   lighter weight since 900 was never loaded. */
+.app-title-purple { color: var(--accent); font-size: 35px; font-weight: 900; }
 /* The owner-only editable version of the title above -- same visual size/
    color/weight as the plain <h1>, but as a real <input> so it can be typed
    into directly instead of only through a separate Settings field. Strip
@@ -641,8 +652,8 @@ button, input, select, textarea { font-family: inherit; }
   font-family: inherit; font-weight: inherit;
   border-bottom: 1px dashed transparent;
 }
-.app-title-input:hover { border-bottom-color: rgba(124, 58, 237, 0.35); }
-.app-title-input:focus { outline: none; border-bottom-color: #7c3aed; }
+.app-title-input:hover { border-bottom-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+.app-title-input:focus { outline: none; border-bottom-color: var(--accent); }
 /* Light-grey nudge shown next to the title input only while it's still
    empty -- tells a first-time owner the title is theirs to set, without
    looking like an error or a permanent label. Disappears for good once

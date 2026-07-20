@@ -83,8 +83,17 @@ const PLATFORM_CENTER = { x: 220, y: 236 };
 // caused the earlier "S" of Smart Budget / trailing "s" of Expenses to
 // look cut off).
 const PLATFORM_ICON_RADIUS = 112;
-const PLATFORM_RING_OUTER = 210;
-const PLATFORM_RING_INNER = 182;
+// Ring pushed outward (182/210 -> 200/218) per explicit follow-up request --
+// the label spokes (PLATFORM_ICON_RADIUS, unchanged at 112) still had a
+// noticeable stretch of genuinely empty white space between them and the
+// ring's old inner edge (182), so rather than moving the labels themselves
+// (which would crowd the center sphere), this reclaims that existing slack
+// by growing the white disc itself, buying the labels ~18 more units of
+// clearance from the ring with zero change to their own position or the
+// two-line wrapping already tuned for them. Ring band is slightly thinner
+// (18 vs 28) to fit the larger inner radius in the same outer footprint.
+const PLATFORM_RING_OUTER = 218;
+const PLATFORM_RING_INNER = 200;
 const PLATFORM_SPHERE_RADIUS = 82;
 
 function polarPoint(cx, cy, r, angleDeg) {
@@ -100,12 +109,13 @@ function arcPath(cx, cy, r, startDeg, endDeg) {
 // Curved path the tagline rides above the TOP of the ring -- originally
 // this sat at radius 196, embedded inside the ring's own 182-210
 // thickness band, but per explicit request to lift it "outside" the dark
-// ring rather than sit on top of it, the radius is now 224: clear past
-// the ring's outer edge (210) with a visible gap, rather than overlapping
-// the ring stroke. The SVG's own viewBox (see the <svg> element below) is
-// extended upward to give this extra room -- without that, text this far
-// out would clip against the top of the canvas.
-const PLATFORM_TITLE_ARC = arcPath(PLATFORM_CENTER.x, PLATFORM_CENTER.y, 224, 200, 340);
+// ring rather than sit on top of it, the radius is now 230: clear past
+// the ring's current outer edge (218, see PLATFORM_RING_OUTER above) with
+// a visible gap, rather than overlapping the ring stroke. The SVG's own
+// viewBox (see the <svg> element below) is extended upward to give this
+// extra room -- without that, text this far out would clip against the
+// top of the canvas.
+const PLATFORM_TITLE_ARC = arcPath(PLATFORM_CENTER.x, PLATFORM_CENTER.y, 230, 200, 340);
 
 // Dashboard (formerly "Home") deliberately isn't one of these spokes --
 // it's not a distinct feature so much as the summary/overview the whole

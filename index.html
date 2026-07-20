@@ -27,7 +27,12 @@
     <title>Hearth -- Household Budget Tracker</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&display=swap" rel="stylesheet" />
+    <!-- 900 added -- the "Expense Management" title was set to font-weight:900
+         but that weight was never actually being fetched (only up to 800 was
+         requested here), so the browser was silently substituting a fallback
+         font/weight instead of true Nunito Black. Without this the title's
+         bold setting has no real effect. -->
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800;900&display=swap" rel="stylesheet" />
   </head>
   <body>
     <div id="root"></div>
