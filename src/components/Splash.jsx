@@ -90,6 +90,19 @@ function polarPoint(cx, cy, r, angleDeg) {
   const a = (angleDeg * Math.PI) / 180;
   return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
 }
+function arcPath(cx, cy, r, startDeg, endDeg) {
+  const p1 = polarPoint(cx, cy, r, startDeg);
+  const p2 = polarPoint(cx, cy, r, endDeg);
+  const largeArc = Math.abs(endDeg - startDeg) > 180 ? 1 : 0;
+  return `M ${p1.x} ${p1.y} A ${r} ${r} 0 ${largeArc} 1 ${p2.x} ${p2.y}`;
+}
+// Curved path the tagline rides along the top of the ring (200deg to
+// 340deg) -- this specific arc/radius already proved legible (white bold
+// text, comfortably inside the ring's own thickness) before being swapped
+// out for a separate heading; brought back per explicit request to put
+// the tagline back on the ring itself.
+const PLATFORM_TITLE_ARC = arcPath(PLATFORM_CENTER.x, PLATFORM_CENTER.y, 196, 200, 340);
+
 // Angles chosen so all 8 icons land in symmetric pairs (two near the top,
 // two near the bottom, two on each side) -- the same rhythm as the
 // reference platform diagram -- while mapping 1:1 onto Hearth's real
@@ -284,12 +297,6 @@ export default function Splash() {
       <div className="splash-dust splash-dust-5" />
 
       <div className="splash-center">
-        {/* Standalone, plainly centered heading -- deliberately a normal
-            HTML heading rather than curved SVG textPath, per explicit
-            request to "lift it" off the ring and center it properly (a
-            straight, centered line reads far more clearly than text bent
-            around a circle). */}
-        <div className="splash-platform-title">Smart Expense Management Platform</div>
         <div className="splash-illustration-wrap">
         <div className="splash-illustration splash-illustration-platform">
           <svg viewBox="0 0 440 472" xmlns="http://www.w3.org/2000/svg">
@@ -303,6 +310,7 @@ export default function Splash() {
                 <stop offset="48%" stopColor="#33509f" />
                 <stop offset="100%" stopColor="#0e1a3f" />
               </radialGradient>
+              <path id="platformTitleArc" d={PLATFORM_TITLE_ARC} fill="none" />
               <clipPath id="platformSphereClip">
                 <circle cx={PLATFORM_CENTER.x} cy={PLATFORM_CENTER.y} r={PLATFORM_SPHERE_RADIUS} />
               </clipPath>
@@ -318,6 +326,15 @@ export default function Splash() {
             />
             {/* Light-blue middle band that the tab icons sit on. */}
             <circle cx={PLATFORM_CENTER.x} cy={PLATFORM_CENTER.y} r={PLATFORM_RING_INNER} fill="#eaf3fc" />
+
+            {/* Tagline curved along the top of the ring, per explicit
+                request to have it "circled around the circle" rather than
+                a separate straight heading. */}
+            <text className="platform-title-text">
+              <textPath href="#platformTitleArc" startOffset="50%" textAnchor="middle">
+                Smart Expense Management Platform
+              </textPath>
+            </text>
 
             {/* One spoke per real header tab -- icon + label, evenly ringed
                 around the center, each popping in with a staggered delay. */}

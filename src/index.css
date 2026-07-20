@@ -144,11 +144,14 @@ button, input, select, textarea { font-family: inherit; }
    gradient background feel alive/premium instead of static. Three orbs at
    different sizes/speeds/positions so the motion doesn't read as
    mechanically repeating. */
-/* Standalone brand line near the very top of the splash, on the plain
-   solid-teal strip above where the world map/orbs start reading as busy --
-   deliberately separate from .splash-center (bottom-anchored) rather than
-   part of that stack, per explicit request to place it "slightly down" from
-   the top edge instead of alongside the main logo block. */
+/* Standalone brand line -- moved from the top of the splash down to sit
+   just above the credit line at the very bottom, per explicit request
+   (was originally at the top "slightly down" from the top edge; now
+   lifted content is vertically centered instead, so this reads better
+   grounded at the bottom alongside the credit line than floating alone
+   at the top). Kept as its own absolutely-positioned element rather than
+   folded into .splash-center, since its position is independent of that
+   centered block. */
 .splash-top-tagline {
   /* Centered with left:0/right:0 + margin-inline:auto, NOT
      left:50%+transform:translateX(-50%) -- .splash-pop below (used for this
@@ -159,16 +162,16 @@ button, input, select, textarea { font-family: inherit; }
      offset, reading as pushed toward the right half). Auto margins don't
      touch transform at all, so they keep working regardless of the
      animation. */
-  position: absolute; top: max(28px, env(safe-area-inset-top));
+  position: absolute;
+  /* Sits directly above .splash-credit (bottom: max(24px, safe-area-inset)
+     plus its own ~17px line height) with a small visible gap. */
+  bottom: calc(max(24px, env(safe-area-inset-bottom, 0px)) + 30px);
   left: 0; right: 0; margin-inline: auto; z-index: 2;
   width: max-content; max-width: 92vw;
-  /* 40px on larger screens (per explicit request), but scaled down via vw
-     on narrow ones so it never overflows or forces awkward wrapping on a
-     phone -- clamp(min, preferred-vw, max) caps out at 40px on tablet/
-     desktop widths and shrinks smoothly toward 22px on small phone
-     viewports, answering "will you auto reduce to fit for phone users":
-     yes, automatically, no separate media query needed. */
-  font-size: clamp(22px, 6vw, 40px); font-weight: 800; letter-spacing: .02em;
+  /* Reduced from the old 40px cap down to 30px per explicit request, still
+     scaling down further via vw on narrow phones so it never overflows or
+     forces awkward wrapping. */
+  font-size: clamp(16px, 6vw, 30px); font-weight: 800; letter-spacing: .02em;
   text-align: center;
   animation: splash-pop .5s ease .15s both;
   /* Same amber-copper gradient as the heart-outline logo/"Hearth" title
@@ -200,11 +203,14 @@ button, input, select, textarea { font-family: inherit; }
 
 .splash-center {
   position: relative; z-index: 2;
-  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  display: flex; flex-direction: column; align-items: center;
+  /* Widened from an earlier tight 6px per explicit request for clearer
+     breathing room between the circle diagram and the tagline/version
+     text sitting right below it. */
+  gap: 20px;
   animation: splash-pop .6s cubic-bezier(.34, 1.56, .64, 1) both;
-  /* Positioning is now handled by .splash-screen (justify-content: flex-end
-     + padding-bottom) so this whole block sits right above the credit
-     line -- no offset needed here directly on top of that. */
+  /* Positioning is now handled by .splash-screen (justify-content: center)
+     so this whole block sits vertically centered on screen. */
 }
 .splash-illustration { width: 360px; max-width: 92vw; filter: drop-shadow(0 18px 30px rgba(0, 0, 0, .24)); }
 .splash-illustration svg { width: 100%; height: auto; display: block; }
@@ -220,12 +226,15 @@ button, input, select, textarea { font-family: inherit; }
 /* Standalone centered heading above the diagram -- replaces the earlier
    curved ring text per explicit feedback that bent text was hard to read;
    a plain centered line is unambiguous at any screen width. */
-.splash-platform-title {
-  color: #ffffff; font-size: clamp(15px, 4.2vw, 21px); font-weight: 800;
-  letter-spacing: .015em; text-align: center; max-width: 92vw;
-  text-shadow: 0 2px 14px rgba(0, 0, 0, .35);
-  margin-bottom: 4px;
-  animation: splash-pop .5s ease .15s both;
+/* Tagline curved along the top of the ring -- brought back per explicit
+   request to have it "circled around the circle"; font kept modest (14px,
+   slightly smaller than the earlier 16px version) since this text is a
+   touch longer ("Smart Expense Management Platform" vs the old title),
+   and this exact arc/radius/white-bold combo already proved legible. */
+.platform-title-text {
+  fill: #ffffff; font-family: 'Nunito', sans-serif; font-size: 14px;
+  font-weight: 800; letter-spacing: .3px; text-transform: uppercase;
+  animation: splash-pop .5s ease .2s both;
 }
 .platform-tab-label {
   fill: #16224a; font-family: 'Nunito', sans-serif; font-size: 9.5px; font-weight: 800;
