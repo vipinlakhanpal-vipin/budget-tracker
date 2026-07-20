@@ -96,12 +96,15 @@ function arcPath(cx, cy, r, startDeg, endDeg) {
   const largeArc = Math.abs(endDeg - startDeg) > 180 ? 1 : 0;
   return `M ${p1.x} ${p1.y} A ${r} ${r} 0 ${largeArc} 1 ${p2.x} ${p2.y}`;
 }
-// Curved path the tagline rides along the top of the ring (200deg to
-// 340deg) -- this specific arc/radius already proved legible (white bold
-// text, comfortably inside the ring's own thickness) before being swapped
-// out for a separate heading; brought back per explicit request to put
-// the tagline back on the ring itself.
-const PLATFORM_TITLE_ARC = arcPath(PLATFORM_CENTER.x, PLATFORM_CENTER.y, 196, 200, 340);
+// Curved path the tagline rides above the TOP of the ring -- originally
+// this sat at radius 196, embedded inside the ring's own 182-210
+// thickness band, but per explicit request to lift it "outside" the dark
+// ring rather than sit on top of it, the radius is now 224: clear past
+// the ring's outer edge (210) with a visible gap, rather than overlapping
+// the ring stroke. The SVG's own viewBox (see the <svg> element below) is
+// extended upward to give this extra room -- without that, text this far
+// out would clip against the top of the canvas.
+const PLATFORM_TITLE_ARC = arcPath(PLATFORM_CENTER.x, PLATFORM_CENTER.y, 224, 200, 340);
 
 // Dashboard (formerly "Home") deliberately isn't one of these spokes --
 // it's not a distinct feature so much as the summary/overview the whole
@@ -301,7 +304,7 @@ export default function Splash() {
       <div className="splash-center">
         <div className="splash-illustration-wrap">
         <div className="splash-illustration splash-illustration-platform">
-          <svg viewBox="0 0 440 472" xmlns="http://www.w3.org/2000/svg">
+          <svg viewBox="0 -50 440 522" xmlns="http://www.w3.org/2000/svg">
             <defs>
               {/* Center sphere lit from the upper-left, deepening to navy at
                   the edges -- same "glowing globe" read as the reference

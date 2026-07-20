@@ -226,15 +226,17 @@ button, input, select, textarea { font-family: inherit; }
    curved ring text per explicit feedback that bent text was hard to read;
    a plain centered line is unambiguous at any screen width. */
 /* Tagline curved along the top of the ring -- brought back per explicit
-   request to have it "circled around the circle". Bumped 14px -> 16px,
-   then 16px -> 18px per two rounds of "increase the font size" -- at 34
-   characters (incl. spaces) and this weight/uppercase, the text still
-   spans well under the 140deg arc it rides (roughly 380 of ~480 available
-   units), so there's still room before it would start wrapping onto
-   itself at the ends. */
+   request to have it "circled around the circle". Bumped 14px -> 16px ->
+   18px -> 20px across four rounds of "increase the font size", and moved
+   from riding embedded in the ring's own thickness (radius 196, between
+   the ring's 182-210 band) out to radius 224 -- clearly outside/above the
+   dark ring line, per explicit request, rather than sitting on top of the
+   ring stroke. At 34 characters (incl. spaces) this weight/uppercase, the
+   text still spans well under the 140deg arc it rides at this larger
+   radius (roughly 420 of ~550 available units). */
 .platform-title-text {
-  fill: #ffffff; font-family: 'Nunito', sans-serif; font-size: 18px;
-  font-weight: 800; letter-spacing: .2px; text-transform: uppercase;
+  fill: #ffffff; font-family: 'Nunito', sans-serif; font-size: 20px;
+  font-weight: 800; letter-spacing: .3px; text-transform: uppercase;
   animation: splash-pop .5s ease .2s both;
 }
 /* Dropped 9.5px -> 9px alongside the two-line wrap of multi-word labels
