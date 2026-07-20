@@ -996,15 +996,33 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   // AI feature #4 (chat assistant): a floating Q&A bubble, available from
   // anywhere in the app (not tied to a specific tab/panel), that answers
   // questions using this household's own data -- spending by category,
-  // budget status, recent-month comparisons. Conversation history lives only
-  // in memory for this session; each request re-sends a fresh snapshot of
-  // the household's numbers rather than trying to keep data "inside" a
-  // saved conversation, so answers can't go stale mid-chat.
+  // budget status, recent-month comparisons. Each request re-sends a fresh
+  // snapshot of the household's numbers rather than trying to keep data
+  // "inside" a saved conversation, so answers can't go stale mid-chat.
+  // The conversation ITSELF, though, is persisted (see chat_messages table
+  // / migration_chat_messages.sql) -- per explicit request ("can chatbot
+  // record the previous chats and save them... so I can retrieve and
+  // continue"), one continuous thread shared by the whole household
+  // (everyone reads/adds to the same running history, same visibility
+  // model as the rest of the app's shared data), loaded once below and
+  // appended to as each message is sent.
   const [chatOpen, setChatOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState([]); // [{ role: 'user'|'assistant', content }]
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const chatMessagesRef = useRef(null);
+  useEffect(() => {
+    let cancelled = false;
+    supabase
+      .from('chat_messages')
+      .select('role, content')
+      .eq('household_id', householdId)
+      .order('created_at', { ascending: true })
+      .then(({ data }) => {
+        if (!cancelled && data) setChatMessages(data.map((m) => ({ role: m.role, content: m.content })));
+      });
+    return () => { cancelled = true; };
+  }, [householdId]);
   // Chat bubble now lives as a fixed icon button in the header, directly
   // next to the notification bell (see .chat-fab-wrap in index.css) --
   // no longer a free-floating, draggable FAB. That removes the recurring
@@ -1967,6 +1985,30 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     return out;
   }
 
+  // Fire-and-forget row insert into chat_messages -- failures here shouldn't
+  // block the conversation itself (worst case that one message just doesn't
+  // survive a reload), so this deliberately swallows its own errors instead
+  // of surfacing them in the chat UI.
+  async function saveChatMessage(role, content) {
+    try {
+      await supabase.from('chat_messages').insert({
+        household_id: householdId,
+        role,
+        content,
+        created_by: session.user.id,
+        created_by_email: session.user.email,
+      });
+    } catch {
+      // ignore -- see comment above
+    }
+  }
+
+  async function clearChatHistory() {
+    if (!window.confirm("Clear the whole chat history for everyone in the household? This can't be undone.")) return;
+    await supabase.from('chat_messages').delete().eq('household_id', householdId);
+    setChatMessages([]);
+  }
+
   async function sendChatMessage() {
     const text = chatInput.trim();
     if (!text || chatLoading) return;
@@ -1974,6 +2016,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     setChatMessages(newHistory);
     setChatInput('');
     setChatLoading(true);
+    saveChatMessage('user', text);
     try {
       const { data: { session: authSession } } = await supabase.auth.getSession();
       const prevMonthDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
@@ -2010,10 +2053,14 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json.reply) {
+        // Deliberately NOT saved to chat_messages -- a transient "try again"
+        // notice isn't part of the actual conversation and would just be
+        // confusing clutter to see again on a later reload.
         setChatMessages((prev) => [...prev, { role: 'assistant', content: "Sorry, I couldn't answer that just now -- try again in a moment." }]);
         return;
       }
       setChatMessages((prev) => [...prev, { role: 'assistant', content: json.reply }]);
+      saveChatMessage('assistant', json.reply);
     } catch {
       setChatMessages((prev) => [...prev, { role: 'assistant', content: "Sorry, I couldn't answer that just now -- try again in a moment." }]);
     } finally {
@@ -4137,12 +4184,24 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 <div className="chat-window">
                   <div className="chat-header">
                     <span>Ask me About Budget &amp; Expenses / Suggestions <AiTag /></span>
-                    <button onClick={() => setChatOpen(false)} aria-label="Close chat"><X size={16} /></button>
+                    <div className="chat-header-actions">
+                      {/* Chat history is now saved (see chat_messages table)
+                          and shared by the whole household, so this is the
+                          one way to actually start over -- with a confirm,
+                          since it wipes it for everyone, not just this
+                          browser. */}
+                      {chatMessages.length > 0 && (
+                        <button onClick={clearChatHistory} aria-label="Clear chat history" title="Clear chat history for everyone">
+                          <Trash2 size={15} />
+                        </button>
+                      )}
+                      <button onClick={() => setChatOpen(false)} aria-label="Close chat"><X size={16} /></button>
+                    </div>
                   </div>
                   <div className="chat-messages" ref={chatMessagesRef}>
                     {chatMessages.length === 0 && (
                       <div className="chat-empty">
-                        Ask about any tab -- Income, Fixed Expenses, Regular Expenses, Savings, or how a feature works -- and ask for suggestions too, e.g. "how much did I spend on dining this month?", "how do fixed expenses work?", or "any suggestions to lower my spending?". I can only see the numbers already in your household's data, nothing outside it.
+                        Ask about any tab -- Income, Fixed Expenses, Regular Expenses, Savings, or how a feature works -- and ask for suggestions too, e.g. "how much did I spend on dining this month?", "how do fixed expenses work?", or "any suggestions to lower my spending?". I can only see the numbers already in your household's data, nothing outside it. Your conversation here is saved automatically, shared by everyone in the household, so you can close this and pick up right where you left off.
                       </div>
                     )}
                     {chatMessages.map((m, i) => (
