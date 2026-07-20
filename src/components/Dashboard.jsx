@@ -4399,14 +4399,24 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           the in-frame headings ("Regular Expenses for {month}", "Your fixed
           expenses", the Income/Fixed Expenses/Regular Expenses/Savings
           add-form headings) per explicit request to leave those in place,
-          just left-aligned instead of centered. */}
+          just left-aligned instead of centered.
+
+          IMPORTANT: inputTab (Income/Fixed/Regular/Savings) and activePanel
+          (Report/Settings/Help/Users) are NOT mutually exclusive elsewhere
+          in this app -- Report/Settings/Help are togglable overlays that
+          can stay open at the same time as whichever data-entry tab was
+          last selected (confirmed live: opening Report while Savings was
+          still selected showed both "Savings" and "Report" stacked on top
+          of each other). So the inputTab titles below are gated on
+          `!activePanel` -- whenever an activePanel overlay is open, its
+          title wins and is the only one shown. */}
       {!inputTab && !activePanel && (
         <h2 className="page-title-themed">Dashboard</h2>
       )}
-      {inputTab === 'income' && <h2 className="page-title-themed">Income</h2>}
-      {inputTab === 'fixed' && <h2 className="page-title-themed">Fixed Expenses</h2>}
-      {inputTab === 'expense' && <h2 className="page-title-themed">Regular Expenses</h2>}
-      {inputTab === 'savings' && <h2 className="page-title-themed">Savings</h2>}
+      {!activePanel && inputTab === 'income' && <h2 className="page-title-themed">Income</h2>}
+      {!activePanel && inputTab === 'fixed' && <h2 className="page-title-themed">Fixed Expenses</h2>}
+      {!activePanel && inputTab === 'expense' && <h2 className="page-title-themed">Regular Expenses</h2>}
+      {!activePanel && inputTab === 'savings' && <h2 className="page-title-themed">Savings</h2>}
       {activePanel === 'report' && <h2 className="page-title-themed">Report</h2>}
       {activePanel === 'settings' && <h2 className="page-title-themed">Settings</h2>}
       {activePanel === 'help' && <h2 className="page-title-themed">Help</h2>}
