@@ -3,7 +3,7 @@
 // the main dashboard, so the two never drift out of sync.
 // Format: YYYY-MM-DD.vN, where N resets to 1 on a new day and increments
 // for same-day updates. Bump this on every pushed batch of changes.
-export const APP_VERSION = '2026-07-20.v22';
+export const APP_VERSION = '2026-07-20.v23';
 
 export function formatVersionBadge() {
   const [datePart, verPart] = APP_VERSION.split('.');

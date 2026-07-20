@@ -915,7 +915,14 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
    the JSX. Color follows the active theme's accent (same variable the
    active tab highlight and Expense Management title already use) so picking
    a new theme recolors these too. */
-.panel-title-themed { font-size: 40px; color: var(--accent); text-align: center; }
+.panel-title-themed { font-size: 40px; color: var(--accent); text-align: left; }
+
+/* Small left-aligned title shown right above the month nav for every header
+   tab (Dashboard/Income/Fixed Expenses/Regular Expenses/Savings/Report/
+   Settings/Help) -- deliberately separate from .panel-title-themed above,
+   which stays untouched (still 40px) on the existing in-frame headings
+   further down each panel. */
+.page-title-themed { font-size: 25px; color: var(--accent); text-align: left; margin: 0 0 4px 0; }
 
 .filter-field input[type="date"] {
   padding: 7px 9px; border: 1.5px solid var(--border); border-radius: 8px;

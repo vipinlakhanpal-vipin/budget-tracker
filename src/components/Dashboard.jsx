@@ -4387,25 +4387,29 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           </div>
         </div>
 
-      {/* Every header tab shows its own name as a big centered title at the
-          top, matching whichever button was clicked. Dashboard uses inputTab
-          and activePanel both being null (the same condition the header's
-          Dashboard button uses to highlight itself); Report/Settings/Help
-          used to render this same title cramped inside their own narrow
-          content-grid column further down -- moved up here instead so they
-          get the same full-width treatment. */}
+      {/* Every header tab shows its own name as a small left-aligned title
+          right above the month nav, matching whichever button was clicked
+          -- Income/Fixed Expenses/Regular Expenses/Savings used to only
+          show their name as a heading buried inside their own panel further
+          down the page (easy to miss, per explicit feedback), and
+          Report/Settings/Help used to render cramped inside their own
+          narrow content-grid column. Uses its own .page-title-themed class
+          (25px, left-aligned) -- deliberately separate from
+          .panel-title-themed (40px) below, which stays exactly as it was on
+          the in-frame headings ("Regular Expenses for {month}", "Your fixed
+          expenses", the Income/Fixed Expenses/Regular Expenses/Savings
+          add-form headings) per explicit request to leave those in place,
+          just left-aligned instead of centered. */}
       {!inputTab && !activePanel && (
-        <h2 className="panel-title-themed" style={{ marginBottom: 4 }}>Dashboard</h2>
+        <h2 className="page-title-themed">Dashboard</h2>
       )}
-      {activePanel === 'report' && (
-        <h2 className="panel-title-themed" style={{ marginBottom: 4 }}>Report</h2>
-      )}
-      {activePanel === 'settings' && (
-        <h2 className="panel-title-themed" style={{ marginBottom: 4 }}>Settings</h2>
-      )}
-      {activePanel === 'help' && (
-        <h2 className="panel-title-themed" style={{ marginBottom: 4 }}>Help</h2>
-      )}
+      {inputTab === 'income' && <h2 className="page-title-themed">Income</h2>}
+      {inputTab === 'fixed' && <h2 className="page-title-themed">Fixed Expenses</h2>}
+      {inputTab === 'expense' && <h2 className="page-title-themed">Regular Expenses</h2>}
+      {inputTab === 'savings' && <h2 className="page-title-themed">Savings</h2>}
+      {activePanel === 'report' && <h2 className="page-title-themed">Report</h2>}
+      {activePanel === 'settings' && <h2 className="page-title-themed">Settings</h2>}
+      {activePanel === 'help' && <h2 className="page-title-themed">Help</h2>}
 
       <div className="month-nav">
         <button onClick={() => setCurrentMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))}>&lsaquo;</button>
