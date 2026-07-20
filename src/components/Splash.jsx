@@ -75,7 +75,13 @@ const COUNTRY_CENTROIDS = JSON.parse('{"_somaliland":[519.8,505.8],"ae":[534.4,4
 // -- not filler -- so this reads as an honest map of what's actually in
 // the app, not a generic marketing graphic.
 const PLATFORM_CENTER = { x: 220, y: 236 };
-const PLATFORM_ICON_RADIUS = 150;
+// Kept well inside PLATFORM_RING_INNER (182) even for the two long labels
+// ("Fixed Expenses", "Regular Expenses") -- their fill color is the same
+// dark navy as the ring stroke, so any part of a label that strayed past
+// the ring's inner edge would silently vanish against it (this is what
+// caused the earlier "S" of Smart Budget / trailing "s" of Expenses to
+// look cut off).
+const PLATFORM_ICON_RADIUS = 120;
 const PLATFORM_RING_OUTER = 210;
 const PLATFORM_RING_INNER = 182;
 const PLATFORM_SPHERE_RADIUS = 82;
