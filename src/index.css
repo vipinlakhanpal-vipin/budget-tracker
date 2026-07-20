@@ -903,7 +903,13 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
    the JSX. Color follows the active theme's accent (same variable the
    active tab highlight and Expense Management title already use) so picking
    a new theme recolors these too. */
-.panel-title-themed { font-size: 40px; color: var(--accent); }
+.panel-title-themed { font-size: 40px; color: var(--accent); text-align: center; }
+
+.filter-field input[type="date"] {
+  padding: 7px 9px; border: 1.5px solid var(--border); border-radius: 8px;
+  font-size: 12px; background: #fff; color: var(--text); font-family: inherit;
+}
+.filter-field input[type="date"]:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
 
 /* Filter buttons/dropdowns -- Regular Expenses, Fixed Expenses, Income, and
    Savings each get one, sitting next to that section's own heading (or, for

@@ -521,6 +521,18 @@ function monthLabel(d) {
   return d.toLocaleString('default', { month: 'long', year: 'numeric' });
 }
 
+// First/last calendar day of a given month, as yyyy-mm-dd strings -- used to
+// bound the dashboard's date-range picker (see rangeStart/rangeEnd below) so
+// it can never be dragged outside whichever month is currently selected via
+// the </> month nav.
+function firstDayOfMonthStr(d) {
+  return monthKey(d) + '-01';
+}
+function lastDayOfMonthStr(d) {
+  const last = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+  return monthKey(d) + '-' + String(last.getDate()).padStart(2, '0');
+}
+
 function fmtDate(dateStr) {
   if (!dateStr) return '';
   const d = new Date(dateStr + 'T00:00:00');
@@ -1398,6 +1410,42 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     return expenses.filter((e) => e.expense_date.slice(0, 7) === key);
   }, [expenses, currentMonth]);
 
+  // ---- Dashboard date range (start/end within the currently viewed month).
+  // Narrows Regular Expenses' contribution to the spending totals/chart --
+  // Spent so far, Remaining, Combined expenses, Net, and Spending by category
+  // all flow from oneOffTotal/byCategory below, which now read rangeExpenses
+  // instead of monthExpenses directly. Combined income, the Fixed Expenses
+  // total, and Savings are NOT affected -- those are only ever entered as one
+  // lump sum for the whole month (no specific day), so there's nothing
+  // meaningful to narrow. The "Regular Expenses for {month}" list further
+  // down the page is a separate view (with its own Category/Payment Filter
+  // button) and always keeps showing the full month, regardless of this
+  // range -- a caption next to the range picker says so.
+  const [rangeStart, setRangeStart] = useState(() => firstDayOfMonthStr(currentMonth));
+  const [rangeEnd, setRangeEnd] = useState(() => lastDayOfMonthStr(currentMonth));
+  const [rangeOpen, setRangeOpen] = useState(false);
+  const rangeRef = useRef(null);
+  useEffect(() => {
+    if (!rangeOpen) return;
+    function onDocClick(e) {
+      if (rangeRef.current && !rangeRef.current.contains(e.target)) setRangeOpen(false);
+    }
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [rangeOpen]);
+  // Reset to the full new month whenever the </> month nav changes months --
+  // a range picked for July shouldn't silently carry over and quietly narrow
+  // August too.
+  useEffect(() => {
+    setRangeStart(firstDayOfMonthStr(currentMonth));
+    setRangeEnd(lastDayOfMonthStr(currentMonth));
+  }, [currentMonth]);
+  const rangeIsFullMonth = rangeStart === firstDayOfMonthStr(currentMonth) && rangeEnd === lastDayOfMonthStr(currentMonth);
+  const rangeExpenses = useMemo(
+    () => monthExpenses.filter((e) => e.expense_date >= rangeStart && e.expense_date <= rangeEnd),
+    [monthExpenses, rangeStart, rangeEnd]
+  );
+
   // Whichever month the dashboard is currently showing -- see the
   // monthlyBudgets state declaration above for why this replaced the old
   // flat totalBudget value. Falls back to 0 (same as before) if no budget
@@ -1469,7 +1517,11 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
   const byCategory = useMemo(() => {
     const m = {};
-    monthExpenses.forEach((e) => {
+    // Regular Expenses respects the date-range picker (rangeExpenses is
+    // monthExpenses narrowed to rangeStart/rangeEnd, or the full month by
+    // default) -- Fixed Expenses always contributes its full monthly amount
+    // since it isn't entered per day.
+    rangeExpenses.forEach((e) => {
       const name = categoryNameById[e.category_id] || 'Uncategorized';
       m[name] = (m[name] || 0) + Number(e.amount);
     });
@@ -1478,9 +1530,9 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       m[name] = (m[name] || 0) + Number(r.amount);
     });
     return m;
-  }, [monthExpenses, recurringForMonth, categoryNameById]);
+  }, [rangeExpenses, recurringForMonth, categoryNameById]);
 
-  const oneOffTotal = useMemo(() => monthExpenses.reduce((s, e) => s + Number(e.amount), 0), [monthExpenses]);
+  const oneOffTotal = useMemo(() => rangeExpenses.reduce((s, e) => s + Number(e.amount), 0), [rangeExpenses]);
   const recurringTotal = useMemo(() => recurringForMonth.reduce((s, r) => s + Number(r.amount), 0), [recurringForMonth]);
   // "total" = actual spending only (one-off + fixed), used for the per-category
   // Pareto/budget-cap checks below since savings goals aren't tied to a category.
@@ -4335,10 +4387,70 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           </div>
         </div>
 
+      {/* Only shown on the Home tab itself (inputTab and activePanel both
+          null -- the same condition the header's Dashboard button uses to
+          highlight itself) so every tab shows its own name as a big centered
+          title at the top, matching whichever header button was clicked. */}
+      {!inputTab && !activePanel && (
+        <h2 className="panel-title-themed" style={{ marginBottom: 4 }}>Dashboard</h2>
+      )}
+
       <div className="month-nav">
         <button onClick={() => setCurrentMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))}>&lsaquo;</button>
         <div className="label">{monthLabel(currentMonth)}</div>
         <button onClick={() => setCurrentMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))}>&rsaquo;</button>
+        <div className="filter-wrap" ref={rangeRef}>
+          <button
+            type="button"
+            className={`filter-btn ${!rangeIsFullMonth ? 'active' : ''}`}
+            onClick={() => setRangeOpen((o) => !o)}
+            title="Date range"
+          >
+            <CalendarClock size={13} />
+            {rangeIsFullMonth ? 'Full month' : `${fmtDate(rangeStart)} - ${fmtDate(rangeEnd)}`}
+            {!rangeIsFullMonth && <span className="filter-active-dot" />}
+          </button>
+          {rangeOpen && (
+            <div className="filter-dropdown" style={{ width: 240 }}>
+              <div className="filter-dropdown-title">Date range within {monthLabel(currentMonth)}</div>
+              <div className="filter-field">
+                <label>Start</label>
+                <input
+                  type="date"
+                  value={rangeStart}
+                  min={firstDayOfMonthStr(currentMonth)}
+                  max={rangeEnd}
+                  onChange={(e) => setRangeStart(e.target.value)}
+                />
+              </div>
+              <div className="filter-field">
+                <label>End</label>
+                <input
+                  type="date"
+                  value={rangeEnd}
+                  min={rangeStart}
+                  max={lastDayOfMonthStr(currentMonth)}
+                  onChange={(e) => setRangeEnd(e.target.value)}
+                />
+              </div>
+              <div className="muted-small" style={{ fontSize: 11, lineHeight: 1.5 }}>
+                Narrows Spent so far/Remaining/Net and the spending chart to Regular Expenses in this range. Fixed Expenses, Income, Savings, and the Regular Expenses list below always show the full month.
+              </div>
+              {!rangeIsFullMonth && (
+                <button
+                  type="button"
+                  className="filter-clear-btn"
+                  onClick={() => {
+                    setRangeStart(firstDayOfMonthStr(currentMonth));
+                    setRangeEnd(lastDayOfMonthStr(currentMonth));
+                  }}
+                >
+                  Reset to full month
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="grid">
@@ -4994,7 +5106,10 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           {inputTab === 'fixed' && (
           <>
           <div className="panel">
-            <h2 className="panel-title-themed">Fixed Expenses (loans, EMIs, credit cards, rent)</h2>
+            <h2 className="panel-title-themed">Fixed Expenses</h2>
+            <div className="muted-small" style={{ textAlign: 'center', marginTop: -6, marginBottom: 12 }}>
+              Loans, EMIs, credit cards, rent
+            </div>
             {/* With 7 fields, this form can wrap onto several lines on
                 narrower screens -- the Add button is kept on its own row
                 below (rather than inline at flex-end) so it never overlaps
@@ -5604,7 +5719,10 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
           {inputTab === 'savings' && (
           <div className="panel">
-            <h2 className="panel-title-themed">Savings (how much you want to set aside each month)</h2>
+            <h2 className="panel-title-themed">Savings</h2>
+            <div className="muted-small" style={{ textAlign: 'center', marginTop: -6, marginBottom: 12 }}>
+              How much you want to set aside each month
+            </div>
             <form onSubmit={handleAddSaving}>
             <div className="row">
               <div className="field" style={{ flex: 1.4 }}>
@@ -6326,8 +6444,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             ];
             return (
             <div className="panel" ref={panelRef}>
-              <h2>How to use this app</h2>
-              <div className="muted-small" style={{ marginBottom: 10 }}>Tap any topic below to open its description.</div>
+              <h2 className="panel-title-themed">Help</h2>
+              <div className="muted-small" style={{ textAlign: 'center', marginTop: -6, marginBottom: 10 }}>How to use this app -- tap any topic below to open its description.</div>
               {/* Replays the same first-run spotlight tour that auto-showed
                   once for this browser -- lets anyone (a returning user who
                   wants a refresher, or someone who skipped it the first
