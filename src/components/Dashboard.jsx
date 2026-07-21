@@ -3577,7 +3577,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                     <div className="muted-small" style={{ marginBottom: 4, fontWeight: 600 }}>Change a member's relation</div>
                     {members.filter((m) => m.role !== 'owner').map((m) => (
                       <div className="row" key={m.id} style={{ alignItems: 'center', marginBottom: 6 }}>
-                        <span className="muted-small" style={{ flex: 1 }}>{m.name || m.email}</span>
+                                    <span className="muted-small" style={{ marginRight: 10 }}>{m.name || m.email}</span>
                         <select value={m.relation} onChange={(e) => handleUpdateMemberRelation(m.id, e.target.value)}>
                           {RELATIONS.map((r) => (
                             <option key={r} value={r}>{r}</option>
