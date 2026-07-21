@@ -3787,7 +3787,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         return (
                           <div key={c.name} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
                             <span style={{ width: 9, height: 9, borderRadius: '50%', background: COLORS[i % COLORS.length], flexShrink: 0 }} />
-                            <span style={{ flex: 1, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
+                                            <span style={{ maxWidth: 140, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
                             <span className="muted-small" style={{ flexShrink: 0 }}>{pct}%</span>
                             <span style={{ fontWeight: 700, minWidth: 78, textAlign: 'right', flexShrink: 0 }}><Amt value={c.value} /></span>
                           </div>
