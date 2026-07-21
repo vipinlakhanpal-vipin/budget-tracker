@@ -612,7 +612,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     // never end up stacked underneath an already-open Add sheet.
     setAddSheetOpen(false);
     closeAllMobileEditSheets();
-    setActivePanel((cur) => (cur === name ? null : name));
+    setActivePanel(name);
     // Also clear inputTab -- Report/Settings/Help are meant to pair with
     // Home, not linger stacked on top of whichever Income/Fixed Expenses/
     // Regular Expenses/Savings tab was previously selected.
@@ -4175,18 +4175,18 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                 like it stopped doing anything. */}
             <button className="btn-teal" onClick={() => togglePanel('report')}>
               <FileText size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
-              {activePanel === 'report' ? 'Hide report' : 'Report'}
+              Report
             </button>
             <button className="btn-teal" data-tour="nav-settings" onClick={() => togglePanel('settings')}>
               <SettingsIcon size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
-              {activePanel === 'settings' ? 'Hide settings' : 'Settings'}
+              Settings
             </button>
             {/* Standalone "Users" button removed from this row -- Users
                 management now lives under Settings > Users instead, so
                 there's one way to reach it, not two. */}
             <button className="btn-teal" data-tour="nav-help" onClick={() => togglePanel('help')}>
               <HelpCircle size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
-              {activePanel === 'help' ? 'Hide help' : 'Help'}
+              Help
             </button>
             {/* Color theme picker -- deliberately styled as a multi-color
                 swatch (conic-gradient ring) rather than matching the plain
