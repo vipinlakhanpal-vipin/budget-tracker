@@ -1,3 +1,4 @@
+
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
@@ -6421,8 +6422,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             );
           })()}
         </div>
-
-        <div>
+        <div style={(activePanel === 'report' || activePanel === 'help') ? { gridColumn: '1 / -1' } : undefined}>        
           {/* This narrow chart/AI column only shows for the normal
               data-entry tabs now (inputTab truthy) -- Home has its own
               full-width, bigger version of the same three cards further
@@ -6478,7 +6478,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               { key: 'privacy', title: 'Privacy Policy', body: <>Covers what's collected, where it's stored, and how the AI features use your data. Also linked at the very bottom of every page. <a href="/privacy.html" target="_blank" rel="noopener noreferrer">Read the full Privacy Policy</a>.</> },
             ];
             return (
-            <div className="panel" ref={panelRef}>
+                    <div className="panel" ref={panelRef} style={{ maxWidth: 820, margin: '0 auto' }}>
               {/* "Help" itself now renders as a page-level centered title
                   next to the Dashboard/Report/Settings ones (see the
                   !inputTab block up near the month nav) instead of cramped
@@ -6497,11 +6497,11 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               >
                 Take the tour again
               </button>
-              <div className="help-accordion">
+                        <div className="help-accordion" style={{ columnCount: 2, columnGap: 32 }}>
                 {helpTopics.map((t) => {
                   const open = helpOpenTopic === t.key;
                   return (
-                    <div key={t.key} className="help-accordion-item">
+                                <div key={t.key} className="help-accordion-item" style={{ breakInside: 'avoid' }}>
                       <button
                         type="button"
                         className="help-accordion-title"
@@ -6527,7 +6527,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           })()}
 
           {activePanel === 'report' && (
-          <div className="panel" ref={panelRef}>
+                  <div className="panel" ref={panelRef} style={{ maxWidth: 460, margin: '0 auto' }}>
             {/* "Report" itself renders as a page-level centered title (see
                 the !inputTab block near the month nav) instead of cramped
                 inside this narrow content-grid column. */}
@@ -6847,7 +6847,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           budgetCoachCard), just rendered bigger and full width here so
           there's room to "play around" with the charts and AI features,
           per explicit request. */}
-      {!inputTab && (
+            {!inputTab && activePanel !== 'settings' && activePanel !== 'help' && (
         <div className="home-explore-frame">
           <h2 style={{ margin: '0 0 10px' }}>Explore</h2>
           {chartTypeToggle}
