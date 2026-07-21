@@ -6497,11 +6497,11 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               >
                 Take the tour again
               </button>
-                        <div className="help-accordion" style={{ columnCount: 2, columnGap: 32 }}>
+                                  <div className="help-accordion" style={{ display: 'flex', flexFlow: 'row wrap', gap: '8px 32px' }}>
                 {helpTopics.map((t) => {
                   const open = helpOpenTopic === t.key;
                   return (
-                                <div key={t.key} className="help-accordion-item" style={{ breakInside: 'avoid' }}>
+                                            <div key={t.key} className="help-accordion-item" style={{ flex: '0 0 calc(50% - 16px)' }}>
                       <button
                         type="button"
                         className="help-accordion-title"
