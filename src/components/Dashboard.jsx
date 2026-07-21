@@ -613,6 +613,10 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     setAddSheetOpen(false);
     closeAllMobileEditSheets();
     setActivePanel((cur) => (cur === name ? null : name));
+    // Also clear inputTab -- Report/Settings/Help are meant to pair with
+    // Home, not linger stacked on top of whichever Income/Fixed Expenses/
+    // Regular Expenses/Savings tab was previously selected.
+    setInputTab(null);
   }
 
   // Bell icon (top bar, just before Help) replaces the old always-visible red
@@ -4130,16 +4134,16 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             <button
               type="button"
               className={`btn-teal header-tab-btn ${inputTab === 'income' ? 'header-tab-btn-active' : ''}`}
-              onClick={() => { setInputTab('income'); scrollToFrameA(); }}
-            >
+              onClick={() => { setActivePanel(null); setInputTab('income'); scrollToFrameA(); }}
+              >
               <Wallet size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
               Income
             </button>
             <button
               type="button"
               className={`btn-teal header-tab-btn ${inputTab === 'fixed' ? 'header-tab-btn-active' : ''}`}
-              onClick={() => { setInputTab('fixed'); scrollToFrameA(); }}
-            >
+              onClick={() => { setActivePanel(null); setInputTab('fixed'); scrollToFrameA(); }}
+              >
               <CalendarClock size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
               Fixed Expenses
             </button>
@@ -4147,16 +4151,16 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               type="button"
               data-tour="nav-add"
               className={`btn-teal header-tab-btn ${inputTab === 'expense' ? 'header-tab-btn-active' : ''}`}
-              onClick={() => { setInputTab('expense'); scrollToFrameA(); }}
-            >
+              onClick={() => { setActivePanel(null); setInputTab('expense'); scrollToFrameA(); }}
+              >
               <ShoppingCart size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
               Regular Expenses
             </button>
             <button
               type="button"
               className={`btn-teal header-tab-btn ${inputTab === 'savings' ? 'header-tab-btn-active' : ''}`}
-              onClick={() => { setInputTab('savings'); scrollToFrameA(); }}
-            >
+              onClick={() => { setActivePanel(null); setInputTab('savings'); scrollToFrameA(); }}
+              >
               <PiggyBank size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
               Savings
             </button>
