@@ -6422,7 +6422,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             );
           })()}
         </div>
-        <div style={(activePanel === 'report' || activePanel === 'help') ? { gridColumn: '1 / -1' } : undefined}>        
+                <div style={(activePanel === 'report' || activePanel === 'help' || activePanel === 'settings') ? { gridColumn: '1 / -1' } : undefined}>
           {/* This narrow chart/AI column only shows for the normal
               data-entry tabs now (inputTab truthy) -- Home has its own
               full-width, bigger version of the same three cards further
@@ -6527,7 +6527,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           })()}
 
           {activePanel === 'report' && (
-                  <div className="panel" ref={panelRef} style={{ maxWidth: 460, margin: '0 auto' }}>
+ <div className="panel" ref={panelRef} style={{ maxWidth: 460, marginBottom: 24 }}>
             {/* "Report" itself renders as a page-level centered title (see
                 the !inputTab block near the month nav) instead of cramped
                 inside this narrow content-grid column. */}
