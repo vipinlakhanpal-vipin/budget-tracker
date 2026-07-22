@@ -1830,7 +1830,7 @@ row. */
 }
 .chat-fab-badge-below { top: 100%; margin-top: 4px; font-size: 11px; }
 .chat-window {
-  position: absolute; top: calc(100% + 8px); right: 0; z-index: 43;
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 200;
   width: 340px; max-width: min(85vw, 340px); height: 440px; max-height: 65vh;
   background: var(--card); border: 1px solid var(--border); border-radius: 16px;
   box-shadow: 0 10px 30px rgba(15, 42, 46, .18);
