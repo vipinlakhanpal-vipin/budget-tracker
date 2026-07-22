@@ -1544,6 +1544,10 @@ td.amount { font-weight: 600; text-align: right; }
        Settings/Help (.tab-hide-mobile hides Settings/Help from this row,
        since they moved to the bottom bar). */
     .header-tab-btn { display: none; }
+/* Keep the date+version+username block pinned to the right edge even
+            if the header row wraps to two lines on a narrow phone -- margin-left:
+            auto pushes it to the far right of whichever line it ends up on. */
+          .corner-badge-group { margin-left: auto; }
     .tab-visible-mobile { display: inline-block; }
     .tab-hide-mobile { display: none; }
   h1 { font-size: 19px; }
@@ -1589,7 +1593,7 @@ instead of overflowing at the unconditional 35px desktop size. */
   input[type="date"], .field input[type="date"] {
     font-size: 15px; min-width: 0; width: 100%;
   }
-  .btn { width: 100%; padding: 11px 16px; font-size: 15px; }
+    .btn { padding: 11px 18px; font-size: 15px; }
 }
 
 /* Responsive "card" tables: below 720px, each row becomes a bordered card
@@ -1785,8 +1789,7 @@ instead of overflowing at the unconditional 35px desktop size. */
      and profile's dropdowns do. */
   .chat-window {
     width: auto; max-width: min(90vw, 340px);
-        left: 0; right: auto;
-    max-height: 60vh;
+                  max-height: 60vh;
   }
 }
 /* AI feature #4: chat assistant, now a fixed icon button living in the
@@ -1800,16 +1803,6 @@ instead of overflowing at the unconditional 35px desktop size. */
    the row's default 8px flex-gap read as too tight per explicit feedback
    ("create a more space betwee reminder icon and chat BoT"). */
 .chat-fab-wrap-spaced { margin-left: 14px; }
-@media (max-width: 640px) {
-/* Mobile only: the chat button leaves the header row entirely and
-anchors below the logo, top-left, instead of next to the bell -- its
-label used to collide with the header tabs when that row wrapped to
-two lines on narrow screens. Desktop keeps the original in-flow
-placement untouched -- this rule only exists inside this media
-query. */
-.chat-fab-wrap-spaced { margin-left: 0; }
-.chat-fab-wrap { position: fixed; top: 78px; left: 14px; z-index: 40; }
-}
 /* Filled purple color combo, per explicit correction (the original floating
    chat bubble was purple, not the sky-blue this was first restored to) --
    same purple as the "Expense Management" title (--chat-accent) so it reads
@@ -1817,8 +1810,8 @@ query. */
    elsewhere in the row. */
 .chat-fab-btn {
   position: relative; display: inline-flex; align-items: center; justify-content: center;
-  background: var(--chat-accent); color: #fff; border: none;
-  border-radius: 17px; min-width: 34px; height: 34px; padding: 0 10px; cursor: pointer;
+            background: linear-gradient(135deg, #7c3aed, #a855f7 55%, #ec4899); color: #fff; border: none;
+            border-radius: 50%; width: 34px; height: 34px; padding: 0; cursor: pointer;
   box-shadow: 0 4px 14px rgba(124, 58, 237, .4);
 }
 .chat-fab-btn:hover { filter: brightness(1.08); }

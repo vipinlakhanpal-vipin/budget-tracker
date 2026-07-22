@@ -12,7 +12,7 @@ import AdminConsole from './AdminConsole.jsx';
 import { formatVersionBadge } from '../version.js';
 import {
   Home, Plus, FileText, Users as UsersIcon, Settings as SettingsIcon,
-  Pencil, Trash2, X, ChevronLeft, ChevronRight, ChevronDown, Camera, MessageCircle, Sparkles, User,
+  Pencil, Trash2, X, ChevronLeft, ChevronRight, ChevronDown, Camera, MessageCircle, Bot, Sparkles, User,
   Palette, Check, StickyNote, Paperclip, ExternalLink, Mail, Lightbulb,
   Wallet, CalendarClock, ShoppingCart, PiggyBank, HelpCircle, Filter,
 } from 'lucide-react';
@@ -4329,7 +4329,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                         title={chatOpen ? 'Close chat' : 'Aria -- your AI budget assistant'}
                 onClick={() => setChatOpen((o) => !o)}
               >
-                {chatOpen ? <X size={18} /> : <MessageCircle size={18} />}
+                          {chatOpen ? <X size={18} /> : <Bot size={18} strokeWidth={2.2} />}
               </button>
               {!chatOpen && (
                 <>
@@ -6059,12 +6059,13 @@ I can help you track expenses, understand spending patterns, create budgets, and
           </div>
           )}
 
-          {/* Hidden entirely in Home mode (inputTab null) -- per explicit
-              request, Home should show nothing but the dashboard itself
-              plus its own big chart/AI explore section further down, not
-              this always-on transaction list. */}
-          {inputTab && (
-          <div className="panel">
+          {/* Now shown only while the Regular Expenses tab itself is active --
+            per explicit request, each tab (Income/Fixed/Regular/Savings)
+            should show only its own list instead of this one staying
+            visible underneath every other tab, which read as cluttered
+            and confusing once the tabs looked mutually exclusive. */}
+          {inputTab === 'expense' && (
+                    <div className="panel">
             {/* Renamed from the generic "Expenses this month" -- the month
                 shown here always follows currentMonth (the same </> month-
                 nav state driving the whole dashboard), so it stays correct
