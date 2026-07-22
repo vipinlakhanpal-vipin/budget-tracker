@@ -51,7 +51,7 @@
   --accent-active: #166534;
 }
 * { box-sizing: border-box; }
-html {
+html { overflow-x: hidden;
   /* One consistent type family everywhere, Nunito Light as the base weight
      for a soft, uniform, "designed as one piece" feel. Buttons, headings,
      and labels still use heavier Nunito weights (600/700) where emphasis
@@ -61,7 +61,7 @@ html {
      instead of one single font-size for all text. */
   font-family: 'Nunito', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
-body {
+body { overflow-x: hidden; max-width: 100vw;
   margin: 0; font-family: inherit; font-weight: 300;
   background: var(--bg); color: var(--text);
 }
@@ -595,7 +595,7 @@ button, input, select, textarea { font-family: inherit; }
   cursor: pointer; display: inline-flex; align-items: center;
 }
 
-.wrap { max-width: 1520px; margin: 0 auto; padding: 24px; }
+.wrap { max-width: 1520px; margin: 0 auto; padding: 24px; overflow-x: hidden; }
 /* Frozen to the top of the viewport while the page scrolls -- now wraps the
    ENTIRE "dashboard frame" (title/logo, the merged tab+action row, month
    nav, and both summary-card rows), not just the title bar, so all of it
@@ -606,7 +606,7 @@ button, input, select, textarea { font-family: inherit; }
    as the page scrolls, so no extra margin trick is needed for that. */
 .sticky-dashboard-frame {
   position: sticky; top: 0; z-index: 60;
-  background: var(--bg);
+  background: var(--bg); overflow-x: hidden;
   padding-bottom: 4px;
 }
 .top-bar {
