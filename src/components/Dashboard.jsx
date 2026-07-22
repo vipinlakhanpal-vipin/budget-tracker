@@ -1580,13 +1580,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   }, [expenseFilterOpen]);
   const expenseFilterActive = !!(expenseFilter.category || expenseFilter.payment || expenseFilter.bank);
   const filteredMonthExpenses = useMemo(() => {
-    return monthExpenses.filter((e) => {
+    return rangeExpenses.filter((e) => {
       if (expenseFilter.category && e.category_id !== expenseFilter.category) return false;
       if (expenseFilter.payment && (e.payment_source || 'Cash') !== expenseFilter.payment) return false;
       if (expenseFilter.bank && (e.payment_bank || '') !== expenseFilter.bank) return false;
       return true;
     });
-  }, [monthExpenses, expenseFilter]);
+  }, [rangeExpenses, expenseFilter]);
 
   const [recurringFilter, setRecurringFilter] = useState({ category: '', payment: '', bank: '' });
   const [recurringFilterOpen, setRecurringFilterOpen] = useState(false);
