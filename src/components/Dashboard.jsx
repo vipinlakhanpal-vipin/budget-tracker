@@ -4088,17 +4088,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             )}
           </div>
           <div className="corner-badge-group">
-            <span className="corner-version-badge" title="This updates automatically -- if a change doesn't look right, reload the page.">
-              {formatVersionBadge()}
-            </span>
-            {/* Signed-in user's own display name, shown under the date+version
-                badge per explicit request -- reuses displayNameForEmail (same
-                household_members.name lookup already used for the "By"
-                column) rather than the raw email, so it reads "Vipin" not
-                "vipinlakhanpal". */}
-            <span className="corner-username-badge">{displayNameForEmail(session.user.email)}</span>
-          </div>
-        </div>
+                    {/* Signed-in user's own display name now shown ABOVE the
+            date+version badge, both still right-aligned -- per
+            explicit request to swap their order. */}
+        <span className="corner-username-badge">{displayNameForEmail(session.user.email)}</span>
+        <span className="corner-version-badge" title="This updates automatically -- if a change doesn't look right, reload the page.">
+          {formatVersionBadge()}
+                </span></div>
           {/* Left-aligned, single row: the 4 data-entry tabs first, then the
               teal panel-toggle buttons, then the Profile icon, then the
               bell last -- all one flowing group instead of two separate
@@ -5191,7 +5187,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   />
                 </div>
               </div>
-              <div className="field" style={{ flex: '0 1 150px', minWidth: 140 }}>
+                      <div className="field">
                 <label>Start date</label>
                 <input
                   type="date"
@@ -5199,7 +5195,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   onChange={(e) => setNewRecurring({ ...newRecurring, startDate: e.target.value })}
                 />
               </div>
-              <div className="field" style={{ flex: '0 1 150px', minWidth: 140 }}>
+                      <div className="field">
                 <label>End date (optional)</label>
                 <input
                   type="date"

@@ -1532,7 +1532,7 @@ td.amount { font-weight: 600; text-align: right; }
 .cat-budget-row .amount-field-wrap { flex: 0 0 auto; }
 
 @media (max-width: 640px) {
-  .wrap { padding: 14px; }
+    .wrap { padding: 14px 8px 14px 12px; }
   .top-bar .btn.secondary.small { align-self: flex-start; }
   .action-row-teal { width: 100%; }
   .btn-teal { flex: 1 1 auto; text-align: center; }
@@ -1554,7 +1554,7 @@ td.amount { font-weight: 600; text-align: right; }
 /* Mobile: shrink the editable app-title input/h1 so "Expense
 Management" (or whatever it's renamed to) fits the narrow header
 instead of overflowing at the unconditional 35px desktop size. */
-.app-title-purple { font-size: 21px; }
+  .app-title-purple { font-size: 27px; }
   .month-nav { gap: 8px; margin: 12px 0 16px; }
   .month-nav .label { min-width: 0; flex: 1; font-size: 14px; }
   /* The "6 cell dashboard" -- instead of 6 full-width cards stacked one
