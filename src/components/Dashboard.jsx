@@ -4095,6 +4095,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
         <span className="corner-version-badge" title="This updates automatically -- if a change doesn't look right, reload the page.">
           {formatVersionBadge()}
                 </span></div>
+      </div>
           {/* Left-aligned, single row: the 4 data-entry tabs first, then the
               teal panel-toggle buttons, then the Profile icon, then the
               bell last -- all one flowing group instead of two separate
