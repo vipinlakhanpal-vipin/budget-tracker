@@ -4325,29 +4325,21 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             <div className="chat-fab-wrap chat-fab-wrap-spaced" ref={chatMenuRef}>
               <button
                 type="button"
-                className="chat-fab-btn"
-                title={chatOpen ? 'Close chat' : 'Chat BoT -- Ask about your budget (AI powered)'}
+                                  className="chat-fab-btn"
+                        title={chatOpen ? 'Close chat' : 'Aria -- your AI budget assistant'}
                 onClick={() => setChatOpen((o) => !o)}
               >
                 {chatOpen ? <X size={18} /> : <MessageCircle size={18} />}
               </button>
               {!chatOpen && (
                 <>
-                  {/* "AI powered" sits above the icon, "Chat BoT" below --
-                      both centered on the button itself, per explicit
-                      request (previously both lines were stacked below and
-                      right-aligned to the button). */}
-                  <span className="chat-fab-badge-sub chat-fab-badge-above">
-                    <Sparkles size={11} className="ai-tag-sparkle" strokeWidth={2.25} />
-                    AI powered
-                  </span>
-                  <span className="chat-fab-badge-title chat-fab-badge-below">Chat BoT</span>
+            <span className="chat-fab-badge-title chat-fab-badge-below">Aria</span>
                 </>
               )}
               {chatOpen && (
                 <div className="chat-window">
                   <div className="chat-header">
-                    <span>Ask me About Budget &amp; Expenses / Suggestions <AiTag /></span>
+                              <span>Ask Aria about your budget &amp; expenses <AiTag /></span>
                     <div className="chat-header-actions">
                       {/* Chat history is now saved (see chat_messages table)
                           and shared by the whole household, so this is the
@@ -4365,7 +4357,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   <div className="chat-messages" ref={chatMessagesRef}>
                     {chatMessages.length === 0 && (
                       <div className="chat-empty">
-                        Ask about any tab -- Income, Fixed Expenses, Regular Expenses, Savings, or how a feature works -- and ask for suggestions too, e.g. "how much did I spend on dining this month?", "how do fixed expenses work?", or "any suggestions to lower my spending?". I can only see the numbers already in your household's data, nothing outside it. Your conversation here is saved automatically, shared by everyone in the household, so you can close this and pick up right where you left off.
+                        <div className="chat-empty-greeting">Hi, I'm Aria 👋</div>
+I can help you track expenses, understand spending patterns, create budgets, and make smarter financial decisions including your saving plans.
                       </div>
                     )}
                     {chatMessages.map((m, i) => (
@@ -6470,7 +6463,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               { key: 'chart', title: 'Spending by category chart', body: <>Toggle between Pie, Bar, Pareto, and Treemap. The Pie groups smaller categories into "Other" to stay readable; Bar and Treemap show every category individually. The totals cards above show your combined income, combined expenses (split into Regular, Fixed, and Savings), and what's left of your budget and income after all three are accounted for.</> },
               { key: 'insights', title: 'AI Insights', body: <>Tap Generate below the chart for a short AI-written summary of the month you're viewing (spending patterns, whether you're over budget, and a couple of concrete suggestions). It only runs when you tap the button -- never automatically -- and Refresh regenerates it if your numbers have changed.</> },
               { key: 'coach', title: 'Budget Coach', body: <>Unlike AI Insights (one month at a time), Coach looks across your last 6 months for patterns: a category that keeps going over budget, spending trending up or down, or a savings goal that no longer looks realistic. It only ever writes out suggestions -- it never changes your Settings for you.</> },
-              { key: 'chatbot', title: 'Chat BoT', body: <>The round chat bubble in the corner (drag it anywhere on screen) answers questions about your household's own numbers across every tab -- Income, Fixed Expenses, Savings, one-off spending, and who's in the household -- and can also answer "how do I..." questions about the app itself and give suggestions when asked. It can only see the data already in the app -- nothing outside it.</> },
+                        { key: 'chatbot', title: 'Aria', body: <>Aria is the purple chat button below the logo (on phones) or next to the bell (on desktop). Ask it about your spending, budgets, or how any feature works.</> },
               { key: 'report', title: 'Report', body: <>Generate a PDF for any date range, then view it on screen, download it, or email it. Each topic gets its own page -- Income, Expenses, Fixed Expenses, Savings, Spend Analysis (Pareto chart), and Recommendations -- except the Category Breakdown bar chart and the Summary table, which share one page by default and only split onto two once the chart itself grows long enough to need the room. Every table also auto-shrinks its text to try to fit on one page first, and only flows onto a second page if the list is too long even at a readable size. The last page closes with a data & privacy note.</> },
               { key: 'settings', title: 'Settings', body: <>Has its own sub-tabs. Currency covers your household's chosen currency (renaming the app/household name itself happens right in the header now -- click the title next to the logo, owners only). Smart Budget always follows whichever month you're viewing on the dashboard (change the Month field there to set or review a different month instead) and covers your overall monthly cap for that month, plus an optional "Budget for Per Category" section below it and how this month's spending compares to those caps (you'll get a notification in the bell icon if you go over). Add Category adds, renames, or removes categories. Users (owners only) covers household members and invites -- see below. Admin Console (owners only) covers members and invites. Every field auto-saves as you edit -- there's no Save button to click.</> },
               { key: 'notifications', title: 'Notifications', body: <>The bell icon next to Help (top-right) replaces the old always-on red banners. It shows a count of unread items -- over-total-budget, over a category's budget, or a bill due soon -- and opening it lists them and marks them read.</> },

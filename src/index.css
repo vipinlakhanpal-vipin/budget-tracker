@@ -716,9 +716,13 @@ button, input, select, textarea { font-family: inherit; }
    "Add" bottom sheet -- desktop uses the new header-tab-btn buttons in the
    sticky frame instead, so showing this one too would just duplicate the
    same 4 buttons twice. */
-@media (min-width: 641px) {
-  .data-entry-tabs { display: none; }
-}
+/* Hidden everywhere by default -- desktop uses the header-tab-btn
+switcher instead, and on mobile this exact same element doubles as
+the tab switcher inside the "+Add" bottom sheet (see .mobile-add-sheet
+override below), so it only needs to reappear there instead of also
+sitting duplicated under the summary cards. */
+.data-entry-tabs { display: none; }
+.mobile-add-sheet .data-entry-tabs { display: flex; }
 /* The merged row: Income/Fixed Expenses/Add an expense/Savings tabs, then
    Help/Report/Settings/Users, then the Profile icon, then the bell last --
    all left-aligned as one flowing group (replaces the old right-aligned
@@ -1543,6 +1547,10 @@ td.amount { font-weight: 600; text-align: right; }
     .tab-visible-mobile { display: inline-block; }
     .tab-hide-mobile { display: none; }
   h1 { font-size: 19px; }
+/* Mobile: shrink the editable app-title input/h1 so "Expense
+Management" (or whatever it's renamed to) fits the narrow header
+instead of overflowing at the unconditional 35px desktop size. */
+.app-title-purple { font-size: 21px; }
   .month-nav { gap: 8px; margin: 12px 0 16px; }
   .month-nav .label { min-width: 0; flex: 1; font-size: 14px; }
   /* The "6 cell dashboard" -- instead of 6 full-width cards stacked one
@@ -1777,10 +1785,10 @@ td.amount { font-weight: 600; text-align: right; }
      and profile's dropdowns do. */
   .chat-window {
     width: auto; max-width: min(90vw, 340px);
+        left: 0; right: auto;
     max-height: 60vh;
   }
 }
-
 /* AI feature #4: chat assistant, now a fixed icon button living in the
    header right next to the notification bell -- same relative-wrapper +
    absolutely-positioned-dropdown pattern as .notif-bell-wrap and
@@ -1792,6 +1800,16 @@ td.amount { font-weight: 600; text-align: right; }
    the row's default 8px flex-gap read as too tight per explicit feedback
    ("create a more space betwee reminder icon and chat BoT"). */
 .chat-fab-wrap-spaced { margin-left: 14px; }
+@media (max-width: 640px) {
+/* Mobile only: the chat button leaves the header row entirely and
+anchors below the logo, top-left, instead of next to the bell -- its
+label used to collide with the header tabs when that row wrapped to
+two lines on narrow screens. Desktop keeps the original in-flow
+placement untouched -- this rule only exists inside this media
+query. */
+.chat-fab-wrap-spaced { margin-left: 0; }
+.chat-fab-wrap { position: fixed; top: 78px; left: 14px; z-index: 40; }
+}
 /* Filled purple color combo, per explicit correction (the original floating
    chat bubble was purple, not the sky-blue this was first restored to) --
    same purple as the "Expense Management" title (--chat-accent) so it reads
@@ -1800,24 +1818,22 @@ td.amount { font-weight: 600; text-align: right; }
 .chat-fab-btn {
   position: relative; display: inline-flex; align-items: center; justify-content: center;
   background: var(--chat-accent); color: #fff; border: none;
-  border-radius: 8px; width: 34px; height: 34px; padding: 0; cursor: pointer;
+  border-radius: 17px; min-width: 34px; height: 34px; padding: 0 10px; cursor: pointer;
   box-shadow: 0 4px 14px rgba(124, 58, 237, .4);
 }
 .chat-fab-btn:hover { filter: brightness(1.08); }
-/* "AI powered" above the button and "Chat BoT" below it, both centered on
-   the button itself (not right-aligned/stacked together the way the old
-   floating bubble's caption was) -- per explicit request. Absolutely
-   positioned so neither adds height to the header row, and both hidden
-   once the chat window is open (its own header already carries an
-   AI-powered tag then). */
-.chat-fab-badge-title, .chat-fab-badge-sub {
+.chat-fab-monogram { font-size: 13px; font-weight: 800; letter-spacing: .2px; line-height: 1; }
+/* "Aria" sits below the icon, centered on the button itself, and
+hides once the chat window is open (its own header already carries
+the name). Absolutely positioned so it adds no height to the header
+row. */
+.chat-fab-badge-title {
   position: absolute; left: 50%; transform: translateX(-50%); z-index: 41;
   color: var(--chat-accent); background: none;
   font-weight: 800; letter-spacing: .2px;
   text-shadow: 0 1px 3px rgba(255, 255, 255, .9), 0 0 8px rgba(255, 255, 255, .7);
   pointer-events: none; white-space: nowrap;
 }
-.chat-fab-badge-above { bottom: 100%; margin-bottom: 4px; display: inline-flex; align-items: center; gap: 3px; font-size: 10px; }
 .chat-fab-badge-below { top: 100%; margin-top: 4px; font-size: 11px; }
 .chat-window {
   position: absolute; top: calc(100% + 8px); right: 0; z-index: 43;
@@ -1835,6 +1851,7 @@ td.amount { font-weight: 600; text-align: right; }
 .chat-header button { background: none; border: none; cursor: pointer; color: var(--muted); display: flex; }
 .chat-messages { flex: 1; overflow-y: auto; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
 .chat-empty { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+.chat-empty-greeting { font-weight: 800; color: var(--text); margin-bottom: 6px; display: block; font-size: 13.5px; }
 .chat-bubble {
   max-width: 82%; padding: 8px 12px; border-radius: 14px; font-size: 13px; line-height: 1.45;
   white-space: pre-line;
