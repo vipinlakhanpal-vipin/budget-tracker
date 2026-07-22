@@ -6488,11 +6488,11 @@ I can help you track expenses, understand spending patterns, create budgets, and
               >
                 Take the tour again
               </button>
-                                  <div className="help-accordion" style={{ display: 'flex', flexFlow: 'row wrap', gap: '8px 32px' }}>
+                                  <div className="help-accordion" style={{ display: 'flex', flexDirection: 'column', gap: '8px 32px' }}>
                 {helpTopics.map((t) => {
                   const open = helpOpenTopic === t.key;
                   return (
-                                            <div key={t.key} className="help-accordion-item" style={{ flex: '0 0 calc(50% - 16px)' }}>
+                                            <div key={t.key} className="help-accordion-item" style={{ flex: '1 1 100%' }}>
                       <button
                         type="button"
                         className="help-accordion-title"
