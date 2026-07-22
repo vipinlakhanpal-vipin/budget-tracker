@@ -4134,7 +4134,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             </button>
             <button
               type="button"
-              className={`btn-teal header-tab-btn ${inputTab === 'income' ? 'header-tab-btn-active' : ''}`}
+              className={`btn-teal header-tab-btn tab-visible-mobile ${inputTab === 'income' ? 'header-tab-btn-active' : ''}`}
               onClick={() => { setActivePanel(null); setInputTab('income'); scrollToFrameA(); }}
               >
               <Wallet size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
@@ -4142,7 +4142,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             </button>
             <button
               type="button"
-              className={`btn-teal header-tab-btn ${inputTab === 'fixed' ? 'header-tab-btn-active' : ''}`}
+              className={`btn-teal header-tab-btn tab-visible-mobile ${inputTab === 'fixed' ? 'header-tab-btn-active' : ''}`}
               onClick={() => { setActivePanel(null); setInputTab('fixed'); scrollToFrameA(); }}
               >
               <CalendarClock size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
@@ -4151,7 +4151,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             <button
               type="button"
               data-tour="nav-add"
-              className={`btn-teal header-tab-btn ${inputTab === 'expense' ? 'header-tab-btn-active' : ''}`}
+              className={`btn-teal header-tab-btn tab-visible-mobile ${inputTab === 'expense' ? 'header-tab-btn-active' : ''}`}
               onClick={() => { setActivePanel(null); setInputTab('expense'); scrollToFrameA(); }}
               >
               <ShoppingCart size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
@@ -4159,7 +4159,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
             </button>
             <button
               type="button"
-              className={`btn-teal header-tab-btn ${inputTab === 'savings' ? 'header-tab-btn-active' : ''}`}
+              className={`btn-teal header-tab-btn tab-visible-mobile ${inputTab === 'savings' ? 'header-tab-btn-active' : ''}`}
               onClick={() => { setActivePanel(null); setInputTab('savings'); scrollToFrameA(); }}
               >
               <PiggyBank size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
@@ -4178,14 +4178,14 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <FileText size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
               Report
             </button>
-            <button className="btn-teal" data-tour="nav-settings" onClick={() => togglePanel('settings')}>
+            <button className="btn-teal tab-hide-mobile" data-tour="nav-settings" onClick={() => togglePanel('settings')}>
               <SettingsIcon size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
               Settings
             </button>
             {/* Standalone "Users" button removed from this row -- Users
                 management now lives under Settings > Users instead, so
                 there's one way to reach it, not two. */}
-            <button className="btn-teal" data-tour="nav-help" onClick={() => togglePanel('help')}>
+            <button className="btn-teal tab-hide-mobile" data-tour="nav-help" onClick={() => togglePanel('help')}>
               <HelpCircle size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
               Help
             </button>
@@ -6982,9 +6982,9 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
           <Plus size={20} strokeWidth={2.2} />
           <span>Add</span>
         </button>
-        <button className={activePanel === 'report' ? 'active' : ''} onClick={() => togglePanel('report')}>
-          <FileText size={20} strokeWidth={2.2} />
-          <span>Report</span>
+        <button data-tour="nav-help" className={activePanel === 'help' ? 'active' : ''} onClick={() => togglePanel('help')}>
+          <HelpCircle size={20} strokeWidth={2.2} />
+          <span>Help</span>
         </button>
         {/* Users button removed from here too -- reach it via Settings >
             Users now, same as desktop. */}

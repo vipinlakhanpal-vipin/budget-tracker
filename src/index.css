@@ -1532,11 +1532,16 @@ td.amount { font-weight: 600; text-align: right; }
   .top-bar .btn.secondary.small { align-self: flex-start; }
   .action-row-teal { width: 100%; }
   .btn-teal { flex: 1 1 auto; text-align: center; }
-  /* The 4 data-entry tabs stay out of the header on phones -- the bottom
-     nav's "+" button and its own bottom-sheet tab switcher already cover
-     that job there, so showing both would just be two ways to do the same
-     thing in a much smaller space. */
-  .header-tab-btn { display: none; }
+    /* Dashboard/Home stays out of the header on phones -- the bottom nav's
+       Home button already covers that job. Income/Fixed/Regular/Savings
+       (.tab-visible-mobile) and Report now DO show up here per the mobile
+       nav spec: top row carries Income/Fixed/Regular/Savings/Report/Theme/
+       Profile/Reminder/Chat BoT; the bottom bar carries Dashboard/Add/
+       Settings/Help (.tab-hide-mobile hides Settings/Help from this row,
+       since they moved to the bottom bar). */
+    .header-tab-btn { display: none; }
+    .tab-visible-mobile { display: inline-block; }
+    .tab-hide-mobile { display: none; }
   h1 { font-size: 19px; }
   .month-nav { gap: 8px; margin: 12px 0 16px; }
   .month-nav .label { min-width: 0; flex: 1; font-size: 14px; }
