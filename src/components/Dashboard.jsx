@@ -4384,8 +4384,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   <div className="chat-messages" ref={chatMessagesRef}>
                     {chatMessages.length === 0 && (
                       <div className="chat-empty">
-                        <div className="chat-empty-greeting">Hello {displayNameForEmail(session.user.email)}, I'm Aria. Car loan EMI
-How can I help? </div>
+                        <div className="chat-empty-greeting">Hello {displayNameForEmail(session.user.email)}, I'm Aria. How can I help today? </div>
 I can help you track expenses, understand spending patterns, create budgets, and make smarter financial decisions including your saving plans.
                       </div>
                     )}
@@ -5666,7 +5665,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                       </div>
                     )}
                     <div className="field" style={{ marginBottom: 10 }}>
-                      <label>Name</label>
+                      <label>Description</label>
                       <input
                         type="text"
                         value={recurringDrafts[r.id]?.name ?? ''}
@@ -5785,7 +5784,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             <form onSubmit={handleAddSaving}>
             <div className="row">
               <div className="field" style={{ flex: 1.4 }}>
-                <label>Name</label>
+                <label>Description</label>
                 <input
                   type="text"
                   placeholder="e.g. Emergency fund"
@@ -6046,7 +6045,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                       </div>
                     )}
                     <div className="field" style={{ marginBottom: 10 }}>
-                      <label>Name</label>
+                      <label>Description</label>
                       <input
                         type="text"
                         value={savingsDrafts[s.id]?.name ?? ''}
