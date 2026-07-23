@@ -4596,15 +4596,6 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   onBlur={(e) => suggestCategoryFromDescription(e.target.value)}
                 />
               </div>
-              <div className="field">
-                <label>Category <AiTag /></label>
-                <select value={form.categoryId} onChange={(e) => { setForm({ ...form, categoryId: e.target.value }); setAiCategoryHint(''); }}>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-                {aiCategoryHint && <div className="ai-hint">{aiCategoryHint}</div>}
-              </div>
               <div className="field" style={{ flex: '0 0 auto' }}>
                 {/* Was flex:'0 1 140px'/minWidth:120 -- same leftover width
                     reservation fixed on Income's Amount field. Sizing to
@@ -4624,7 +4615,16 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   />
                 </div>
               </div>
-            </div>
+              <div className="field">
+                <label>Category <AiTag /></label>
+                <select value={form.categoryId} onChange={(e) => { setForm({ ...form, categoryId: e.target.value }); setAiCategoryHint(''); }}>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+                {aiCategoryHint && <div className="ai-hint">{aiCategoryHint}</div>}
+              </div>
+          </div>
             {/* Payment source sits on its own row, below the main fields --
                 keeping it out of the first row avoids cramming a 5th/6th
                 field into a row already tight on width (the exact pattern
