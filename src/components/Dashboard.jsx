@@ -4353,7 +4353,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               <button
                 type="button"
                                   className="chat-fab-btn"
-                        title={chatOpen ? 'Close chat' : 'Aria -- your AI budget assistant'}
+                        title={chatOpen ? 'Close chat' : 'Aria - Your AI Assistant'}
                 onClick={() => setChatOpen((o) => !o)}
               >
                           {chatOpen ? <X size={18} /> : <Bot size={18} strokeWidth={2.2} />}
@@ -4366,7 +4366,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
               {chatOpen && (
                 <div className="chat-window">
                   <div className="chat-header">
-                              <span>Ask Aria about your budget &amp; expenses <AiTag /></span>
+                              <span>Ask Aria about your Expenses, Budgets and Savings <AiTag /></span>
                     <div className="chat-header-actions">
                       {/* Chat history is now saved (see chat_messages table)
                           and shared by the whole household, so this is the
@@ -4384,7 +4384,8 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
                   <div className="chat-messages" ref={chatMessagesRef}>
                     {chatMessages.length === 0 && (
                       <div className="chat-empty">
-                        <div className="chat-empty-greeting">Hi, I'm Aria 👋</div>
+                        <div className="chat-empty-greeting">Hello {displayNameForEmail(session.user.email)}, I'm Aria. Car loan EMI
+How can I help? </div>
 I can help you track expenses, understand spending patterns, create budgets, and make smarter financial decisions including your saving plans.
                       </div>
                     )}
@@ -5180,7 +5181,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 based on which fields happen to land on line 2. */}
             <div className="row">
               <div className="field" style={{ flex: '1.2 1 180px', minWidth: 160 }}>
-                <label>Name</label>
+<label>Description</label>
                 <input
                   type="text"
                   placeholder="e.g. Car loan EMI"
@@ -6482,6 +6483,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             // how clicking Home/Regular Expenses/etc. in the header itself
             // jumps straight to that one thing.
             const helpTopics = [
+{ key: 'updates', title: "What's New", body: <>Latest updates (Jul 23, 2026): Fixed Expenses now suggests a Category automatically as you type the Description (just like Regular Expenses). Amount/month now comes before Category in Fixed Expenses to match Regular Expenses' layout. The Fixed Expenses "Name" field is now called "Description" for consistency. Aria's greeting is now personalized and her chat window position was fixed so it no longer gets hidden behind the page. Hovering the Aria icon now shows "Aria - Your AI Assistant".</> },
               { key: 'home', title: 'Dashboard', body: <>Shows just the dashboard (summary cards and totals), nothing else. Below it, a bigger "Explore" section holds the same Spending by category chart (Pie/Bar/Pareto/Treemap), AI Insights, and Budget Coach, sized larger so there's more room to look through them. Clicking Income, Fixed Expenses, Regular Expenses, Savings, Report, Settings, or Help scrolls back up to the top and switches to that tab as usual.</> },
               { key: 'regular', title: 'Regular Expenses', body: <>Log one-off spending (groceries, dining, shopping). Pick the date, category, a short description, and the amount, then Add. It appears under "Expenses this month" and is always editable there -- just type into a field and it saves. The note icon (<StickyNote size={11} style={{ verticalAlign: -2 }} />) next to Amount opens a spot for a longer free-text description, and the paperclip (<Paperclip size={11} style={{ verticalAlign: -2 }} />) lets you attach one photo or PDF (5MB max) -- a receipt, warranty, or anything else worth keeping with that expense. Both are optional. Once saved, a small icon appears next to the entry if it has a note or attachment -- click it to read the note or open the file.</> },
               { key: 'scan', title: 'Scan a receipt', body: <>Below the Regular Expenses form, upload a photo of a receipt (or a screenshot/sheet listing several expenses) and Claude will read it for you. You'll see an editable review list first -- fix anything that looks wrong, untick what you don't want, then add only what you confirm. Nothing is saved automatically.</> },

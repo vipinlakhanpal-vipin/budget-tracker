@@ -606,7 +606,7 @@ button, input, select, textarea { font-family: inherit; }
    as the page scrolls, so no extra margin trick is needed for that. */
 .sticky-dashboard-frame {
   position: sticky; top: 0; z-index: 60;
-  background: var(--bg); overflow-x: hidden;
+  background: var(--bg); overflow-x: clip; overflow-y: visible;
   padding-bottom: 4px;
 }
 .top-bar {
