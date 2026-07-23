@@ -4446,6 +4446,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
       {activePanel === 'settings' && <h2 className="page-title-themed">Settings</h2>}
       {activePanel === 'help' && <h2 className="page-title-themed">Help</h2>}
 
+{inputTab !== 'income' && inputTab !== 'savings' && (
       <div className="month-nav">
         <button onClick={() => setCurrentMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))}>&lsaquo;</button>
         <div className="label">{monthLabel(currentMonth)}</div>
@@ -4508,7 +4509,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
         </div>
         )}
       </div>
-
+)}
       <div className="grid">
         <div className="card card-budget"><div className="k">Monthly Budget</div><div className="v"><Amt value={totalBudget} /></div></div>
         <div className={`card card-spent ${totalBudget > 0 && combinedOutflow > totalBudget ? 'over' : ''}`}>
@@ -6551,12 +6552,13 @@ I can help you track expenses, understand spending patterns, create budgets, and
           })()}
 
           {activePanel === 'report' && (
- <div className="panel" ref={panelRef} style={{ maxWidth: 460, marginBottom: 24 }}>
+ <div className="panel" ref={panelRef} style={{ maxWidth: 900, marginBottom: 24 }}>
             {/* "Report" itself renders as a page-level centered title (see
                 the !inputTab block near the month nav) instead of cramped
                 inside this narrow content-grid column. */}
             <div className="muted-small" style={{ marginBottom: 12 }}>
               Generate a PDF for a date range, then view it on screen, download it, or email it. Category Breakdown and Summary share a page unless the chart runs long; Income, Expenses, Fixed Expenses, Savings, Spend Analysis, and Recommendations each get their own dedicated page. Tables auto-shrink to try to fit one page before flowing onto a second.
+<br /><br /><strong>What's New</strong> (Jul 23, 2026): Fixed Expenses now suggests a Category automatically as you type the Description, just like Regular Expenses, and Amount/month now comes before Category to match. The Fixed Expenses and Savings "Name" fields are now called "Description" for consistency. Aria's greeting is personalized and her chat window no longer gets hidden behind the page. Hovering the Aria icon now shows "Aria - Your AI Assistant".
             </div>
             <div className="row" style={{ marginBottom: 12 }}>
               <div className="field">
