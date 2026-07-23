@@ -5189,18 +5189,6 @@ I can help you track expenses, understand spending patterns, create budgets, and
                                       onBlur={(e) => suggestFixedCategoryFromDescription(e.target.value)}
                 />
               </div>
-              <div className="field" style={{ flex: '1.3 1 190px', minWidth: 170 }}>
-                                <label>Category <AiTag /></label>
-                <select
-                  value={newRecurring.categoryId}
-                  onChange={(e) => setNewRecurring({ ...newRecurring, categoryId: e.target.value })}
-                >
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-))}
-</select>
-      {fixedAiCategoryHint && <div className="ai-hint">{fixedAiCategoryHint}</div>}
-              </div>
               <div className="field" style={{ flex: '0 0 auto' }}>
                 {/* Was flex:'0 1 150px'/minWidth:130 -- same leftover width
                     reservation fixed on Income's Amount field. Sizing to
@@ -5219,6 +5207,18 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     onChange={(e) => setNewRecurring({ ...newRecurring, amount: e.target.value })}
                   />
                 </div>
+              </div>
+              <div className="field" style={{ flex: '1.3 1 190px', minWidth: 170 }}>
+                                <label>Category <AiTag /></label>
+                <select
+                  value={newRecurring.categoryId}
+                  onChange={(e) => setNewRecurring({ ...newRecurring, categoryId: e.target.value })}
+                >
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+))}
+</select>
+      {fixedAiCategoryHint && <div className="ai-hint">{fixedAiCategoryHint}</div>}
               </div>
                       <div className="field">
                 <label>Start date</label>
