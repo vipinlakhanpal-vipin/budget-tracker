@@ -989,6 +989,10 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   // additive -- if the API key isn't configured yet or the call fails, this
   // just never fires and the form behaves exactly as before.
   const [aiCategoryHint, setAiCategoryHint] = useState('');
+  
+  // suggestion for Fixed Expenses' Name field, kept in its own state so
+  // it never clashes with the Regular Expenses hint above.
+  const [fixedAiCategoryHint, setFixedAiCategoryHint] = useState('');// AI feature #1b: same auto-categorize behaviour as Regular Expenses'
   // AI feature #2 (monthly digest): a short AI-written summary of the
   // currently viewed month's spending, generated on demand (not
   // automatically) so it never costs anything unless someone actually asks
@@ -1909,6 +1913,32 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       setTimeout(() => setAiCategoryHint((h) => (h.includes(match.name) ? '' : h)), 4000);
     } catch {
       // AI suggestion is a nice-to-have -- silently skip on any failure.
+    }
+  }
+
+  // Same AI category-suggestion flow as Regular Expenses, but wired to
+  // the Fixed Expenses form's own state (newRecurring/setNewRecurring)
+  // and its own hint variable so the two forms never step on each other.
+  async function suggestFixedCategoryFromDescription(text) {
+    const trimmed = (text || '').trim();
+    if (trimmed.length < 4 || categories.length === 0) return;
+    try {
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const res = await fetch('/api/categorize-expense', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authSession?.access_token}` },
+        body: JSON.stringify({ description: trimmed, categories: categories.map((c) => c.name) }),
+      });
+      if (!res.ok) return;
+      const json = await res.json();
+      if (!json.categoryName) return;
+      const match = categories.find((c) => c.name === json.categoryName);
+      if (!match) return;
+      setNewRecurring((f) => (f.name.trim() === trimmed ? { ...f, categoryId: match.id } : f));
+      setFixedAiCategoryHint(`✨ AI-suggested: ${match.name}`);
+      setTimeout(() => setFixedAiCategoryHint((h) => (h.includes(match.name) ? '' : h)), 4000);
+    } catch {
+      // AI suggestion is a nice-to-have -- worst case, nothing gets suggested.
     }
   }
 
@@ -5156,18 +5186,20 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   placeholder="e.g. Car loan EMI"
                   value={newRecurring.name}
                   onChange={(e) => setNewRecurring({ ...newRecurring, name: e.target.value })}
+                                      onBlur={(e) => suggestFixedCategoryFromDescription(e.target.value)}
                 />
               </div>
               <div className="field" style={{ flex: '1.3 1 190px', minWidth: 170 }}>
-                <label>Category</label>
+                                <label>Category <AiTag /></label>
                 <select
                   value={newRecurring.categoryId}
                   onChange={(e) => setNewRecurring({ ...newRecurring, categoryId: e.target.value })}
                 >
                   {categories.map((c) => (
                     <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
+))}
+</select>
+      {fixedAiCategoryHint && <div className="ai-hint">{fixedAiCategoryHint}</div>}
               </div>
               <div className="field" style={{ flex: '0 0 auto' }}>
                 {/* Was flex:'0 1 150px'/minWidth:130 -- same leftover width
