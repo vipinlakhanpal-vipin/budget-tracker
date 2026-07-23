@@ -1927,7 +1927,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       const res = await fetch('/api/categorize-expense', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authSession?.access_token}` },
-        body: JSON.stringify({ description: trimmed, categories: categories.map((c) => c.name) }),
+                body: JSON.stringify({ description: trimmed, categoryNames: categories.map((c) => c.name) }),
       });
       if (!res.ok) return;
       const json = await res.json();
