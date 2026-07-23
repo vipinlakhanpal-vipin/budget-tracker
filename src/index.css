@@ -595,7 +595,7 @@ button, input, select, textarea { font-family: inherit; }
   cursor: pointer; display: inline-flex; align-items: center;
 }
 
-.wrap { max-width: 1520px; margin: 0 auto; padding: 24px; }
+.wrap { max-width: 1520px; margin: 0 auto; padding: 24px; overflow-x: hidden; }
 /* Frozen to the top of the viewport while the page scrolls -- now wraps the
    ENTIRE "dashboard frame" (title/logo, the merged tab+action row, month
    nav, and both summary-card rows), not just the title bar, so all of it
@@ -874,7 +874,7 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
 .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 20px; }
 .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; }
 .card .k { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
-.card .v { font-size: 24px; font-weight: 700; margin-top: 4px; }
+.card .v { font-size: 24px; font-weight: 700; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .card.over .v { color: var(--danger); }
 .card.ok .v { color: var(--ok); }
 
@@ -1569,7 +1569,7 @@ instead of overflowing at the unconditional 35px desktop size. */
       .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
   .card { padding: 10px 6px; text-align: center; border-radius: 10px; }
   .card .k { font-size: 9.5px; line-height: 1.25; } .card { min-width: 0; }
-  .card .v { font-size: 15px; margin-top: 3px; }
+  .card .v { font-size: 15px; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
   .card .muted-small { display: none; }
   .panel { padding: 14px; }
   /* Home's explore frame is its own class (not .panel), so it needs its own

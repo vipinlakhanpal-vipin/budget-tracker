@@ -2831,22 +2831,13 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     // than 7pt would make the text illegible on screen, in print, and
     // especially on a phone, so that's the one thing this won't sacrifice.
     function autoFitTableStyles(rowCount, startY, bottomLimit = 272) {
-          const maxFont = 11.25, minFont  = 8.5;
-      const maxPad = 3, minPad = 1;
-      const extraRows = 2; // header + footer row, approximated as normal rows
-      const rowHeight = (fontSize, cellPadding) => fontSize * 0.3528 + 2 * cellPadding + 1;
-      const maxRowHeight = rowHeight(maxFont, maxPad);
-      const minRowHeight = rowHeight(minFont, minPad);
-      const availableHeight = Math.max(bottomLimit - startY, minRowHeight);
-      const targetRowHeight = availableHeight / Math.max(rowCount + extraRows, 1);
-      if (targetRowHeight >= maxRowHeight) return { fontSize: maxFont, cellPadding: maxPad };
-      if (targetRowHeight <= minRowHeight) return { fontSize: minFont, cellPadding: minPad };
-      const t = (targetRowHeight - minRowHeight) / (maxRowHeight - minRowHeight);
-      return {
-        fontSize: Math.round((minFont + t * (maxFont - minFont)) * 10) / 10,
-        cellPadding: Math.round((minPad + t * (maxPad - minPad)) * 10) / 10,
-      };
-    }
+  // Always render at the same fixed size on every page/table so the report
+  // reads consistently -- tables that don't fit within bottomLimit simply
+  // flow onto a new page (autoTable does this automatically) instead of
+  // shrinking, which is what caused different font sizes on different pages.
+  const maxFont = 11.25, maxPad = 3;
+  return { fontSize: maxFont, cellPadding: maxPad };
+}
 
     // ---------- Category Breakdown -- bar chart, plus Summary if it fits ----------
     // The bar chart and the Summary table share one page by default (there's
@@ -6642,17 +6633,26 @@ I can help you track expenses, understand spending patterns, create budgets, and
                       </div>
                       <div style={{ fontSize: 11, opacity: 0.85 }}>{reportDoc.filename}</div>
                     </div>
-                    <iframe
-                      title="Budget report preview"
-                      src={reportDoc.previewUrl}
-                      style={{
-                        width: '100%',
-                        height: 'min(85vh, 1000px)',
-                        border: 'none',
-                        display: 'block',
-                        background: '#525659',
-                      }}
-                    />
+                    {isMobile ? (
+        <div style={{ padding: 24, textAlign: 'center' }}>
+          <p style={{ fontSize: 13, color: '#475569', marginBottom: 12 }}>
+            Your phone's built-in preview can only show the first page. Open the full report to scroll through every page.
+          </p>
+          <button
+            type="button"
+            onClick={() => window.open(reportDoc.previewUrl, '_blank')}
+            style={{ background: '#0d9488', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 20px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+          >
+            Open Full Report
+          </button>
+        </div>
+      ) : (
+        <iframe
+          title="Budget report preview"
+          src={reportDoc.previewUrl}
+          style={{ width: '100%', height: 'min(85vh, 1000px)', border: 'none', display: 'block', background: '#525659' }}
+        />
+      )}
                   </div>
                 )}
               </div>
