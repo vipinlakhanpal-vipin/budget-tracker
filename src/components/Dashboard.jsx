@@ -2816,7 +2816,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     }
 
     const tableDefaults = {
-      styles: { fontSize: 9, cellPadding: 3, lineColor: [230, 234, 238], lineWidth: 0.1 },
+      styles: { fontSize: 13.5, cellPadding: 3, lineColor: [230, 234, 238], lineWidth: 0.1 },
       alternateRowStyles: { fillColor: [248, 250, 251] },
       margin: { left: M, right: M },
     };
@@ -2831,7 +2831,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     // than 7pt would make the text illegible on screen, in print, and
     // especially on a phone, so that's the one thing this won't sacrifice.
     function autoFitTableStyles(rowCount, startY, bottomLimit = 272) {
-      const maxFont = 9.5, minFont = 7;
+          const maxFont = 13.5, minFont = 10;
       const maxPad = 3, minPad = 1;
       const extraRows = 2; // header + footer row, approximated as normal rows
       const rowHeight = (fontSize, cellPadding) => fontSize * 0.3528 + 2 * cellPadding + 1;
@@ -2860,7 +2860,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
     drawEyebrow('Spending Breakdown', y);
     y += 7;
-    doc.setFontSize(13);
+    doc.setFontSize(15);
     doc.setFont(undefined, 'bold');
     doc.text('Expenses by Category', M, y);
     doc.setFont(undefined, 'normal');
@@ -2931,7 +2931,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
     drawEyebrow('At A Glance', y);
     y += 7;
-    doc.setFontSize(13);
+    doc.setFontSize(15);
     doc.setFont(undefined, 'bold');
     doc.text('Summary', M, y);
     doc.setFont(undefined, 'normal');
@@ -2947,7 +2947,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
         ['Net (Income - Total Outflow)', fmt(netTotal)],
       ],
       theme: 'plain',
-      styles: { fontSize: 10.5, fontStyle: 'bold', cellPadding: 3 },
+      styles: { fontSize: 13.5, fontStyle: 'bold', cellPadding: 3 },
       columnStyles: { 0: { cellWidth: 100 }, 1: { halign: 'right' } },
       margin: { left: M, right: M },
       didParseCell: (data) => {
@@ -2971,7 +2971,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
     drawEyebrow('Money In', y);
     y += 7;
-    doc.setFontSize(13);
+    doc.setFontSize(15);
     doc.setFont(undefined, 'bold');
     doc.text('Income', M, y);
     doc.setFont(undefined, 'normal');
@@ -2993,7 +2993,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
     drawEyebrow('Money Out', y);
     y += 7;
-    doc.setFontSize(13);
+    doc.setFontSize(15);
     doc.setFont(undefined, 'bold');
     doc.text('Expenses', M, y);
     doc.setFont(undefined, 'normal');
@@ -3015,7 +3015,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
     drawEyebrow('Recurring Bills', y);
     y += 7;
-    doc.setFontSize(13);
+    doc.setFontSize(15);
     doc.setFont(undefined, 'bold');
     doc.text('Fixed Expenses', M, y);
     doc.setFont(undefined, 'normal');
@@ -3056,7 +3056,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
     drawEyebrow('Money Set Aside', y);
     y += 7;
-    doc.setFontSize(13);
+    doc.setFontSize(15);
     doc.setFont(undefined, 'bold');
     doc.text('Savings by Month', M, y);
     doc.setFont(undefined, 'normal');
@@ -3089,7 +3089,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
       if (y > 250) { doc.addPage(); y = drawHeader('Savings'); }
       drawEyebrow('Month By Month', y);
       y += 7;
-      doc.setFontSize(13);
+      doc.setFontSize(15);
       doc.setFont(undefined, 'bold');
       doc.text('Total Saved Per Month', M, y);
       doc.setFont(undefined, 'normal');
@@ -3123,7 +3123,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
     drawEyebrow('80/20 Breakdown', y);
     y += 7;
-    doc.setFontSize(13);
+    doc.setFontSize(15);
     doc.setFont(undefined, 'bold');
     doc.text('Pareto Chart -- Where Your Money Goes', M, y);
     doc.setFont(undefined, 'normal');
@@ -3258,7 +3258,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
 
     drawEyebrow('Recommendations', y);
     y += 7;
-    doc.setFontSize(13);
+    doc.setFontSize(15);
     doc.setFont(undefined, 'bold');
     doc.text('Where You Can Bring In Controls', M, y);
     doc.setFont(undefined, 'normal');
@@ -6552,7 +6552,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
           })()}
 
           {activePanel === 'report' && (
- <div className="panel" ref={panelRef} style={{ maxWidth: 900, marginBottom: 24 }}>
+ <div className="panel" ref={panelRef} style={{ maxWidth: 1000, marginBottom: 24 }}>
             {/* "Report" itself renders as a page-level centered title (see
                 the !inputTab block near the month nav) instead of cramped
                 inside this narrow content-grid column. */}
