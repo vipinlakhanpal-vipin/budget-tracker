@@ -3354,17 +3354,16 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     }
     const { doc, filename, rangeLabel } = buildReportPdf(reportFrom, reportTo);
     const dataUri = doc.output('datauristring');
-    // The on-screen preview uses a blob: URL (rather than the data: URI used
-    // for email) with a "#zoom=150" PDF-open-parameter suffix -- browsers
-    // reliably honor this zoom fragment for blob: URLs, which is what
-    // actually makes the embedded page render larger in the iframe. Without
-    // it, the built-in PDF viewer defaults to "fit page to width", which on
-    // a wide screen scales the whole page down and made the text look small
-    // even though the PDF's own font sizes are fine for print/download.
+        // The on-screen preview uses a blob: URL (rather than the data: URI used
+    // for email) with a "#view=FitH" PDF-open-parameter suffix so the
+    // embedded page always fits the iframe's current width and re-fits
+    // automatically if the browser window is resized, instead of staying
+    // locked at a fixed zoom. The PDF's own font sizes were bumped up this
+        // pass specifically so fit-width viewing still reads comfortably.
     if (reportPreviewUrlRef.current) URL.revokeObjectURL(reportPreviewUrlRef.current);
     const blobUrl = URL.createObjectURL(doc.output('blob'));
     reportPreviewUrlRef.current = blobUrl;
-    setReportDoc({ dataUri, previewUrl: `${blobUrl}#zoom=150`, filename, rangeLabel });
+    setReportDoc({ dataUri, previewUrl: `${blobUrl}#view=FitH`, filename, rangeLabel });
     setReportStatus('');
     setReportPreviewOpen(true);
   }
