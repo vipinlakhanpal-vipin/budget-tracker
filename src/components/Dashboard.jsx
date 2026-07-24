@@ -594,6 +594,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   // and opening one auto-scrolls its title into view.
   const [activePanel, setActivePanel] = useState(null);
   const panelRef = useRef(null);
+const [mobileReportOpen, setMobileReportOpen] = useState(false);
   // Which sub-section shows inside the Settings panel -- App Settings
   // (budget/currency/categories) or, for the admin user only, the Admin
   // Console. Previously Admin Console was its own separate top-bar button
@@ -6640,7 +6641,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
           </p>
           <button
             type="button"
-            onClick={() => window.open(reportDoc.previewUrl, '_blank')}
+                        onClick={() => setMobileReportOpen(true)}
             style={{ background: '#0d9488', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 20px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
           >
             Open Full Report
@@ -6655,6 +6656,24 @@ I can help you track expenses, understand spending patterns, create budgets, and
       )}
                   </div>
                 )}
+            {isMobile && mobileReportOpen && reportDoc && (
+              <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: '#fff', zIndex: 9999, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', background: '#0d9488' }}>
+                  <button
+                    type="button"
+                    onClick={() => setMobileReportOpen(false)}
+                    style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: 16, fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                  >
+                    {'←'} Back to App
+                  </button>
+                </div>
+                <iframe
+                  title="Budget report full view"
+                  src={reportDoc.previewUrl}
+                  style={{ flex: 1, width: '100%', border: 'none', background: '#525659' }}
+                />
+              </div>
+            )}
               </div>
             )}
           </div>
