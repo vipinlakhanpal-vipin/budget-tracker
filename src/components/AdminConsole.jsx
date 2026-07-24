@@ -44,29 +44,39 @@ export default function AdminConsole({ onClose, embedded = false }) {
 
   async function loadHouseholds() {
     setLoading(true);
-    const headers = await authHeader();
-    const res = await fetch('/api/admin/households', { headers });
-    const json = await res.json();
-    if (res.ok) {
-      setHouseholds(json.households || []);
-    } else {
-      setError(json.error || 'Could not load households');
+    try {
+      const headers = await authHeader();
+      const res = await fetch('/api/admin/households', { headers });
+      const json = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setHouseholds(json.households || []);
+      } else {
+        setError(json.error || 'Could not load households');
+      }
+    } catch (e) {
+      setError(e.message || 'Could not load households');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   async function loadAllUsers() {
     setAllUsersLoading(true);
     setAllUsersError('');
-    const headers = await authHeader();
-    const res = await fetch('/api/admin/users', { headers });
-    const json = await res.json();
-    if (res.ok) {
-      setAllUsers(json.users || []);
-    } else {
-      setAllUsersError(json.error || 'Could not load users');
+    try {
+      const headers = await authHeader();
+      const res = await fetch('/api/admin/users', { headers });
+      const json = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setAllUsers(json.users || []);
+      } else {
+        setAllUsersError(json.error || 'Could not load users');
+      }
+    } catch (e) {
+      setAllUsersError(e.message || 'Could not load users');
+    } finally {
+      setAllUsersLoading(false);
     }
-    setAllUsersLoading(false);
   }
 
   async function handleDeleteUser(u) {
@@ -77,46 +87,56 @@ export default function AdminConsole({ onClose, embedded = false }) {
     if (!window.confirm(confirmMsg)) return;
 
     setDeletingEmail(u.email);
-    const headers = { 'Content-Type': 'application/json', ...(await authHeader()) };
-    const body = u.userId
-      ? { userId: u.userId, email: u.email }
-      : { inviteId: u.invites[0]?.inviteId, email: u.email };
-    const res = await fetch('/api/admin/users', { method: 'POST', headers, body: JSON.stringify(body) });
-    const json = await res.json().catch(() => ({}));
-    setDeletingEmail('');
-    if (!res.ok) {
-      alert('Could not delete: ' + (json.error || 'unknown error'));
-      return;
+    try {
+      const headers = { 'Content-Type': 'application/json', ...(await authHeader()) };
+      const body = u.userId
+        ? { userId: u.userId, email: u.email }
+        : { inviteId: u.invites[0]?.inviteId, email: u.email };
+      const res = await fetch('/api/admin/users', { method: 'POST', headers, body: JSON.stringify(body) });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert('Could not delete: ' + (json.error || 'unknown error'));
+        return;
+      }
+      await loadAllUsers();
+    } catch (e) {
+      alert('Could not delete: ' + (e.message || 'unknown error'));
+    } finally {
+      setDeletingEmail('');
     }
-    loadAllUsers();
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
     setStatus('sending');
-    const headers = { 'Content-Type': 'application/json', ...(await authHeader()) };
-    const res = await fetch('/api/admin/invite', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        email: email.trim(),
-        relation,
-        householdId: householdId || undefined,
-        newHouseholdName: householdId ? undefined : newHouseholdName.trim(),
-      }),
-    });
-    const json = await res.json();
-    if (!res.ok) {
+    try {
+      const headers = { 'Content-Type': 'application/json', ...(await authHeader()) };
+      const res = await fetch('/api/admin/invite', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          email: email.trim(),
+          relation,
+          householdId: householdId || undefined,
+          newHouseholdName: householdId ? undefined : newHouseholdName.trim(),
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setStatus('');
+        setError(json.error || 'Something went wrong');
+        return;
+      }
+      setStatus('sent');
+      setEmail('');
+      setNewHouseholdName('');
+      loadHouseholds();
+      loadAllUsers();
+    } catch (e) {
       setStatus('');
-      setError(json.error || 'Something went wrong');
-      return;
+      setError(e.message || 'Something went wrong');
     }
-    setStatus('sent');
-    setEmail('');
-    setNewHouseholdName('');
-    loadHouseholds();
-    loadAllUsers();
   }
 
   const Wrap = embedded ? 'div' : 'div';
@@ -193,7 +213,14 @@ export default function AdminConsole({ onClose, embedded = false }) {
         {view === 'users' && (
           <div>
             {allUsersLoading && <div className="muted-small">Loading users...</div>}
-            {allUsersError && <div className="login-error">{allUsersError}</div>}
+            {allUsersError && (
+              <div className="login-error">
+                {allUsersError}{' '}
+                <button type="button" className="btn secondary small" style={{ marginLeft: 8 }} onClick={loadAllUsers}>
+                  Retry
+                </button>
+              </div>
+            )}
             {!allUsersLoading && !allUsersError && (
               <>
                 <div className="muted-small" style={{ marginBottom: 10, fontWeight: 600 }}>
