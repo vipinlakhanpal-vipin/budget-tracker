@@ -7,7 +7,7 @@ const DEFAULT_CATEGORIES = [
 ];
 
 export default function CreateHousehold({ session, onCreated }) {
-  const [name, setName] = useState('');
+  const [name, setName] = useState('Expense Management');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
