@@ -6549,10 +6549,6 @@ I can help you track expenses, understand spending patterns, create budgets, and
             {/* "Report" itself renders as a page-level centered title (see
                 the !inputTab block near the month nav) instead of cramped
                 inside this narrow content-grid column. */}
-            <div className="muted-small" style={{ marginBottom: 12 }}>
-              Generate a PDF for a date range, then view it on screen, download it, or email it. Category Breakdown and Summary share a page unless the chart runs long; Income, Expenses, Fixed Expenses, Savings, Spend Analysis, and Recommendations each get their own dedicated page. Tables auto-shrink to try to fit one page before flowing onto a second.
-<br /><br /><strong>What's New</strong> (Jul 23, 2026): Fixed Expenses now suggests a Category automatically as you type the Description, just like Regular Expenses, and Amount/month now comes before Category to match. The Fixed Expenses and Savings "Name" fields are now called "Description" for consistency. Aria's greeting is personalized and her chat window no longer gets hidden behind the page. Hovering the Aria icon now shows "Aria - Your AI Assistant".
-            </div>
             <div className="row" style={{ marginBottom: 12 }}>
               <div className="field">
                 <label>From</label>
@@ -6574,6 +6570,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 <button className="btn secondary small" onClick={handleGenerateReport}>Generate report</button>
               </div>
             </div>
+            <div className="muted-small" style={{ marginBottom: 12 }}>Generate a PDF for a date range, then view it on screen, download it, or email it. Category Breakdown and Summary share a page unless the chart runs long; Income, Expenses, Fixed Expenses, Savings, Spend Analysis, and Recommendations each get their own dedicated page. Tables auto-shrink to try to fit one page before flowing onto a second.<br /><br /><strong>What's New</strong> (Jul 23, 2026): Fixed Expenses now suggests a Category automatically as you type the Description, just like Regular Expenses, and Amount/month now comes before Category to match. The Fixed Expenses and Savings "Name" fields are now called "Description" for consistency. Aria's greeting is personalized and her chat window no longer gets hidden behind the page. Hovering the Aria icon now shows "Aria - Your AI Assistant".</div>
 
             {reportDoc && (
               <div style={{ marginTop: 8 }}>
