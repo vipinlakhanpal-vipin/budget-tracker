@@ -2939,14 +2939,16 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
         ['Net (Income - Total Outflow)', fmt(netTotal)],
       ],
       theme: 'plain',
-      styles: { fontSize: 11.25, fontStyle: 'bold', cellPadding: 3 },
+        styles: { fontSize: 11.25, fontStyle: 'normal', cellPadding: 3 },
       columnStyles: { 0: { cellWidth: 100 }, 1: { halign: 'right' } },
       margin: { left: M, right: M },
       didParseCell: (data) => {
         if (data.row.index === 4) {
+        data.cell.styles.fontStyle = 'bold';
           data.cell.styles.fillColor = [241, 245, 249];
         }
         if (data.row.index === 5) {
+        data.cell.styles.fontStyle = 'bold';
           data.cell.styles.fillColor = netTotal >= 0 ? [220, 252, 231] : [254, 226, 226];
           data.cell.styles.textColor = netTotal >= 0 ? [22, 101, 52] : [153, 27, 27];
         }
