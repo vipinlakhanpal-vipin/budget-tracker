@@ -800,10 +800,10 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   // JS (not just CSS) because which JSX gets rendered actually differs
   // between the two, not just how it's styled.
   const [isMobile, setIsMobile] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches
+        () => typeof window !== 'undefined' && window.matchMedia('(max-width: 640px), ((pointer: coarse) and (hover: none) and (max-width: 1366px))').matches
   );
   useEffect(() => {
-    const mq = window.matchMedia('(max-width: 640px)');
+        const mq = window.matchMedia('(max-width: 640px), ((pointer: coarse) and (hover: none) and (max-width: 1366px))');
     const handler = (e) => setIsMobile(e.matches);
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);
