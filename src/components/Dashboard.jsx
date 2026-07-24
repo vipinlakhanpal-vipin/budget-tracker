@@ -2881,8 +2881,8 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       // Readability comes first here: label size only drops a little even
       // for a long category list, rather than shrinking down to a size
       // that's hard to read on screen, in print, or on a phone.
-      const labelFontSize = chartRows.length > 30 ? 7.5 : chartRows.length > 18 ? 8.5 : 9.5;
-      const labelMaxLen = chartRows.length > 30 ? 12 : chartRows.length > 18 ? 15 : 19;
+const labelFontSize = 11.25; // Uniform with every other table/section
+const labelMaxLen = chartRows.length > 18 ? 12 : 15;
       chartRows.forEach(([name, val], i) => {
         // Shrinking only goes so far before bars get unreadably thin -- once
         // an extreme number of categories exists (well beyond a typical
