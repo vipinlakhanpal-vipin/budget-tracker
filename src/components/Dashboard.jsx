@@ -109,7 +109,7 @@ const RECURRING_PAYMENT_SOURCES = [...PAYMENT_SOURCES, 'Bank', 'Salary'];
 const CARD_PAYMENT_SOURCES = ['Credit Card', 'Debit Card', 'Bank'];
 // Free-tier household size cap: the owner plus this many additional people
 // (active members + pending invites combined).
-const MAX_ADDITIONAL_USERS = 2;
+const MAX_ADDITIONAL_USERS = Infinity; // No cap on household size
 // Common UAE retail banks, since this household is based in Dubai -- "Other"
 // covers anything not listed rather than blocking entry.
 const BANKS = [
