@@ -6650,7 +6650,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
         <iframe
           title="Budget report preview"
           src={reportDoc.previewUrl}
-          style={{ width: '100%', height: 'min(85vh, 1000px)', border: 'none', display: 'block', background: '#525659' }}
+          style={{ width: '100%', maxWidth: 800, margin: '0 auto', height: 'min(85vh, 1000px)', border: 'none', display: 'block', background: '#525659' }}
         />
       )}
                   </div>
