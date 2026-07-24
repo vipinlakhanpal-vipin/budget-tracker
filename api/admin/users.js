@@ -1,17 +1,18 @@
 import { createAdminClient, requireAdmin } from './_auth.js';
 
-// This endpoint powers the admin "Users" tab. Vipin's ask was to see
-// every signup attempt across every household -- successful and
-// unsuccessful -- not just the pending invites for one household. So
-// instead of querying a single table, we cross-reference three sources:
-//   - auth.users (every account that was ever created, via the admin API)
-//   - household_members (accounts that actually landed in a household)
-//   - household_invites (invites sent, regardless of whether the person
-//     ever signed up)
-// and classify each unique email into a status so the UI can group them
-// into "successful" vs "unsuccessful/pending".
+// This single endpoint powers the admin "Users" tab: GET lists every
+// signup attempt across every household (successful and unsuccessful,
+// cross-referencing auth.users / household_members / household_invites),
+// and POST deletes a user Vipin picked from that list. Combined into one
+// file (instead of two) to stay under Vercel Hobby's 12-serverless-function
+// cap for this project.
 export default async function handler(req, res) {
-  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method === 'GET') return listUsers(req, res);
+  if (req.method === 'POST') return deleteUser(req, res);
+  return res.status(405).json({ error: 'Method not allowed' });
+}
+
+async function listUsers(req, res) {
   try {
     await requireAdmin(req);
   } catch (e) {
@@ -111,5 +112,34 @@ export default async function handler(req, res) {
     res.status(200).json({ users: rows });
   } catch (e) {
     res.status(500).json({ error: e.message || 'Could not load users' });
+  }
+}
+
+async function deleteUser(req, res) {
+  try {
+    await requireAdmin(req);
+  } catch (e) {
+    return res.status(e.status || 401).json({ error: e.message });
+  }
+  const { userId, email, inviteId } = req.body || {};
+  if (!userId && !inviteId) {
+    return res.status(400).json({ error: 'userId or inviteId is required' });
+  }
+  const admin = createAdminClient();
+  try {
+    if (userId) {
+      const { error } = await admin.auth.admin.deleteUser(userId);
+      if (error) throw error;
+    }
+    if (email) {
+      const { error } = await admin.from('household_invites').delete().ilike('email', email.trim());
+      if (error) throw error;
+    } else if (inviteId) {
+      const { error } = await admin.from('household_invites').delete().eq('id', inviteId);
+      if (error) throw error;
+    }
+    res.status(200).json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message || 'Could not delete user' });
   }
 }

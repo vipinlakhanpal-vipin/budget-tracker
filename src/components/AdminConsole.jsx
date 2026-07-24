@@ -59,7 +59,7 @@ export default function AdminConsole({ onClose, embedded = false }) {
     setAllUsersLoading(true);
     setAllUsersError('');
     const headers = await authHeader();
-    const res = await fetch('/api/admin/all-users', { headers });
+    const res = await fetch('/api/admin/users', { headers });
     const json = await res.json();
     if (res.ok) {
       setAllUsers(json.users || []);
@@ -81,7 +81,7 @@ export default function AdminConsole({ onClose, embedded = false }) {
     const body = u.userId
       ? { userId: u.userId, email: u.email }
       : { inviteId: u.invites[0]?.inviteId, email: u.email };
-    const res = await fetch('/api/admin/delete-user', { method: 'POST', headers, body: JSON.stringify(body) });
+    const res = await fetch('/api/admin/users', { method: 'POST', headers, body: JSON.stringify(body) });
     const json = await res.json().catch(() => ({}));
     setDeletingEmail('');
     if (!res.ok) {
