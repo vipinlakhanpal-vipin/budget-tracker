@@ -871,7 +871,7 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
 }
 .month-nav .label { font-weight: 600; font-size: 16px; min-width: 160px; text-align: center; }
 
-.grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr); gap: 14px; margin-bottom: 20px; }
 .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; }
 .card .k { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
 .card .v { font-size: 24px; font-weight: 700; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
@@ -1254,12 +1254,12 @@ input[type="number"] { text-align: right; }
 .home-explore-frame .panel:last-child { margin-bottom: 0; }
 
 .content-grid { display: grid; grid-template-columns: minmax(0, 2.6fr) minmax(320px, 1fr); gap: 24px; }
-@media (max-width: 1150px) { .content-grid { grid-template-columns: 1fr; } }
+@media (max-width: 1150px) { .content-grid { grid-template-columns: minmax(0, 1fr); } }
 /* Tablet-width only (641-800px) -- stack to a single column since 3 cards
    is still a bit tight at that width. Phones get their own 3-column rule
    below (inside the 640px block) instead of stacking, per the "6 cell
    dashboard" redesign -- see that block for why. */
-@media (max-width: 800px) and (min-width: 641px) { .grid { grid-template-columns: 1fr; } }
+@media (max-width: 800px) and (min-width: 641px) { .grid { grid-template-columns: minmax(0, 1fr); } }
 
 .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
