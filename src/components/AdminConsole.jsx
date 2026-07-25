@@ -246,7 +246,7 @@ function UserGroup({ title, users, onDelete, deletingEmail }) {
   if (!users.length) return null;
   return (
     <div style={{ marginBottom: 18 }}>
-      <div className="muted-small" style={{ fontWeight: 600, marginBottom: 6 }}>{title}</div>
+      <div className="muted-small" style={{ fontWeight: 700, fontSize: 14, marginBottom: 6 }}>{title}</div>
       <div className="table-scroll">
         <table className="responsive-table">
           <thead>
@@ -276,7 +276,4 @@ function UserGroup({ title, users, onDelete, deletingEmail }) {
             ))}
           </tbody>
         </table>
-      </div>
-    </div>
-  );
-}
+      
