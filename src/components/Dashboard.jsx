@@ -6828,11 +6828,6 @@ I can help you track expenses, understand spending patterns, create budgets, and
 
                 {reportPreviewOpen && (
         <>
-                  // On-screen preview -- the exact same PDF that Download and
-                  // Email produce, presented in a polished card (rounded
-                  // frame, subtle shadow, teal title bar) instead of a bare
-                  // browser PDF plugin, so viewing it in-app feels like a
-                  // deliberate feature rather than an afterthought.
                   <ReportHtmlView data={reportDoc.data} />
                   <div
                     style={{
