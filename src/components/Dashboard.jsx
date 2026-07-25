@@ -3559,7 +3559,13 @@ function ReportHtmlView({ data }) {
           ))}
         </ul>
         <div style={{ marginTop: 8, padding: 12, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 12, color: '#5a6472' }}>
-          <strong>Data & Privacy:</strong> The figures in this report are drawn directly from the data your household has entered into Hearth. This data is private to your household -- it is not visible to, or shared with, anyone outside your household's account, and it is not sold or provided to third parties. Once downloaded or emailed, this report becomes a standalone file outside the app, so please share it only with people you intend to see your household's financial information.function handleGenerateReport() {
+          <strong>Data & Privacy:</strong> The figures in this report are drawn directly from the data your household has entered into Hearth. This data is private to your household -- it is not visible to, or shared with, anyone outside your household's account, and it is not sold or provided to third parties. Once downloaded or emailed, this report becomes a standalone file outside the app, so please share it only with people you intend to see your household's financial information.
+        </div>
+      </div>
+    );
+}
+
+  function handleGenerateReport() {
     if (!reportFrom || !reportTo || reportFrom > reportTo) {
       alert('Please choose a valid From/To date range.');
       return;
