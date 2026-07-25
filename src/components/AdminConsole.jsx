@@ -11,9 +11,6 @@ const STATUS_LABEL = {
   unknown: 'Unknown',
 };
 
-// "Successful" = a real, usable account: signed up AND landed in a
-// household. Everything else is some flavor of "unsuccessful" -- this is
-// what the Users tab below groups by, per Vipin's ask to see both lists.
 const SUCCESSFUL_STATUSES = new Set(['active']);
 
 export default function AdminConsole({ onClose, embedded = false }) {
@@ -26,7 +23,7 @@ export default function AdminConsole({ onClose, embedded = false }) {
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
 
-  const [view, setView] = useState('invite'); // 'invite' | 'users'
+  const [view, setView] = useState('invite');
   const [allUsers, setAllUsers] = useState([]);
   const [allUsersLoading, setAllUsersLoading] = useState(true);
   const [allUsersError, setAllUsersError] = useState('');
@@ -276,4 +273,7 @@ function UserGroup({ title, users, onDelete, deletingEmail }) {
             ))}
           </tbody>
         </table>
-      
+      </div>
+    </div>
+  );
+}
