@@ -929,6 +929,12 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
 .card-expenses .k { color: #e11d48; }
 .card-net { background: linear-gradient(160deg, #eff6ff, #ffffff); border-color: #bfdbfe; }
 .card-net .k { color: #0284c7; }
+/* These 6 cards keep a soft light-tinted background in both light AND dark
+   mode by design (see comment above) -- so their big value number needs a
+   fixed dark color instead of following --text, otherwise it goes light-on-
+   light and disappears once dark mode flips --text to a pale color. */
+.card-budget .v, .card-spent .v, .card-remaining .v,
+.card-income .v, .card-expenses .v, .card-net .v { color: #0f2a2e; }
 
 .warning {
   background: var(--danger-bg); border: 1px solid #fecaca; color: var(--danger);
