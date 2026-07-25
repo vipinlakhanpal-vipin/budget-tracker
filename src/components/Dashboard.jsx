@@ -4394,6 +4394,7 @@ function ReportHtmlView({ data }) {
               )}
             </div>
                   </div>
+        </div>
           {/* Left-aligned, single row: the 4 data-entry tabs first, then the
               teal panel-toggle buttons, then the Profile icon, then the
               bell last -- all one flowing group instead of two separate
