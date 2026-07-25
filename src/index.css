@@ -763,11 +763,12 @@ sitting duplicated under the summary cards. */
    notification bell right next to it, so the two read as one family. */
 .profile-menu-wrap { position: relative; }
 .profile-icon-btn {
-  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   background: #fff; color: var(--accent); border: 1.5px solid var(--accent);
-  border-radius: 8px; width: 34px; height: 34px; padding: 0; cursor: pointer;
+  border-radius: 999px; width: auto; height: 34px; padding: 0 12px 0 10px; cursor: pointer;
 }
 .profile-icon-btn:hover { background: var(--accent-light); }
+.corner-profile-label { font-size: 11px; font-weight: 700; white-space: nowrap; }
 .profile-dropdown {
   position: absolute; top: calc(100% + 8px); right: 0; z-index: 40;
   width: 260px; max-width: min(85vw, 280px);
