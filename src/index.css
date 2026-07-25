@@ -50,6 +50,37 @@
   --accent: #15803d; --accent-light: #dcfce7; --accent2: #22c55e; --accent2-light: #f0fdf4;
   --accent-active: #166534;
 }
+[data-theme="amber"] {
+  --accent: #b45309; --accent-light: #fef3c7; --accent2: #f59e0b; --accent2-light: #fffbeb;
+  --accent-active: #92400e;
+}
+[data-theme="indigo"] {
+  --accent: #4f46e5; --accent-light: #e0e7ff; --accent2: #818cf8; --accent2-light: #eef2ff;
+  --accent-active: #4338ca;
+}
+[data-theme="slate"] {
+  --accent: #475569; --accent-light: #e2e8f0; --accent2: #94a3b8; --accent2-light: #f8fafc;
+  --accent-active: #334155;
+}
+[data-theme="wine"] {
+  --accent: #9f1239; --accent-light: #ffe4e6; --accent2: #fb7185; --accent2-light: #fff1f2;
+  --accent-active: #881337;
+}
+/* Dark mode -- independent of the accent color theme above, toggled via a
+   [data-mode="dark"] attribute on <html> (see the Light/Dark switch in
+   ThemeMenu in Dashboard.jsx, stored separately in localStorage so a user's
+   color choice and their light/dark preference don't overwrite each other).
+   Only the neutral surface/text colors change here; --accent-light and
+   --accent2-light are recalculated as a translucent tint of whichever accent
+   is active (via color-mix) instead of a pale-on-white tint, so hover/active
+   states stay readable against a dark background no matter which of the
+   themes above is picked. */
+[data-mode="dark"] {
+  --bg: #0b1418; --card: #16262c; --text: #e7f3f4; --muted: #93b2b8;
+  --border: #26414a; --danger-bg: #2a1416;
+  --accent-light: color-mix(in srgb, var(--accent) 24%, var(--card));
+  --accent2-light: color-mix(in srgb, var(--accent2) 20%, var(--card));
+}
 * { box-sizing: border-box; }
 html {
   /* One consistent type family everywhere, Nunito Light as the base weight
@@ -1872,7 +1903,7 @@ row. */
   position: relative; display: inline-flex; align-items: center; justify-content: center;
   width: 34px; height: 34px; padding: 0; border-radius: 8px; cursor: pointer;
   border: 2px solid #fff;
-  background: conic-gradient(from 0deg, #0d9488, #0369a1, #7c3aed, #db2777, #15803d, #0d9488);
+    background: conic-gradient(from 0deg, #0d9488, #0369a1, #4f46e5, #7c3aed, #9f1239, #db2777, #b45309, #15803d, #475569, #0d9488);
   color: #fff;
   box-shadow: 0 4px 14px rgba(15, 42, 46, .25);
 }
@@ -1895,6 +1926,14 @@ row. */
 .theme-swatch-row:hover { background: var(--bg); }
 .theme-swatch-row.active { background: var(--accent2-light); }
 .theme-swatch-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; box-shadow: inset 0 0 0 1.5px rgba(0,0,0,.08); }
+.theme-mode-row { display: flex; gap: 6px; margin-bottom: 8px; }
+.theme-mode-btn {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 6px 0; border-radius: 8px; border: 1.5px solid var(--border);
+  background: var(--bg); color: var(--muted); font-size: 12.5px; font-weight: 700;
+  cursor: pointer;
+}
+.theme-mode-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
 
 /* Attachment viewer -- a centered modal (works identically on desktop and
    mobile) opened from every place a document can be viewed: desktop table

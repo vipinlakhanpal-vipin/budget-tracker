@@ -14,7 +14,7 @@ import {
   Home, Plus, FileText, Users as UsersIcon, Settings as SettingsIcon,
   Pencil, Trash2, X, ChevronLeft, ChevronRight, ChevronDown, Camera, MessageCircle, Bot, Sparkles, User,
   Palette, Check, StickyNote, Paperclip, ExternalLink, Mail, Lightbulb,
-  Wallet, CalendarClock, ShoppingCart, PiggyBank, HelpCircle, Filter,
+  Wallet, CalendarClock, ShoppingCart, PiggyBank, HelpCircle, Filter, Sun, Moon,
 } from 'lucide-react';
 
 // Max size for a note/fixed-expense attachment (images or PDF only). Kept as
@@ -674,6 +674,10 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     { id: 'purple', label: 'Purple', color: '#7c3aed' },
     { id: 'rose', label: 'Rose', color: '#db2777' },
     { id: 'forest', label: 'Forest green', color: '#15803d' },
+{ id: 'amber', label: 'Amber', color: '#b45309' },
+  { id: 'indigo', label: 'Indigo', color: '#4f46e5' },
+  { id: 'slate', label: 'Slate', color: '#475569' },
+  { id: 'wine', label: 'Wine', color: '#9f1239' },
   ];
   const [theme, setTheme] = useState(() => {
     try {
@@ -696,6 +700,31 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       // ignore -- purely a nice-to-have persistence, not worth surfacing an error for
     }
   }, [theme]);
+    // Light/dark mode -- stored separately from the color theme above (its own
+    // localStorage key) so switching one never resets the other. Toggled via
+    // a [data-mode="dark"] attribute on <html>; index.css recolors --bg/
+    // --card/--text/--muted/--border off of that attribute for every color
+    // theme at once.
+    const [mode, setMode] = useState(() => {
+      try {
+        return localStorage.getItem('hearth-mode') || 'light';
+      } catch {
+        return 'light';
+      }
+    });
+    useEffect(() => {
+      if (mode === 'dark') {
+        document.documentElement.setAttribute('data-mode', 'dark');
+      } else {
+        document.documentElement.removeAttribute('data-mode');
+      }
+      try {
+        localStorage.setItem('hearth-mode', mode);
+      } catch {
+        // ignore -- same nice-to-have persistence as the color theme above
+      }
+    }, [mode]);
+
   useEffect(() => {
     if (!themeMenuOpen) return;
     function onDocClick(e) {
@@ -4502,6 +4531,23 @@ function ReportHtmlView({ data }) {
               </button>
               {themeMenuOpen && (
                 <div className="theme-dropdown">
+                    <div className="theme-dropdown-title">Appearance</div>
+                    <div className="theme-mode-row">
+            <button
+              type="button"
+              className={`theme-mode-btn ${mode === 'light' ? 'active' : ''}`}
+              onClick={() => setMode('light')}
+            >
+              <Sun size={14} /> Light
+            </button>
+            <button
+              type="button"
+              className={`theme-mode-btn ${mode === 'dark' ? 'active' : ''}`}
+              onClick={() => setMode('dark')}
+            >
+              <Moon size={14} /> Dark
+            </button>
+          </div>
                   <div className="theme-dropdown-title">Color theme</div>
                   {THEMES.map((t) => (
                     <button
