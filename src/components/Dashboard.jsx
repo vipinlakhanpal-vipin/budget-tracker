@@ -6827,6 +6827,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 {reportStatus.startsWith('error') && <div className="muted-small" style={{ marginTop: 6, color: '#ef4444' }}>{reportStatus.replace('error: ', '')}</div>}
 
                 {reportPreviewOpen && (
+        <>
                   // On-screen preview -- the exact same PDF that Download and
                   // Email produce, presented in a polished card (rounded
                   // frame, subtle shadow, teal title bar) instead of a bare
@@ -6880,6 +6881,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
         />
       )}
                   </div>
+                </>
                 )}
             {isMobile && mobileReportOpen && reportDoc && (
               <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: '#fff', zIndex: 9999, display: 'flex', flexDirection: 'column' }}>
