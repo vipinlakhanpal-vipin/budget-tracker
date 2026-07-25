@@ -3341,7 +3341,225 @@ const labelMaxLen = chartRows.length > 18 ? 12 : 15;
     return { doc, filename, rangeLabel };
   }
 
-  function handleGenerateReport() {
+  function computeReportData(from, to) {
+    const rangeLabel = `${fmtDate(from)} - ${fmtDate(to)}`;
+    const rangeExpenses = expenses.filter((e) => e.expense_date >= from && e.expense_date <= to);
+    const fromMonth = from.slice(0, 7);
+    const toMonth = to.slice(0, 7);
+    const rangeIncomes = incomes.filter((i) => i.active && i.start_date.slice(0, 7) >= fromMonth && i.start_date.slice(0, 7) <= toMonth);
+    const rangeMonths = monthsBetween(from, to);
+    const rangeRecurringOccurrences = [];
+    rangeMonths.forEach((mKey) => {
+      recurringExpenses.forEach((r) => {
+        if (recurringOccursInMonth(r, mKey)) {
+          rangeRecurringOccurrences.push({ ...r, occurredMonth: mKey });
+        }
+      });
+    });
+    const rangeSavingsOccurrences = savingsGoals
+      .filter((s) => s.active && s.start_date.slice(0, 7) >= fromMonth && s.start_date.slice(0, 7) <= toMonth)
+      .map((s) => ({ ...s, occurredMonth: s.start_date.slice(0, 7) }));
+    const expenseTotal = rangeExpenses.reduce((s, e) => s + Number(e.amount), 0);
+    const incomeTotal = rangeIncomes.reduce((s, i) => s + Number(i.amount), 0);
+    const fixedTotal = rangeRecurringOccurrences.reduce((s, r) => s + Number(r.amount), 0);
+    const savingsGoalTotal = rangeSavingsOccurrences.reduce((s, g) => s + Number(g.amount), 0);
+    const netTotal = incomeTotal - expenseTotal - fixedTotal - savingsGoalTotal;
+    const categoryTotals = {};
+    rangeExpenses.forEach((e) => {
+      const name = categoryNameById[e.category_id] || 'Uncategorized';
+      categoryTotals[name] = (categoryTotals[name] || 0) + Number(e.amount);
+    });
+    rangeRecurringOccurrences.forEach((r) => {
+      const name = categoryNameById[r.category_id] || 'Uncategorized';
+      categoryTotals[name] = (categoryTotals[name] || 0) + Number(r.amount);
+    });
+    const chartRows = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]);
+    const maxCategoryVal = Math.max(1, ...chartRows.map(([, v]) => v));
+    const totalSpend = chartRows.reduce((s, [, v]) => s + v, 0);
+    let cum = 0;
+    const paretoRows = chartRows.map(([name, val]) => {
+      cum += val;
+      return { name, val, cumPct: totalSpend > 0 ? (cum / totalSpend) * 100 : 0 };
+    });
+    let vitalFewNames = paretoRows.filter((r) => r.cumPct <= 80).map((r) => r.name);
+    if (vitalFewNames.length === 0 && paretoRows.length) vitalFewNames = [paretoRows[0].name];
+    const suggestions = [];
+    if (chartRows.length && totalSpend > 0) {
+      const [topName, topVal] = chartRows[0];
+      const topShare = Math.round((topVal / totalSpend) * 100);
+      suggestions.push(`${topName} is your single biggest spend at ${fmt(topVal)} (${topShare}% of total). Even a small cut here moves the needle more than trimming several small categories.`);
+      if (vitalFewNames.length) {
+        suggestions.push(`Focus review time on ${vitalFewNames.length === 1 ? 'this one category' : `these ${vitalFewNames.length} categories`} first -- they drive 80% of your spending, so that's where controls will have the most impact (the 80/20 rule).`);
+      }
+    }
+    if (fixedTotal > expenseTotal && fixedTotal > 0) {
+      suggestions.push(`Fixed/recurring bills (${fmt(fixedTotal)}) are larger than your regular day-to-day spending (${fmt(expenseTotal)}). Review loans, EMIs, and subscriptions for refinancing, consolidation, or cancellation opportunities -- fixed costs compound every month whether or not you notice them.`);
+    }
+    const overBudgetInRange = categories.filter((c) => c.monthly_budget > 0 && (categoryTotals[c.name] || 0) > c.monthly_budget * Math.max(1, rangeMonths.length));
+    if (overBudgetInRange.length) {
+      suggestions.push(`${overBudgetInRange.map((c) => c.name).join(', ')} went over the budget you set for ${overBudgetInRange.length > 1 ? 'them' : 'it'} this period. Consider raising the budget if it's genuinely necessary, or setting a firmer cap if it's discretionary.`);
+    }
+    if (netTotal < 0) {
+      suggestions.push(`You spent ${fmt(Math.abs(netTotal))} more than you earned this period. Before cutting anywhere else, check whether this was a one-off (e.g. an annual bill or a big-ticket purchase) or a pattern -- if it repeats, it's worth revisiting the top categories above.`);
+    } else if (totalSpend > 0) {
+      suggestions.push(`You stayed within income this period (net ${fmt(netTotal)}). Consider directing part of that surplus toward paying down the highest-interest EMI or loan faster, or into savings.`);
+    }
+    if (suggestions.length === 0) {
+      suggestions.push('Not enough data in this period to generate suggestions -- add a few more expenses and generate the report again.');
+    }
+    const perMonthSavings = {};
+    rangeSavingsOccurrences.forEach((s) => {
+      perMonthSavings[s.occurredMonth] = (perMonthSavings[s.occurredMonth] || 0) + Number(s.amount);
+    });
+    const sortedRecurring = [...rangeRecurringOccurrences].sort((a, b) => (a.occurredMonth < b.occurredMonth ? -1 : a.occurredMonth > b.occurredMonth ? 1 : a.name.localeCompare(b.name)));
+    const sortedSavings = [...rangeSavingsOccurrences].sort((a, b) => (a.occurredMonth < b.occurredMonth ? -1 : a.occurredMonth > b.occurredMonth ? 1 : a.name.localeCompare(b.name)));
+    return {
+      rangeLabel, rangeIncomes, rangeExpenses,
+      rangeRecurringOccurrences: sortedRecurring,
+      rangeSavingsOccurrences: sortedSavings,
+      rangeMonths, perMonthSavings,
+      expenseTotal, incomeTotal, fixedTotal, savingsGoalTotal, netTotal,
+      chartRows, maxCategoryVal, totalSpend, paretoRows, vitalFewNames, suggestions,
+    };
+  }
+
+function ReportHtmlView({ data }) {
+    if (!data) return null;
+    return (
+      <div style={{ padding: 20, maxHeight: 'min(80vh, 1400px)', overflowY: 'auto' }}>
+        <h4 style={{ marginTop: 0 }}>Summary</h4>
+        <table className="responsive-table" style={{ marginBottom: 24 }}>
+          <tbody>
+            <tr><td>Total Income</td><td style={{ textAlign: 'right' }}>{fmt(data.incomeTotal)}</td></tr>
+            <tr><td>Total Regular Expenses</td><td style={{ textAlign: 'right' }}>{fmt(data.expenseTotal)}</td></tr>
+            <tr><td>Total Fixed Expenses</td><td style={{ textAlign: 'right' }}>{fmt(data.fixedTotal)}</td></tr>
+            <tr><td>Total Savings</td><td style={{ textAlign: 'right' }}>{fmt(data.savingsGoalTotal)}</td></tr>
+            <tr style={{ fontWeight: 700, background: '#f1f5f9' }}><td>Total Outflow (Expenses + Savings)</td><td style={{ textAlign: 'right' }}>{fmt(data.expenseTotal + data.fixedTotal + data.savingsGoalTotal)}</td></tr>
+            <tr style={{ fontWeight: 700, background: data.netTotal >= 0 ? '#dcfce7' : '#fee2e2', color: data.netTotal >= 0 ? '#166534' : '#991b1b' }}><td>Net (Income - Total Outflow)</td><td style={{ textAlign: 'right' }}>{fmt(data.netTotal)}</td></tr>
+          </tbody>
+        </table>
+        <h4>Expenses by Category</h4>
+        {data.chartRows.length === 0 ? (
+          <div className="muted-small" style={{ marginBottom: 24 }}>No expenses in this period.</div>
+        ) : (
+          <div style={{ marginBottom: 24 }}>
+            {data.chartRows.map(([name, val], i) => (
+              <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <div style={{ width: 120, fontSize: 12, color: '#475569', flexShrink: 0 }}>{name}</div>
+                <div style={{ flex: 1, background: '#f1f5f9', borderRadius: 4, height: 14 }}>
+                  <div style={{ width: `${Math.max(2, (val / data.maxCategoryVal) * 100)}%`, background: COLORS[i % COLORS.length], height: '100%', borderRadius: 4 }} />
+                </div>
+                <div style={{ width: 90, fontSize: 12, textAlign: 'right', fontWeight: 600, flexShrink: 0 }}>{fmt(val)}</div>
+              </div>
+            ))}
+          </div>
+        )}
+        <h4>Income</h4>
+        <div className="table-scroll" style={{ marginBottom: 24 }}>
+          <table className="responsive-table">
+            <thead><tr><th>Month</th><th>Source</th><th>Amount</th></tr></thead>
+            <tbody>
+              {data.rangeIncomes.map((i, idx) => (
+                <tr key={idx}><td>{i.start_date.slice(0, 7)}</td><td>{i.name}</td><td style={{ textAlign: 'right' }}>{fmt(i.amount)}</td></tr>
+              ))}
+            </tbody>
+            <tfoot><tr style={{ fontWeight: 700 }}><td></td><td>Total</td><td style={{ textAlign: 'right' }}>{fmt(data.incomeTotal)}</td></tr></tfoot>
+          </table>
+        </div>
+        <h4>Expenses</h4>
+        <div className="table-scroll" style={{ marginBottom: 24 }}>
+          <table className="responsive-table">
+            <thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th></tr></thead>
+            <tbody>
+              {data.rangeExpenses.map((e) => (
+                <tr key={e.id}><td>{fmtDate(e.expense_date)}</td><td>{categoryNameById[e.category_id] || 'Uncategorized'}</td><td>{e.description || ''}</td><td style={{ textAlign: 'right' }}>{fmt(e.amount)}</td></tr>
+              ))}
+            </tbody>
+            <tfoot><tr style={{ fontWeight: 700 }}><td></td><td></td><td>Total</td><td style={{ textAlign: 'right' }}>{fmt(data.expenseTotal)}</td></tr></tfoot>
+          </table>
+        </div>
+        <h4>Fixed Expenses</h4>
+        {data.rangeRecurringOccurrences.length === 0 ? (
+          <div className="muted-small" style={{ marginBottom: 24 }}>No fixed expenses due in this period.</div>
+        ) : (
+          <div className="table-scroll" style={{ marginBottom: 24 }}>
+            <table className="responsive-table">
+              <thead><tr><th>Name</th><th>Category</th><th>Frequency</th><th>Month Due</th><th>Amount</th></tr></thead>
+              <tbody>
+                {data.rangeRecurringOccurrences.map((r, idx) => (
+                  <tr key={idx}>
+                    <td>{r.name}</td>
+                    <td>{categoryNameById[r.category_id] || 'Uncategorized'}</td>
+                    <td>{(FREQUENCIES.find((f) => f.value === r.frequency) || {}).label || r.frequency}</td>
+                    <td>{r.occurredMonth}</td>
+                    <td style={{ textAlign: 'right' }}>{fmt(r.amount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot><tr style={{ fontWeight: 700 }}><td></td><td></td><td></td><td>Total</td><td style={{ textAlign: 'right' }}>{fmt(data.fixedTotal)}</td></tr></tfoot>
+            </table>
+          </div>
+        )}
+        <h4>Savings by Month</h4>
+        {data.rangeSavingsOccurrences.length === 0 ? (
+          <div className="muted-small" style={{ marginBottom: 24 }}>No savings goals set for this period. Add one from the Savings tab.</div>
+        ) : (
+          <div className="table-scroll" style={{ marginBottom: 24 }}>
+            <table className="responsive-table">
+              <thead><tr><th>Month</th><th>Savings Goal</th><th>Amount</th></tr></thead>
+              <tbody>
+                {data.rangeSavingsOccurrences.map((s, idx) => (
+                  <tr key={idx}><td>{s.occurredMonth}</td><td>{s.name}</td><td style={{ textAlign: 'right' }}>{fmt(s.amount)}</td></tr>
+                ))}
+              </tbody>
+              <tfoot><tr style={{ fontWeight: 700 }}><td></td><td>Total Savings</td><td style={{ textAlign: 'right' }}>{fmt(data.savingsGoalTotal)}</td></tr></tfoot>
+            </table>
+          </div>
+        )}
+        {data.rangeMonths.length > 1 && data.rangeSavingsOccurrences.length > 0 && (
+          <>
+            <h4>Total Saved Per Month</h4>
+            <div className="table-scroll" style={{ marginBottom: 24 }}>
+              <table className="responsive-table">
+                <thead><tr><th>Month</th><th>Total Saved</th></tr></thead>
+                <tbody>
+                  {data.rangeMonths.map((mKey) => (
+                    <tr key={mKey}><td>{mKey}</td><td style={{ textAlign: 'right' }}>{fmt(data.perMonthSavings[mKey] || 0)}</td></tr>
+                  ))}
+                </tbody>
+                <tfoot><tr style={{ fontWeight: 700 }}><td>Total</td><td style={{ textAlign: 'right' }}>{fmt(data.savingsGoalTotal)}</td></tr></tfoot>
+              </table>
+            </div>
+          </>
+        )}
+        <h4>Pareto Chart -- Where Your Money Goes</h4>
+        {data.paretoRows.length === 0 ? (
+          <div className="muted-small" style={{ marginBottom: 24 }}>No expenses in this period.</div>
+        ) : (
+          <div style={{ marginBottom: 12 }}>
+            {data.paretoRows.map((r, i) => (
+              <div key={r.name} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <div style={{ width: 120, fontSize: 12, color: '#475569', flexShrink: 0 }}>{r.name}</div>
+                <div style={{ flex: 1, background: '#f1f5f9', borderRadius: 4, height: 14 }}>
+                  <div style={{ width: `${Math.max(2, (r.val / data.maxCategoryVal) * 100)}%`, background: (r.cumPct <= 80 || i === 0) ? '#0d9488' : '#94a3b8', height: '100%', borderRadius: 4 }} />
+                </div>
+                <div style={{ width: 90, fontSize: 12, textAlign: 'right', fontWeight: 600, flexShrink: 0 }}>{fmt(r.val)}</div>
+                <div style={{ width: 44, fontSize: 12, textAlign: 'right', color: (r.cumPct <= 80 || i === 0) ? '#0d9488' : '#94a3b8', flexShrink: 0 }}>{Math.round(r.cumPct)}%</div>
+              </div>
+            ))}
+            <div className="muted-small" style={{ marginTop: 8 }}>
+              {data.vitalFewNames.length} of {data.paretoRows.length} categories ({data.vitalFewNames.join(', ')}) make up about 80% of this period's spending.
+            </div>
+          </div>
+        )}
+        <h4>Where You Can Bring In Controls</h4>
+        <ul style={{ paddingLeft: 20, marginBottom: 20 }}>
+          {data.suggestions.map((s, i) => (
+            <li key={i} style={{ marginBottom: 8, fontSize: 13, color: '#334155' }}>{s}</li>
+          ))}
+        </ul>
+        <div style={{ marginTop: 8, padding: 12, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 12, color: '#5a6472' }}>
+          <strong>Data & Privacy:</strong> The figures in this report are drawn directly from the data your household has entered into Hearth. This data is private to your household -- it is not visible to, or shared with, anyone outside your household's account, and it is not sold or provided to third parties. Once downloaded or emailed, this report becomes a standalone file outside the app, so please share it only with people you intend to see your household's financial information.function handleGenerateReport() {
     if (!reportFrom || !reportTo || reportFrom > reportTo) {
       alert('Please choose a valid From/To date range.');
       return;
@@ -3357,7 +3575,7 @@ const labelMaxLen = chartRows.length > 18 ? 12 : 15;
     if (reportPreviewUrlRef.current) URL.revokeObjectURL(reportPreviewUrlRef.current);
     const blobUrl = URL.createObjectURL(doc.output('blob'));
     reportPreviewUrlRef.current = blobUrl;
-    setReportDoc({ dataUri, previewUrl: `${blobUrl}#view=FitH`, filename, rangeLabel });
+    setReportDoc({ dataUri, previewUrl: `${blobUrl}#view=FitH`, filename, rangeLabel, data: computeReportData(reportFrom, reportTo) });
     setReportStatus('');
     setReportPreviewOpen(true);
   }
@@ -6608,9 +6826,11 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   // frame, subtle shadow, teal title bar) instead of a bare
                   // browser PDF plugin, so viewing it in-app feels like a
                   // deliberate feature rather than an afterthought.
+                  <ReportHtmlView data={reportDoc.data} />
                   <div
                     style={{
                       marginTop: 16,
+                      display: 'none',
                       borderRadius: 12,
                       overflow: 'hidden',
                       border: '1px solid #e2e8f0',
