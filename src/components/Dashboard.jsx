@@ -4335,14 +4335,65 @@ function ReportHtmlView({ data }) {
             )}
           </div>
           <div className="corner-badge-group">
-                    {/* Signed-in user's own display name now shown ABOVE the
-            date+version badge, both still right-aligned -- per
-            explicit request to swap their order. */}
-        <span className="corner-username-badge">{displayNameForEmail(session.user.email)}</span>
-        <span className="corner-version-badge" title="This updates automatically -- if a change doesn't look right, reload the page.">
-          {formatVersionBadge()}
-                </span></div>
-      </div>
+<div className="profile-menu-wrap" ref={profileMenuRef}>
+              <button
+                type="button"
+                className="profile-icon-btn"
+                title="Profile"
+                onClick={() => setProfileMenuOpen((o) => !o)}
+              >
+                <User size={18} />
+<span className="corner-profile-label" title="This updates automatically -- if a change doesn't look right, reload the page.">{displayNameForEmail(session.user.email)} | {formatVersionBadge().replace(' · ', ' | ')}</span>
+              </button>
+              {profileMenuOpen && (
+                <div className="profile-dropdown">
+                  {/* Per explicit request: a clear "Signed in as {name}
+                      ({email})" line, plus role and account-created date --
+                      everything else (phone/location) is already editable
+                      just below this, so this line is purely identity
+                      context, not another editable field. */}
+                  <div className="profile-dropdown-email">
+                    Signed in as {myDetailsDraft.name || 'you'} ({session.user.email})
+                  </div>
+                  <div className="muted-small" style={{ marginTop: -6, marginBottom: 10 }}>
+                    {isOwner ? 'Owner' : 'User'}
+                    {session.user.created_at && (
+                      <> &middot; Member since {new Date(session.user.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</>
+                    )}
+                  </div>
+                  <div className="field" style={{ marginBottom: 10 }}>
+                    <label>Full name</label>
+                    <input
+                      type="text"
+                      value={myDetailsDraft.name}
+                      onChange={(e) => setMyDetailsDraft((d) => ({ ...d, name: e.target.value }))}
+                      onBlur={(e) => commitMyDetailsField('name', e.target.value)}
+                    />
+                  </div>
+                  <div className="field" style={{ marginBottom: 10 }}>
+                    <label>Phone (optional)</label>
+                    <input
+                      type="text"
+                      value={myDetailsDraft.phone}
+                      onChange={(e) => setMyDetailsDraft((d) => ({ ...d, phone: e.target.value }))}
+                      onBlur={(e) => commitMyDetailsField('phone', e.target.value)}
+                    />
+                  </div>
+                  <div className="field" style={{ marginBottom: 12 }}>
+                    <label>Location</label>
+                    <input
+                      type="text"
+                      value={myDetailsDraft.location}
+                      onChange={(e) => setMyDetailsDraft((d) => ({ ...d, location: e.target.value }))}
+                      onBlur={(e) => commitMyDetailsField('location', e.target.value)}
+                    />
+                  </div>
+                  <div className="muted-small" style={{ marginBottom: 12 }}>Changes save automatically.</div>
+                  <button className="btn-teal profile-signout-btn" onClick={handleSignOut}>Sign out</button>
+                </div>
+              )}
+            </div>
+                  </div>
           {/* Left-aligned, single row: the 4 data-entry tabs first, then the
               teal panel-toggle buttons, then the Profile icon, then the
               bell last -- all one flowing group instead of two separate
@@ -4470,63 +4521,6 @@ function ReportHtmlView({ data }) {
                 clicking it shows the signed-in email plus the same
                 self-editable Name/Phone/Location fields as "My details" in
                 Users, with Sign out as the last action in the dropdown. */}
-            <div className="profile-menu-wrap" ref={profileMenuRef}>
-              <button
-                type="button"
-                className="profile-icon-btn"
-                title="Profile"
-                onClick={() => setProfileMenuOpen((o) => !o)}
-              >
-                <User size={18} />
-              </button>
-              {profileMenuOpen && (
-                <div className="profile-dropdown">
-                  {/* Per explicit request: a clear "Signed in as {name}
-                      ({email})" line, plus role and account-created date --
-                      everything else (phone/location) is already editable
-                      just below this, so this line is purely identity
-                      context, not another editable field. */}
-                  <div className="profile-dropdown-email">
-                    Signed in as {myDetailsDraft.name || 'you'} ({session.user.email})
-                  </div>
-                  <div className="muted-small" style={{ marginTop: -6, marginBottom: 10 }}>
-                    {isOwner ? 'Owner' : 'User'}
-                    {session.user.created_at && (
-                      <> &middot; Member since {new Date(session.user.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</>
-                    )}
-                  </div>
-                  <div className="field" style={{ marginBottom: 10 }}>
-                    <label>Full name</label>
-                    <input
-                      type="text"
-                      value={myDetailsDraft.name}
-                      onChange={(e) => setMyDetailsDraft((d) => ({ ...d, name: e.target.value }))}
-                      onBlur={(e) => commitMyDetailsField('name', e.target.value)}
-                    />
-                  </div>
-                  <div className="field" style={{ marginBottom: 10 }}>
-                    <label>Phone (optional)</label>
-                    <input
-                      type="text"
-                      value={myDetailsDraft.phone}
-                      onChange={(e) => setMyDetailsDraft((d) => ({ ...d, phone: e.target.value }))}
-                      onBlur={(e) => commitMyDetailsField('phone', e.target.value)}
-                    />
-                  </div>
-                  <div className="field" style={{ marginBottom: 12 }}>
-                    <label>Location</label>
-                    <input
-                      type="text"
-                      value={myDetailsDraft.location}
-                      onChange={(e) => setMyDetailsDraft((d) => ({ ...d, location: e.target.value }))}
-                      onBlur={(e) => commitMyDetailsField('location', e.target.value)}
-                    />
-                  </div>
-                  <div className="muted-small" style={{ marginBottom: 12 }}>Changes save automatically.</div>
-                  <button className="btn-teal profile-signout-btn" onClick={handleSignOut}>Sign out</button>
-                </div>
-              )}
-            </div>
             <div className="notif-bell-wrap" ref={notifBellRef}>
               <button
                 type="button"
