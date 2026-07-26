@@ -4642,16 +4642,6 @@ function ReportHtmlView({ data }) {
             <span className="chat-fab-badge-title chat-fab-badge-below tab-hide-mobile">Aria</span>
                 </>
               )}
-{isOwner && (
-  <button
-    type="button"
-    className={`refresh-app-btn tab-hide-mobile${updateAvailable ? ' refresh-app-btn-new' : ''}`}
-    title={updateAvailable ? 'New update available -- click to refresh' : 'Refresh app'}
-    onClick={() => window.location.reload()}
-  >
-    <RefreshCw size={16} />
-  </button>
-)}
               {chatOpen && (
                 <div className="chat-window">
                   <div className="chat-header">
@@ -4698,6 +4688,16 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 </div>
               )}
             </div>
+            {isOwner && (
+              <button
+                type="button"
+                className={`refresh-app-btn${updateAvailable ? ' refresh-app-btn-new' : ''}`}
+                title={updateAvailable ? 'New update available -- click to refresh' : 'Refresh app'}
+                onClick={() => window.location.reload()}
+              >
+                <RefreshCw size={16} />
+              </button>
+            )}
           </div>
         </div>
 
@@ -4799,7 +4799,8 @@ I can help you track expenses, understand spending patterns, create budgets, and
         )}
       </div>
 )}
-      <div className="grid">
+<div className="summary-cards">
+            <div className="grid">
                 <div className="card card-budget">
           <div className="k">Monthly Budget</div>
           {totalBudget > 0 ? (
@@ -4860,6 +4861,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
         <div className={`card card-net ${netCombined < 0 ? 'over' : 'ok'}`}>
           <div className="k">Net (income - expenses - savings)</div><div className="v"><Amt value={netCombined} /></div>
         </div>
+      </div>
       </div>
       </div>
 

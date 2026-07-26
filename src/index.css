@@ -963,6 +963,34 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
 .card-budget .v, .card-spent .v, .card-remaining .v,
 .card-income .v, .card-expenses .v, .card-net .v { color: #0f2a2e; }
 
+/* The 6 KPI cards (Monthly Budget -> Net) were reported as taking up more
+   than half a laptop's visible screen before the rest of the app (forms,
+   lists, charts) even started -- two stacked 3-card .grid rows, each with
+   fairly generous padding/type sized for a looser layout. Two changes,
+   stacked:
+   1. Above the mobile breakpoint, shrink the cards themselves (padding,
+      label/value font-size, row gap/margin) regardless of how many
+      columns they're currently wrapping into.
+   2. At real laptop/desktop widths, fold the two stacked 3-card rows into
+      one 6-card row: .summary-cards (the new wrapper around both existing
+      .grid blocks, see Dashboard.jsx) becomes the single 6-column grid,
+      and display: contents on the two child .grid elements removes their
+      own box (and, critically, their own grid-template-columns/margin-
+      bottom) so each one's 3 cards flow straight into that parent grid as
+      if there were never two separate rows -- without needing to touch
+      the .grid class itself, which narrower screens still rely on for
+      their own 3-col/1-col layouts below. */
+@media (min-width: 641px) {
+  .card { padding: 12px 14px; border-radius: 12px; }
+  .card .k { font-size: 10.5px; }
+  .card .v { font-size: 18px; margin-top: 2px; }
+  .grid { gap: 10px; margin-bottom: 12px; }
+}
+@media (min-width: 1100px) {
+  .summary-cards { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .summary-cards .grid { display: contents; }
+}
+
 .warning {
   background: var(--danger-bg); border: 1px solid #fecaca; color: var(--danger);
   padding: 12px 16px; border-radius: 10px; margin-bottom: 20px; font-size: 14px; font-weight: 600;
@@ -1664,8 +1692,19 @@ instead of overflowing at the unconditional 35px desktop size. */
   .field input, .field select {
     font-size: 16px; padding: 10px 12px;
   }
+/* Date fields don't need the same edge-to-edge width the rule above
+     forces onto every other .field input/select on phones -- a date is at
+     most ~10 characters, so stretching it across the whole screen (like
+     text/amount/select fields reasonably benefit from) reads as an
+     oversized, mostly-empty box, and was reported directly as the date
+     cell looking too big / running past a comfortable width on phones.
+     Cap it to a compact, natural width instead of width: 100% -- it still
+     sits inside its (full-width) .field wrapper, just left-aligned within
+     that space rather than stretched to fill it. 16px font, not 15px,
+     keeps the same iOS Safari zoom-on-focus prevention the rule above
+     relies on. */
   input[type="date"], .field input[type="date"] {
-    font-size: 15px; min-width: 0; width: 100%;
+    font-size: 16px; min-width: 0; width: auto; max-width: 150px; padding: 8px 6px;
   }
     .btn { padding: 11px 18px; font-size: 15px; }
 }
