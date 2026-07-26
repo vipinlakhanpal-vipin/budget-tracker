@@ -1554,7 +1554,7 @@ td.amount { font-weight: 600; text-align: right; }
    matches): a bordered, tinted, 6px-radius box, one for the name and one
    for the amount pill from the shared .amount-field-wrap.tight rule. */
 .cat-budget-row .cat-budget-name {
-  flex: 1;
+    flex: 0 1 240px;
   min-width: 0;
   display: inline-flex;
   align-items: center;
