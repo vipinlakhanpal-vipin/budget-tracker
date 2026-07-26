@@ -4724,6 +4724,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
           of each other). So the inputTab titles below are gated on
           `!activePanel` -- whenever an activePanel overlay is open, its
           title wins and is the only one shown. */}
+      <div className="page-title-row">
       {!inputTab && !activePanel && (
         <h2 className="page-title-themed">Dashboard</h2>
       )}
@@ -4735,7 +4736,14 @@ I can help you track expenses, understand spending patterns, create budgets, and
       {activePanel === 'settings' && <h2 className="page-title-themed">Settings</h2>}
       {activePanel === 'help' && <h2 className="page-title-themed">Help</h2>}
 
-{inputTab !== 'income' && inputTab !== 'savings' && (
+      {/* Month selection has no purpose on Settings/Help -- neither ever
+          shows monthly spending data, so the nav (and its date-range
+          filter) is hidden entirely for those two rather than just hiding
+          the filter piece. Income and Savings used to be excluded here too
+          (their own "for the month" lists are month-scoped, so the nav is
+          just as relevant there as on Fixed/Regular Expenses) -- removed
+          per explicit request so they now get it as well. */}
+{activePanel !== 'settings' && activePanel !== 'help' && (
       <div className="month-nav">
         <button onClick={() => setCurrentMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))}>&lsaquo;</button>
         <div className="label">{monthLabel(currentMonth)}</div>
@@ -4799,6 +4807,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
         )}
       </div>
 )}
+      </div>
 <div className="summary-cards">
             <div className="grid">
                 <div className="card card-budget">
