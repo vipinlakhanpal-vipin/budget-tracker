@@ -4520,18 +4520,18 @@ function ReportHtmlView({ data }) {
                 page right after that effect had already positioned things
                 correctly, which is why opening Report/Settings/Help looked
                 like it stopped doing anything. */}
-            <button className="btn-teal" onClick={() => togglePanel('report')}>
+                        <button className={`btn-teal${activePanel === 'report' ? ' header-tab-btn-active' : ''}`} onClick={() => togglePanel('report')}>
               <FileText size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
               Report
             </button>
-            <button className="btn-teal tab-hide-mobile" data-tour="nav-settings" onClick={() => togglePanel('settings')}>
+                        <button className={`btn-teal tab-hide-mobile${activePanel === 'settings' ? ' header-tab-btn-active' : ''}`} data-tour="nav-settings" onClick={() => togglePanel('settings')}>
               <SettingsIcon size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
               Settings
             </button>
             {/* Standalone "Users" button removed from this row -- Users
                 management now lives under Settings > Users instead, so
                 there's one way to reach it, not two. */}
-            <button className="btn-teal tab-hide-mobile" data-tour="nav-help" onClick={() => togglePanel('help')}>
+                        <button className={`btn-teal tab-hide-mobile${activePanel === 'help' ? ' header-tab-btn-active' : ''}`} data-tour="nav-help" onClick={() => togglePanel('help')}>
               <HelpCircle size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
               Help
             </button>

@@ -806,6 +806,27 @@ sitting duplicated under the summary cards. */
 .header-tab-btn-active {
   background: var(--accent-active);
   box-shadow: inset 0 0 0 2px rgba(255,255,255,.55);
+  animation: tab-heartbeat 3.2s ease-in-out infinite;
+}
+/* Shared "heartbeat" pulse -- same 3.2s ease-in-out rhythm as the Hearth
+   logo's own breathing sphere (hearth-family-breathe, defined further
+   below) so the active tab and these header icons read as the same
+   animated family. Scale-only (no opacity dip, unlike the logo's own
+   version) so the button/icon stays fully legible the whole time instead
+   of visually fading in and out -- dimming an "you are here" indicator or
+   a tappable icon would work against the point of it. Applied to: the
+   active tab (above), theme/reminder/Aria icons (always-on, decorative,
+   per explicit request "all tabs including icons"), but deliberately NOT
+   to .refresh-app-btn -- that one has its own separate, conditional pulse
+   (.refresh-app-btn-new / refresh-app-btn-pulse below) that only kicks in
+   once an update is actually available, per explicit request that refresh
+   should only beat when there's something to push. */
+@keyframes tab-heartbeat {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+.theme-fab-btn, .notif-bell-btn, .chat-fab-btn {
+  animation: tab-heartbeat 3.2s ease-in-out infinite;
 }
 /* Outline variant for the "which sub-section" toggle inside Settings (App
    Settings / Admin Console) -- same teal family as the top action row so it
