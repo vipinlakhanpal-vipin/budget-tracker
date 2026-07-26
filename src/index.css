@@ -939,15 +939,14 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
 .muted-small { color: var(--muted); font-size: 12px; }
 
 .page-title-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
   gap: 10px 16px;
+  margin-bottom: 10px;
 }
-.page-title-row .page-title-themed { margin: 0; }
-.page-title-row .month-nav { margin: 0; }
-.page-title-row { margin-bottom: 10px; }
+.page-title-row .page-title-themed { grid-column: 2; grid-row: 1; margin: 0; text-align: center; }
+.page-title-row .month-nav { grid-column: 1; grid-row: 1; margin: 0; justify-self: start; min-width: 0; max-width: 100%; }
 
 .month-nav { display: flex; align-items: center; gap: 12px; margin: 16px 0 20px; }
 /* ">" child combinator, not a plain descendant selector -- the </> arrow
