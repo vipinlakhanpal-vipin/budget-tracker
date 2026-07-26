@@ -7,7 +7,7 @@
 // this file is deliberately bumped for a pushed batch of changes. Starts at
 // 1.01. The date shown next to it in the badge is computed live (always
 // "today"), completely separate from this number.
-export const APP_VERSION = '1.05';
+export const APP_VERSION = '1.05';export const APP_VERSION = '1.06';
 export function formatVersionBadge() {
   const dateLabel = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   return `${dateLabel} - v${APP_VERSION}`;

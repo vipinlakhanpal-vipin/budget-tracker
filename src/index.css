@@ -668,8 +668,8 @@ button, input, select, textarea { font-family: inherit; }
   padding-bottom: 4px;
 }
 .top-bar {
-  display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px;
-  padding-bottom: 8px;
+    display: flex; flex-direction: column; gap: 10px; margin-bottom: 6px;
+  padding-bottom: 6px;
 }
 /* Title/logo on the left, the version badge on the right -- the only part
    of the header that's still a left/right split. Everything else (the
@@ -926,6 +926,7 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
 }
 .page-title-row .page-title-themed { margin: 0; }
 .page-title-row .month-nav { margin: 0; }
+.page-title-row { margin-bottom: 10px; }
 
 .month-nav { display: flex; align-items: center; gap: 12px; margin: 16px 0 20px; }
 /* ">" child combinator, not a plain descendant selector -- the </> arrow
@@ -936,7 +937,7 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
    visible white background. */
 .month-nav > button {
   background: var(--card); border: 1px solid var(--border); border-radius: 8px;
-  width: 32px; height: 32px; cursor: pointer; font-size: 16px;
+    width: 26px; height: 26px; cursor: pointer; font-size: 14px;
 }
 .month-nav .label { font-weight: 600; font-size: 16px; min-width: 160px; text-align: center; }
 
@@ -994,7 +995,8 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
   .card { padding: 12px 14px; border-radius: 12px; }
   .card .k { font-size: 10.5px; }
   .card .v { font-size: 18px; margin-top: 2px; }
-  .grid { gap: 10px; margin-bottom: 12px; }
+      .card .muted-small { font-size: 10.5px; line-height: 1.35; }
+.grid { gap: 10px; margin-bottom: 12px; }
 }
 @media (min-width: 1100px) {
   .summary-cards { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
@@ -1668,7 +1670,7 @@ instead of overflowing at the unconditional 35px desktop size. */
   .app-title-purple { font-size: 27px; }
   .month-nav { gap: 8px; margin: 12px 0 16px; }
   .month-nav .label { min-width: 0; flex: 1; font-size: 14px; }
-    .month-nav > button { width: 24px; height: 24px; font-size: 13px; }
+        .month-nav > button { width: 21px; height: 21px; font-size: 12px; }
   /* The "6 cell dashboard" -- instead of 6 full-width cards stacked one
      below the other (a long scroll of near-identical rows), phones get the
      same 3-across x 2-row grid as desktop, just with smaller type/padding
@@ -1981,6 +1983,19 @@ row. */
 @keyframes refresh-app-btn-pulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(13, 148, 136, .45); }
   50% { box-shadow: 0 0 0 6px rgba(13, 148, 136, .12); }
+}
+@media (max-width: 640px) {
+  /* On mobile the Aria icon itself is hidden (.chat-fab-btn.tab-hide-mobile
+     -- it lives in the bottom nav instead), but its wrapper
+     (.chat-fab-wrap-spaced) still sits in the row and still carries its
+     14px "space before Aria" margin even though there's nothing visible
+     inside it anymore. Combined with the refresh button's own 10px margin
+     right after it, that left a big empty-looking gap between the
+     reminder bell and the refresh button ("looks far and odd" per report).
+     Zero the now-pointless wrapper margin and pull the refresh button in
+     tight to the bell instead. */
+  .chat-fab-wrap-spaced { margin-left: 0; }
+  .refresh-app-btn { margin-left: 6px; }
 }
 .chat-window {
   position: absolute; top: calc(100% + 8px); right: 0; z-index: 200;
