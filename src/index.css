@@ -1561,7 +1561,7 @@ td.amount { font-weight: 600; text-align: right; }
   padding: 6px 10px;
   border: 1.5px solid #c7d2fe;
   border-radius: 6px;
-  background: linear-gradient(160deg, #eef2ff, #ffffff);
+  background: linear-gradient(160deg, #eef2ff, #ffffff); color: #0f2a2e;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;

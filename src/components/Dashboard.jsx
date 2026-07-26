@@ -4769,7 +4769,14 @@ I can help you track expenses, understand spending patterns, create budgets, and
       </div>
 )}
       <div className="grid">
-        <div className="card card-budget"><div className="k">Monthly Budget</div><div className="v"><Amt value={totalBudget} /></div></div>
+                <div className="card card-budget">
+          <div className="k">Monthly Budget</div>
+          {totalBudget > 0 ? (
+            <div className="v"><Amt value={totalBudget} /></div>
+          ) : (
+            <div className="muted-small" style={{ marginTop: 4 }}>You can enter monthly budget values in settings</div>
+          )}
+        </div>
         <div className={`card card-spent ${totalBudget > 0 && combinedOutflow > totalBudget ? 'over' : ''}`}>
           <div className="k">Spent so far</div><div className="v"><Amt value={combinedOutflow} /></div>
           {savingsTotal > 0 && (
@@ -6956,10 +6963,16 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     Currency
                   </button>
                   <button
+                    className={`btn-teal ${settingsSubTab === 'monthlybudget' ? '' : 'secondary'}`}
+                    onClick={() => { setBudgetMonthDraft(monthKey(currentMonth)); setSettingsSubTab('monthlybudget'); }}
+                  >
+                    Monthly Budget
+                  </button>
+                  <button
                     className={`btn-teal ${settingsSubTab === 'budgeting' ? '' : 'secondary'}`}
                     onClick={() => { setBudgetMonthDraft(monthKey(currentMonth)); setSettingsSubTab('budgeting'); }}
                   >
-                    Smart Budget
+                    Category Budgets
                   </button>
                   <button
                     className={`btn-teal ${settingsSubTab === 'category' ? '' : 'secondary'}`}
@@ -6993,7 +7006,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     management logic exists in exactly one place. */}
                 {settingsSubTab === 'admin' && isAdmin ? (
                   <AdminConsole embedded onClose={() => setSettingsSubTab('app')} />
-                ) : settingsSubTab === 'budgeting' ? (
+                ) : settingsSubTab === 'monthlybudget' ? (
                 <>
                 {/* Smart Budget tab -- Monthly Budget and per-category Budget
                     merged into one tab, per explicit request. Month always
@@ -7027,6 +7040,9 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   </div>
                 </div>
                 <div className="muted-small">Changes save automatically as you edit -- there's no Save button to click.</div>
+                </>
+                ) : settingsSubTab === 'budgeting' ? (
+                <>
 
                 {/* Per-category caps + how this month's actual spending
                     compares to them. Optional -- the overall monthly budget
