@@ -1614,7 +1614,15 @@ td.amount { font-weight: 600; text-align: right; }
             auto pushes it to the far right of whichever line it ends up on. */
           .corner-badge-group { margin-left: auto; }
     .tab-visible-mobile { display: inline-block; }
-    .tab-hide-mobile { display: none; }
+    /* !important -- some elements this hides on mobile (chat-fab-btn,
+       refresh-app-btn) declare their own unconditional display value
+       (e.g. display: inline-flex) later in this same file for their
+       desktop layout; since that rule and this one are tied on
+       specificity (both single class selectors), plain source order
+       would let that later, unconditional rule win even while this
+       media query is active, silently defeating the hide. !important
+       makes this win regardless of where else display gets set. */
+    .tab-hide-mobile { display: none !important; }
   h1 { font-size: 19px; }
 /* Mobile: shrink the editable app-title input/h1 so "Expense
 Management" (or whatever it's renamed to) fits the narrow header
