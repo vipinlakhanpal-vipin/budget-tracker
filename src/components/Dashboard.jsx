@@ -9,12 +9,12 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { supabase } from '../supabaseClient';
 import AdminConsole from './AdminConsole.jsx';
-import { formatVersionBadge } from '../version.js';
+import { formatVersionBadge, APP_VERSION } from '../version.js';
 import {
   Home, Plus, FileText, Users as UsersIcon, Settings as SettingsIcon,
   Pencil, Trash2, X, ChevronLeft, ChevronRight, ChevronDown, Camera, MessageCircle, Bot, Sparkles, User,
   Palette, Check, StickyNote, Paperclip, ExternalLink, Mail, Lightbulb,
-  Wallet, CalendarClock, ShoppingCart, PiggyBank, HelpCircle, Filter, Sun, Moon,
+  Wallet, CalendarClock, ShoppingCart, PiggyBank, HelpCircle, Filter, Sun, Moon, RefreshCw,
 } from 'lucide-react';
 
 // Max size for a note/fixed-expense attachment (images or PDF only). Kept as
@@ -1058,6 +1058,27 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   // model as the rest of the app's shared data), loaded once below and
   // appended to as each message is sent.
   const [chatOpen, setChatOpen] = useState(false);
+  // Owner-only new version available indicator + one-click refresh --
+  // polls the tiny static /version.json file (bumped in lockstep with
+  // APP_VERSION every time a change is pushed) rather than the already-
+  // loaded bundle, since running code cannot know about a newer build of
+  // itself. Desktop + owner only, per explicit request -- lets Vipin hit
+  // one button instead of remembering to hard-refresh the browser tab.
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    const checkVersion = () => {
+      fetch(`/version.json?t=${Date.now()}`, { cache: 'no-store' })
+        .then((r) => r.json())
+        .then((data) => {
+          if (!cancelled && data && data.version && data.version !== APP_VERSION) setUpdateAvailable(true);
+        })
+        .catch(() => {});
+    };
+    checkVersion();
+    const id = setInterval(checkVersion, 60000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, []);
   const [chatMessages, setChatMessages] = useState([]); // [{ role: 'user'|'assistant', content }]
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
@@ -4610,7 +4631,7 @@ function ReportHtmlView({ data }) {
             <div className="chat-fab-wrap chat-fab-wrap-spaced" ref={chatMenuRef}>
               <button
                 type="button"
-                                  className="chat-fab-btn"
+                                                            className="chat-fab-btn tab-hide-mobile"
                         title={chatOpen ? 'Close chat' : 'Aria - Your AI Assistant'}
                 onClick={() => setChatOpen((o) => !o)}
               >
@@ -4618,9 +4639,19 @@ function ReportHtmlView({ data }) {
               </button>
               {!chatOpen && (
                 <>
-            <span className="chat-fab-badge-title chat-fab-badge-below">Aria</span>
+            <span className="chat-fab-badge-title chat-fab-badge-below tab-hide-mobile">Aria</span>
                 </>
               )}
+{isOwner && (
+  <button
+    type="button"
+    className={`refresh-app-btn tab-hide-mobile${updateAvailable ? ' refresh-app-btn-new' : ''}`}
+    title={updateAvailable ? 'New update available -- click to refresh' : 'Refresh app'}
+    onClick={() => window.location.reload()}
+  >
+    <RefreshCw size={16} />
+  </button>
+)}
               {chatOpen && (
                 <div className="chat-window">
                   <div className="chat-header">
@@ -7309,6 +7340,15 @@ I can help you track expenses, understand spending patterns, create budgets, and
           <HelpCircle size={20} strokeWidth={2.2} />
           <span>Help</span>
         </button>
+{/* Aria now lives here on phones instead of the top-bar icon (see
+    tab-hide-mobile on chat-fab-btn/chat-fab-badge-title above) --
+    same chatOpen state either way, so the chat window itself is
+    unchanged, just the thumb-reachable entry point moved down per
+    explicit request. Desktop keeps the original top-bar icon. */}
+<button data-tour="nav-aria" className={chatOpen ? 'active' : ''} onClick={() => setChatOpen((o) => !o)}>
+  <Bot size={20} strokeWidth={2.2} />
+  <span>Aria</span>
+</button>
         {/* Users button removed from here too -- reach it via Settings >
             Users now, same as desktop. */}
         <button data-tour="nav-settings" className={activePanel === 'settings' ? 'active' : ''} onClick={() => togglePanel('settings')}>

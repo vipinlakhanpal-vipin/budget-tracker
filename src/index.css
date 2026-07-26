@@ -1876,6 +1876,28 @@ row. */
   text-shadow: 0 1px 3px rgba(0, 0, 0, .7), 0 0 8px rgba(0, 0, 0, .6);
 }
 .chat-fab-badge-below { top: 100%; margin-top: 4px; font-size: 11px; }
+/* Owner-only refresh-app button, sat right next to Aria in the header --
+   plain outline circle normally; once /version.json (polled every 60s)
+   reports a newer APP_VERSION than what is already loaded, it fills solid
+   and pulses so it actually gets noticed instead of blending into the row.
+   Desktop only (.tab-hide-mobile) -- on mobile there is no reason to check
+   for updates mid-session the way there is on an always-open desktop tab. */
+.refresh-app-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border-radius: 50%; margin-left: 10px; padding: 0;
+  background: var(--card); border: 1.5px solid var(--border); color: var(--muted);
+  cursor: pointer; transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+.refresh-app-btn:hover { color: var(--accent); border-color: var(--accent); }
+.refresh-app-btn-new {
+  background: var(--accent); border-color: var(--accent); color: #fff;
+  animation: refresh-app-btn-pulse 1.6s ease-in-out infinite;
+}
+.refresh-app-btn-new:hover { color: #fff; filter: brightness(1.08); }
+@keyframes refresh-app-btn-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(13, 148, 136, .45); }
+  50% { box-shadow: 0 0 0 6px rgba(13, 148, 136, .12); }
+}
 .chat-window {
   position: absolute; top: calc(100% + 8px); right: 0; z-index: 200;
   width: 340px; max-width: min(85vw, 340px); height: 440px; max-height: 65vh;
