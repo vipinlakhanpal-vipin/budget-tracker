@@ -5479,7 +5479,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
 </select>
       {fixedAiCategoryHint && <div className="ai-hint">{fixedAiCategoryHint}</div>}
               </div>
-                      <div className="field">
+                      <div className="field" style={{ flex: '0 1 190px', minWidth: 170 }}>
                 <label>Start date</label>
                 <input
                   type="date"
@@ -5487,7 +5487,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   onChange={(e) => setNewRecurring({ ...newRecurring, startDate: e.target.value })}
                 />
               </div>
-                      <div className="field">
+                      <div className="field" style={{ flex: '0 1 190px', minWidth: 170 }}>
                 <label>End date (optional)</label>
                 <input
                   type="date"
