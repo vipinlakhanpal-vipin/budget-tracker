@@ -320,34 +320,45 @@ function SpotlightTour({ stepIndex, onNext, onPrev, onSkip }) {
   const [rect, setRect] = useState(null);
   const step = TOUR_STEPS[stepIndex];
 
-  useLayoutEffect(() => {
-    if (!step) return;
+    useLayoutEffect(() => {
+    // Clear any previous step's highlight immediately on step change --
+    // showing nothing for a frame beats showing the WRONG (previous
+    // step's) box, which is what a one-shot setTimeout measurement used
+    // to do here: if steps advanced faster than its 260ms delay (a normal
+    // double-click, or this component's own smooth-scroll re-triggering
+    // the old step's scroll listener before its cleanup ran), the stale
+    // rect from the step you just left could get painted under the NEW
+    // step's tooltip text, or -- worse -- a scroll event mid-transition
+    // could hand the old closure a completely unrelated element's rect.
+    // A continuous requestAnimationFrame loop instead of a single delayed
+    // measurement has no "stale snapshot" to leak: every frame re-reads
+    // the real DOM and the real scroll-into-view position, so it always
+    // self-corrects to the truth within one frame, and rAF ids (not a
+    // closed-over boolean) fully own their own cancellation.
+    if (!step) { setRect(null); return; }
+    setRect(null);
     let cancelled = false;
-    const measure = () => {
+    let rafId = null;
+    let hasScrolled = false;
+    const tick = () => {
       if (cancelled) return;
       const candidates = Array.from(document.querySelectorAll(step.selector));
       const el = candidates.find((c) => c.offsetParent !== null) || candidates[0];
       if (el) {
-        el.scrollIntoView({ block: 'center', behavior: 'smooth' });
-        // Small delay lets the smooth scroll settle before measuring the
-        // final on-screen position -- measuring immediately would capture
-        // the pre-scroll rect and place the highlight/tooltip in the wrong
-        // spot for a frame or two.
-        setTimeout(() => {
-          if (cancelled) return;
-          setRect(el.getBoundingClientRect());
-        }, 260);
+        if (!hasScrolled) {
+          el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          hasScrolled = true;
+        }
+        setRect(el.getBoundingClientRect());
       } else {
         setRect(null);
       }
+      rafId = requestAnimationFrame(tick);
     };
-    measure();
-    window.addEventListener('resize', measure);
-    window.addEventListener('scroll', measure, true);
+    rafId = requestAnimationFrame(tick);
     return () => {
       cancelled = true;
-      window.removeEventListener('resize', measure);
-      window.removeEventListener('scroll', measure, true);
+      if (rafId != null) cancelAnimationFrame(rafId);
     };
   }, [stepIndex, step]);
 
