@@ -529,6 +529,33 @@ button, input, select, textarea { font-family: inherit; }
   from { opacity: 1; visibility: visible; }
   to { opacity: 0; visibility: hidden; }
 }
+/* Mobile splash overlap fix -- the vertically-centered diagram block
+   (.splash-center) and the bottom-anchored Hearth -- Spend smart line
+   (.splash-top-tagline) have enough combined height that on a SHORTER
+   phone screen (e.g. 375x667) they collide, even though the same layout
+   has plenty of room on a taller 390x844 one -- the real constraint is
+   available vertical space, not width, so this targets height (plus a
+   plain narrow-width fallback for anything that reports an odd
+   viewport) rather than the usual width-only breakpoint. Shrinking
+   .splash-illustration-platform also shrinks every bit of text inside
+   its SVG proportionally, since that text is sized in the SVG's own
+   user-space units rather than real px, so this one change buys back a
+   large chunk of vertical room without needing to touch each line
+   individually. */
+@media (max-height: 720px), (max-width: 480px) {
+  .splash-illustration-platform { width: min(340px, 78vw); }
+  .splash-center { gap: 10px; }
+  .splash-tagline-group { gap: 3px; }
+  .splash-greeting {
+    top: calc(env(safe-area-inset-top, 0px) + 16px);
+    font-size: clamp(22px, 8vw, 40px);
+  }
+  .splash-top-tagline {
+    bottom: calc(max(20px, env(safe-area-inset-bottom, 0px)) + 20px);
+    font-size: clamp(13px, 4.6vw, 20px);
+  }
+  .splash-credit { bottom: max(16px, env(safe-area-inset-bottom)); font-size: 10px; }
+}
 /* Small confirmation that Claude auto-picked a category for the expense
    description just typed -- fades in next to the Category dropdown, and
    clears itself (or on manual override) after a few seconds. */
