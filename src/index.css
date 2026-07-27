@@ -1337,21 +1337,25 @@ input[type="number"] { text-align: right; }
    a best guess, not a guarantee. */
 .scan-receipt-block { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
 .scan-error { margin-top: 6px; font-size: 12.5px; color: #b91c1c; }
-.scan-review-list { margin-top: 14px; }
-.scan-review-row {
-  display: flex; gap: 8px; align-items: center; margin-bottom: 8px;
+/* Receipt scan now adds straight to the database (see handleScanFileChange
+   in Dashboard.jsx) -- this is just a brief read-only "here's what just got
+   added" line, not an editable review list anymore. */
+.scan-added-summary { margin-top: 8px; font-size: 12.5px; color: var(--accent); font-weight: 600; }
+/* "Updated" confirmation toast -- manual Add and receipt auto-add both use
+   this. Fixed at the top of the frame, above everything else, and dismisses
+   itself (see showToast in Dashboard.jsx) rather than needing a close
+   button for something this short-lived. */
+@keyframes app-toast-in {
+  0% { opacity: 0; transform: translate(-50%, -8px); }
+  100% { opacity: 1; transform: translate(-50%, 0); }
 }
-.scan-review-row input[type="checkbox"] { flex: 0 0 auto; width: 16px; height: 16px; }
-.scan-review-row input[type="date"] { flex: 0 0 128px; }
-.scan-review-row input[type="text"] { flex: 1.4; }
-.scan-review-row select { flex: 1; }
-.scan-review-row .amount-field-wrap { flex: 0 0 110px; }
-@media (max-width: 640px) {
-  .scan-review-row { flex-wrap: wrap; }
-  .scan-review-row input[type="date"] { flex: 1 1 45%; }
-  .scan-review-row input[type="text"] { flex: 1 1 100%; order: 3; }
-  .scan-review-row select { flex: 1 1 45%; }
-  .scan-review-row .amount-field-wrap { flex: 1 1 100%; order: 4; }
+.app-toast {
+  position: fixed; top: 14px; left: 50%; z-index: 9999;
+  transform: translate(-50%, 0);
+  background: var(--accent); color: #fff; font-weight: 700; font-size: 13px;
+  padding: 9px 18px; border-radius: 999px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.2);
+  animation: app-toast-in .2s ease-out;
 }
 .btn {
   background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 9px 16px;
@@ -1704,15 +1708,23 @@ instead of overflowing at the unconditional 35px desktop size. */
   .card .k { font-size: 9.5px; line-height: 1.25; } .card { min-width: 0; }
   .card .v { font-size: 15px; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
   .card .muted-small { display: none; }
-  .panel { padding: 14px; }
+  /* Data-entry tabs (Income/Fixed Expenses/Regular Expenses/Savings) no
+     longer carry the summary tiles + chart column on mobile (see the
+     isMobile-gated JSX around .summary-cards/.content-grid) -- that frees
+     up real vertical room for the form itself, so it gets a bit more
+     breathing room here (more padding, taller/roomier fields, wider row
+     gaps) instead of the tightest-possible spacing that made sense when
+     the dashboard tiles/chart were always competing for the same screen. */
+  .panel { padding: 18px 16px; }
   /* Home's explore frame is its own class (not .panel), so it needs its own
      mobile override -- its 24px desktop padding was eating ~48px of a
      ~390px-wide phone screen (over a tenth of the width) before the chart
      inside it even started, on top of the chart's own internal margins. */
   .home-explore-frame { padding: 14px; }
-  .row { gap: 8px; }
-  .field { min-width: 100% !important; flex: 1 1 100% !important; }
+  .row { gap: 12px; margin-bottom: 2px; }
+  .field { min-width: 100% !important; flex: 1 1 100% !important; gap: 6px; }
   .field.half { min-width: 100% !important; flex: 1 1 100% !important; }
+  .field label { font-size: 13.5px; }
   table { font-size: 12px; }
   th, td { padding: 6px 4px; }
   .login-card { padding: 22px; }
@@ -1722,7 +1734,7 @@ instead of overflowing at the unconditional 35px desktop size. */
      Expenses" entry forms -- 16px prevents iOS Safari's automatic zoom-in
      on focus, which is what was making data entry feel clumsy on a phone. */
   .field input, .field select {
-    font-size: 16px; padding: 10px 12px;
+    font-size: 16px; padding: 13px 14px;
   }
 /* Date fields don't need the same edge-to-edge width the rule above
      forces onto every other .field input/select on phones -- a date is at
