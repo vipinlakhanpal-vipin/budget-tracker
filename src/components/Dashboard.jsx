@@ -5230,7 +5230,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             )}
             <PendingAttachmentChips files={incomeFiles} onRemove={(i) => removeAttachmentAt(setIncomeFiles, i)} />
             </form>
-            <div className="panel-heading-row" style={{ justifyContent: 'flex-end', marginTop: 16, marginBottom: 0 }}>
+            <div className="panel-heading-row" style={{ justifyContent: 'flex-end', marginTop: 8, marginBottom: 0 }}>
               <div className="filter-wrap" ref={incomeFilterRef}>
                 <button
                   type="button"
@@ -5315,7 +5315,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
               </div>
             ) : (
               <div className="table-scroll">
-              <table className="responsive-table" style={{ marginTop: 14, fontSize: 11 }}>
+              <table className="responsive-table" style={{ marginTop: 6, fontSize: 11 }}>
                 <colgroup>
                   {/* Member only ever shows a first name now (displayNameForEmail),
                       so its old 26% (same as Source) was reserving far more room
@@ -6186,7 +6186,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             )}
             <PendingAttachmentChips files={savingFiles} onRemove={(i) => removeAttachmentAt(setSavingFiles, i)} />
             </form>
-            <div className="panel-heading-row" style={{ justifyContent: 'flex-end', marginTop: 16, marginBottom: 0 }}>
+            <div className="panel-heading-row" style={{ justifyContent: 'flex-end', marginTop: 8, marginBottom: 0 }}>
               <div className="filter-wrap" ref={savingsFilterRef}>
                 <button
                   type="button"
@@ -6259,7 +6259,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
               </div>
             ) : (
               <div className="table-scroll">
-              <table className="responsive-table" style={{ marginTop: 14, fontSize: 11 }}>
+              <table className="responsive-table" style={{ marginTop: 6, fontSize: 11 }}>
                 <colgroup>
                   <col style={{ width: '32%' }} /><col style={{ width: '24%' }} /><col style={{ width: '24%' }} /><col style={{ width: '10%' }} />
                 </colgroup>

@@ -275,7 +275,7 @@ function UserGroup({ title, users, onDelete, deletingEmail, onInsights, insightL
       <div className="table-scroll">
         <table className="responsive-table">
           <thead>
-            <tr><th>Email</th><th>Status</th><th>Household(s)</th><th>Joined</th><th>Location</th><th>Usage</th><th>Invited</th><th></th></tr>
+            <tr><th>Email</th><th>Status</th><th>Household(s)</th><th>Joined</th><th>Location</th><th>Usage</th><th></th></tr>
           </thead>
           <tbody>
             {users.map((u) => (
@@ -295,9 +295,6 @@ function UserGroup({ title, users, onDelete, deletingEmail, onInsights, insightL
                 </td>
                 <td data-label="Usage" className="muted-small">
                   {u.usagePercent === null || u.usagePercent === undefined ? '--' : `${u.usagePercent}%`}
-                </td>
-                <td data-label="Invited" className="muted-small">
-                  {u.invitedNames && u.invitedNames.length ? u.invitedNames.join(', ') : '--'}
                 </td>
                 <td>
                   <div style={{ display: 'flex', gap: 6 }}>
