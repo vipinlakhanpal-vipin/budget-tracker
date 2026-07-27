@@ -4965,22 +4965,13 @@ I can help you track expenses, understand spending patterns, create budgets, and
 
           {inputTab === 'expense' && (
           <div className="panel">
-            <h2 className="panel-title-themed">Regular Expenses</h2>
+            <h2 className="panel-title-themed form-title-mobile-hide">Regular Expenses</h2>
             <form onSubmit={handleAddExpense}>
             <div className="row">
+              <div className="field-pair">
               <div className="field">
                 <label>Date</label>
                 <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
-              </div>
-              <div className="field" style={{ flex: 1.4 }}>
-                <label>Description</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Groceries at Trader Joe's"
-                  value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  onBlur={(e) => suggestCategoryFromDescription(e.target.value)}
-                />
               </div>
               <div className="field" style={{ flex: '0 0 auto' }}>
                 {/* Was flex:'0 1 140px'/minWidth:120 -- same leftover width
@@ -5001,6 +4992,17 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   />
                 </div>
               </div>
+              </div>
+              <div className="field" style={{ flex: 1.4 }}>
+                <label>Description</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Groceries at Trader Joe's"
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  onBlur={(e) => suggestCategoryFromDescription(e.target.value)}
+                />
+              </div>
               <div className="field">
                 <label>Category <AiTag /></label>
                 <select value={form.categoryId} onChange={(e) => { setForm({ ...form, categoryId: e.target.value }); setAiCategoryHint(''); }}>
@@ -5018,6 +5020,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 Fixed Expenses). The bank picker only renders once a card
                 option is chosen, so Cash payers never see an irrelevant field. */}
             <div className="row" style={{ marginTop: 10, alignItems: 'flex-end' }}>
+              <div className="field-pair">
               <div className="field" style={{ flex: '0 1 150px', minWidth: 130 }}>
                 <label>Payment Source</label>
                 <select
@@ -5040,6 +5043,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   </select>
                 </div>
               )}
+              </div>
               {/* Scan a receipt now comes before Add, reading left-to-right as
                   "capture it, then confirm/submit it" -- Add is the final
                   action in the row, same order the eye naturally follows.
@@ -5129,7 +5133,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
 
           {inputTab === 'income' && (
           <div className="panel">
-            <h2 className="panel-title-themed">Income</h2>
+            <h2 className="panel-title-themed form-title-mobile-hide">Income</h2>
             <form onSubmit={handleAddIncome}>
             <div className="row">
               <div className="field" style={{ flex: 1.2 }}>
@@ -5152,6 +5156,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   ))}
                 </select>
               </div>
+              <div className="field-pair">
               <div className="field" style={{ flex: '0 0 auto' }}>
                 {/* Was flex:'0 1 150px'/minWidth:130 -- a leftover width
                     reservation from before the Amount box shrank to its
@@ -5180,6 +5185,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   value={newIncome.month}
                   onChange={(e) => setNewIncome({ ...newIncome, month: e.target.value })}
                 />
+              </div>
               </div>
               {/* Note + Attach + Add live together in ONE flex item, in that
                   order, immediately before Add -- per explicit request that
@@ -5472,7 +5478,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
           {inputTab === 'fixed' && (
           <>
           <div className="panel">
-            <h2 className="panel-title-themed">Fixed Expenses</h2>
+            <h2 className="panel-title-themed form-title-mobile-hide">Fixed Expenses</h2>
             <div className="muted-small" style={{ textAlign: 'center', marginTop: -6, marginBottom: 12 }}>
               Loans, EMIs, credit cards, rent
             </div>
@@ -5530,6 +5536,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
 </select>
       {fixedAiCategoryHint && <div className="ai-hint">{fixedAiCategoryHint}</div>}
               </div>
+              <div className="field-pair">
                       <div className="field" style={{ flex: '0 1 190px', minWidth: 170 }}>
                 <label>Start date</label>
                 <input
@@ -5546,6 +5553,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   onChange={(e) => setNewRecurring({ ...newRecurring, endDate: e.target.value })}
                 />
               </div>
+              </div>
               <div className="field" style={{ flex: '0 1 165px', minWidth: 150 }}>
                 <label>Repeats</label>
                 <select
@@ -5557,6 +5565,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   ))}
                 </select>
               </div>
+              <div className="field-pair">
               <div className="field" style={{ flex: '0 1 190px', minWidth: 170 }}>
                 <label>Due date (optional, for reminders)</label>
                 <input
@@ -5578,6 +5587,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     <option key={p} value={p}>{p}</option>
                   ))}
                 </select>
+              </div>
               </div>
               {CARD_PAYMENT_SOURCES.includes(newRecurring.paymentSource) && (
                 <div className="field" style={{ flex: '0 1 190px', minWidth: 150 }}>
@@ -6087,7 +6097,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
 
           {inputTab === 'savings' && (
           <div className="panel">
-            <h2 className="panel-title-themed">Savings</h2>
+            <h2 className="panel-title-themed form-title-mobile-hide">Savings</h2>
             <div className="muted-small" style={{ textAlign: 'center', marginTop: -6, marginBottom: 12 }}>
               How much you want to set aside each month
             </div>
@@ -6102,6 +6112,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   onChange={(e) => setNewSaving({ ...newSaving, name: e.target.value })}
                 />
               </div>
+              <div className="field-pair">
               <div className="field" style={{ flex: '0 0 auto' }}>
                 {/* Was flex:'0 1 150px'/minWidth:130 -- same leftover width
                     reservation fixed on Income's Amount field. Sizing to
@@ -6128,6 +6139,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   value={newSaving.month}
                   onChange={(e) => setNewSaving({ ...newSaving, month: e.target.value })}
                 />
+              </div>
               </div>
               {/* Note + Attach + Add live together in ONE flex item, in that
                   order, immediately before Add -- per explicit request that
