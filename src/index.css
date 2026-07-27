@@ -1130,6 +1130,31 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
    out of order" bug reported on desktop Fixed Expenses. */
 .field-pair { display: flex; gap: 8px; align-items: flex-end; }
 
+/* Header text was left at the browser's UA-default (bold + centered) while
+   the value underneath in each td is left-aligned -- on columns like
+   Amount that visually reads as the header floating out of line with its
+   own values below it. Left-align every header this table component uses,
+   instead of overriding it column by column. */
+table.responsive-table th { text-align: left; }
+
+/* Multiple rounds of shrinking individual date fields (Fixed Expenses
+   Start/End/Due, Regular Expenses date...) kept leaving some date field
+   somewhere still visually bigger than its neighbors, because each pass
+   only touched the one inline flex-basis it was looking at. Pin the actual
+   rendered width centrally instead: any .field wrapping a native date
+   input gets the same compact size on real desktop/mouse devices, no
+   matter what flex-basis that particular tab's JSX happens to set.
+   (!important is required since inline styles otherwise always win over a
+   stylesheet rule.) Scoped to hover:hover/pointer:fine so this never
+   fights the isMobile JS branch's own full-width mobile sizing. */
+@media (min-width: 641px) and (hover: hover) and (pointer: fine) {
+  .field:has(input[type="date"]) {
+    flex: 0 1 140px !important;
+    min-width: 120px !important;
+  }
+}
+
+
 /* Bold, higher-contrast labels everywhere (Name, Category, Amount/month,
    Start date, End date, etc.) -- previously small and muted-gray, which made
    them hard to read at a glance, especially on mobile. */
