@@ -6264,7 +6264,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   <col style={{ width: '32%' }} /><col style={{ width: '24%' }} /><col style={{ width: '24%' }} /><col style={{ width: '10%' }} />
                 </colgroup>
                 <thead>
-                  <tr><th>Name</th><th style={{ textAlign: 'right' }}>Amount</th><th>Month</th><th></th></tr>
+                  <tr><th>Name</th><th style={{ textAlign: 'center' }}>Amount</th><th>Month</th><th></th></tr>
                 </thead>
                 <tbody>
                   {filteredSavingsForMonth.map((s) => (
@@ -6291,7 +6291,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                         )}
                       </td>
                       <td data-label="Amount">
-                        <div className="amount-field-wrap tight" style={{ marginLeft: 'auto' }}>
+                        <div className="amount-field-wrap tight" style={{ margin: '0 auto' }}>
                           <span className="currency-prefix"><CurrencyPrefix /></span>
                           <input
                             type="number"
