@@ -102,6 +102,7 @@ export default function App() {
             email,
             role: 'member',
             relation: invite.relation || 'Other',
+            invited_by: invite.invited_by || null,
             name: session.user.user_metadata?.full_name || null,
             phone: session.user.user_metadata?.phone || null,
             location: session.user.user_metadata?.location || null,
