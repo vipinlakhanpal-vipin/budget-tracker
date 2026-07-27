@@ -1813,6 +1813,18 @@ instead of overflowing at the unconditional 35px desktop size. */
      grouping only kicks in here, on mobile. */
   .row > .field-pair { width: 100%; }
   .field-pair > .field { flex: 1 1 0; min-width: 0; }
+  /* Repeated real-device reports (Safari on iPhone) showed date/select
+     fields still crowding or reading as overlapping in side-by-side pairs
+     (Start/End date, Due date/Payment Source, Date/Amount) even after
+     multiple rounds of shrinking padding and font-size -- native form
+     control rendering differs from what a Chrome-based simulated
+     viewport shows, so width-tuning could not be verified against the
+     real failure mode. Stacking every field-pair vertically on mobile
+     removes the possibility entirely: each field gets the full row
+     width, so there is nothing for it to collide with regardless of how
+     any given mobile browser sizes its native date/select chrome. */
+  .field-pair { flex-direction: column; align-items: stretch; }
+  .field-pair > .field { width: 100%; }
   table { font-size: 12px; }
   th, td { padding: 6px 4px; }
   .login-card { padding: 22px; }
