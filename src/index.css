@@ -957,7 +957,7 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
    visible white background. */
 .month-nav > button {
   background: var(--card); border: 1px solid var(--border); border-radius: 8px;
-    width: 26px; height: 26px; cursor: pointer; font-size: 14px;
+    width: 26px; height: 26px; cursor: pointer; font-size: 14px; flex-shrink: 0;
 }
 .month-nav .label { font-weight: 600; font-size: 16px; min-width: 160px; text-align: center; }
 
@@ -1669,7 +1669,7 @@ td.amount { font-weight: 600; text-align: right; }
 }
 .cat-budget-row .amount-field-wrap { flex: 0 0 auto; }
 
-@media (max-width: 640px) {
+@media (max-width: 640px), (pointer: coarse) and (hover: none) and (max-width: 1366px) {
     .wrap { padding: 14px 8px 14px 12px; }
   .top-bar .btn.secondary.small { align-self: flex-start; }
   .action-row-teal { width: 100%; }
@@ -1701,9 +1701,10 @@ td.amount { font-weight: 600; text-align: right; }
 Management" (or whatever it's renamed to) fits the narrow header
 instead of overflowing at the unconditional 35px desktop size. */
   .app-title-purple { font-size: 27px; }
-  .month-nav { gap: 8px; margin: 12px 0 16px; }
+  .month-nav { gap: 8px; margin: 12px 0 16px; flex-wrap: wrap; }
   .month-nav .label { min-width: 0; flex: 1; font-size: 14px; }
-        .month-nav > button { width: 21px; height: 21px; font-size: 12px; }
+        .month-nav > button { width: 21px; height: 21px; font-size: 12px; flex-shrink: 0; }
+        .month-nav .filter-wrap { flex: 1 1 100%; margin-top: 4px; }
   /* The "6 cell dashboard" -- instead of 6 full-width cards stacked one
      below the other (a long scroll of near-identical rows), phones get the
      same 3-across x 2-row grid as desktop, just with smaller type/padding
@@ -1767,6 +1768,7 @@ instead of overflowing at the unconditional 35px desktop size. */
   }
   .amount-field-wrap { height: auto; min-height: 46px; }
   .amount-field-wrap input { padding: 0 !important; height: auto !important; min-height: 0 !important; }
+  .field-pair > .field .amount-field-wrap:not(.tight) { width: 100%; }
 /* Date/month fields inside a .field-pair should split evenly with
      whatever they're paired with (Amount, End date, Payment Source...)
      rather than shrinking to a fixed compact width and leaving the other
