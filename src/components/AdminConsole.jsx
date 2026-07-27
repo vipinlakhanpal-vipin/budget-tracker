@@ -28,6 +28,7 @@ export default function AdminConsole({ onClose, embedded = false }) {
   const [allUsersLoading, setAllUsersLoading] = useState(true);
   const [allUsersError, setAllUsersError] = useState('');
   const [deletingEmail, setDeletingEmail] = useState('');
+  const [insightLoadingEmail, setInsightLoadingEmail] = useState('');
 
   useEffect(() => {
     loadHouseholds();
@@ -100,6 +101,33 @@ export default function AdminConsole({ onClose, embedded = false }) {
       alert('Could not delete: ' + (e.message || 'unknown error'));
     } finally {
       setDeletingEmail('');
+    }
+  }
+
+  async function handleGetInsights(u) {
+    if (!u.userId) return;
+    setInsightLoadingEmail(u.email);
+    try {
+      const headers = { 'Content-Type': 'application/json', ...(await authHeader()) };
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ action: 'insights', userId: u.userId }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert('Could not get insights: ' + (json.error || 'unknown error'));
+        return;
+      }
+      if (json.aiEnabled === false) {
+        alert('AI insights are not configured yet.');
+        return;
+      }
+      alert(json.insight || 'No insight available for this user yet.');
+    } catch (e) {
+      alert('Could not get insights: ' + (e.message || 'unknown error'));
+    } finally {
+      setInsightLoadingEmail('');
     }
   }
 
@@ -224,7 +252,7 @@ export default function AdminConsole({ onClose, embedded = false }) {
                   {successfulUsers.length} successful signup{successfulUsers.length === 1 ? '' : 's'} -- {unsuccessfulUsers.length} unsuccessful / pending
                 </div>
 
-                <UserGroup title="Successful signups" users={successfulUsers} onDelete={handleDeleteUser} deletingEmail={deletingEmail} />
+                <UserGroup title="Successful signups" users={successfulUsers} onDelete={handleDeleteUser} deletingEmail={deletingEmail} onInsights={handleGetInsights} insightLoadingEmail={insightLoadingEmail} />
                 <UserGroup title="Unsuccessful / pending" users={unsuccessfulUsers} onDelete={handleDeleteUser} deletingEmail={deletingEmail} />
               </>
             )}
@@ -239,7 +267,7 @@ export default function AdminConsole({ onClose, embedded = false }) {
   );
 }
 
-function UserGroup({ title, users, onDelete, deletingEmail }) {
+function UserGroup({ title, users, onDelete, deletingEmail, onInsights, insightLoadingEmail }) {
   if (!users.length) return null;
   return (
     <div style={{ marginBottom: 18 }}>
@@ -247,7 +275,7 @@ function UserGroup({ title, users, onDelete, deletingEmail }) {
       <div className="table-scroll">
         <table className="responsive-table">
           <thead>
-            <tr><th>Email</th><th>Status</th><th>Household(s)</th><th></th></tr>
+            <tr><th>Email</th><th>Status</th><th>Household(s)</th><th>Joined</th><th>Location</th><th>Usage</th><th>Invited</th><th></th></tr>
           </thead>
           <tbody>
             {users.map((u) => (
@@ -259,15 +287,39 @@ function UserGroup({ title, users, onDelete, deletingEmail }) {
                     ? u.households.map((h) => h.householdName).join(', ')
                     : (u.invites[0]?.householdName || '--')}
                 </td>
+                <td data-label="Joined" className="muted-small">
+                  {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '--'}
+                </td>
+                <td data-label="Location" className="muted-small">
+                  {u.households.map((h) => h.location).find(Boolean) || '--'}
+                </td>
+                <td data-label="Usage" className="muted-small">
+                  {u.usagePercent === null || u.usagePercent === undefined ? '--' : `${u.usagePercent}%`}
+                </td>
+                <td data-label="Invited" className="muted-small">
+                  {u.invitedNames && u.invitedNames.length ? u.invitedNames.join(', ') : '--'}
+                </td>
                 <td>
-                  <button
-                    type="button"
-                    className="btn secondary small"
-                    onClick={() => onDelete(u)}
-                    disabled={deletingEmail === u.email}
-                  >
-                    {deletingEmail === u.email ? 'Deleting...' : 'Delete'}
-                  </button>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {onInsights && (
+                      <button
+                        type="button"
+                        className="btn secondary small"
+                        onClick={() => onInsights(u)}
+                        disabled={!u.userId || insightLoadingEmail === u.email}
+                      >
+                        {insightLoadingEmail === u.email ? 'Thinking...' : 'AI Insights'}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="btn secondary small"
+                      onClick={() => onDelete(u)}
+                      disabled={deletingEmail === u.email}
+                    >
+                      {deletingEmail === u.email ? 'Deleting...' : 'Delete'}
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

@@ -5230,10 +5230,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             )}
             <PendingAttachmentChips files={incomeFiles} onRemove={(i) => removeAttachmentAt(setIncomeFiles, i)} />
             </form>
-            <div className="panel-heading-row" style={{ alignItems: 'flex-start', marginTop: 6, marginBottom: 0 }}>
-              <div className="muted-small">
-                Income is entered per month on purpose -- it won't automatically carry over. The list below only shows entries for {monthLabel(currentMonth)}; add a new row for each new month.
-              </div>
+            <div className="panel-heading-row" style={{ justifyContent: 'flex-end', marginTop: 16, marginBottom: 0 }}>
               <div className="filter-wrap" ref={incomeFilterRef}>
                 <button
                   type="button"
@@ -5466,6 +5463,9 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 </>
               );
             })()}
+          <div className="muted-small" style={{ marginTop: 14 }}>
+            Income is entered per month on purpose -- it won't automatically carry over. The list below only shows entries for {monthLabel(currentMonth)}; add a new row for each new month.
+          </div>
           </div>
           )}
 
@@ -5568,7 +5568,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
               </div>
               </div>
               <div className="field-pair">
-              <div className="field" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : { flex: '0 1 190px', minWidth: 170 }}>
+              <div className="field" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : { flex: '0 1 170px', minWidth: 150 }}>
                 <label>Due date (optional, for reminders)</label>
                 <input
                   type="date"
@@ -5579,7 +5579,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
               {/* Payment Source sits right next to Due date in this same row now
                   (previously it was pushed onto its own separate row below, which
                   made it look disconnected/unaligned from the rest of the form). */}
-              <div className="field" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : { flex: '0 1 150px', minWidth: 130 }}>
+              <div className="field" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : { flex: '0 1 170px', minWidth: 150 }}>
                 <label>Payment Source</label>
                 <select
                   value={newRecurring.paymentSource}
@@ -6100,7 +6100,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
           {inputTab === 'savings' && (
           <div className="panel">
             <h2 className="panel-title-themed form-title-mobile-hide">Savings</h2>
-            <div className="muted-small" style={{ textAlign: 'center', marginTop: -6, marginBottom: 12 }}>
+            <div className="muted-small" style={{ textAlign: 'left', marginTop: -6, marginBottom: 12 }}>
               How much you want to set aside each month
             </div>
             <form onSubmit={handleAddSaving}>
@@ -6186,10 +6186,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             )}
             <PendingAttachmentChips files={savingFiles} onRemove={(i) => removeAttachmentAt(setSavingFiles, i)} />
             </form>
-            <div className="panel-heading-row" style={{ alignItems: 'flex-start', marginTop: 6, marginBottom: 0 }}>
-              <div className="muted-small">
-                Savings is entered per month on purpose -- it won't automatically carry over, exactly like Income. The list below only shows entries for {monthLabel(currentMonth)}; add a new row for each new month. Since it's money leaving your income, it's included in "Spent so far" and "Combined expenses" above and reduces "Remaining"/"Net" -- it also gets its own report page.
-              </div>
+            <div className="panel-heading-row" style={{ justifyContent: 'flex-end', marginTop: 16, marginBottom: 0 }}>
               <div className="filter-wrap" ref={savingsFilterRef}>
                 <button
                   type="button"
@@ -6403,6 +6400,9 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 </>
               );
             })()}
+          <div className="muted-small" style={{ marginTop: 14 }}>
+            Savings is entered per month on purpose -- it won't automatically carry over, exactly like Income. The list below only shows entries for {monthLabel(currentMonth)}; add a new row for each new month. Since it's money leaving your income, it's included in "Spent so far" and "Combined expenses" above and reduces "Remaining"/"Net" -- it also gets its own report page.
+          </div>
           </div>
           )}
 
