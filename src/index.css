@@ -1721,10 +1721,26 @@ instead of overflowing at the unconditional 35px desktop size. */
      ~390px-wide phone screen (over a tenth of the width) before the chart
      inside it even started, on top of the chart's own internal margins. */
   .home-explore-frame { padding: 14px; }
-  .row { gap: 12px; margin-bottom: 2px; }
-  .field { min-width: 100% !important; flex: 1 1 100% !important; gap: 6px; }
-  .field.half { min-width: 100% !important; flex: 1 1 100% !important; }
+  .row { gap: 10px; margin-bottom: 2px; }
+  /* Scoped to DIRECT children of .row only (not .field-pair > .field) --
+     see .field-pair below. A field sitting alone in the row still gets
+     forced to full width, same as before. */
+  .row > .field { min-width: 100% !important; flex: 1 1 100% !important; }
+  .row > .field.half { min-width: 100% !important; flex: 1 1 100% !important; }
+  .field { gap: 6px; }
   .field label { font-size: 13.5px; }
+  /* Explicit field-pairing, per tester feedback that a lone Date field
+     (or any other short field) was taking a full mobile row-width all to
+     itself with mostly empty space next to it, while related short fields
+     (Date+Amount, Start date+End date, Amount+Month, Due date+Payment
+     Source, etc.) sat stacked one-per-row below it instead of sharing a
+     row -- see the .field-pair wrapper each form now uses around exactly
+     those pairs. display:contents on desktop makes this wrapper invisible
+     to layout (its two children behave exactly as if they were direct
+     .row children, same as before this change) -- the actual side-by-side
+     grouping only kicks in here, on mobile. */
+  .row > .field-pair { display: flex; gap: 8px; width: 100%; }
+  .field-pair > .field { flex: 1 1 0; min-width: 0; }
   table { font-size: 12px; }
   th, td { padding: 6px 4px; }
   .login-card { padding: 22px; }
@@ -1732,25 +1748,49 @@ instead of overflowing at the unconditional 35px desktop size. */
   .input-tabs button { flex: 1 1 auto; }
   /* Bigger, easier-to-tap fields on the "Add an expense / Income / Fixed
      Expenses" entry forms -- 16px prevents iOS Safari's automatic zoom-in
-     on focus, which is what was making data entry feel clumsy on a phone. */
+     on focus, which is what was making data entry feel clumsy on a phone.
+     height switched from a fixed 40px (which clipped the taller 16px text
+     under the increased padding below -- reported directly as "half text
+     visible") to min-height + auto, so the box grows to fit its own
+     padding+text instead of cropping it. */
   .field input, .field select {
-    font-size: 16px; padding: 13px 14px;
+    font-size: 16px; padding: 11px 12px; height: auto; min-height: 46px;
   }
-/* Date fields don't need the same edge-to-edge width the rule above
-     forces onto every other .field input/select on phones -- a date is at
-     most ~10 characters, so stretching it across the whole screen (like
-     text/amount/select fields reasonably benefit from) reads as an
-     oversized, mostly-empty box, and was reported directly as the date
-     cell looking too big / running past a comfortable width on phones.
-     Cap it to a compact, natural width instead of width: 100% -- it still
-     sits inside its (full-width) .field wrapper, just left-aligned within
-     that space rather than stretched to fill it. 16px font, not 15px,
-     keeps the same iOS Safari zoom-on-focus prevention the rule above
-     relies on. */
-  input[type="date"], .field input[type="date"] {
-    font-size: 16px; min-width: 0; width: auto; max-width: 150px; padding: 8px 6px;
+  .amount-field-wrap { height: auto; min-height: 46px; }
+  .amount-field-wrap input { padding: 0 !important; height: auto !important; min-height: 0 !important; }
+/* Date/month fields inside a .field-pair should split evenly with
+     whatever they're paired with (Amount, End date, Payment Source...)
+     rather than shrinking to a fixed compact width and leaving the other
+     half of the pair's row empty -- the exact "one dedicated field taking
+     full screen width for no purpose" complaint, just one level down from
+     the row to the pair. A date/month field NOT in a pair (none currently,
+     but kept as a safety net) still gets the old compact treatment so it
+     doesn't stretch edge-to-edge for no reason. */
+  .field-pair > .field input[type="date"],
+  .field-pair > .field input[type="month"] {
+    width: 100%; max-width: none; min-width: 0; font-size: 16px; padding: 11px 12px;
+  }
+  input[type="date"], .field input[type="date"],
+  input[type="month"], .field input[type="month"] {
+    font-size: 16px; min-width: 0; width: auto; max-width: 150px; padding: 8px 6px; height: auto; min-height: 46px;
   }
     .btn { padding: 11px 18px; font-size: 15px; }
+  /* Per explicit feedback: the big centered tab title ("Regular Expenses",
+     "Income", etc. -- see .page-title-themed's render logic, one <h2> per
+     tab right under the month-nav) duplicates text already shown on the
+     active tab button above it AND on the form's own heading right below
+     it, and on a narrow phone screen that's 2-3 repeats of the same two or
+     three words eating vertical space before any real content shows.
+     Hidden on mobile only -- desktop keeps it. */
+  .page-title-themed { display: none; }
+  /* The 4 data-entry forms' own in-panel heading (Regular Expenses/Income/
+     Fixed Expenses/Savings, right above the fields) is the second of those
+     repeats -- also hidden on mobile via this dedicated class, added only
+     to those 4 headings (NOT to the "Your fixed expenses"/"Regular
+     Expenses for {month}" list headings below, which use the same
+     panel-title-themed class but carry real information -- which month --
+     so they stay visible). */
+  .form-title-mobile-hide { display: none; }
 }
 
 /* Responsive "card" tables: below 720px, each row becomes a bordered card
