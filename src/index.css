@@ -1832,9 +1832,10 @@ instead of overflowing at the unconditional 35px desktop size. */
      page the instant one of these is focused, which is worse than the
      current size. */
   .field input, .field select {
-    font-size: 16px; padding: 8px 10px; height: auto; min-height: 38px;
+    font-size: 13px; padding: 6px 8px; height: auto; min-height: 32px;
   }
-  .amount-field-wrap { height: auto; min-height: 38px; }
+  .field label { font-size: 11px; }
+  .amount-field-wrap { height: auto; min-height: 32px; }
   .amount-field-wrap input { padding: 0 !important; height: auto !important; min-height: 0 !important; }
   .field-pair > .field .amount-field-wrap:not(.tight) { width: 100%; }
 /* Date/month fields inside a .field-pair should split evenly with
@@ -1847,11 +1848,11 @@ instead of overflowing at the unconditional 35px desktop size. */
      doesn't stretch edge-to-edge for no reason. */
   .field-pair > .field input[type="date"],
   .field-pair > .field input[type="month"] {
-    width: 100%; max-width: none; min-width: 0; font-size: 16px; padding: 8px 6px;
+    width: 100%; max-width: none; min-width: 0; font-size: 13px; padding: 6px 6px;
   }
   input[type="date"], .field input[type="date"],
   input[type="month"], .field input[type="month"] {
-    font-size: 16px; min-width: 0; width: auto; max-width: 150px; padding: 6px 6px; height: auto; min-height: 38px;
+    font-size: 13px; min-width: 0; width: auto; max-width: 150px; padding: 5px 6px; height: auto; min-height: 32px;
   }
     .btn { padding: 11px 18px; font-size: 15px; }
   /* Per explicit feedback: the big centered tab title ("Regular Expenses",
