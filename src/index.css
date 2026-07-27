@@ -1753,6 +1753,20 @@ instead of overflowing at the unconditional 35px desktop size. */
            pushed this onto its own row. */
         .month-nav .filter-wrap { flex: 0 0 auto; margin-top: 0; }
         .month-nav .filter-btn { padding: 5px 8px; font-size: 11px; gap: 4px; }
+        /* The month-nav row lives inside .page-title-row, a 3-col grid
+           (month-nav | centered title | empty mirror column) built so a
+           centered page title has equal margins on both sides. On mobile
+           the title (.page-title-themed) is display:none, but its column
+           template still reserves two full 1fr tracks either side of it --
+           so month-nav was being squeezed into HALF the row while the
+           other half sat empty and invisible. That's the actual reason
+           "July 2026" was wrapping onto two lines: not a sizing issue on
+           the label itself, but its grid column being half the width it
+           needed. Collapse to a single column on mobile so month-nav gets
+           the full row. */
+        .page-title-row { grid-template-columns: 1fr; }
+        .page-title-row .month-nav { grid-column: 1; max-width: 100%; }
+
   /* The "6 cell dashboard" -- instead of 6 full-width cards stacked one
      below the other (a long scroll of near-identical rows), phones get the
      same 3-across x 2-row grid as desktop, just with smaller type/padding
