@@ -4969,15 +4969,17 @@ I can help you track expenses, understand spending patterns, create budgets, and
             <form onSubmit={handleAddExpense}>
             <div className="row">
               <div className="field-pair">
-              <div className="field">
+              <div className="field" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : undefined}>
                 <label>Date</label>
                 <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
               </div>
-              <div className="field" style={{ flex: '0 0 auto' }}>
-                {/* Was flex:'0 1 140px'/minWidth:120 -- same leftover width
-                    reservation fixed on Income's Amount field. Sizing to
-                    content instead closes the dead space now that the box
-                    itself is exactly as wide as the typed value. */}
+              <div className="field" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : { flex: '0 0 auto' }}>
+                {/* Mobile: this field is forced to flex:1 1 0 (see isMobile
+                    above) so Date and Amount split the pair's width evenly --
+                    without that override, Amount's desktop content-sized
+                    flex:'0 0 auto' would win over the mobile CSS rule (inline
+                    style beats a class rule), leaving Date to grab all the
+                    leftover space and visually overlap/crowd Amount. */}
                 <label>Amount</label>
                 <div className="amount-field-wrap">
                   <span className="currency-prefix"><CurrencyPrefix /></span>
@@ -5135,6 +5137,12 @@ I can help you track expenses, understand spending patterns, create budgets, and
           <div className="panel">
             <h2 className="panel-title-themed form-title-mobile-hide">Income</h2>
             <form onSubmit={handleAddIncome}>
+            {/* Month field removed on purpose -- this entry's month
+                already comes from the month-nav selector above (see the
+                effect that syncs newIncome.month to currentMonth), so a
+                second, editable Month input here was pure duplication. To
+                save an entry for a different month, switch the month-nav
+                first, same as everywhere else the entry list is filtered. */}
             <div className="row">
               <div className="field" style={{ flex: 1.2 }}>
                 <label>Source</label>
@@ -5145,25 +5153,19 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   onChange={(e) => setNewIncome({ ...newIncome, name: e.target.value })}
                 />
               </div>
-              <div className="field">
+              <div className="field-pair">
+              <div className="field" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : undefined}>
                 <label>Whose income</label>
                 <select
                   value={newIncome.memberEmail}
                   onChange={(e) => setNewIncome({ ...newIncome, memberEmail: e.target.value })}
                 >
                   {members.map((m) => (
-                    <option key={m.id} value={m.email}>{m.email} ({m.relation})</option>
+                    <option key={m.id} value={m.email}>{displayNameForEmail(m.email)}</option>
                   ))}
                 </select>
               </div>
-              <div className="field-pair">
-              <div className="field" style={{ flex: '0 0 auto' }}>
-                {/* Was flex:'0 1 150px'/minWidth:130 -- a leftover width
-                    reservation from before the Amount box shrank to its
-                    exact content (see tightAmountPx/formAmountPx). That fixed
-                    minimum left a big empty gap between the now-narrow pill
-                    and the Month field next to it. Sizing to content instead
-                    (like the Add button field) closes that gap. */}
+              <div className="field" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : { flex: '0 0 auto' }}>
                 <label>Amount / month</label>
                 <div className="amount-field-wrap">
                   <span className="currency-prefix"><CurrencyPrefix /></span>
@@ -5177,14 +5179,6 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     onChange={(e) => setNewIncome({ ...newIncome, amount: e.target.value })}
                   />
                 </div>
-              </div>
-              <div className="field" style={{ flex: '0 1 150px', minWidth: 130 }}>
-                <label>Month</label>
-                <input
-                  type="month"
-                  value={newIncome.month}
-                  onChange={(e) => setNewIncome({ ...newIncome, month: e.target.value })}
-                />
               </div>
               </div>
               {/* Note + Attach + Add live together in ONE flex item, in that
@@ -5494,23 +5488,28 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 row wrap unevenly) -- this is what keeps the row's spacing
                 and wrapping predictable/balanced instead of shifting around
                 based on which fields happen to land on line 2. */}
+            {/* Row 1: what the expense is, how much, how often, what
+                category -- the "what/how much" facts. Row 2 (below): the
+                "when/how paid" scheduling facts. Splitting into two
+                explicit rows (rather than one long row that auto-wraps
+                wherever flexbox happens to run out of width) is what keeps
+                field order predictable on desktop -- an auto-wrapped single
+                row was cutting a field-pair in half across two lines,
+                which is what made the form look "funny"/out of order. */}
             <div className="row">
-              <div className="field" style={{ flex: '1.2 1 180px', minWidth: 160 }}>
-<label>Description</label>
+              <div className="field-pair">
+              <div className="field" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : { flex: '1.2 1 180px', minWidth: 160 }}>
+                <label>Description</label>
                 <input
                   type="text"
                   placeholder="e.g. Car loan EMI"
                   value={newRecurring.name}
                   onChange={(e) => setNewRecurring({ ...newRecurring, name: e.target.value })}
-                                      onBlur={(e) => suggestFixedCategoryFromDescription(e.target.value)}
+                  onBlur={(e) => suggestFixedCategoryFromDescription(e.target.value)}
                 />
               </div>
-              <div className="field" style={{ flex: '0 0 auto' }}>
-                {/* Was flex:'0 1 150px'/minWidth:130 -- same leftover width
-                    reservation fixed on Income's Amount field. Sizing to
-                    content instead closes the dead space now that the box
-                    itself is exactly as wide as the typed value. */}
-                <label>Amount / month</label>
+              <div className="field" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : { flex: '0 0 auto' }}>
+                <label>Amount/M.</label>
                 <div className="amount-field-wrap">
                   <span className="currency-prefix"><CurrencyPrefix /></span>
                   <input
@@ -5524,35 +5523,18 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   />
                 </div>
               </div>
+              </div>
               <div className="field" style={{ flex: '1.3 1 190px', minWidth: 170 }}>
-                                <label>Category <AiTag /></label>
+                <label>Category <AiTag /></label>
                 <select
                   value={newRecurring.categoryId}
                   onChange={(e) => setNewRecurring({ ...newRecurring, categoryId: e.target.value })}
                 >
                   {categories.map((c) => (
                     <option key={c.id} value={c.id}>{c.name}</option>
-))}
-</select>
-      {fixedAiCategoryHint && <div className="ai-hint">{fixedAiCategoryHint}</div>}
-              </div>
-              <div className="field-pair">
-                      <div className="field" style={{ flex: '0 1 190px', minWidth: 170 }}>
-                <label>Start date</label>
-                <input
-                  type="date"
-                  value={newRecurring.startDate}
-                  onChange={(e) => setNewRecurring({ ...newRecurring, startDate: e.target.value })}
-                />
-              </div>
-                      <div className="field" style={{ flex: '0 1 190px', minWidth: 170 }}>
-                <label>End date (optional)</label>
-                <input
-                  type="date"
-                  value={newRecurring.endDate}
-                  onChange={(e) => setNewRecurring({ ...newRecurring, endDate: e.target.value })}
-                />
-              </div>
+                  ))}
+                </select>
+                {fixedAiCategoryHint && <div className="ai-hint">{fixedAiCategoryHint}</div>}
               </div>
               <div className="field" style={{ flex: '0 1 165px', minWidth: 150 }}>
                 <label>Repeats</label>
@@ -5565,8 +5547,28 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   ))}
                 </select>
               </div>
+            </div>
+            <div className="row" style={{ marginTop: 10 }}>
               <div className="field-pair">
-              <div className="field" style={{ flex: '0 1 190px', minWidth: 170 }}>
+              <div className="field" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : { flex: '0 1 190px', minWidth: 170 }}>
+                <label>Start date</label>
+                <input
+                  type="date"
+                  value={newRecurring.startDate}
+                  onChange={(e) => setNewRecurring({ ...newRecurring, startDate: e.target.value })}
+                />
+              </div>
+              <div className="field" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : { flex: '0 1 190px', minWidth: 170 }}>
+                <label>End date (optional)</label>
+                <input
+                  type="date"
+                  value={newRecurring.endDate}
+                  onChange={(e) => setNewRecurring({ ...newRecurring, endDate: e.target.value })}
+                />
+              </div>
+              </div>
+              <div className="field-pair">
+              <div className="field" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : { flex: '0 1 190px', minWidth: 170 }}>
                 <label>Due date (optional, for reminders)</label>
                 <input
                   type="date"
@@ -5577,7 +5579,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
               {/* Payment Source sits right next to Due date in this same row now
                   (previously it was pushed onto its own separate row below, which
                   made it look disconnected/unaligned from the rest of the form). */}
-              <div className="field" style={{ flex: '0 1 150px', minWidth: 130 }}>
+              <div className="field" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : { flex: '0 1 150px', minWidth: 130 }}>
                 <label>Payment Source</label>
                 <select
                   value={newRecurring.paymentSource}
@@ -6102,8 +6104,15 @@ I can help you track expenses, understand spending patterns, create budgets, and
               How much you want to set aside each month
             </div>
             <form onSubmit={handleAddSaving}>
+            {/* Month field removed on purpose -- this entry's month
+                already comes from the month-nav selector above (see the
+                effect that syncs newSaving.month to currentMonth), so a
+                second, editable Month input here was pure duplication. To
+                save an entry for a different month, switch the month-nav
+                first, same as everywhere else the entry list is filtered. */}
             <div className="row">
-              <div className="field" style={{ flex: 1.4 }}>
+              <div className="field-pair">
+              <div className="field" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : { flex: 1.1 }}>
                 <label>Description</label>
                 <input
                   type="text"
@@ -6112,13 +6121,8 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   onChange={(e) => setNewSaving({ ...newSaving, name: e.target.value })}
                 />
               </div>
-              <div className="field-pair">
-              <div className="field" style={{ flex: '0 0 auto' }}>
-                {/* Was flex:'0 1 150px'/minWidth:130 -- same leftover width
-                    reservation fixed on Income's Amount field. Sizing to
-                    content instead closes the dead space now that the box
-                    itself is exactly as wide as the typed value. */}
-                <label>Amount / month</label>
+              <div className="field" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : { flex: '0 0 auto' }}>
+                <label>Amount/M.</label>
                 <div className="amount-field-wrap">
                   <span className="currency-prefix"><CurrencyPrefix /></span>
                   <input
@@ -6131,14 +6135,6 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     onChange={(e) => setNewSaving({ ...newSaving, amount: e.target.value })}
                   />
                 </div>
-              </div>
-              <div className="field" style={{ flex: '0 1 150px', minWidth: 130 }}>
-                <label>Month</label>
-                <input
-                  type="month"
-                  value={newSaving.month}
-                  onChange={(e) => setNewSaving({ ...newSaving, month: e.target.value })}
-                />
               </div>
               </div>
               {/* Note + Attach + Add live together in ONE flex item, in that
