@@ -6540,7 +6540,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   <col style={{ width: '6%' }} />
                 </colgroup>
                 <thead>
-                  <tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th><th>Payment</th><th style={{ textAlign: 'center' }}>By</th><th></th></tr>
+                  <tr><th>Date</th><th>Category</th><th>Description</th><th style={{ textAlign: 'center' }}>Amount</th><th>Payment</th><th style={{ textAlign: 'center' }}>By</th><th></th></tr>
                 </thead>
                 <tbody>
                   {filteredMonthExpenses.map((e) => (
