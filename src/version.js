@@ -1,5 +1,1 @@
-export const APP_VERSION = '1.19';
-export function formatVersionBadge() {
-  const dateLabel = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  return `${dateLabel} - v${APP_VERSION}`;
-}
+export const APP_VERSION = '1.20';
