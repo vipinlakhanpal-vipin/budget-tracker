@@ -1046,14 +1046,27 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   const [aiDigestMonthKey, setAiDigestMonthKey] = useState(null);
   // AI feature #3 (receipt scanning): upload a photo of a receipt, or a
   // sheet/screenshot listing several expenses, and let Claude read it
-  // instead of typing each line by hand. Nothing is saved to the database
-  // until the user reviews and confirms the extracted rows below -- OCR/
-  // vision can misread a date, merchant name, or amount, especially on a
-  // blurry photo, so this is a staging area rather than a direct insert.
+  // instead of typing each line by hand. Per explicit request, scanned
+  // items are now added straight to Regular Expenses (including a best-
+  // guess payment source read off the receipt) rather than sitting in a
+  // review list first -- edit afterwards the same way you'd edit any other
+  // expense (pencil icon in the list / mobile edit sheet) if anything looks
+  // wrong.
   const scanFileInputRef = useRef(null);
   const [scanLoading, setScanLoading] = useState(false);
   const [scanError, setScanError] = useState('');
-  const [scanResults, setScanResults] = useState([]); // [{ include, date, description, amount, categoryId }]
+  // Read-only summary of what the last scan just added, shown briefly right
+  // below the button -- not an editable staging area anymore.
+  const [lastScanAdded, setLastScanAdded] = useState([]); // [{ description, amount }]
+  // Tiny toast used for "Updated" confirmations (manual Add and receipt
+  // auto-add both trigger it) -- auto-dismisses on its own.
+  const [toastMsg, setToastMsg] = useState('');
+  const toastTimerRef = useRef(null);
+  function showToast(msg) {
+    setToastMsg(msg);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToastMsg(''), 2200);
+  }
 
   // AI feature #4 (chat assistant): a floating Q&A bubble, available from
   // anywhere in the app (not tied to a specific tab/panel), that answers
@@ -1949,6 +1962,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     setExpenseFiles([]);
     if (expenseFilesInputRef.current) expenseFilesInputRef.current.value = '';
     loadAll();
+    showToast('Updated');
   }
 
   // AI feature #1: ask Claude to pick the best category for what the user
@@ -2091,6 +2105,13 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     });
   }
 
+  // Maps whatever the model read off the receipt to one of the app's own
+  // PAYMENT_SOURCES values -- defaults to 'Cash' (same default the manual
+  // Add form uses) when the receipt didn't show a clear payment marker.
+  function matchPaymentSource(detected) {
+    return PAYMENT_SOURCES.includes(detected) ? detected : 'Cash';
+  }
+
   async function handleScanFileChange(e) {
     const file = e.target.files?.[0];
     e.target.value = ''; // lets the same file be re-picked later if needed
@@ -2101,7 +2122,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     }
     setScanLoading(true);
     setScanError('');
-    setScanResults([]);
+    setLastScanAdded([]);
     try {
       const base64 = await readFileAsResizedBase64(file);
       const { data: { session: authSession } } = await supabase.auth.getSession();
@@ -2115,51 +2136,45 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
         setScanError("Couldn't find any expenses in that image -- try a clearer photo, or enter it manually below.");
         return;
       }
-      const rows = json.items.map((item) => {
-        const match = categories.find((c) => c.name.toLowerCase() === (item.categoryName || '').toLowerCase());
-        return {
-          include: true,
-          date: item.date || new Date().toISOString().slice(0, 10),
-          description: item.description || '',
-          amount: item.amount ? String(item.amount) : '',
-          categoryId: match ? match.id : (categories[0]?.id || ''),
-        };
-      });
-      setScanResults(rows);
+      // Straight to the database -- no review step. categoryId falls back
+      // to the first category (same fallback the old review list used) so
+      // a row never goes in with no category at all; payment source falls
+      // back to Cash. Both are just as editable afterwards as anything
+      // typed in by hand.
+      const rows = json.items
+        .filter((item) => item.amount && Number(item.amount) > 0)
+        .map((item) => {
+          const match = categories.find((c) => c.name.toLowerCase() === (item.categoryName || '').toLowerCase());
+          const paymentSource = matchPaymentSource(item.paymentSource);
+          return {
+            household_id: householdId,
+            expense_date: item.date || new Date().toISOString().slice(0, 10),
+            category_id: match ? match.id : (categories[0]?.id || null),
+            description: (item.description || '').trim(),
+            amount: Number(item.amount),
+            payment_source: paymentSource,
+            payment_bank: null,
+            created_by: session.user.id,
+            created_by_email: session.user.email,
+          };
+        });
+      if (rows.length === 0) {
+        setScanError("Couldn't find any expenses in that image -- try a clearer photo, or enter it manually below.");
+        return;
+      }
+      const { error } = await supabase.from('expenses').insert(rows);
+      if (error) {
+        setScanError('Could not save scanned expenses: ' + error.message);
+        return;
+      }
+      setLastScanAdded(rows.map((r) => ({ description: r.description || '(no description)', amount: r.amount })));
+      loadAll();
+      showToast('Updated');
     } catch {
       setScanError("Couldn't read that image -- try again, or enter it manually below.");
     } finally {
       setScanLoading(false);
     }
-  }
-
-  function updateScanRow(i, field, value) {
-    setScanResults((prev) => prev.map((r, idx) => (idx === i ? { ...r, [field]: value } : r)));
-  }
-
-  async function commitScanResults() {
-    const toAdd = scanResults.filter((r) => r.include && r.categoryId && Number(r.amount) > 0 && r.date);
-    if (toAdd.length === 0) {
-      alert('Select at least one item with a category and a valid amount.');
-      return;
-    }
-    const rows = toAdd.map((r) => ({
-      household_id: householdId,
-      expense_date: r.date,
-      category_id: r.categoryId,
-      description: r.description.trim(),
-      amount: Number(r.amount),
-      created_by: session.user.id,
-      created_by_email: session.user.email,
-    }));
-    const { error } = await supabase.from('expenses').insert(rows);
-    if (error) {
-      alert('Could not save scanned expenses: ' + error.message);
-      return;
-    }
-    setScanResults([]);
-    setScanError('');
-    loadAll();
   }
 
   // Shared by AI feature #4 (chat) and #5 (Budget Coach): a snapshot of one
@@ -3705,6 +3720,23 @@ function ReportHtmlView({ data }) {
   overCategories.forEach((name) => {
     notifications.push({ id: `over-cat-${name}`, text: `Over budget in: ${name}.` });
   });
+  // Budget threshold alerts (35% / 60% of a category's monthly_budget) --
+  // one bell item per category, escalating: a category already over 100%
+  // shows via overCategories above instead of repeating itself here. Same
+  // 35/60/100 tiers as the daily email alert (see
+  // api/cron/rent-reminders.js's checkCategoryBudgetAlerts), just computed
+  // live from what's already on screen instead of a server round-trip.
+  categories.forEach((c) => {
+    if (!(c.monthly_budget > 0)) return;
+    if (overCategories.includes(c.name)) return;
+    const spend = byCategory[c.name] || 0;
+    const pct = (spend / c.monthly_budget) * 100;
+    if (pct >= 60) {
+      notifications.push({ id: `cat-pct-60-${c.name}`, text: `${c.name}: 60% of this month's budget used.` });
+    } else if (pct >= 35) {
+      notifications.push({ id: `cat-pct-35-${c.name}`, text: `${c.name}: 35% of this month's budget used.` });
+    }
+  });
   dueReminders.forEach((r) => {
     notifications.push({
       id: `due-${r.id}`,
@@ -4354,6 +4386,9 @@ function ReportHtmlView({ data }) {
 
   return (
     <div className="wrap">
+      {/* "Updated" confirmation toast -- fires on manual Add (Regular
+          Expenses) and on receipt auto-add; auto-dismisses itself. */}
+      {toastMsg && <div className="app-toast">{toastMsg}</div>}
       {/* Header, month nav, and both summary-card rows are wrapped in one
           sticky block (see .sticky-dashboard-frame) so the whole "dashboard
           frame" stays frozen at the top while only the tabs/panels/lists
@@ -4819,6 +4854,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
       </div>
 )}
       </div>
+{(!isMobile || (!inputTab && !activePanel)) && (
 <div className="summary-cards">
             <div className="grid">
                 <div className="card card-budget">
@@ -4883,6 +4919,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
         </div>
       </div>
       </div>
+)}
       </div>
 
       <div className="content-grid">
@@ -5078,61 +5115,15 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 onChange={handleScanFileChange}
               />
               <div className="muted-small" style={{ marginTop: 6 }}>
-                Upload a photo of a receipt, or a sheet/screenshot listing several expenses -- review what Claude finds before anything is added.
+                Upload a photo of a receipt, or a sheet/screenshot listing several expenses -- Claude adds them straight to the list below (payment source included, when the receipt shows one). Edit anything that looks wrong afterwards.
               </div>
               {scanError && <div className="scan-error">{scanError}</div>}
+              {lastScanAdded.length > 0 && (
+                <div className="scan-added-summary">
+                  Added {lastScanAdded.length} expense{lastScanAdded.length === 1 ? '' : 's'}: {lastScanAdded.map((r) => `${r.description} (${r.amount})`).join(', ')}
+                </div>
+              )}
             </div>
-
-            {scanResults.length > 0 && (
-              <div className="scan-review-list">
-                <div className="muted-small" style={{ fontWeight: 700, marginBottom: 8 }}>
-                  Review before adding -- edit anything that looks wrong, untick what you don't want:
-                </div>
-                {scanResults.map((row, i) => (
-                  <div className="scan-review-row" key={i}>
-                    <input
-                      type="checkbox"
-                      checked={row.include}
-                      onChange={(e) => updateScanRow(i, 'include', e.target.checked)}
-                    />
-                    <input
-                      type="date"
-                      value={row.date}
-                      onChange={(e) => updateScanRow(i, 'date', e.target.value)}
-                    />
-                    <input
-                      type="text"
-                      value={row.description}
-                      placeholder="Description"
-                      onChange={(e) => updateScanRow(i, 'description', e.target.value)}
-                    />
-                    <select value={row.categoryId} onChange={(e) => updateScanRow(i, 'categoryId', e.target.value)}>
-                      {categories.map((c) => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                    </select>
-                    <div className="amount-field-wrap tight">
-                      <span className="currency-prefix"><CurrencyPrefix /></span>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={row.amount}
-                        onChange={(e) => updateScanRow(i, 'amount', e.target.value)}
-                      />
-                    </div>
-                  </div>
-                ))}
-                <div className="row" style={{ marginTop: 4 }}>
-                  <button type="button" className="btn" onClick={commitScanResults}>
-                    Add {scanResults.filter((r) => r.include).length} expense{scanResults.filter((r) => r.include).length === 1 ? '' : 's'}
-                  </button>
-                  <button type="button" className="btn secondary" onClick={() => { setScanResults([]); setScanError(''); }}>
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
           )}
 
@@ -6771,8 +6762,13 @@ I can help you track expenses, understand spending patterns, create budgets, and
               down the page (see the !inputTab section right after this
               content-grid closes), so the two don't show at once. Report/
               Settings/Help panels below still render regardless of
-              inputTab, since those can be open at the same time as Home. */}
-          {inputTab && (
+              inputTab, since those can be open at the same time as Home.
+              Mobile-only: this column is dropped entirely on the data-entry
+              tabs so the form to its left gets the full screen width/height
+              for entering data -- the chart/AI/Coach cards are only useful
+              once there's data to look at, and are still one tap away via
+              the Dashboard tab. Desktop is unaffected. */}
+          {inputTab && !isMobile && (
             <>
               {chartTypeToggle}
               {renderChartCard(false)}
@@ -7222,8 +7218,13 @@ I can help you track expenses, understand spending patterns, create budgets, and
           above as chartTypeToggle/renderChartCard/aiInsightsCard/
           budgetCoachCard), just rendered bigger and full width here so
           there's room to "play around" with the charts and AI features,
-          per explicit request. */}
-            {!inputTab && activePanel !== 'settings' && activePanel !== 'help' && (
+          per explicit request. Mobile-only addition: on top of the above,
+          require the screen to be true Home (no activePanel at all, so
+          Report is excluded too) -- Report/Settings/Help each get to use
+          the freed-up screen for their own content on mobile instead of
+          this Explore block tagging along underneath. Desktop keeps the
+          original behavior (Explore still follows Report there). */}
+            {!inputTab && activePanel !== 'settings' && activePanel !== 'help' && (!isMobile || !activePanel) && (
         <div className="home-explore-frame">
           <h2 style={{ margin: '0 0 10px' }}>Explore</h2>
           {chartTypeToggle}
