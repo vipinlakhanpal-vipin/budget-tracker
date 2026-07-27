@@ -1,0 +1,2257 @@
+:root {
+  /* --card was plain white; changed to a soft warm ivory so every panel/
+     card/frame reads as one deliberate, inviting light color scheme instead
+     of stark white boxes on a cyan-tinted page background -- per explicit
+     request ("some other lighter shade that u have not used it... same
+     through the app"). Defined once here (not per color-theme below) so it
+     stays consistent no matter which accent theme is picked. */
+  --bg: #f0f9fb; --card: #fdf9f2; --text: #0f2a2e; --muted: #5b7c82;
+  --accent: #0d9488; --accent-light: #ccfbf1; --accent2: #0ea5e9; --accent2-light: #e0f2fe;
+  --danger: #dc2626; --danger-bg: #fef2f2;
+  --ok: #0d9488; --border: #d5ecec;
+  /* Fixed purple used only by the Chat BoT button now -- deliberately NOT
+     swapped by the color-theme picker below, so the app's own AI accent
+     stays recognizable no matter which theme is active. The "Expense
+     Management" title used to share this same fixed purple, but per
+     explicit request it now follows --accent instead (see
+     .app-title-purple below) so it recolors along with the rest of the
+     theme instead of staying purple forever. */
+  --chat-accent: #7c3aed;
+  /* A darker shade of --accent, used only for the currently-selected header
+     tab's highlight (.header-tab-btn-active). Previously that highlight was
+     hardcoded to one dark-teal value no matter which color theme was picked,
+     so choosing e.g. "purple" recolored every other button but the active
+     tab kept showing teal -- per explicit bug report ("selected tab shows
+     teal color only... should also show same color as selected via theme
+     tab"). Each [data-theme] block below now also sets its own matching
+     --accent-active so the active-tab ring always tracks the chosen theme. */
+  --accent-active: #0f766e;
+}
+/* Color theme picker (see .theme-fab-btn / ThemeMenu in Dashboard.jsx):
+   swaps only the two "accent" pairs that drive buttons, borders, tab
+   highlights, etc. app-wide -- never --bg/--card/--text/--danger, so the
+   app never becomes hard to read no matter which theme is picked. Applied
+   via a data-theme attribute on <html>, set from the saved choice in
+   localStorage, rather than inline styles, so every themed rule lives in
+   one place here instead of being computed in JS. */
+[data-theme="ocean"] {
+  --accent: #0369a1; --accent-light: #dbeafe; --accent2: #0ea5e9; --accent2-light: #e0f2fe;
+  --accent-active: #075985;
+}
+[data-theme="purple"] {
+  --accent: #7c3aed; --accent-light: #ede9fe; --accent2: #a78bfa; --accent2-light: #f5f3ff;
+  --accent-active: #6d28d9;
+}
+[data-theme="rose"] {
+  --accent: #db2777; --accent-light: #fce7f3; --accent2: #f472b6; --accent2-light: #fdf2f8;
+  --accent-active: #be185d;
+}
+[data-theme="forest"] {
+  --accent: #15803d; --accent-light: #dcfce7; --accent2: #22c55e; --accent2-light: #f0fdf4;
+  --accent-active: #166534;
+}
+[data-theme="amber"] {
+  --accent: #b45309; --accent-light: #fef3c7; --accent2: #f59e0b; --accent2-light: #fffbeb;
+  --accent-active: #92400e;
+}
+[data-theme="indigo"] {
+  --accent: #4f46e5; --accent-light: #e0e7ff; --accent2: #818cf8; --accent2-light: #eef2ff;
+  --accent-active: #4338ca;
+}
+[data-theme="slate"] {
+  --accent: #475569; --accent-light: #e2e8f0; --accent2: #94a3b8; --accent2-light: #f8fafc;
+  --accent-active: #334155;
+}
+[data-theme="wine"] {
+  --accent: #9f1239; --accent-light: #ffe4e6; --accent2: #fb7185; --accent2-light: #fff1f2;
+  --accent-active: #881337;
+}
+/* Dark mode -- independent of the accent color theme above, toggled via a
+   [data-mode="dark"] attribute on <html> (see the Light/Dark switch in
+   ThemeMenu in Dashboard.jsx, stored separately in localStorage so a user's
+   color choice and their light/dark preference don't overwrite each other).
+   Only the neutral surface/text colors change here; --accent-light and
+   --accent2-light are recalculated as a translucent tint of whichever accent
+   is active (via color-mix) instead of a pale-on-white tint, so hover/active
+   states stay readable against a dark background no matter which of the
+   themes above is picked. */
+[data-mode="dark"] {
+  --bg: #0b1418; --card: #16262c; --text: #e7f3f4; --muted: #93b2b8;
+  --border: #26414a; --danger-bg: #2a1416;
+  --accent-light: color-mix(in srgb, var(--accent) 24%, var(--card));
+  --accent2-light: color-mix(in srgb, var(--accent2) 20%, var(--card));
+}
+* { box-sizing: border-box; }
+html {
+  /* One consistent type family everywhere, Nunito Light as the base weight
+     for a soft, uniform, "designed as one piece" feel. Buttons, headings,
+     and labels still use heavier Nunito weights (600/700) where emphasis
+     matters -- literally flattening every size/weight would actually hurt
+     readability (a 24px total and a 10px caption need to look different to
+     stay scannable), so this keeps one font and one tightened size scale
+     instead of one single font-size for all text. */
+  font-family: 'Nunito', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+body {
+  margin: 0; font-family: inherit; font-weight: 300;
+  background: var(--bg); color: var(--text);
+}
+button, input, select, textarea { font-family: inherit; }
+.center-screen {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; overflow-x: hidden; max-width: 100vw;
+}
+
+/* Launch splash -- full-screen brand moment shown for ~2s on every app
+   start (see App.jsx). Fades itself out via animation so it disappears
+   smoothly on its own; App.jsx also unmounts it on the same timer so it
+   never lingers as an invisible-but-still-there click-blocker. */
+.splash-screen {
+  position: fixed; inset: 0; z-index: 999999; overflow: hidden;
+  display: flex; flex-direction: column; align-items: center;
+  /* Lifted to vertical center per explicit request -- the platform
+     diagram + the tagline/version summary beneath it (both inside
+     .splash-center) now sit in the middle of the screen instead of
+     anchored to the bottom. .splash-credit stays pinned to the true
+     bottom edge separately (it's absolutely positioned, not part of this
+     flex column), so it's unaffected by this. */
+  justify-content: center;
+  /* Blue vignette -- replaces the earlier teal background entirely, to
+     match the blue theme of the circular platform diagram below (per
+     explicit request to remove teal here). Still a radial glow centered
+     where the diagram sits, just built from navy/blue stops instead. */
+  background:
+    radial-gradient(circle at 50% 38%, #2f4f9e 0%, #1c2f66 32%, #101a3e 62%, #050914 100%);
+  pointer-events: none;
+  animation: splash-fade-out .5s ease forwards;
+  /* Splash is on screen for a full 6s (kept in sync with the setTimeout in
+     App.jsx) -- delay the fade until 5.5s so the .5s fade-out finishes
+     exactly as React unmounts it. */
+  animation-delay: 5.5s;
+}
+
+/* Dotted world map -- a quiet full-bleed backdrop behind the whole scene,
+   built from real lat/lon land regions (WORLD_DOTS in Splash.jsx) rather
+   than smooth abstract shapes, so it reads as an actual world map. Kept
+   low-opacity and behind the orbs/dust so it reads as texture, not a
+   competing subject. */
+.splash-worldmap {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 130vmax; height: 65vmax; z-index: 0;
+}
+/* Continents stay faint/textural -- background detail, not the subject.
+   The location marker below is deliberately kept OUT of this dimmed
+   group and given its own much higher opacity so it reads as a clear,
+   intentional highlight ("this is YOUR Hearth") rather than blending into
+   the map texture at the same low strength. */
+.worldmap-continents { opacity: .3; }
+.geo-marker { filter: drop-shadow(0 0 5px rgba(239, 68, 68, .85)); }
+.geo-ping { transform-box: fill-box; transform-origin: center; animation: geo-ping-out 2.2s ease-out infinite; }
+@keyframes geo-ping-out {
+  0% { transform: scale(.6); opacity: .9; }
+  75%, 100% { transform: scale(2.6); opacity: 0; }
+}
+/* The actual "blink" -- a real on/off pulse (not just the expanding ring
+   above) so the dot unmistakably reads as live/blinking, per direct
+   feedback that the earlier gold pulsing-ring-only version didn't read as
+   a blinking marker. */
+.geo-dot-core { animation: geo-blink 1.1s ease-in-out infinite; }
+@keyframes geo-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .25; }
+}
+.geo-label {
+  /* This is set in the map SVG's own user-space units, not real CSS px --
+     the map is blown up ~1.85x on a typical viewport (viewBox width 784
+     stretched to 130vmax), so the old "8" here was actually rendering
+     around 15px on screen. Shortening the country name to "UAE" (see
+     COUNTRY_SHORT_NAMES in Splash.jsx) frees up room, and this value is
+     tuned down so the label renders close to a true 10px. */
+  fill: #ffffff; font-size: 5.5px; font-weight: 700; font-family: 'Nunito', sans-serif;
+  paint-order: stroke; stroke: #0d1a3d; stroke-width: 1.2px; stroke-linejoin: round;
+  opacity: .95; letter-spacing: .01em;
+}
+/* Small twinkling points scattered across the background -- turns the
+   glow into a lively "night sky" rather than an empty gradient. Pure CSS,
+   staggered delays/durations so they don't blink in lockstep. */
+.splash-dust {
+  position: absolute; width: 4px; height: 4px; border-radius: 50%;
+  background: #ffffff; opacity: 0;
+  animation: splash-dust-twinkle 3.4s ease-in-out infinite;
+}
+.splash-dust-1 { top: 18%; left: 22%; animation-delay: .2s; }
+.splash-dust-2 { top: 68%; left: 16%; width: 3px; height: 3px; animation-delay: 1.1s; }
+.splash-dust-3 { top: 24%; right: 20%; animation-delay: 1.8s; }
+.splash-dust-4 { top: 78%; right: 26%; width: 3px; height: 3px; animation-delay: .7s; }
+.splash-dust-5 { top: 46%; left: 8%; width: 3px; height: 3px; animation-delay: 2.4s; }
+@keyframes splash-dust-twinkle {
+  0%, 100% { opacity: 0; transform: scale(.6); }
+  50% { opacity: .8; transform: scale(1.3); }
+}
+/* Soft, slowly-drifting blurred light -- the thing that makes a flat
+   gradient background feel alive/premium instead of static. Three orbs at
+   different sizes/speeds/positions so the motion doesn't read as
+   mechanically repeating. */
+/* Personal greeting -- now the actual top-of-screen element (the brand
+   line below this one moved down to the bottom a while back). Name +
+   "Good X" text is built in Splash.jsx (getGreeting()); this just styles
+   it. 50px per explicit request, clamped down on narrow phones so it
+   doesn't force a line-wrap/overflow at the small end. */
+.splash-greeting {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + 28px);
+  left: 0; right: 0; margin-inline: auto; z-index: 2;
+  width: max-content; max-width: 92vw;
+  text-align: center; color: #ffffff; font-weight: 800;
+  font-size: clamp(26px, 9vw, 50px); line-height: 1.1;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, .35);
+  animation: splash-pop .5s ease .05s both;
+}
+/* Standalone brand line -- moved from the top of the splash down to sit
+   just above the credit line at the very bottom, per explicit request
+   (was originally at the top "slightly down" from the top edge; now
+   lifted content is vertically centered instead, so this reads better
+   grounded at the bottom alongside the credit line than floating alone
+   at the top). Kept as its own absolutely-positioned element rather than
+   folded into .splash-center, since its position is independent of that
+   centered block. */
+.splash-top-tagline {
+  /* Centered with left:0/right:0 + margin-inline:auto, NOT
+     left:50%+transform:translateX(-50%) -- .splash-pop below (used for this
+     element's pop-in animation) animates the `transform` property too, and
+     its final keyframe ("scale(1) translateY(0)") silently clobbers any
+     static transform set here, which is exactly why the centering trick
+     wasn't actually taking effect (text was pinned to left:50% with no
+     offset, reading as pushed toward the right half). Auto margins don't
+     touch transform at all, so they keep working regardless of the
+     animation. */
+  position: absolute;
+  /* Sits directly above .splash-credit (bottom: max(24px, safe-area-inset)
+     plus its own ~17px line height) with a small visible gap. */
+  bottom: calc(max(24px, env(safe-area-inset-bottom, 0px)) + 30px);
+  left: 0; right: 0; margin-inline: auto; z-index: 2;
+  width: max-content; max-width: 92vw;
+  /* Reduced from the old 40px cap down to 30px per explicit request, still
+     scaling down further via vw on narrow phones so it never overflows or
+     forces awkward wrapping. */
+  font-size: clamp(16px, 6vw, 30px); font-weight: 800; letter-spacing: .02em;
+  text-align: center;
+  animation: splash-pop .5s ease .15s both;
+  /* Switched from the old amber-copper gradient to plain white per explicit
+     request, to match the new blue intro theme -- white reads cleanly
+     against the navy background and echoes the "AI POWERED" text already
+     used at the center of the circle, rather than clashing with it. */
+  color: #ffffff;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, .3);
+}
+/* Sized in em, not px, so it scales exactly with .splash-top-tagline's own
+   clamp()-driven font-size at any screen width -- a fixed px size would
+   look mismatched once the text shrinks on a narrow phone. Inline (not
+   flex) so it flows naturally as part of the text and stays glued to the
+   front of "Hearth" even if the line wraps. */
+.splash-top-tagline-icon {
+  width: .8em; height: .8em; display: inline-block;
+  vertical-align: -.1em; margin-right: .15em;
+}
+.splash-orb {
+  position: absolute; border-radius: 50%; filter: blur(40px); opacity: .35;
+}
+.splash-orb-1 { width: 260px; height: 260px; background: #60a5fa; top: -60px; left: -60px; animation: splash-drift-a 9s ease-in-out infinite; }
+.splash-orb-2 { width: 220px; height: 220px; background: #ffe27a; bottom: -50px; right: -40px; animation: splash-drift-b 11s ease-in-out infinite; }
+.splash-orb-3 { width: 180px; height: 180px; background: #93c5fd; top: 30%; right: 8%; animation: splash-drift-c 8s ease-in-out infinite; }
+@keyframes splash-drift-a { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(30px, 40px); } }
+@keyframes splash-drift-b { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-25px, -30px); } }
+@keyframes splash-drift-c { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(15px, -20px) scale(1.12); } }
+
+.splash-center {
+  position: relative; z-index: 2;
+  display: flex; flex-direction: column; align-items: center;
+  /* Widened from an earlier tight 6px per explicit request for clearer
+     breathing room between the circle diagram and the tagline/version
+     text sitting right below it. */
+  gap: 20px;
+  animation: splash-pop .6s cubic-bezier(.34, 1.56, .64, 1) both;
+  /* Positioning is now handled by .splash-screen (justify-content: center)
+     so this whole block sits vertically centered on screen. */
+}
+.splash-illustration { width: 360px; max-width: 92vw; filter: drop-shadow(0 18px 30px rgba(0, 0, 0, .24)); }
+.splash-illustration svg { width: 100%; height: auto; display: block; }
+/* The circular platform diagram carries 8 icon labels + 4 lines of ring/
+   center text, so it gets a bit more room than the old single-logo mark
+   did -- otherwise the small print gets too cramped to read. */
+.splash-illustration-platform { width: 410px; max-width: 96vw; }
+
+/* Circular platform diagram (intro/splash) -- ring title, per-tab icon
+   spokes, and the center "AI POWERED" sphere. All text sizes are tuned in
+   the SVG's own viewBox units (not real px), same convention as the old
+   .geo-label above. */
+/* Standalone centered heading above the diagram -- replaces the earlier
+   curved ring text per explicit feedback that bent text was hard to read;
+   a plain centered line is unambiguous at any screen width. */
+/* Tagline curved along the top of the ring -- brought back per explicit
+   request to have it "circled around the circle". Bumped 14px -> 16px ->
+   18px -> 20px across four rounds of "increase the font size", and moved
+   from riding embedded in the ring's own thickness (radius 196, between
+   the ring's 182-210 band) out to radius 224 -- clearly outside/above the
+   dark ring line, per explicit request, rather than sitting on top of the
+   ring stroke. At 34 characters (incl. spaces) this weight/uppercase, the
+   text still spans well under the 140deg arc it rides at this larger
+   radius (roughly 420 of ~550 available units). */
+.platform-title-text {
+  fill: #ffffff; font-family: 'Nunito', sans-serif; font-size: 20px;
+  font-weight: 800; letter-spacing: .3px; text-transform: uppercase;
+  animation: splash-pop .5s ease .2s both;
+}
+/* Dropped 9.5px -> 9px alongside the two-line wrap of multi-word labels
+   (see Splash.jsx) -- between the smaller font and roughly half the
+   per-line width, every label now sits with a large, obvious gap before
+   the ring instead of a marginal one. */
+.platform-tab-label {
+  fill: #16224a; font-family: 'Nunito', sans-serif; font-size: 9px; font-weight: 800;
+}
+/* Each tab spoke pops in with its own staggered delay (set inline per-icon
+   in Splash.jsx) rather than all at once, echoing the old float-in cast. */
+.platform-tab-icon {
+  opacity: 0; transform-box: fill-box; transform-origin: center;
+  animation: platform-icon-pop .45s ease forwards;
+}
+@keyframes platform-icon-pop {
+  from { opacity: 0; transform: scale(.5); }
+  to { opacity: 1; transform: scale(1); }
+}
+/* Reuses the family-glow "breathe" keyframe already defined below for a
+   slow, gentle pulse rather than a new animation. */
+.platform-sphere-pulse { transform-box: fill-box; transform-origin: center; animation: hearth-family-breathe 3.2s ease-in-out infinite; }
+.platform-network { animation: platform-network-fade 4s ease-in-out infinite; }
+@keyframes platform-network-fade {
+  0%, 100% { opacity: .55; }
+  50% { opacity: 1; }
+}
+.platform-center-kicker {
+  fill: #ffffff; font-family: 'Nunito', sans-serif; font-size: 15px;
+  font-weight: 800; letter-spacing: 2px;
+  animation: splash-pop .5s ease .55s both;
+}
+.platform-center-brand {
+  /* Darkened from the original pale #ffd88a cream-yellow to a richer,
+     more saturated amber/gold -- reads more clearly against the blue
+     sphere behind it, per explicit feedback that the pale version was
+     too washed out. */
+  fill: #f2a91a; font-family: 'Nunito', sans-serif; font-size: 40px; font-weight: 800;
+  animation: splash-pop .5s ease .6s both;
+}
+.platform-center-stat {
+  fill: #cfe0fb; font-family: 'Nunito', sans-serif; font-size: 10.5px; font-weight: 700;
+  animation: splash-pop .5s ease .65s both;
+}
+
+/* Wraps the hearth illustration so it's centered independent of the
+   title/tagline/etc. stacked below it in .splash-center. */
+.splash-illustration-wrap { position: relative; display: flex; align-items: center; justify-content: center; }
+
+/* The flame itself: three layered teardrops (outer/mid/inner) each with
+   their own independent flicker -- different durations/offsets so the
+   whole flame reads as one continuously-alive fire rather than a single
+   shape pulsing in lockstep, which would look mechanical. The whole group
+   also pops in with a quick "ignite" beat once the roofline has mostly
+   drawn in. */
+.hearth-flame { opacity: 0; animation: flame-ignite .4s ease .5s forwards; }
+@keyframes flame-ignite {
+  from { opacity: 0; transform: scaleY(.4); }
+  to { opacity: 1; transform: scaleY(1); }
+}
+.flame-layer { transform-box: fill-box; transform-origin: 50% 100%; }
+.flame-outer { animation: flame-flicker 1.6s ease-in-out .5s infinite; }
+.flame-mid { animation: flame-flicker 1.3s ease-in-out .6s infinite; }
+.flame-inner { animation: flame-flicker 1s ease-in-out .7s infinite; }
+@keyframes flame-flicker {
+  0%, 100% { transform: scaleY(1) scaleX(1) skewX(0deg); }
+  30% { transform: scaleY(1.05) scaleX(.96) skewX(-1.5deg); }
+  60% { transform: scaleY(.95) scaleX(1.03) skewX(1.5deg); }
+}
+
+/* Embers drift up out of the fire and fade, looping continuously -- the
+   literal "sparks from the hearth" that the AI sparkle stars (below) drift
+   alongside, tying the two motifs together instead of the AI badge feeling
+   bolted on separately. */
+.ember { opacity: 0; transform-box: fill-box; transform-origin: center; animation: ember-rise 2.6s ease-in infinite; }
+.ember-1 { animation-delay: .6s; }
+.ember-2 { animation-delay: 1.3s; }
+.ember-3 { animation-delay: .9s; }
+.ember-4 { animation-delay: 1.9s; }
+@keyframes ember-rise {
+  0% { opacity: 0; transform: translateY(0) scale(.6); }
+  15% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-70px) scale(1.1); }
+}
+
+/* The coin/chart/wallet cast orbiting the hearth -- each pops in shortly
+   after the flame ignites, then settles into its own slow, independent
+   bob so the trio doesn't move in unison (which would look mechanical).
+   transform-box: fill-box keeps each element rotating/bobbing around its
+   own center rather than the SVG's (0,0) origin. */
+.splash-float {
+  opacity: 0; transform-box: fill-box; transform-origin: center;
+  animation: splash-float-pop-in .45s ease forwards;
+}
+.splash-float-coin { animation-name: splash-float-pop-in, splash-float-bob; animation-delay: .8s, 1.25s; animation-duration: .45s, 3.6s; animation-timing-function: ease, ease-in-out; animation-iteration-count: 1, infinite; animation-fill-mode: forwards, none; }
+.splash-float-chart { animation-name: splash-float-pop-in, splash-float-bob-alt; animation-delay: 1s, 1.45s; animation-duration: .45s, 4.2s; animation-timing-function: ease, ease-in-out; animation-iteration-count: 1, infinite; animation-fill-mode: forwards, none; }
+.splash-float-wallet { animation-name: splash-float-pop-in, splash-float-bob; animation-delay: 1.15s, 1.6s; animation-duration: .45s, 3.9s; animation-timing-function: ease, ease-in-out; animation-iteration-count: 1, infinite; animation-fill-mode: forwards, none; }
+/* Lower-right piggy bank (Savings) and upper-left receipt (an expense,
+   logged) -- direct finance/expense/savings graphics requested in place
+   of the earlier orbiting text labels, drawn in the same hand-illustrated
+   line-art style as the coin/chart/wallet cast rather than photos (photos
+   would need licensing and wouldn't match this vector scene). */
+.splash-float-piggy { animation-name: splash-float-pop-in, splash-float-bob-alt; animation-delay: 1.3s, 1.75s; animation-duration: .45s, 4s; animation-timing-function: ease, ease-in-out; animation-iteration-count: 1, infinite; animation-fill-mode: forwards, none; }
+.splash-float-receipt { animation-name: splash-float-pop-in, splash-float-bob; animation-delay: 1.45s, 1.9s; animation-duration: .45s, 3.7s; animation-timing-function: ease, ease-in-out; animation-iteration-count: 1, infinite; animation-fill-mode: forwards, none; }
+/* A coin drops into the piggy bank's slot and fades, looping -- the
+   literal "money being saved" motion rather than a static icon. */
+.piggy-coin-drop { transform-box: fill-box; transform-origin: center; opacity: 0; animation: coin-drop-in-slot 2.4s ease-in infinite; }
+@keyframes coin-drop-in-slot {
+  0% { transform: translateY(0); opacity: 0; }
+  8% { opacity: 1; }
+  55% { transform: translateY(20px); opacity: 0; }
+  100% { transform: translateY(20px); opacity: 0; }
+}
+@keyframes splash-float-pop-in {
+  from { opacity: 0; transform: scale(.4); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes splash-float-bob {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-9px) rotate(-6deg); }
+}
+@keyframes splash-float-bob-alt {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-7px) rotate(4deg); }
+}
+/* The coin's own continuous "flip" -- squashing to near-zero width at the
+   midpoint mimics a coin turning edge-on, a genuine spin rather than a
+   flat icon just bobbing in place. A brief diagonal shine flashes right
+   as it turns face-on again for a bit of shimmer/premium polish. */
+.coin-spin { transform-box: fill-box; transform-origin: center; animation: coin-flip 3.2s ease-in-out infinite; }
+@keyframes coin-flip {
+  0%, 100% { transform: scaleX(1); }
+  50% { transform: scaleX(.12); }
+}
+.coin-shine { transform-box: fill-box; transform-origin: center; opacity: 0; animation: coin-shine-sweep 3.2s ease-in-out infinite; }
+@keyframes coin-shine-sweep {
+  0%, 38%, 62%, 100% { opacity: 0; }
+  50% { opacity: .9; }
+}
+.splash-title {
+  color: #ffffff; font-size: 26px; font-weight: 800; letter-spacing: .01em; text-align: center;
+  text-shadow: 0 2px 18px rgba(255, 255, 255, .35);
+  animation: splash-pop .5s ease .25s both;
+}
+/* Same rich amber-copper as the heart-outline mark above it (not the paler
+   gold this used before), per explicit request to match the text to the
+   logo -- background-clip:text is the standard way to fill text with a
+   gradient (there's no plain CSS "gradient color" property). */
+.splash-title-gold {
+  background: linear-gradient(180deg, #fb923c 0%, #c2410c 55%, #7c2d12 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  text-shadow: none;
+}
+/* Small "AI-powered" pill under the app name -- same gradient family as the
+   in-app <AiTag /> badges, so the splash reads as a preview of the AI
+   features rather than a generic loading screen. */
+/* The splash background is itself teal, so unlike the other AI tags this
+   one flips to a white pill with teal text -- keeps the same theme color
+   as the accent everywhere else while still standing out against the
+   gradient behind it. */
+/* No pill/background here either -- but the splash background is itself
+   teal, so plain teal text (like every other AI tag) would disappear into
+   it. White keeps it legible while still matching the same "no badge
+   shape" look everywhere else. */
+.splash-ai-tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  color: #ffffff; font-size: 10.5px; font-weight: 800; letter-spacing: .2px;
+  animation: splash-pop .5s ease .3s both;
+}
+.splash-ai-tag svg { animation: ai-sparkle-twinkle 2.2s ease-in-out infinite; }
+/* Twinkling star accents scattered around the illustration -- pop in late
+   (after the coin/confetti settle) and keep a slow shimmer for as long as
+   the splash is on screen. */
+.splash-sparkle { opacity: 0; transform-box: fill-box; transform-origin: center; animation: sparkle-pop-in .4s ease forwards, ai-sparkle-twinkle 1.8s ease-in-out infinite; }
+.splash-sparkle-1 { animation-delay: 1.2s, 1.6s; }
+.splash-sparkle-2 { animation-delay: 1.4s, 1.8s; }
+.splash-sparkle-3 { animation-delay: 1.6s, 2s; }
+@keyframes sparkle-pop-in {
+  from { opacity: 0; transform: scale(.3); }
+  to { opacity: 1; transform: scale(1); }
+}
+/* Wrapper for the tagline + version/date line -- its own small gap (6px)
+   keeps these two short lines reading as one closely-joined unit, separate
+   from .splash-center's own wider 20px gap (which stays generous between
+   the big circle diagram and this whole text block). Previously these two
+   were plain siblings inside .splash-center, so the 20px flex gap plus
+   .splash-version's own margin-top pushed them further apart than
+   intended. */
+.splash-tagline-group {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.splash-tagline {
+  color: rgba(255, 255, 255, .88); font-size: 13px; font-weight: 600;
+  animation: splash-pop .5s ease .35s both;
+}
+/* "A Happy Hearth" -- the reference logo's own tagline treatment: a thin
+   rule either side of the words, gold and uppercase-ish letter-spaced like
+   the source, with a small solid heart underneath (separate element right
+   below, since a heart doesn't sit well inline with the rule/text baseline). */
+.splash-happy-hearth {
+  /* Text kept exactly as written in the reference ("A Happy Hearth", not
+     forced to all-caps) -- the letter-spacing alone gives the same
+     spaced-out look without changing the actual wording's casing. Color
+     matched to the amber-copper mark above, same as the "Hearth" title. */
+  display: flex; align-items: center; gap: 10px; margin-top: 6px;
+  color: #fb923c; font-size: 12px; font-weight: 800; letter-spacing: .1em;
+  animation: splash-pop .5s ease .4s both;
+}
+.splash-happy-rule { width: 26px; height: 1px; background: rgba(251, 146, 60, .55); }
+.splash-happy-heart {
+  margin-top: 4px;
+  animation: splash-pop .5s ease .42s both, hearth-family-breathe 2.4s ease-in-out 1s infinite;
+}
+.splash-version {
+  color: rgba(255, 255, 255, .7); font-size: 11px; font-weight: 700; letter-spacing: .02em;
+  animation: splash-pop .5s ease .45s both;
+}
+.splash-credit { left: 0; right: 0; margin-inline: auto; width: max-content; max-width: 92vw; text-align: center;
+  position: absolute; bottom: max(24px, env(safe-area-inset-bottom));
+  color: rgba(255, 255, 255, .78); font-size: 12px; font-weight: 700; letter-spacing: .02em;
+  animation: splash-pop .6s ease .5s both;
+}
+@keyframes splash-pop {
+  from { opacity: 0; transform: scale(.82) translateY(6px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes splash-fade-out {
+  from { opacity: 1; visibility: visible; }
+  to { opacity: 0; visibility: hidden; }
+}
+/* Mobile splash overlap fix -- the vertically-centered diagram block
+   (.splash-center) and the bottom-anchored Hearth -- Spend smart line
+   (.splash-top-tagline) have enough combined height that on a SHORTER
+   phone screen (e.g. 375x667) they collide, even though the same layout
+   has plenty of room on a taller 390x844 one -- the real constraint is
+   available vertical space, not width, so this targets height (plus a
+   plain narrow-width fallback for anything that reports an odd
+   viewport) rather than the usual width-only breakpoint. Shrinking
+   .splash-illustration-platform also shrinks every bit of text inside
+   its SVG proportionally, since that text is sized in the SVG's own
+   user-space units rather than real px, so this one change buys back a
+   large chunk of vertical room without needing to touch each line
+   individually. */
+@media (max-height: 720px), (max-width: 480px) {
+  .splash-illustration-platform { width: min(340px, 78vw); }
+  .splash-center { gap: 10px; }
+  .splash-tagline-group { gap: 3px; }
+  .splash-greeting {
+    top: calc(env(safe-area-inset-top, 0px) + 16px);
+    font-size: clamp(22px, 8vw, 40px);
+  }
+  .splash-top-tagline {
+    bottom: calc(max(20px, env(safe-area-inset-bottom, 0px)) + 20px);
+    font-size: clamp(13px, 4.6vw, 20px);
+  }
+  .splash-credit { bottom: max(16px, env(safe-area-inset-bottom)); font-size: 10px; }
+}
+/* Small confirmation that Claude auto-picked a category for the expense
+   description just typed -- fades in next to the Category dropdown, and
+   clears itself (or on manual override) after a few seconds. */
+.ai-hint {
+  margin-top: 5px; font-size: 11px; font-weight: 700; color: var(--accent);
+  animation: splash-pop .3s ease both;
+}
+.login-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 18px;
+  padding: 32px; max-width: 380px; width: 100%; text-align: center;
+}
+.login-card h1 { font-size: 20px; margin: 0 0 8px; }
+.login-card form { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+.login-card input {
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px;
+}
+.login-sent { margin-top: 16px; font-size: 14px; }
+.login-error { margin-top: 12px; color: var(--danger); font-size: 13px; }
+
+.auth-tabs {
+  display: flex; gap: 4px; background: var(--bg); border-radius: 8px; padding: 3px; margin: 14px 0 4px;
+}
+.auth-tabs button {
+  flex: 1; border: none; background: transparent; padding: 7px 0; font-size: 13px; font-weight: 600;
+  color: var(--muted); border-radius: 6px; cursor: pointer;
+}
+.auth-tabs button.active { background: var(--card); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+.link-btn {
+  background: none; border: none; color: var(--accent2); font-size: 12px; cursor: pointer; padding: 0;
+}
+.link-btn:hover { text-decoration: underline; }
+
+/* Note/attachment icons on the Add-expense and Fixed Expenses forms (task:
+   note + document attachment). Outline style matches the existing "Scan a
+   receipt" secondary button family, but square/icon-only since there's no
+   label text to size around. "active" (a note typed, or a file chosen)
+   swaps to the accent color so it's obvious at a glance the field isn't
+   empty, even while collapsed. */
+.icon-btn-outline {
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1.5px solid var(--border); border-radius: 9px; background: #fff;
+  color: var(--muted); cursor: pointer; transition: border-color .15s ease, color .15s ease;
+}
+.icon-btn-outline:hover { border-color: #a9d9d5; color: var(--text); }
+.icon-btn-outline.active { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+.field textarea {
+  padding: 9px 11px; border: 1.5px solid var(--border); border-radius: 9px; font-size: 13px;
+    background: var(--card); color: var(--text); font-family: inherit; resize: vertical; width: 100%;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.field textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
+.attachment-chip {
+  display: inline-flex; align-items: center; gap: 5px; background: var(--accent-light);
+  color: var(--accent); padding: 4px 8px; border-radius: 999px; font-weight: 600;
+}
+.attachment-chip-remove {
+  display: inline-flex; border: none; background: none; color: inherit; cursor: pointer;
+  padding: 2px; margin-left: 2px; border-radius: 50%;
+}
+.attachment-chip-remove:hover { background: rgba(0,0,0,.08); }
+/* Small view-only note/attachment indicators shown next to a saved row's
+   Name/Description once it has a note and/or attachment -- desktop table
+   version is a clickable icon (note = alert with the text, attachment =
+   opens a signed download link), mobile transaction-row version is a
+   plain (non-clickable) hint since tapping the whole row already opens the
+   edit sheet, which shows the same info. */
+.row-attach-icons { display: flex; gap: 4px; margin-top: 4px; }
+.row-icon-btn {
+  display: inline-flex; align-items: center; justify-content: center; border: none;
+  background: var(--bg); color: var(--muted); cursor: pointer; padding: 3px; border-radius: 6px;
+}
+.row-icon-btn:hover { color: var(--accent); background: var(--accent-light); }
+.row-attach-hint { color: var(--muted); margin-left: 5px; vertical-align: -1px; }
+/* Groups the paperclip "view attachment" shortcut next to the row's own
+   Trash2 delete icon (last table column) -- a second, faster way to reach
+   the same viewer as the icon already shown under Description/Name,
+   requested so opening a saved doc doesn't require hunting for the small
+   icon further over in the row. Only rendered when the row actually has
+   an attachment, so rows without one still show just the delete icon. */
+.row-actions { display: flex; align-items: center; justify-content: center; gap: 2px; }
+
+.confidentiality-note {
+  margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border);
+  font-size: 11px; color: var(--muted); line-height: 1.5;
+}
+.app-footer {
+  text-align: center; font-size: 11px; color: var(--muted); padding: 18px 0 6px;
+}
+.app-footer-link { color: var(--accent); font-weight: 700; text-decoration: underline; }
+/* The Suggestion link is a <button> (not an <a>, since it opens a modal
+   rather than navigating) -- reset native button chrome so it reads as an
+   inline text link identical to the Privacy Policy link beside it. */
+.app-footer-link-btn {
+  background: none; border: none; padding: 0; margin: 0; font: inherit;
+  cursor: pointer; display: inline-flex; align-items: center;
+}
+
+.wrap { max-width: 1520px; margin: 0 auto; padding: 24px; overflow-x: clip; }
+/* Frozen to the top of the viewport while the page scrolls -- now wraps the
+   ENTIRE "dashboard frame" (title/logo, the merged tab+action row, month
+   nav, and both summary-card rows), not just the title bar, so all of it
+   stays reachable without scrolling back up; only the tabs/panels/lists
+   below this frame scroll underneath. Own background (matching the page) is
+   what keeps scrolled-past content from showing through underneath once
+   it's stuck; sticky naturally closes the gap from .wrap's own top padding
+   as the page scrolls, so no extra margin trick is needed for that. */
+.sticky-dashboard-frame {
+  position: sticky; top: 0; z-index: 60;
+  background: var(--bg); overflow-x: clip; overflow-y: visible;
+  padding-bottom: 4px;
+}
+.top-bar {
+    display: flex; flex-direction: column; gap: 10px; margin-bottom: 6px;
+  padding-bottom: 6px;
+}
+/* Title/logo on the left, the version badge on the right -- the only part
+   of the header that's still a left/right split. Everything else (the
+   merged tab+action row below) spans the full width and is left-aligned. */
+.top-bar-row { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; }
+/* Logo sits right before the title now, on the same line, instead of its
+   own row above it -- the "Signed in as..." line that used to sit under
+   the title is gone too, since that same email is already shown at the top
+   of the Profile dropdown right in this row. */
+.header-title-row { display: flex; align-items: center; gap: 8px; }
+.header-title-row h1 { margin: 0; }
+/* Fixed at 35px in all contexts, per explicit request -- deliberately set
+   here (a class selector, specificity 0,1,0) rather than relying on the
+   plain-tag "h1 { font-size: ... }" rules elsewhere (specificity 0,0,1,
+   including the one inside the mobile breakpoint), so this title's size
+   can never be silently shrunk by a narrower-screen h1 override: a class
+   selector always beats a same-or-lower-specificity tag selector
+   regardless of media query or source order. Also covers "wherever user
+   changes" the household name (now renamed right here in the header,
+   owners only -- see .app-title-input below) -- the size here is
+   independent of the text content/length, so renaming never changes it.
+   Bolded per explicit request -- applies to both the owner's editable
+   <input> and the plain <h1> everyone else sees, so the two don't look
+   inconsistent with each other. */
+/* Class name kept as-is (renaming it would mean touching every call site
+   for no functional reason), but the color itself is no longer fixed
+   purple -- it now follows --accent so picking a different color theme
+   (see the [data-theme] blocks above) recolors this title too, per
+   explicit request. font-weight:900 only actually renders as true bold
+   now that Nunito's 900 weight is being fetched at all (see the Google
+   Fonts <link> in index.html) -- previously it silently fell back to a
+   lighter weight since 900 was never loaded. */
+.app-title-purple { color: var(--accent); font-size: 35px; font-weight: 900; }
+/* The owner-only editable version of the title above -- same visual size/
+   color/weight as the plain <h1>, but as a real <input> so it can be typed
+   into directly instead of only through a separate Settings field. Strip
+   all the browser's default input chrome (border/background/padding) so it
+   reads as plain text until you actually click into it; a soft underline on
+   hover/focus is the only hint that it's editable.
+   IMPORTANT: this used to also set `font-weight: inherit`, which was the
+   actual reason the title never looked bold for owners (everyone else sees
+   the plain <h1> with only .app-title-purple applied, which was fine) --
+   this <input> carries BOTH classes, and `inherit` here doesn't mean "use
+   whatever .app-title-purple sets on this same element", it means "use
+   whatever this element's DOM PARENT computes to", which was the page's
+   base Nunito Light (300) weight. Since .app-title-input is declared after
+   .app-title-purple with the same specificity, that inherited 300 silently
+   won every time, no matter how bold .app-title-purple's own font-weight
+   was set to. Simply not overriding it here lets .app-title-purple's own
+   font-weight cascade through untouched. */
+.app-title-input {
+  border: none; background: transparent; padding: 0; margin: 0;
+  font-family: inherit;
+  border-bottom: 1px dashed transparent;
+}
+.app-title-input:hover { border-bottom-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+.app-title-input:focus { outline: none; border-bottom-color: var(--accent); }
+/* Light-grey nudge shown next to the title input only while it's still
+   empty -- tells a first-time owner the title is theirs to set, without
+   looking like an error or a permanent label. Disappears for good once
+   they type and save a real name. */
+.title-hint-text {
+  color: #9ca3af;
+  font-size: 12px;
+  font-weight: 400;
+  margin-left: 8px;
+  white-space: nowrap;
+}
+/* Header logo text -- the header's HearthMark (Dashboard.jsx) now reuses
+   the splash's own circular ring+sphere badge instead of the old gold
+   heart-outline mark, so these two text styles (and the shared
+   .platform-sphere-pulse breathing animation, still driven by
+   @keyframes hearth-family-breathe below) are the only badge-specific
+   rules left -- everything else about the ring is drawn inline in
+   Dashboard.jsx to match Splash.jsx's own styling. Sizes are scaled down
+   from the splash version's .platform-center-kicker/.platform-center-brand
+   by the same ratio as the sphere itself shrank (82 -> 38 radius). */
+.header-badge-kicker {
+  fill: #ffffff; font-family: 'Nunito', sans-serif; font-weight: 800;
+  font-size: 7px; letter-spacing: .6px;
+}
+.header-badge-brand {
+  /* Matches .platform-center-brand's darker, more saturated amber --
+     same "Hearth" wordmark, same fix for the same washed-out pale color. */
+  fill: #f2a91a; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 19px;
+}
+/* Gentle breathing pulse on the badge's center sphere -- shared by both
+   the header logo (.platform-sphere-pulse on HearthMark's <circle>) and
+   the splash's own larger sphere (Splash.jsx), so the two read as the
+   same animated mark at two sizes. */
+@keyframes hearth-family-breathe {
+  0%, 100% { opacity: .55; transform: scale(1); }
+  50% { opacity: .85; transform: scale(1.08); }
+}
+.top-bar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.input-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+/* This original in-content Income/Fixed Expenses/Add an expense/Savings
+   switcher (.data-entry-tabs, a second class on top of the shared
+   .input-tabs styling -- the chart-type Pie/Bar/Pareto/Treemap toggle
+   reuses plain .input-tabs too and must stay visible at every width) now
+   only matters on phones, where it doubles as the tab switcher inside the
+   "Add" bottom sheet -- desktop uses the new header-tab-btn buttons in the
+   sticky frame instead, so showing this one too would just duplicate the
+   same 4 buttons twice. */
+/* Hidden everywhere by default -- desktop uses the header-tab-btn
+switcher instead, and on mobile this exact same element doubles as
+the tab switcher inside the "+Add" bottom sheet (see .mobile-add-sheet
+override below), so it only needs to reappear there instead of also
+sitting duplicated under the summary cards. */
+.data-entry-tabs { display: none; }
+.mobile-add-sheet .data-entry-tabs { display: flex; }
+/* The merged row: Income/Fixed Expenses/Add an expense/Savings tabs, then
+   Help/Report/Settings/Users, then the Profile icon, then the bell last --
+   all left-aligned as one flowing group (replaces the old right-aligned
+   .top-right-group column). */
+.action-row-teal {
+  display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-start;
+}
+.action-row-left { justify-content: flex-start; width: 100%; }
+.btn-teal {
+  background: var(--accent); color: #fff; border: none; border-radius: 8px;
+  padding: 7px 14px; font-size: 13px; font-weight: 600; cursor: pointer;
+  white-space: nowrap;
+}
+.btn-teal:hover { opacity: .88; }
+/* The 4 data-entry tabs are always solid --accent + white now (no outline
+   "unselected" look) -- this just adds a subtle inset ring + slightly
+   darker shade to the currently-open one so it's still distinguishable
+   from the other three, without breaking the "all one color, all white
+   text" look that was asked for. Uses --accent-active (defined per
+   [data-theme] in the :root block above) instead of a hardcoded teal value,
+   so picking a different color theme also recolors the active tab instead
+   of leaving it stuck on teal -- per explicit bug report. */
+.header-tab-btn-active {
+  background: var(--accent-active);
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,.55);
+  animation: tab-heartbeat 3.2s ease-in-out infinite;
+}
+/* Shared "heartbeat" pulse -- same 3.2s ease-in-out rhythm as the Hearth
+   logo's own breathing sphere (hearth-family-breathe, defined further
+   below) so the active tab and these header icons read as the same
+   animated family. Scale-only (no opacity dip, unlike the logo's own
+   version) so the button/icon stays fully legible the whole time instead
+   of visually fading in and out -- dimming an "you are here" indicator or
+   a tappable icon would work against the point of it. Applied to: the
+   active tab (above), theme/reminder/Aria icons (always-on, decorative,
+   per explicit request "all tabs including icons"), but deliberately NOT
+   to .refresh-app-btn -- that one has its own separate, conditional pulse
+   (.refresh-app-btn-new / refresh-app-btn-pulse below) that only kicks in
+   once an update is actually available, per explicit request that refresh
+   should only beat when there's something to push. */
+@keyframes tab-heartbeat {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+.theme-fab-btn, .notif-bell-btn, .chat-fab-btn {
+  animation: tab-heartbeat 3.2s ease-in-out infinite;
+}
+/* Outline variant for the "which sub-section" toggle inside Settings (App
+   Settings / Admin Console) -- same teal family as the top action row so it
+   reads as the same button language, but the inactive choice needs to look
+   visibly "not selected" rather than two identical solid buttons. */
+.btn-teal.secondary {
+  background: transparent; color: var(--accent); border: 1.5px solid var(--accent);
+}
+.btn-teal.secondary:hover { background: var(--accent-light); opacity: 1; }
+
+/* Profile icon (replaces the old standalone "Sign out" button) -- same
+   circular-icon-button + absolutely-positioned-dropdown pattern as the
+   notification bell right next to it, so the two read as one family. */
+.profile-menu-wrap { position: relative; }
+.profile-icon-btn {
+  position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  background: #fff; color: var(--accent); border: 1.5px solid var(--accent);
+  border-radius: 999px; width: auto; height: 34px; padding: 0 12px 0 10px; cursor: pointer;
+}
+.profile-icon-btn:hover { background: var(--accent-light); }
+.corner-profile-label { font-size: 11px; font-weight: 700; white-space: nowrap; }
+.profile-dropdown {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 40;
+  width: 260px; max-width: min(85vw, 280px);
+  background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.14); padding: 14px;
+}
+.profile-dropdown-email {
+  font-size: 12.5px; font-weight: 700; color: var(--text);
+  background: var(--accent-light); border-radius: 8px; padding: 7px 10px; margin-bottom: 12px;
+  word-break: break-all;
+}
+.profile-signout-btn { width: 100%; text-align: center; }
+
+/* Notification bell (replaces the old always-visible red "over budget" /
+   "bill due soon" banners) -- sits first in the top action row, just before
+   Help, so it reads as "check here" rather than shouting across the whole
+   page on every visit. The dropdown is absolutely positioned off the button
+   itself so it never pushes other top-bar content around when it opens. */
+.notif-bell-wrap { position: relative; }
+.notif-bell-btn {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  background: #fff; color: var(--accent); border: 1.5px solid var(--accent);
+  border-radius: 8px; width: 34px; height: 34px; padding: 0; cursor: pointer;
+}
+.notif-bell-btn:hover { background: var(--accent-light); }
+.notif-badge {
+  position: absolute; top: -6px; right: -6px; min-width: 16px; height: 16px;
+  padding: 0 4px; border-radius: 999px; background: var(--danger); color: #fff;
+  font-size: 10px; font-weight: 800; line-height: 16px; text-align: center;
+  border: 1.5px solid #fff;
+}
+.notif-dropdown {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 40;
+  width: 300px; max-width: min(80vw, 340px); max-height: 320px; overflow-y: auto;
+  background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.14); padding: 10px;
+}
+.notif-dropdown-title { font-size: 12px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; padding: 2px 6px 8px; }
+.notif-item {
+  font-size: 13px; font-weight: 600; color: var(--danger); background: var(--danger-bg);
+  border: 1px solid #fecaca; border-radius: 8px; padding: 8px 10px; margin-bottom: 6px;
+}
+.notif-item:last-child { margin-bottom: 0; }
+.notif-empty { font-size: 13px; color: var(--muted); padding: 10px 6px; text-align: center; }
+
+/* Notes/Attachments header buttons -- reuse .theme-fab-wrap for the
+   relative-positioned dropdown anchor, but override the button itself to
+   look like the plain outlined bell icon rather than the theme picker's
+   colorful conic-gradient swatch (a plain note/paperclip icon in a rainbow
+   circle would read oddly, since there's no "color" concept here). */
+.notes-fab-btn {
+  background: #fff !important; color: var(--accent) !important;
+  border: 1.5px solid var(--accent) !important; width: 34px; height: 34px;
+}
+.notes-fab-btn:hover { background: var(--accent-light) !important; filter: none !important; }
+.notes-attach-dropdown {
+  width: 340px; max-width: min(88vw, 380px); max-height: 420px; overflow-y: auto;
+}
+.notes-attach-row {
+  border-bottom: 1px solid var(--border); padding: 8px 6px; margin-bottom: 2px;
+}
+.notes-attach-row:last-child { border-bottom: none; }
+.notes-attach-row-head { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.notes-attach-num { font-weight: 800; color: var(--accent); font-size: 12.5px; }
+.notes-attach-name { font-weight: 700; font-size: 13px; }
+.notes-attach-source {
+  font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em;
+  color: var(--muted); background: var(--bg); border-radius: 999px; padding: 1px 7px; margin-left: auto;
+}
+.notes-attach-meta { margin: 2px 0 4px; }
+.notes-attach-text { font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; }
+.notes-attach-view { font-size: 12.5px; font-weight: 600; }
+.corner-version-badge {
+  font-size: 10.5px; font-weight: 700; color: var(--muted);
+  background: var(--bg); border: 1px solid var(--border); border-radius: 999px;
+  padding: 3px 10px; white-space: nowrap;
+}
+/* Wraps the date+version pill and the signed-in user's name stacked right
+   under it, top-right corner -- per explicit request ("add user name under
+   the date and ver on top right corner"). */
+.corner-badge-group {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
+}
+.corner-username-badge {
+  font-size: 11px; font-weight: 700; color: var(--accent); white-space: nowrap;
+}
+h1 { font-size: 22px; margin: 0 0 4px 0; }
+.sub { color: var(--muted); font-size: 13px; }
+.muted-small { color: var(--muted); font-size: 12px; }
+
+.page-title-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px 16px;
+  margin-bottom: 10px;
+}
+.page-title-row .page-title-themed { grid-column: 2; grid-row: 1; margin: 0; text-align: center; }
+.page-title-row .month-nav { grid-column: 1; grid-row: 1; margin: 0; justify-self: start; min-width: 0; max-width: 100%; }
+
+.month-nav { display: flex; align-items: center; gap: 12px; margin: 16px 0 20px; }
+/* ">" child combinator, not a plain descendant selector -- the </> arrow
+   buttons are direct children of .month-nav, but the new date-range Filter
+   button is nested one level deeper inside .filter-wrap. A descendant
+   selector here was matching that button too, squashing it into this same
+   32x32 fixed box and clipping its "Full month"/date-range text outside the
+   visible white background. */
+.month-nav > button {
+  background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    width: 26px; height: 26px; cursor: pointer; font-size: 14px; flex-shrink: 0;
+} 
+.month-nav .label { font-weight: 600; font-size: 16px; min-width: 160px; text-align: center; }
+
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr); gap: 14px; margin-bottom: 20px; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; }
+.card .k { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.card .v { font-size: 24px; font-weight: 700; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.card.over .v { color: var(--danger); }
+.card.ok .v { color: var(--ok); }
+
+/* Give the 6 top summary cards their own distinct, appealing color identity
+   (a soft tinted background + matching label color) instead of 6 identical
+   white boxes -- makes the dashboard read at a glance ("green = money in,
+   amber = spending, etc.") instead of everything blending together. The
+   .over/.ok classes above still win on the *value* text color when a card
+   needs to flag over-budget/under-budget, since those rules come later and
+   target the same .v element with equal specificity order. */
+.card-budget { background: linear-gradient(160deg, #eef2ff, #ffffff); border-color: #c7d2fe; }
+.card-budget .k { color: #6366f1; }
+.card-spent { background: linear-gradient(160deg, #fff7ed, #ffffff); border-color: #fed7aa; }
+.card-spent .k { color: #ea580c; }
+.card-remaining { background: linear-gradient(160deg, #f0fdfa, #ffffff); border-color: #99f6e4; }
+.card-remaining .k { color: #0d9488; }
+.card-income { background: linear-gradient(160deg, #ecfdf5, #ffffff); border-color: #a7f3d0; }
+.card-income .k { color: #059669; }
+.card-expenses { background: linear-gradient(160deg, #fef2f2, #ffffff); border-color: #fecaca; }
+.card-expenses .k { color: #e11d48; }
+.card-net { background: linear-gradient(160deg, #eff6ff, #ffffff); border-color: #bfdbfe; }
+.card-net .k { color: #0284c7; }
+/* These 6 cards keep a soft light-tinted background in both light AND dark
+   mode by design (see comment above) -- so their big value number needs a
+   fixed dark color instead of following --text, otherwise it goes light-on-
+   light and disappears once dark mode flips --text to a pale color. */
+.card-budget .v, .card-spent .v, .card-remaining .v,
+.card-income .v, .card-expenses .v, .card-net .v { color: #0f2a2e; }
+
+/* The 6 KPI cards (Monthly Budget -> Net) were reported as taking up more
+   than half a laptop's visible screen before the rest of the app (forms,
+   lists, charts) even started -- two stacked 3-card .grid rows, each with
+   fairly generous padding/type sized for a looser layout. Two changes,
+   stacked:
+   1. Above the mobile breakpoint, shrink the cards themselves (padding,
+      label/value font-size, row gap/margin) regardless of how many
+      columns they're currently wrapping into.
+   2. At real laptop/desktop widths, fold the two stacked 3-card rows into
+      one 6-card row: .summary-cards (the new wrapper around both existing
+      .grid blocks, see Dashboard.jsx) becomes the single 6-column grid,
+      and display: contents on the two child .grid elements removes their
+      own box (and, critically, their own grid-template-columns/margin-
+      bottom) so each one's 3 cards flow straight into that parent grid as
+      if there were never two separate rows -- without needing to touch
+      the .grid class itself, which narrower screens still rely on for
+      their own 3-col/1-col layouts below. */
+@media (min-width: 641px) {
+  .card { padding: 12px 14px; border-radius: 12px; }
+  .card .k { font-size: 10.5px; }
+  .card .v { font-size: 18px; margin-top: 2px; }
+      .card .muted-small { font-size: 10.5px; line-height: 1.35; }
+.grid { gap: 10px; margin-bottom: 12px; }
+}
+@media (min-width: 1100px) {
+  .summary-cards { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .summary-cards .grid { display: contents; }
+}
+
+.warning {
+  background: var(--danger-bg); border: 1px solid #fecaca; color: var(--danger);
+  padding: 12px 16px; border-radius: 10px; margin-bottom: 20px; font-size: 14px; font-weight: 600;
+}
+.warning.reminder {
+  background: #fffbeb; border-color: #fde68a; color: #92400e;
+}
+
+.panel { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 20px; }
+.panel h2 { font-size: 15px; margin: 0 0 14px 0; }
+
+/* Big themed section titles -- the heading that opens each of Income, Fixed
+   Expenses, Regular Expenses, Savings, Report, and Settings (e.g. "Regular
+   Expenses for July 2026"). Deliberately its own class rather than a blanket
+   .panel h2 override, since edit-sheet titles ("Edit expense" etc.), the
+   Home dashboard's chart/Explore headings, and AI Insights/Budget Coach
+   titles all reuse .panel h2 too and should stay their original small
+   neutral size -- only the specific headings above got this class added in
+   the JSX. Color follows the active theme's accent (same variable the
+   active tab highlight and Expense Management title already use) so picking
+   a new theme recolors these too. */
+.panel-title-themed { font-size: 40px; color: var(--accent); text-align: left; }
+
+/* Small left-aligned title shown right above the month nav for every header
+   tab (Dashboard/Income/Fixed Expenses/Regular Expenses/Savings/Report/
+   Settings/Help) -- deliberately separate from .panel-title-themed above,
+   which stays untouched (still 40px) on the existing in-frame headings
+   further down each panel. */
+.page-title-themed { font-size: 25px; color: var(--accent); text-align: left; margin: 0 0 4px 0; }
+
+.filter-field input[type="date"] {
+  padding: 7px 9px; border: 1.5px solid var(--border); border-radius: 8px;
+  font-size: 12px; background: #fff; color: var(--text); font-family: inherit;
+}
+.filter-field input[type="date"]:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
+
+/* Filter buttons/dropdowns -- Regular Expenses, Fixed Expenses, Income, and
+   Savings each get one, sitting next to that section's own heading (or, for
+   Income/Savings which don't have a dedicated list heading, next to the
+   "entered per month" note right above the list). Same click-to-open,
+   click-outside-to-close pattern as the theme picker (.theme-fab-wrap/
+   .theme-dropdown), but styled as a plain outlined pill with a text label
+   (like .icon-btn-outline) since there's no color swatch to show here.
+   Filtering only narrows what's rendered in these lists -- every total,
+   chart, and the PDF report keep reading the full unfiltered data. */
+.panel-heading-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin-bottom: 14px;
+}
+.panel-heading-row h2 { margin: 0; }
+.filter-wrap { position: relative; flex-shrink: 0; }
+.filter-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1.5px solid var(--border); border-radius: 9px; background: #fff;
+  color: var(--muted); font-size: 12px; font-weight: 700; cursor: pointer;
+  padding: 7px 12px; white-space: nowrap; transition: border-color .15s ease, color .15s ease;
+}
+.filter-btn:hover { border-color: #a9d9d5; color: var(--text); }
+.filter-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+.filter-active-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.filter-dropdown {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 30;
+  width: 220px; background: var(--card); border: 1px solid var(--border);
+  border-radius: 14px; box-shadow: 0 10px 30px rgba(15, 42, 46, .18);
+  padding: 12px; display: flex; flex-direction: column; gap: 10px;
+}
+.filter-dropdown-title {
+  font-size: 11px; font-weight: 800; color: var(--muted); text-transform: uppercase;
+  letter-spacing: .4px;
+}
+.filter-field { display: flex; flex-direction: column; gap: 4px; }
+.filter-field label { font-size: 11px; font-weight: 700; color: var(--text); }
+.filter-field select {
+  padding: 7px 9px; border: 1.5px solid var(--border); border-radius: 8px;
+  font-size: 12px; background: #fff; color: var(--text); font-family: inherit;
+}
+.filter-field select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
+.filter-clear-btn {
+  border: none; background: none; color: var(--accent); font-size: 12px; font-weight: 700;
+  cursor: pointer; text-align: left; padding: 2px 0;
+}
+.filter-clear-btn:hover { text-decoration: underline; }
+
+/* Help panel accordion -- each topic is a rounded row with a bold title
+   button; tapping it reveals just that topic's description below it. */
+.help-accordion { display: flex; flex-direction: column; gap: 8px; }
+.help-accordion-item { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--bg); }
+.help-accordion-title {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; background: none; border: none; cursor: pointer;
+  padding: 12px 14px; font-weight: 800; font-size: 13.5px; color: var(--text);
+  text-align: left; font-family: inherit;
+}
+.help-accordion-chevron { transition: transform .15s ease; flex-shrink: 0; color: var(--muted); }
+.help-accordion-chevron.open { transform: rotate(180deg); color: var(--accent); }
+.help-accordion-body { padding: 0 14px 14px; line-height: 1.6; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+.field { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 110px; }
+/* Wrapper for two related short fields (date+amount, start/end date, etc.)
+   that should sit side by side instead of one-per-row. Needs display:flex
+   here (not just inside the mobile media query below) because otherwise,
+   on desktop, this is a plain block div and its two .field children (each
+   already a flex *container* of its own via the rule above) stack one
+   under the other instead of side by side -- the exact "fields look funny,
+   out of order" bug reported on desktop Fixed Expenses. */
+.field-pair { display: flex; gap: 8px; }
+
+/* Bold, higher-contrast labels everywhere (Name, Category, Amount/month,
+   Start date, End date, etc.) -- previously small and muted-gray, which made
+   them hard to read at a glance, especially on mobile. */
+.field label { font-size: 12.5px; font-weight: 800; color: var(--text); }
+/* Flags the one field that Claude actually acts on, right where the eye
+   already is -- so the connection to typing a Description first is visible
+   before anyone has to discover it by accident. */
+/* A small pill + sparkling magic-wand icon, reused via <AiTag /> wherever an
+   AI feature is labeled (Category suggestion, receipt scan, AI Insights,
+   Budget Coach, chat). Uses the app's own teal accent (not an off-theme
+   purple) so AI features read as visually distinct without clashing with
+   the rest of the UI -- the sparkle keeps its golden color as an accent. */
+.ai-powered-tag {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 10px; font-weight: 800; letter-spacing: .1px; text-transform: none;
+  margin-left: 4px; color: var(--accent);
+  vertical-align: middle;
+}
+.ai-tag-sparkle {
+  flex: 0 0 auto; color: #eab308;
+  animation: ai-sparkle-twinkle 2.2s ease-in-out infinite;
+}
+@keyframes ai-sparkle-twinkle {
+  0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  50% { transform: scale(1.18) rotate(-8deg); opacity: .8; }
+}
+.field input, .field select {
+    padding: 9px 11px; border: 1.5px solid var(--border); border-radius: 9px; font-size: 14px; background: var(--card);
+  color: var(--text); transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+  height: 40px;
+}
+/* Clear, friendly focus + hover states -- previously an input looked
+   identical whether idle, hovered, or actively focused, which made data
+   entry feel flat and gave no feedback about which field you're in. */
+.field input:hover, .field select:hover { border-color: #a9d9d5; }
+.field input:focus, .field select:focus {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light);
+}
+.field input::placeholder { color: var(--muted); opacity: .75; }
+.field input:disabled, .field select:disabled { background: var(--bg); color: var(--muted); cursor: not-allowed; }
+/* Date inputs previously got smaller padding/font than every other .field
+   input/select (to save horizontal space), which quietly made them ~5px
+   shorter than a select sitting in the same row (e.g. Due date next to
+   Payment Source in Fixed Expenses) -- with the row's flex bottom-aligned,
+   that height gap made the *shorter* one's top sit lower and the taller
+   select's top stick up above it, reported as the select "going upward".
+   Forcing the same fixed height here (box-sizing:border-box already global)
+   guarantees every field in a row starts and ends at the same pixel
+   regardless of its own font-size/padding. */
+input[type="date"],
+input[type="month"] {
+  font-size: 12px; min-width: 122px; padding: 8px 6px; height: 40px;
+}
+.field input[type="date"],
+.field input[type="month"] { min-width: 130px; height: 40px; }
+/* Bold, right-aligned amounts read more like a receipt/ledger and are
+   easier to compare at a glance than left-aligned plain numbers. */
+.field input[type="number"] { font-weight: 700; text-align: right; }
+
+/* Currency prefix shown inside every amount field (Add forms, edit sheets,
+   inline table cells, Settings budgets) so it's always clear which
+   currency you're typing in, without having to check Settings separately.
+   Every amount field -- top-level Add forms AND table rows/mobile edit
+   sheets (the .tight variant) alike -- follows the same single convention:
+   the symbol sits printed inside the input's own bordered box (left edge,
+   vertically centered) rather than as a separate element beside it, same
+   as a "$" printed inside a bank app's amount field. .tight just uses a
+   smaller inset + smaller symbol, sized for the narrower table cells and
+   11px table font. */
+/* Superseded the old "absolute-positioned prefix + padding-left on the
+   input" scheme (which left a visible ~6-8px gap between the symbol and the
+   first digit -- confirmed live by measuring the rendered symbol's ink vs
+   where the digit glyphs actually started, since the padding-left figure
+   was always a bit more generous than the symbol's own rendered width) with
+   the same flex-row "pill" design already proven for the in-table amount
+   cells: symbol and input are adjacent flex children with zero gap between
+   their boxes, so there's nothing left to create a visual gap regardless of
+   which digits are typed. This makes every amount field in the app -- the
+   4 top-level Add forms (Add an expense, Income, Fixed Expenses, Savings)
+   and the in-table/mobile-card cells -- look and behave identically. */
+.amount-field-wrap { position: relative; width: 100%; }
+.amount-field-wrap:not(.tight) {
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  background: linear-gradient(160deg, #ecfdf5, #ffffff);
+  border: 1.5px solid #a7f3d0;
+  border-radius: 9px;
+  padding: 0 8px;
+  height: 40px;
+  transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+}
+.amount-field-wrap:not(.tight):focus-within {
+  border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-light); background: #fff;
+}
+.amount-field-wrap .currency-prefix {
+  position: static; transform: none;
+  flex: 0 0 auto; z-index: 1; pointer-events: none;
+  font-size: 12px; font-weight: 800; color: var(--muted); white-space: nowrap;
+  /* The Dirham glyph is an inline <svg>, which by default sits on its
+     parent's text baseline (vertical-align: baseline) rather than centered
+     in the line -- a baseline sits a couple px above the true vertical
+     center (room is reserved below it for descenders like "g"/"y"), which
+     is exactly the "symbol floats slightly above the digits" offset
+     reported live. Making this span itself a small inline-flex row and
+     centering its one child on the cross-axis sidesteps text-baseline
+     math entirely -- confirmed live (measuring this span's SVG center
+     against the sibling input's center): 848.0 vs 848.0, an exact match,
+     versus roughly 1.75px high before this. */
+  display: inline-flex;
+  align-items: center;
+}
+.amount-field-wrap input[type="number"] {
+  text-align: right; border: none; background: transparent; padding: 0; color: #0f2a2e;
+}
+/* Shrink-to-fit width driven by the actual number of characters typed
+   (--amt-ch, set inline from the field's own React state) -- the same
+   mechanism that keeps the in-table amount pills snug instead of leaving
+   trailing empty space after the digits. Falls back to 4 characters (the
+   width of the "0.00" placeholder) when the field is empty. */
+.amount-field-wrap:not(.tight) input[type="number"] {
+  flex: 0 1 auto; min-width: 0; max-width: 100%;
+  /* --amt-px is set inline per-field from the real measured pixel width of
+     the current value (see measureAmountWidthPx/formAmountPx in
+     Dashboard.jsx) -- exact, not a per-character estimate. The ch-based
+     calc is just a defensive fallback for the rare case JS hasn't set it
+     yet (first paint before React's effect/render cycle settles). */
+  width: var(--amt-px, calc(max(var(--amt-ch, 4), 4) * 1ch + 4px));
+}
+.amount-field-wrap.tight .currency-prefix { font-size: 10.5px; }
+/* The ".tight" pill treatment (border/background/tight-fit width) was only
+   ever defined scoped to ".table-scroll table td" (see further down this
+   file), since every existing ".tight" field lived inside a table. The
+   Smart Budget per-category rows (.cat-budget-row) also use ".tight" but
+   are plain flex rows, not table cells -- so outside a table this class
+   rendered with none of that styling: no border/background/flex layout on
+   the wrap, and the currency symbol and input just sat as two separate
+   inline elements with normal text spacing between them, reading as "way
+   away from the value". This generic rule gives ".tight" its pill look
+   everywhere, not just inside tables -- the table-scoped rule below still
+   wins there (equal specificity, later in the file, plus its own
+   !important on width), so nothing changes for the existing table cells. */
+.amount-field-wrap.tight {
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  background: linear-gradient(160deg, #ecfdf5, #ffffff);
+  border: 1.5px solid #a7f3d0;
+  border-radius: 6px;
+  padding: 0 5px 0 6px;
+  transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+}
+.amount-field-wrap.tight:focus-within {
+  border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-light); background: #fff;
+}
+.amount-field-wrap.tight input[type="number"] {
+  flex: 0 1 auto;
+  width: var(--amt-px, 100%);
+  min-width: 0;
+  text-align: right;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+/* Hide the native step spinner everywhere an amount is typed -- it was only
+   ever visible on the top-level Add-form fields (the in-table cells are too
+   narrow for Chrome to render it), which made those fields look like a
+   different, older control next to the spinner-free table cells. */
+.amount-field-wrap input[type="number"]::-webkit-outer-spin-button,
+.amount-field-wrap input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none; margin: 0;
+}
+.amount-field-wrap input[type="number"] { -moz-appearance: textfield; }
+
+/* Read-only currency figures (dashboard cards, mobile transaction amounts,
+   budget-cap progress) -- glues the symbol straight onto the number with
+   no gap at all, the same "$4,500" convention as the editable amount
+   fields above, instead of the old "AED 4,500.00" (currency code + space)
+   text format. */
+/* Bold everywhere it appears -- including inside lighter-weight footer
+   sentences ("Changes save automatically. <value> in combined income...")
+   so the actual figure still stands out from the surrounding muted text,
+   the same way the currency symbol itself is already bold. */
+/* Root-cause fix for "amount sits above its surrounding text" (reported in
+   the over-budget warning banner, mobile transaction cards, and anywhere
+   else a figure is inline with plain text): .amt-tight is inline-flex so the
+   Dirham glyph + number sit with zero gap, but browsers don't compute a real
+   text baseline for a flex container with align-items:center -- they fall
+   back to using the box's own BOTTOM edge as its "baseline" for lining up
+   with surrounding text, which pushes the whole box (and everything inside
+   it) up by roughly its own height. Verified live (measuring this span's
+   rect against a plain sibling text node's rect): default vertical-align
+   (baseline) was consistently ~2-3px too high; vertical-align: text-bottom
+   landed at an exact 0px difference. This single rule fixes every place
+   amt-tight is used inline with text, so the old per-component nudge on
+   .mobile-txn-amount is no longer needed and has been removed. */
+.amt-tight { display: inline-flex; align-items: center; gap: 0; white-space: nowrap; font-weight: 800; vertical-align: text-bottom; }
+.amt-tight svg { flex: 0 0 auto; }
+
+/* All monetary/numeric values right-aligned app-wide (Amount fields, Monthly
+   budget, per-category caps, Income/Savings amounts) -- standard
+   spreadsheet/ledger convention, easier to scan and compare down a column. */
+input[type="number"] { text-align: right; }
+
+/* AI feature #3 (receipt scanning) -- the "Scan a receipt" trigger sits
+   below the Add-an-expense form as a secondary, opt-in action rather than
+   competing with the manual form for attention. The review list below it
+   only ever appears after a scan returns results, and every row stays
+   fully editable (nothing is a read-only label) since OCR/vision output is
+   a best guess, not a guarantee. */
+.scan-receipt-block { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+.scan-error { margin-top: 6px; font-size: 12.5px; color: #b91c1c; }
+/* Receipt scan now adds straight to the database (see handleScanFileChange
+   in Dashboard.jsx) -- this is just a brief read-only "here's what just got
+   added" line, not an editable review list anymore. */
+.scan-added-summary { margin-top: 8px; font-size: 12.5px; color: var(--accent); font-weight: 600; }
+/* "Updated" confirmation toast -- manual Add and receipt auto-add both use
+   this. Fixed at the top of the frame, above everything else, and dismisses
+   itself (see showToast in Dashboard.jsx) rather than needing a close
+   button for something this short-lived. */
+@keyframes app-toast-in {
+  0% { opacity: 0; transform: translate(-50%, -8px); }
+  100% { opacity: 1; transform: translate(-50%, 0); }
+}
+.app-toast {
+  position: fixed; top: 14px; left: 50%; z-index: 9999;
+  transform: translate(-50%, 0);
+  background: var(--accent); color: #fff; font-weight: 700; font-size: 13px;
+  padding: 9px 18px; border-radius: 999px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.2);
+  animation: app-toast-in .2s ease-out;
+}
+.btn {
+  background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 9px 16px;
+  font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.btn:hover { opacity: .9; }
+.btn.secondary { background: transparent; color: var(--accent2); border: 1px solid var(--accent2); }
+.btn.small { padding: 5px 10px; font-size: 12px; }
+
+/* Widened from 2.1fr to 2.6fr -- the data-entry tables (Fixed Expenses
+   especially, with 9 columns of Name/Category/Amount/dates/Repeats/Payment)
+   need more raw width than the chart panel does, and this was the single
+   biggest source of the Fixed Expenses table needing a horizontal scroll on
+   typical laptop-width windows. The chart panel keeps its own 320px floor
+   so it never gets uncomfortably narrow. */
+/* Home tab's full-width "explore" frame -- only rendered when Home is
+   active (inputTab null). Deliberately full-width (not the narrow
+   content-grid right column the other tabs share) so the chart and AI
+   cards inside it have room to breathe and are easy to "play around
+   with", per explicit request. Mirrors .panel's card look at the outer
+   level; the chart/AI cards inside already bring their own .panel styling. */
+.home-explore-frame { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px; margin-bottom: 20px; }
+.home-explore-frame h2 { font-size: 17px; }
+.home-explore-frame .panel { border: none; padding: 0; margin-bottom: 24px; background: transparent; }
+.home-explore-frame .panel:last-child { margin-bottom: 0; }
+
+.content-grid { display: grid; grid-template-columns: minmax(0, 2.6fr) minmax(320px, 1fr); gap: 24px; }
+@media (max-width: 1150px) { .content-grid { grid-template-columns: minmax(0, 1fr); } }
+/* Tablet-width only (641-800px) -- stack to a single column since 3 cards
+   is still a bit tight at that width. Phones get their own 3-column rule
+   below (inside the 640px block) instead of stacking, per the "6 cell
+   dashboard" redesign -- see that block for why. */
+@media (max-width: 800px) and (min-width: 641px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+/* Payment cells stack TWO selects (source + an always-reserved bank select,
+   hidden via visibility when not needed -- see Dashboard.jsx) to keep every
+   row the same height. That two-item stack is taller than every other
+   cell's single input, so vertical-align:middle (which centers each cell's
+   content as a whole block) centered the *pair* -- pushing the visible top
+   select noticeably higher than the single-line inputs in Category/Amount/
+   Start/etc, which centered their much-shorter single line lower down.
+   Pinning every cell to the top with the SAME top padding instead makes
+   every column's actual input start at the exact same pixel offset from the
+   row's top edge, regardless of how many hidden/reserved elements sit below
+   it -- this is what genuinely lines every cell up on one row, rather than
+   each cell centering independently around content of a different height. */
+th, td { text-align: left; vertical-align: top; padding: 11px 4px 7px; border-bottom: 1px solid var(--border); overflow: hidden; }
+th { color: var(--text); font-weight: 800; font-size: 12px; text-transform: uppercase; }
+td.amount { font-weight: 600; text-align: right; }
+/* The extra left padding this used to have (to add breathing room after
+   Amount) made the Payment select's left edge sit ~10px to the right of
+   its own "Payment" header -- an obvious mismatch since every other
+   column's input lines up directly under its header. Column widths have
+   grown enough since this was added that the standard 4px padding already
+   gives Amount and Payment enough separation without needing the special
+   case, so this reverts Payment to the same padding as every other cell. */
+.del { cursor: pointer; color: var(--muted); border: none; background: none; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; padding: 4px; border-radius: 6px; }
+.del:hover { color: var(--danger); background: var(--danger-bg); }
+
+/* Compact rows for the Users list -- tighter vertical spacing than the data
+   tables since these rows are just short status lines, not editable fields.
+   The Users panel lives in the narrow sidebar column (min 320px), and with
+   table-layout:fixed + percentage columns that meant Phone/Location/Status
+   were being squeezed to ~30-60px and clipped (overflow:hidden on td). Give
+   the table a min-width wider than the panel so columns keep a readable
+   pixel width and .table-scroll's overflow-x:auto kicks in -- values are
+   fully visible via a short horizontal scroll instead of being cut off. */
+.users-table { font-size: 12px; min-width: 620px; }
+.users-table td { padding: 5px 4px; line-height: 1.3; }
+/* Emails must never be clipped -- let the Email column wrap onto a second
+   line instead of hard-cutting mid-address like "name@gm...". */
+.users-table td[data-label="Email"] { overflow: visible; white-space: normal; word-break: break-all; }
+.users-table input[data-editable] {
+  width: 100%; font-size: 11px; padding: 4px 5px; border-radius: 5px;
+  border: 1px solid var(--border); box-sizing: border-box;
+}
+/* "My details" sits directly above this same Users table, so its inputs
+   should match the table's compact cell size (11px) rather than the larger
+   default .field size (14px) used by the Add-expense-style forms -- the
+   mismatch made "My details" look like a different, oversized component
+   glued on top of the table below it. */
+.my-details-box .field input {
+  font-size: 11px; padding: 4px 5px; border-radius: 5px;
+}
+.my-details-box .field label { font-size: 11px; }
+.users-table .status-pill {
+  display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 10px;
+  font-weight: 700; text-transform: uppercase; letter-spacing: .02em;
+}
+.status-pill.active { background: var(--accent-light); color: var(--accent); }
+.status-pill.pending { background: #fef3c7; color: #92400e; }
+.status-pill.rejected { background: var(--danger-bg); color: var(--danger); }
+
+/* Tables inside panels use table-layout:fixed so columns share the panel's
+   full width instead of each input/select claiming its own intrinsic size
+   and forcing the row wider than the panel (which is what was causing the
+   "still need to scroll right" issue on Expenses/Income/Fixed-expenses). */
+.table-scroll table td input,
+.table-scroll table td select {
+  width: 100% !important;
+  max-width: 100%;
+  box-sizing: border-box;
+  /* A gentle curve (not the fully square corners this had before, and not
+     the near-pill look a bigger radius gave the narrow Amount box) --
+     matches the same soft-edged feel already used on the top-level Add
+     forms and the compact 11px fields elsewhere (Users table, My details),
+     applied consistently to every editable cell in every table now. */
+  border-radius: 6px;
+  transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+}
+/* These inline table cells are quietly always-editable (no separate "edit
+   mode"), which isn't obvious from a plain bordered box that looks the same
+   as read-only text. A faint tint plus a visible focus ring gives a clearer
+   "this is a live field, tap to change it" signal without adding any new UI
+   chrome. */
+/* Per-cell color tone -- reuses the exact same soft gradient family already
+   established for the 6 dashboard summary cards (.card-budget/.card-income/
+   etc, further up this file) so the table styling feels like one designed
+   system rather than a separate flat-gray palette invented for tables. Each
+   FIELD's own box gets the tint (not the row/line behind it, which stayed
+   plain -- a full-row background read as a heavier "banded spreadsheet"
+   look than wanted here). Text inputs (Name/Description) reuse the teal
+   of .card-remaining; dropdowns (Category/Repeats/Payment/Bank) reuse the
+   indigo of .card-budget; Amount reuses the green of .card-income (money);
+   dates reuse the blue of .card-net. */
+.table-scroll table td input[type="text"] {
+  background: linear-gradient(160deg, #f0fdfa, #ffffff);
+  border-color: #99f6e4;
+}
+.table-scroll table td select {
+  background: linear-gradient(160deg, #eef2ff, #ffffff);
+  border-color: #c7d2fe;
+}
+/* Payment gets its own orange tone (matching .card-spent) instead of the
+   same indigo as every other dropdown -- rounds the palette out to more of
+   the dashboard's own color spread (teal/indigo/green/blue plus this
+   orange) rather than stopping at four, and "spending" mapping to the same
+   orange as the SPENT SO FAR card is a natural pairing. Targets both
+   selects stacked in a Payment cell (source + bank) via the existing
+   data-label attribute already used for the mobile responsive-table
+   headers, so no markup changes were needed. */
+.table-scroll table td[data-label="Payment"] select {
+  background: linear-gradient(160deg, #fff7ed, #ffffff);
+  border-color: #fed7aa;
+}
+.table-scroll table td input[type="date"],
+.table-scroll table td input[type="month"] {
+  background: linear-gradient(160deg, #eff6ff, #ffffff);
+  border-color: #bfdbfe;
+}
+.table-scroll table td input:hover,
+.table-scroll table td select:hover {
+  border-color: #a9d9d5;
+}
+.table-scroll table td input:focus,
+.table-scroll table td select:focus {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-light); background: #fff;
+}
+.table-scroll table td input[type="date"],
+.table-scroll table td input[type="month"] {
+  min-width: 0;
+  padding: 6px 2px;
+  font-size: 11px;
+}
+
+/* Amount cells -- three requirements that all failed independently before
+   this version, each confirmed live before shipping:
+   1. Symbol + digits truly share ONE bordered/tinted box (border+background
+      now live on the WRAP itself, not the <input> -- previously the symbol
+      sat outside the input's own border, which is what actually reads as
+      "outside the cell" even though it's technically still inside the <td>).
+   2. That box shrinks to fit its own content (via the --amt-ch custom
+      property, now set on the WRAP so its own calc() can read it -- custom
+      properties don't inherit from a child's inline style up to a parent,
+      which is why setting --amt-ch only on the <input> silently did nothing
+      when the wrap tried to read it) and is centered under the column
+      header via margin:0 auto, instead of being shoved flush to the cell's
+      right edge (confirmed live: a shrink-to-fit box pinned to the right
+      edge reads as disconnected from a left-aligned header above it).
+   3. Digits stay right-aligned WITHIN that box (text-align:right on the
+      input, which fills the remaining flex space next to the prefix).
+   Important constraint discovered live: table-layout:fixed + the standard
+   overflow:hidden on td HARD-CAPS any descendant's width to the column's
+   own width, even with inline style="width:...!important" -- so the box
+   can only be as wide as its Amount COLUMN allows. Each table's Amount
+   column was widened enough for its own worst case (5-digit values in
+   Income/Fixed Expenses) -- see each table's colgroup.
+   NOTE on the multiplier: an earlier pass used "2ch" per digit (to fix a
+   clipping bug, verified at the time via scrollWidth<=clientWidth). That
+   check was misleading -- scrollWidth just reports box width when there's
+   no overflow, it doesn't measure how much of the box the actual digits
+   fill. Measuring the real rendered text width directly (via a mirrored
+   off-screen span) showed 1ch already matches a digit's true width almost
+   exactly in this font/size, so "2ch" was quietly making every box roughly
+   double the width the digits need -- with text-align:right, that leftover
+   space shows up as empty space between the currency symbol and the first
+   digit, which is exactly the "not actually joined" gap reported live.
+   1ch + 27px removed that gap but was still an estimate (a flat per-
+   character rate), not the real width of a given string -- decimals and
+   different digit combinations of the same length still ended up with
+   slightly different amounts of slack, which read as "some rows closer
+   than others". Switched to measuring the actual pixel width of the
+   current value directly (see tightAmountPx() in Dashboard.jsx) and
+   setting it via --amt-px, so the box is now exactly as wide as its
+   content, every time, the same way the read-only dashboard/description
+   figures already are (those are just plain text, which is inherently
+   exact -- this reproduces that for an editable <input>). */
+.table-scroll table td .amount-field-wrap.tight {
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+  background: linear-gradient(160deg, #ecfdf5, #ffffff);
+  border: 1.5px solid #a7f3d0;
+  /* Matches the same gentle curve every other cell in the row now uses
+     (Name/Category/Payment/Date, and the top-level Add-form fields) --
+     6px reads as a soft edge rather than the near-pill look a bigger
+     radius gave this specific box back when it was still wide from the
+     old ch-based sizing. */
+  border-radius: 6px;
+  padding: 0 5px 0 6px;
+  transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+}
+.table-scroll table td .amount-field-wrap.tight:focus-within {
+  border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-light); background: #fff;
+}
+.table-scroll table td .amount-field-wrap.tight .currency-prefix {
+  position: static;
+  transform: none;
+  flex: 0 0 auto;
+}
+.table-scroll table td .amount-field-wrap.tight input[type="number"] {
+  flex: 0 1 auto;
+  /* Overrides the generic ".table-scroll table td input {width:100%
+     !important}" rule above -- needs its own !important to win the tie
+     (this rule is later in the file, so it wins on source order), reading
+     the exact pixel value from --amt-px (set inline per field) instead of
+     stretching to fill the wrap. */
+  width: var(--amt-px, 100%) !important;
+  min-width: 0;
+  text-align: right;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+/* On narrower screens, wide fixed-column tables (e.g. Fixed Expenses) exceed
+   the visible panel width and .table-scroll's horizontal scroll kicks in --
+   without this, the trailing delete-icon column just scrolls out of view
+   with everything else, so users on those narrower screens can lose access
+   to delete entirely unless they think to scroll all the way right. Pinning
+   this last column (and its header, so the two stay lined up while
+   scrolling) to the right edge of the scroll area keeps delete always
+   reachable regardless of scroll position or screen width. */
+@media (min-width: 721px) {
+  .table-scroll table td:has(button.del),
+  .table-scroll table th:last-child:empty {
+    position: sticky;
+    right: 0;
+    background: var(--card);
+    z-index: 2;
+  }
+  .table-scroll table td:has(button.del) {
+    box-shadow: -6px 0 6px -6px rgba(15, 42, 46, .25);
+  }
+}
+
+.cat-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.cat-chip {
+  display: flex; align-items: center; gap: 6px; background: var(--accent2-light); color: var(--accent2);
+  padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 600;
+}
+.cat-chip button { background: none; border: none; color: var(--accent2); cursor: pointer; display: inline-flex; align-items: center; }
+.empty { color: var(--muted); font-size: 13px; padding: 20px 0; text-align: center; }
+.cat-budget-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; }
+/* The category name used to be bare text and the amount used to have its
+   own conflicting width/border/padding rules (below) that fought with the
+   shared ".tight" pill treatment added above -- together those made the
+   currency symbol look "way away" from the value. Both cells now use the
+   same soft-rounded "curvy cell" convention as every select/input elsewhere
+   in the app (see .table-scroll table td select for the indigo tone this
+   matches): a bordered, tinted, 6px-radius box, one for the name and one
+   for the amount pill from the shared .amount-field-wrap.tight rule. */
+.cat-budget-row .cat-budget-name {
+    flex: 0 1 240px;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border: 1.5px solid #c7d2fe;
+  border-radius: 6px;
+  background: linear-gradient(160deg, #eef2ff, #ffffff); color: #0f2a2e;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cat-budget-row .amount-field-wrap { flex: 0 0 auto; }
+
+@media (max-width: 640px), (pointer: coarse) and (hover: none) and (max-width: 1366px) {
+    .wrap { padding: 14px 8px 14px 12px; }
+  .top-bar .btn.secondary.small { align-self: flex-start; }
+  .action-row-teal { width: 100%; }
+  .btn-teal { flex: 1 1 auto; text-align: center; }
+    /* Dashboard/Home stays out of the header on phones -- the bottom nav's
+       Home button already covers that job. Income/Fixed/Regular/Savings
+       (.tab-visible-mobile) and Report now DO show up here per the mobile
+       nav spec: top row carries Income/Fixed/Regular/Savings/Report/Theme/
+       Profile/Reminder/Chat BoT; the bottom bar carries Dashboard/Add/
+       Settings/Help (.tab-hide-mobile hides Settings/Help from this row,
+       since they moved to the bottom bar). */
+    .header-tab-btn { display: none; }
+/* Keep the date+version+username block pinned to the right edge even
+            if the header row wraps to two lines on a narrow phone -- margin-left:
+            auto pushes it to the far right of whichever line it ends up on. */
+          .corner-badge-group { margin-left: auto; }
+    .tab-visible-mobile { display: inline-block; }
+    /* !important -- some elements this hides on mobile (chat-fab-btn,
+       refresh-app-btn) declare their own unconditional display value
+       (e.g. display: inline-flex) later in this same file for their
+       desktop layout; since that rule and this one are tied on
+       specificity (both single class selectors), plain source order
+       would let that later, unconditional rule win even while this
+       media query is active, silently defeating the hide. !important
+       makes this win regardless of where else display gets set. */
+    .tab-hide-mobile { display: none !important; }
+  h1 { font-size: 19px; }
+/* Mobile: shrink the editable app-title input/h1 so "Expense
+Management" (or whatever it's renamed to) fits the narrow header
+instead of overflowing at the unconditional 35px desktop size. */
+  .app-title-purple { font-size: 27px; }
+  .month-nav { gap: 8px; margin: 12px 0 16px; flex-wrap: wrap; }
+  .month-nav .label { min-width: 0; flex: 1; font-size: 14px; }
+        .month-nav > button { width: 21px; height: 21px; font-size: 12px; flex-shrink: 0; }
+        .month-nav .filter-wrap { flex: 1 1 100%; margin-top: 4px; }
+  /* The "6 cell dashboard" -- instead of 6 full-width cards stacked one
+     below the other (a long scroll of near-identical rows), phones get the
+     same 3-across x 2-row grid as desktop, just with smaller type/padding
+     so three cards comfortably share the width. Secondary breakdown lines
+     (e.g. "Expenses X + Savings Y") are hidden at this size since there
+     isn't room to show them without wrapping awkwardly -- the big number +
+     label is the point of a glanceable summary tile; tapping into the
+     relevant panel below still gives the full breakdown. */
+      .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+  .card { padding: 10px 6px; text-align: center; border-radius: 10px; }
+  .card .k { font-size: 9.5px; line-height: 1.25; } .card { min-width: 0; }
+  .card .v { font-size: 15px; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+  .card .muted-small { display: none; }
+  /* Data-entry tabs (Income/Fixed Expenses/Regular Expenses/Savings) no
+     longer carry the summary tiles + chart column on mobile (see the
+     isMobile-gated JSX around .summary-cards/.content-grid) -- that frees
+     up real vertical room for the form itself, so it gets a bit more
+     breathing room here (more padding, taller/roomier fields, wider row
+     gaps) instead of the tightest-possible spacing that made sense when
+     the dashboard tiles/chart were always competing for the same screen. */
+  .panel { padding: 18px 16px; }
+  /* Home's explore frame is its own class (not .panel), so it needs its own
+     mobile override -- its 24px desktop padding was eating ~48px of a
+     ~390px-wide phone screen (over a tenth of the width) before the chart
+     inside it even started, on top of the chart's own internal margins. */
+  .home-explore-frame { padding: 14px; }
+  .row { gap: 10px; margin-bottom: 2px; }
+  /* Scoped to DIRECT children of .row only (not .field-pair > .field) --
+     see .field-pair below. A field sitting alone in the row still gets
+     forced to full width, same as before. */
+  .row > .field { min-width: 100% !important; flex: 1 1 100% !important; }
+  .row > .field.half { min-width: 100% !important; flex: 1 1 100% !important; }
+  .field { gap: 6px; }
+  .field label { font-size: 13.5px; }
+  /* Explicit field-pairing, per tester feedback that a lone Date field
+     (or any other short field) was taking a full mobile row-width all to
+     itself with mostly empty space next to it, while related short fields
+     (Date+Amount, Start date+End date, Amount+Month, Due date+Payment
+     Source, etc.) sat stacked one-per-row below it instead of sharing a
+     row -- see the .field-pair wrapper each form now uses around exactly
+     those pairs. display:contents on desktop makes this wrapper invisible
+     to layout (its two children behave exactly as if they were direct
+     .row children, same as before this change) -- the actual side-by-side
+     grouping only kicks in here, on mobile. */
+  .row > .field-pair { width: 100%; }
+  .field-pair > .field { flex: 1 1 0; min-width: 0; }
+  table { font-size: 12px; }
+  th, td { padding: 6px 4px; }
+  .login-card { padding: 22px; }
+  .input-tabs { gap: 6px; }
+  .input-tabs button { flex: 1 1 auto; }
+  /* Bigger, easier-to-tap fields on the "Add an expense / Income / Fixed
+     Expenses" entry forms -- 16px prevents iOS Safari's automatic zoom-in
+     on focus, which is what was making data entry feel clumsy on a phone.
+     height switched from a fixed 40px (which clipped the taller 16px text
+     under the increased padding below -- reported directly as "half text
+     visible") to min-height + auto, so the box grows to fit its own
+     padding+text instead of cropping it. */
+  .field input, .field select {
+    font-size: 16px; padding: 11px 12px; height: auto; min-height: 46px;
+  }
+  .amount-field-wrap { height: auto; min-height: 46px; }
+  .amount-field-wrap input { padding: 0 !important; height: auto !important; min-height: 0 !important; } .field-pair > .field .amount-field-wrap:not(.tight) { width: 100%; }
+/* Date/month fields inside a .field-pair should split evenly with
+     whatever they're paired with (Amount, End date, Payment Source...)
+     rather than shrinking to a fixed compact width and leaving the other
+     half of the pair's row empty -- the exact "one dedicated field taking
+     full screen width for no purpose" complaint, just one level down from
+     the row to the pair. A date/month field NOT in a pair (none currently,
+     but kept as a safety net) still gets the old compact treatment so it
+     doesn't stretch edge-to-edge for no reason. */
+  .field-pair > .field input[type="date"],
+  .field-pair > .field input[type="month"] {
+    width: 100%; max-width: none; min-width: 0; font-size: 16px; padding: 11px 12px;
+  }
+  input[type="date"], .field input[type="date"],
+  input[type="month"], .field input[type="month"] {
+    font-size: 16px; min-width: 0; width: auto; max-width: 150px; padding: 8px 6px; height: auto; min-height: 46px;
+  }
+    .btn { padding: 11px 18px; font-size: 15px; }
+  /* Per explicit feedback: the big centered tab title ("Regular Expenses",
+     "Income", etc. -- see .page-title-themed's render logic, one <h2> per
+     tab right under the month-nav) duplicates text already shown on the
+     active tab button above it AND on the form's own heading right below
+     it, and on a narrow phone screen that's 2-3 repeats of the same two or
+     three words eating vertical space before any real content shows.
+     Hidden on mobile only -- desktop keeps it. */
+  .page-title-themed { display: none; }
+  /* The 4 data-entry forms' own in-panel heading (Regular Expenses/Income/
+     Fixed Expenses/Savings, right above the fields) is the second of those
+     repeats -- also hidden on mobile via this dedicated class, added only
+     to those 4 headings (NOT to the "Your fixed expenses"/"Regular
+     Expenses for {month}" list headings below, which use the same
+     panel-title-themed class but carry real information -- which month --
+     so they stay visible). */
+  .form-title-mobile-hide { display: none; }
+}
+
+/* Responsive "card" tables: below 720px, each row becomes a bordered card
+   with clean "label on the left, value on the right" rows instead of a wide
+   scrolling table -- this is what makes Expenses/Income/Fixed-expenses
+   readable and simple to enter data on a phone without sideways scrolling. */
+@media (max-width: 720px) {
+    .table-scroll { overflow-x: hidden; }
+  table.responsive-table { border: none; }
+  table.responsive-table thead { display: none; }
+  table.responsive-table, table.responsive-table tbody {
+    display: block; width: 100%;
+  }
+  table.responsive-table tr {
+    display: block; position: relative; width: 100%;
+    border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px 44px 10px 14px; margin-bottom: 12px; background: var(--card);
+    box-shadow: 0 1px 2px rgba(15, 42, 46, .04);
+  }
+  /* Each field is its own full-width block -- bold label on its own line,
+     then the input directly below at full width. Replaces the previous
+     "label left / value right, 64% max-width" layout, which was cramming
+     values like phone numbers, dates, and category names into a narrow
+     right-hand strip and clipping them. Stacking removes the truncation
+     entirely and gives every field a bigger, easier-to-tap input. */
+  table.responsive-table td {
+    display: block; border: none; padding: 8px 0; font-size: 13px;
+  }
+  table.responsive-table td:not(:last-child) { border-bottom: 1px solid var(--bg); }
+  table.responsive-table td[data-label]::before {
+    content: attr(data-label);
+    display: block; font-size: 11px; font-weight: 800; color: var(--text);
+    text-transform: uppercase; letter-spacing: .04em; margin-bottom: 5px;
+  }
+  table.responsive-table td input,
+  table.responsive-table td select {
+    width: 100% !important; max-width: 100%;
+    font-size: 16px; padding: 9px 10px; text-align: left;
+  }
+  /* The row's delete "x" button has no data-label (it's not a data field) --
+     pin it to the card's top-right corner as a clear tap target instead of
+     letting it sit as an awkward extra row. */
+  table.responsive-table td:has(button.del) {
+    position: absolute; top: 8px; right: 6px; padding: 0; border: none;
+  }
+  table.responsive-table td:has(button.del) button.del {
+    font-size: 22px; padding: 8px 10px; line-height: 1;
+  }
+}
+
+/* Mobile-only bottom navigation + floating add button -- hidden entirely on
+   desktop (display:none by default) and switched on only below 640px. This
+   is what gives a phone user an app-like, thumb-reachable way to jump
+   between sections instead of scrolling back up to the top button rows --
+   the single biggest thing that made the phone experience feel like a
+   shrunk desktop page rather than a real app. Desktop's existing top action
+   row and input tabs are untouched and still work exactly as before; this
+   bar is purely additive and calls the same underlying handlers. */
+.mobile-bottom-nav, .mobile-fab { display: none; }
+
+/* When launched as an installed PWA (Add to Home Screen) or later as a
+   Capacitor-wrapped native app, there's no browser chrome to push content
+   below the notch/status bar -- add that clearance ourselves. In a normal
+   browser tab this rule doesn't apply, since the browser's own UI already
+   handles it. */
+@media (display-mode: standalone) {
+  .wrap { padding-top: env(safe-area-inset-top); }
+}
+
+@media (max-width: 640px) {
+  /* Leaves enough room at the bottom of the page so the last card/button
+     isn't hidden behind the fixed nav bar, and respects the iPhone home
+     indicator safe area. */
+  .wrap { padding-bottom: calc(78px + env(safe-area-inset-bottom)); }
+
+  .mobile-bottom-nav {
+    display: flex;
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+    background: var(--card); border-top: 1px solid var(--border);
+    padding: 6px 2px calc(6px + env(safe-area-inset-bottom));
+    box-shadow: 0 -2px 10px rgba(15, 42, 46, .06);
+  }
+  .mobile-bottom-nav button {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    background: none; border: none; color: var(--muted); font-size: 10.5px; font-weight: 700;
+    padding: 7px 2px; margin: 0 2px; border-radius: 12px; cursor: pointer;
+    transition: color .15s ease, background-color .15s ease;
+  }
+  .mobile-bottom-nav button svg { display: block; }
+  .mobile-bottom-nav button.active { color: var(--accent); background: var(--accent-light); }
+  .mobile-bottom-nav button:active { transform: scale(.94); }
+
+  .mobile-fab {
+    display: flex; align-items: center; justify-content: center;
+    position: fixed; right: 16px; bottom: calc(78px + env(safe-area-inset-bottom));
+    width: 54px; height: 54px; border-radius: 50%; z-index: 41;
+    background: var(--accent); color: #fff; border: none;
+    box-shadow: 0 4px 14px rgba(13, 148, 136, .45); cursor: pointer;
+    transition: transform .12s ease;
+  }
+  .mobile-fab:active { transform: scale(.92); }
+
+  /* Mobile "Add" bottom sheet -- turns the exact same input-tabs + form
+     section that desktop shows inline into a sliding overlay instead,
+     triggered by the "+" FAB or bottom nav "Add" button (see goToAdd() /
+     addSheetOpen in Dashboard.jsx). Nothing about the underlying form
+     markup, validation, or auto-save changes -- only its position on
+     screen does. */
+  .mobile-sheet-backdrop {
+    position: fixed; inset: 0; background: rgba(15, 42, 46, .45); z-index: 44;
+  }
+  .mobile-add-sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 45;
+    max-height: 82vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    background: var(--card); border-radius: 18px 18px 0 0;
+    padding: 4px 16px calc(16px + env(safe-area-inset-bottom));
+    box-shadow: 0 -8px 24px rgba(15, 42, 46, .18);
+    animation: mobile-sheet-up .22s ease-out;
+  }
+  .mobile-sheet-handle {
+    display: flex; align-items: center; justify-content: center;
+    padding: 8px 0 10px; margin: 0 -16px 4px; position: sticky; top: 0;
+    background: var(--card);
+  }
+  .mobile-sheet-drag { width: 36px; height: 4px; border-radius: 2px; background: var(--border); }
+  .mobile-sheet-close {
+    position: absolute; right: 6px; top: 2px; background: none; border: none; font-size: 20px;
+    line-height: 1; color: var(--muted); padding: 6px 8px; cursor: pointer;
+  }
+  @keyframes mobile-sheet-up {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+
+  /* Mobile transaction list -- replaces the dense desktop table with a
+     tappable card list. Each row opens the edit sheet instead of exposing
+     inline inputs, which is what made the old shrunk-table look "unfriendly"
+     on a phone. */
+  .mobile-txn-list {
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .mobile-txn-row {
+    display: flex; align-items: flex-start; gap: 12px;
+    width: 100%; text-align: left; background: var(--card); min-width: 0;
+    border: none; border-bottom: 1px solid var(--border);
+    padding: 12px 4px; cursor: pointer; font-family: inherit;
+    transition: background-color .12s ease;
+  }
+  .mobile-txn-row:active { background: var(--bg); }
+  .mobile-txn-row:last-child { border-bottom: none; }
+  .mobile-txn-icon {
+    flex: 0 0 auto; width: 38px; height: 38px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: #ffffff; font-weight: 800; font-size: 15px;
+  }
+  .mobile-txn-mid {
+    flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px;
+  }
+  .mobile-txn-title {
+    font-weight: 700; font-size: 14.5px; color: var(--text); line-height: 1.35; display: block; max-width: 100%;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .mobile-txn-sub {
+    font-size: 12.5px; color: var(--muted); display: block; max-width: 100%;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  /* Was align-items:center on the row, which vertically centers the amount
+     against the FULL two-line title+sub block -- since the amount is only
+     one line, that centered position lands roughly on the gap between the
+     two text lines, which reads as "sitting a bit high" relative to the sub
+     line underneath. Top-aligning the row instead, with a matching
+     line-height on the title, puts the amount's BOX directly level with
+     the title's box. (The remaining few px of visible misalignment turned
+     out to be a separate, app-wide issue in .amt-tight itself -- fixed once,
+     at the source, via vertical-align: text-bottom on that class -- so no
+     per-component nudge is needed here anymore.) */
+  .mobile-txn-amount {
+    flex: 0 0 auto; font-weight: 800; font-size: 15px; color: var(--text);
+    padding-left: 4px; line-height: 1.35;
+  }
+  .mobile-delete-btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; padding: 12px; border-radius: 12px; border: none;
+    background: #fdecea; color: #c0392b; font-weight: 700; font-size: 14.5px;
+    cursor: pointer;
+  }
+  .mobile-delete-btn:active { background: #fadbd8; }
+
+  /* Chat bubble now lives fixed in the header next to the bell (see
+     .chat-fab-wrap below) instead of floating over the page, so it no
+     longer needs a separate mobile corner/position override -- its
+     dropdown already shrinks to fit the viewport the same way the bell's
+     and profile's dropdowns do. */
+  .chat-window {
+    width: auto; max-width: min(90vw, 340px);
+                  max-height: 60vh;
+  }
+}
+/* AI feature #4: chat assistant, now a fixed icon button living in the
+   header right next to the notification bell -- same relative-wrapper +
+   absolutely-positioned-dropdown pattern as .notif-bell-wrap and
+   .profile-menu-wrap right beside it, so all three read as one family and
+   the chat bubble can never again drift off and collide with the header
+   (the recurring bug with the old free-floating, draggable version). */
+.chat-fab-wrap { position: relative; }
+/* Extra breathing room between the notification bell and this button --
+   the row's default 8px flex-gap read as too tight per explicit feedback
+   ("create a more space betwee reminder icon and chat BoT"). */
+.chat-fab-wrap-spaced { margin-left: 14px; }
+/* Filled purple color combo, per explicit correction (the original floating
+   chat bubble was purple, not the sky-blue this was first restored to) --
+   same purple as the "Expense Management" title (--chat-accent) so it reads
+   as the app's own AI-purple accent rather than the teal/blue used
+   elsewhere in the row. */
+.chat-fab-btn {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+            background: linear-gradient(135deg, #7c3aed, #a855f7 55%, #ec4899); color: #fff; border: none;
+            border-radius: 50%; width: 34px; height: 34px; padding: 0; cursor: pointer;
+  box-shadow: 0 4px 14px rgba(124, 58, 237, .4);
+}
+.chat-fab-btn:hover { filter: brightness(1.08); }
+.chat-fab-monogram { font-size: 13px; font-weight: 800; letter-spacing: .2px; line-height: 1; }
+/* "Aria" sits below the icon, centered on the button itself, and
+hides once the chat window is open (its own header already carries
+the name). Absolutely positioned so it adds no height to the header
+row. */
+.chat-fab-badge-title {
+  position: absolute; left: 50%; transform: translateX(-50%); z-index: 41;
+  color: var(--chat-accent); background: none;
+  font-weight: 800; letter-spacing: .2px;
+  text-shadow: 0 1px 3px rgba(255, 255, 255, .9), 0 0 8px rgba(255, 255, 255, .7);
+  pointer-events: none; white-space: nowrap;
+}
+/* In dark mode the page backdrop behind the Aria label flips dark, so the
+   white halo above (meant to help purple text pop against a light page)
+   reads as a mismatched bright blur instead of crisp contrast -- swap it
+   for a dark halo instead, per explicit report that "Aria" was too faded
+   to read in dark theme. */
+[data-mode="dark"] .chat-fab-badge-title {
+  color: #c4b5fd;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .7), 0 0 8px rgba(0, 0, 0, .6);
+}
+.chat-fab-badge-below { top: 100%; margin-top: 4px; font-size: 11px; }
+/* Owner-only refresh-app button, sat right next to Aria in the header --
+   plain outline circle normally; once /version.json (polled every 60s)
+   reports a newer APP_VERSION than what is already loaded, it fills solid
+   and pulses so it actually gets noticed instead of blending into the row.
+   Desktop only (.tab-hide-mobile) -- on mobile there is no reason to check
+   for updates mid-session the way there is on an always-open desktop tab. */
+.refresh-app-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border-radius: 50%; margin-left: 10px; padding: 0;
+  background: var(--card); border: 1.5px solid var(--border); color: var(--muted);
+  cursor: pointer; transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+.refresh-app-btn:hover { color: var(--accent); border-color: var(--accent); }
+.refresh-app-btn-new {
+  background: var(--accent); border-color: var(--accent); color: #fff;
+  animation: refresh-app-btn-pulse 1.6s ease-in-out infinite;
+}
+.refresh-app-btn-new:hover { color: #fff; filter: brightness(1.08); }
+@keyframes refresh-app-btn-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(13, 148, 136, .45); }
+  50% { box-shadow: 0 0 0 6px rgba(13, 148, 136, .12); }
+}
+@media (max-width: 640px) {
+  /* On mobile the Aria icon itself is hidden (.chat-fab-btn.tab-hide-mobile
+     -- it lives in the bottom nav instead), but its wrapper
+     (.chat-fab-wrap-spaced) still sits in the row and still carries its
+     14px "space before Aria" margin even though there's nothing visible
+     inside it anymore. Combined with the refresh button's own 10px margin
+     right after it, that left a big empty-looking gap between the
+     reminder bell and the refresh button ("looks far and odd" per report).
+     Zero the now-pointless wrapper margin and pull the refresh button in
+     tight to the bell instead. */
+  .chat-fab-wrap-spaced { margin-left: 0; }
+  .refresh-app-btn { margin-left: 6px; }
+}
+.chat-window {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 200;
+  width: 340px; max-width: min(85vw, 340px); height: 440px; max-height: 65vh;
+  background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(15, 42, 46, .18);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.chat-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px; border-bottom: 1px solid var(--border);
+  font-weight: 800; font-size: 13.5px; background: var(--accent2-light);
+}
+.chat-header-actions { display: flex; align-items: center; gap: 10px; }
+.chat-header button { background: none; border: none; cursor: pointer; color: var(--muted); display: flex; }
+.chat-messages { flex: 1; overflow-y: auto; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.chat-empty { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+.chat-empty-greeting { font-weight: 800; color: var(--text); margin-bottom: 6px; display: block; font-size: 13.5px; }
+.chat-bubble {
+  max-width: 82%; padding: 8px 12px; border-radius: 14px; font-size: 13px; line-height: 1.45;
+  white-space: pre-line;
+}
+.chat-bubble.user { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
+.chat-bubble.assistant { align-self: flex-start; background: var(--bg); color: var(--text); border-bottom-left-radius: 4px; }
+.chat-bubble.chat-typing { font-style: italic; color: var(--muted); background: var(--bg); }
+.chat-input-row { display: flex; gap: 8px; padding: 10px; border-top: 1px solid var(--border); }
+.chat-input-row input {
+  flex: 1; padding: 8px 10px; border: 1.5px solid var(--border); border-radius: 20px; font-size: 13px;
+}
+.chat-input-row input:focus { outline: none; border-color: var(--accent2); }
+
+/* Color-theme picker, sitting right after the Help button. Its button is
+   deliberately multi-color (a conic-gradient ring) rather than matching the
+   single-color icon-button look of its neighbors -- per explicit request
+   ("make the tab multi color keeing its function character") -- so it reads
+   as "change the app's color" at a glance, while the wrapper/dropdown
+   structure mirrors .chat-fab-wrap / .notif-bell-wrap exactly (relative
+   wrapper + absolutely positioned dropdown + outside-click-to-close). */
+.theme-fab-wrap { position: relative; }
+.theme-fab-btn {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; padding: 0; border-radius: 8px; cursor: pointer;
+  border: 2px solid #fff;
+    background: conic-gradient(from 0deg, #0d9488, #0369a1, #4f46e5, #7c3aed, #9f1239, #db2777, #b45309, #15803d, #475569, #0d9488);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(15, 42, 46, .25);
+}
+.theme-fab-btn:hover { filter: brightness(1.08); }
+.theme-dropdown {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 43;
+  width: 190px; background: var(--card); border: 1px solid var(--border);
+  border-radius: 14px; box-shadow: 0 10px 30px rgba(15, 42, 46, .18);
+  padding: 8px; display: flex; flex-direction: column; gap: 2px;
+}
+.theme-dropdown-title {
+  font-size: 11px; font-weight: 800; color: var(--muted); text-transform: uppercase;
+  letter-spacing: .4px; padding: 4px 8px 6px;
+}
+.theme-swatch-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 8px; border-radius: 9px; border: none; background: none;
+  font-size: 13px; font-weight: 600; color: var(--text); text-align: left; cursor: pointer;
+}
+.theme-swatch-row:hover { background: var(--bg); }
+.theme-swatch-row.active { background: var(--accent2-light); }
+.theme-swatch-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; box-shadow: inset 0 0 0 1.5px rgba(0,0,0,.08); }
+.theme-mode-row { display: flex; gap: 6px; margin-bottom: 8px; }
+.theme-mode-btn {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 6px 0; border-radius: 8px; border: 1.5px solid var(--border);
+  background: var(--bg); color: var(--muted); font-size: 12.5px; font-weight: 700;
+  cursor: pointer;
+}
+.theme-mode-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+
+/* Attachment viewer -- a centered modal (works identically on desktop and
+   mobile) opened from every place a document can be viewed: desktop table
+   row icons, mobile edit sheets. Shows the file inline when the browser can
+   render it (image/PDF), otherwise falls back to an "Open" button so the
+   OS/browser can hand it to whatever app is registered for that file type.
+   Share buttons build a mailto: / wa.me link around a fresh signed URL. */
+.attachment-viewer-overlay {
+  position: fixed; inset: 0; z-index: 60;
+  background: rgba(15, 42, 46, .55);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.attachment-viewer-modal {
+  width: 100%; max-width: 560px; max-height: 88vh;
+  background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(15, 42, 46, .3);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.attachment-viewer-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 12px 14px; border-bottom: 1px solid var(--border);
+}
+.attachment-viewer-title {
+  font-weight: 800; font-size: 14px; color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.attachment-viewer-body {
+  flex: 1; overflow: auto; background: var(--bg);
+  display: flex; align-items: center; justify-content: center; min-height: 160px;
+}
+.attachment-viewer-img { max-width: 100%; max-height: 65vh; display: block; }
+.attachment-viewer-frame { width: 100%; height: 65vh; border: none; display: block; }
+.attachment-viewer-actions {
+  display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 14px;
+  border-top: 1px solid var(--border);
+}
+.attachment-viewer-actions .btn { flex: 1 1 auto; justify-content: center; display: inline-flex; align-items: center; }
+
+/* Attachment LIST modal -- opened by tapping the paperclip icon on a row that
+   now has one or more documents attached (rows can have more than one, per
+   explicit request). Shows every file for that row in upload order; tapping
+   one closes this list and opens the existing attachment-viewer modal above
+   for that specific file, so View/Open/Email/WhatsApp all still work
+   per-attachment without duplicating any of that logic. */
+.attachment-list-body {
+  flex: 1; overflow: auto; padding: 6px; display: flex; flex-direction: column; gap: 4px;
+}
+.attachment-list-item {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 10px 12px; border: none; border-radius: 10px; background: transparent;
+  cursor: pointer; text-align: left; font-family: inherit; color: var(--text);
+}
+.attachment-list-item:hover { background: var(--bg); }
+.attachment-list-item-name {
+  flex: 1; font-size: 13px; font-weight: 700;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.attachment-list-item-order {
+  flex: 0 0 auto; width: 22px; height: 22px; border-radius: 50%;
+  background: var(--accent-light); color: var(--accent);
+  font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center;
+}
+
+/* First-time spotlight tour (#301). .tour-overlay itself is transparent and
+   just a positioning context -- the actual dark backdrop lives on
+   .tour-highlight's box-shadow (the classic "hole cut in an overlay" CSS
+   trick: a transparent box exactly the target's size, ringed by an enormous
+   box-shadow that covers the rest of the viewport). That means the backdrop
+   automatically tracks wherever the target rect is/moves to on
+   resize/scroll -- no separate SVG mask to keep in sync. Sits above
+   everything else in the app (the sticky header is z-index 60, attachment
+   viewers are 60) since a tour step can need to highlight header elements
+   while they're behind other content. */
+.tour-overlay {
+  position: fixed; inset: 0; z-index: 500; pointer-events: none;
+}
+.tour-highlight {
+  position: fixed;
+  box-shadow: 0 0 0 9999px rgba(15, 42, 46, .6);
+  border: 2px solid var(--accent);
+  transition: top .2s ease, left .2s ease, width .2s ease, height .2s ease;
+  pointer-events: none;
+}
+.tour-tooltip {
+  position: fixed;
+  background: var(--card); border-radius: 14px;
+  padding: 16px 18px; box-shadow: 0 10px 30px rgba(15, 42, 46, .3);
+  pointer-events: auto;
+  transition: top .2s ease, left .2s ease;
+}
+.tour-tooltip-title { font-size: 15px; font-weight: 800; color: var(--text); margin-bottom: 6px; }
+.tour-tooltip-body { font-size: 13px; color: var(--text); line-height: 1.45; margin-bottom: 14px; }
+.tour-tooltip-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.tour-skip-link {
+  background: none; border: none; color: var(--muted); font-size: 12px;
+  font-weight: 600; cursor: pointer; padding: 4px 0; text-decoration: underline;
+}
+.tour-tooltip-actions { display: flex; align-items: center; gap: 8px; }
+.tour-step-count { font-size: 11px; color: var(--muted); font-weight: 700; white-space: nowrap; }
+@media (max-width: 640px) {
+  .tour-tooltip { padding: 14px 16px; }
+}
