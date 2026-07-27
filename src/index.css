@@ -1554,8 +1554,16 @@ td.amount { font-weight: 600; text-align: right; }
 .table-scroll table td input[type="date"],
 .table-scroll table td input[type="month"] {
   min-width: 0;
-  padding: 6px 2px;
+  padding: 0 4px;
   font-size: 11px;
+  /* Confirmed live: a native <input type="date"|"month"> renders at ~40px
+     tall in this table even with identical padding to the 24px-tall text/
+     select cells right next to it -- the browser's own calendar-icon/
+     date-segment chrome takes more vertical room internally than padding
+     alone controls. Forcing an explicit height (not just padding) is what
+     actually brings it down to match every other cell in the row. */
+  height: 24px;
+  box-sizing: border-box;
 }
 
 /* Amount cells -- three requirements that all failed independently before
