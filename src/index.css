@@ -1121,6 +1121,15 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
 .help-accordion-body { padding: 0 14px 14px; line-height: 1.6; }
 .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
 .field { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 110px; }
+/* Wrapper for two related short fields (date+amount, start/end date, etc.)
+   that should sit side by side instead of one-per-row. Needs display:flex
+   here (not just inside the mobile media query below) because otherwise,
+   on desktop, this is a plain block div and its two .field children (each
+   already a flex *container* of its own via the rule above) stack one
+   under the other instead of side by side -- the exact "fields look funny,
+   out of order" bug reported on desktop Fixed Expenses. */
+.field-pair { display: flex; gap: 8px; }
+
 /* Bold, higher-contrast labels everywhere (Name, Category, Amount/month,
    Start date, End date, etc.) -- previously small and muted-gray, which made
    them hard to read at a glance, especially on mobile. */
@@ -1739,7 +1748,7 @@ instead of overflowing at the unconditional 35px desktop size. */
      to layout (its two children behave exactly as if they were direct
      .row children, same as before this change) -- the actual side-by-side
      grouping only kicks in here, on mobile. */
-  .row > .field-pair { display: flex; gap: 8px; width: 100%; }
+  .row > .field-pair { width: 100%; }
   .field-pair > .field { flex: 1 1 0; min-width: 0; }
   table { font-size: 12px; }
   th, td { padding: 6px 4px; }
