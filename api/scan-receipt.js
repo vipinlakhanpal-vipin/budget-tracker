@@ -65,8 +65,9 @@ For each item:
 - description: a short plain-language description (merchant name and/or what was purchased), max 8 words.
 - amount: the numeric total as a plain number (no currency symbol, no commas, no text).
 - categoryName: pick the single best match from exactly this list of allowed categories: ${categoryNames.join(', ')}. If nothing fits reasonably, use null.
+- paymentSource: how it was paid, based on any visible marker on the receipt (card network logo/name, "DEBIT", "CREDIT", "CASH TENDERED", "CHANGE DUE", last-4-digits card line, etc). Must be exactly one of "Cash", "Credit Card", "Debit Card", or null if you can't tell.
 
-Respond with ONLY a JSON array, no other text before or after it, no markdown code fences. Example: [{"date":"2026-07-04","description":"Grocery run at Carrefour","amount":142.50,"categoryName":"Groceries"}]
+Respond with ONLY a JSON array, no other text before or after it, no markdown code fences. Example: [{"date":"2026-07-04","description":"Grocery run at Carrefour","amount":142.50,"categoryName":"Groceries","paymentSource":"Debit Card"}]
 
 If the image doesn't contain any readable expense information at all, respond with exactly: []`;
 
@@ -109,6 +110,7 @@ If the image doesn't contain any readable expense information at all, respond wi
         description: typeof item.description === 'string' ? item.description.slice(0, 200) : '',
         amount: Number.isFinite(Number(item.amount)) ? Number(item.amount) : null,
         categoryName: typeof item.categoryName === 'string' ? item.categoryName : null,
+        paymentSource: ['Cash', 'Credit Card', 'Debit Card'].includes(item.paymentSource) ? item.paymentSource : null,
       }))
       .filter((item) => item.amount && item.amount > 0);
 
