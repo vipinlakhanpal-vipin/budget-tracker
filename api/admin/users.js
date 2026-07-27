@@ -8,7 +8,10 @@ import { createAdminClient, requireAdmin } from './_auth.js';
 // cap for this project.
 export default async function handler(req, res) {
   if (req.method === 'GET') return listUsers(req, res);
-  if (req.method === 'POST') return deleteUser(req, res);
+  if (req.method === 'POST') {
+    if ((req.body || {}).action === 'insights') return getInsights(req, res);
+    return deleteUser(req, res);
+  }
   return res.status(405).json({ error: 'Method not allowed' });
 }
 
@@ -32,12 +35,37 @@ async function listUsers(req, res) {
 
     const [{ data: households, error: hErr }, { data: members, error: mErr }, { data: invites, error: iErr }] = await Promise.all([
       admin.from('households').select('id, name, created_at'),
-      admin.from('household_members').select('id, household_id, user_id, email, role, relation, name, joined_at'),
-      admin.from('household_invites').select('id, household_id, email, relation, status, name, created_at'),
+      admin.from('household_members').select('id, household_id, user_id, email, role, relation, name, joined_at, phone, location, invited_by'),
+      admin.from('household_invites').select('id, household_id, email, relation, status, name, created_at, invited_by'),
     ]);
     if (hErr) throw hErr;
     if (mErr) throw mErr;
     if (iErr) throw iErr;
+
+    // Feature-coverage usage % -- computed from data that already exists
+    // (no new tracking table needed): does this person have at least one row
+    // of their own in each of the app's core data tables, plus whether their
+    // household has ever used the AI chat, plus whether they filled in their
+    // own profile (Phone/Location).
+    const [
+      { data: expenseRows },
+      { data: recurringRows },
+      { data: incomeRows },
+      { data: savingsRows },
+      { data: chatRows },
+    ] = await Promise.all([
+      admin.from('expenses').select('created_by'),
+      admin.from('recurring_expenses').select('created_by'),
+      admin.from('incomes').select('created_by'),
+      admin.from('savings_goals').select('created_by'),
+      admin.from('chat_messages').select('household_id'),
+    ]);
+    const usedFeature = { expense: new Set(), recurring: new Set(), income: new Set(), savings: new Set() };
+    (expenseRows || []).forEach((r) => r.created_by && usedFeature.expense.add(r.created_by));
+    (recurringRows || []).forEach((r) => r.created_by && usedFeature.recurring.add(r.created_by));
+    (incomeRows || []).forEach((r) => r.created_by && usedFeature.income.add(r.created_by));
+    (savingsRows || []).forEach((r) => r.created_by && usedFeature.savings.add(r.created_by));
+    const householdsWithChat = new Set((chatRows || []).map((r) => r.household_id));
 
     const householdNameById = {};
     (households || []).forEach((h) => { householdNameById[h.id] = h.name; });
@@ -95,6 +123,8 @@ async function listUsers(req, res) {
           relation: m.relation,
           role: m.role,
           name: m.name || null,
+          phone: m.phone || null,
+          location: m.location || null,
         })),
         invites: inviteRows.map((inv) => ({
           inviteId: inv.id,
@@ -104,7 +134,43 @@ async function listUsers(req, res) {
           relation: inv.relation,
           name: inv.name || null,
         })),
+        // 0-6 features touched -> a rough "how much of the app do they
+        // actually use" percentage. null (not 0) for pending/never-signed-up
+        // rows, since there's no real user_id yet to measure against.
+        usagePercent: authUser
+          ? Math.round(
+              (100 *
+                [
+                  usedFeature.expense.has(authUser.id),
+                  usedFeature.recurring.has(authUser.id),
+                  usedFeature.income.has(authUser.id),
+                  usedFeature.savings.has(authUser.id),
+                  memberRows.some((m) => m.household_id && householdsWithChat.has(m.household_id)),
+                  memberRows.some((m) => m.phone && m.location),
+                ].filter(Boolean).length) /
+                6
+            )
+          : null,
+        // Names of people this user personally invited. Only populated going
+        // forward from when invited_by started being recorded -- invites/
+        // members created before that won't be attributed, which is expected.
+        invitedNames: [],
       };
+    });
+
+    // Second pass: walk every member/invite row and, if it was invited by
+    // someone in our list, add their name to that inviter's invitedNames.
+    const rowsByUserId = {};
+    rows.forEach((r) => { if (r.userId) rowsByUserId[r.userId] = r; });
+    (members || []).forEach((m) => {
+      if (m.invited_by && rowsByUserId[m.invited_by]) {
+        rowsByUserId[m.invited_by].invitedNames.push(m.name || m.email);
+      }
+    });
+    (invites || []).forEach((inv) => {
+      if (inv.invited_by && rowsByUserId[inv.invited_by]) {
+        rowsByUserId[inv.invited_by].invitedNames.push((inv.name || inv.email) + ' (pending)');
+      }
     });
 
     rows.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
@@ -141,5 +207,75 @@ async function deleteUser(req, res) {
     res.status(200).json({ ok: true });
   } catch (e) {
     res.status(500).json({ error: e.message || 'Could not delete user' });
+  }
+}
+
+
+// Powers the "AI insights" button next to each successful signup in the
+// admin Users tab -- reuses this same serverless function (rather than a
+// new api/admin/*.js file) to stay under Vercel Hobby's 12-function cap.
+// Same model/call pattern as api/chat-assistant.js.
+async function getInsights(req, res) {
+  try {
+    await requireAdmin(req);
+  } catch (e) {
+    return res.status(e.status || 401).json({ error: e.message });
+  }
+  const { userId } = req.body || {};
+  if (!userId) return res.status(400).json({ error: 'userId is required' });
+
+  const admin = createAdminClient();
+  try {
+    const { data: authData, error: authErr } = await admin.auth.admin.getUserById(userId);
+    if (authErr || !authData?.user) throw authErr || new Error('User not found');
+    const u = authData.user;
+
+    const [{ data: members }, { data: expenseRows }, { data: recurringRows }, { data: incomeRows }, { data: savingsRows }] = await Promise.all([
+      admin.from('household_members').select('household_id, name, relation, phone, location, joined_at').eq('user_id', userId),
+      admin.from('expenses').select('id').eq('created_by', userId),
+      admin.from('recurring_expenses').select('id').eq('created_by', userId),
+      admin.from('incomes').select('id').eq('created_by', userId),
+      admin.from('savings_goals').select('id').eq('created_by', userId),
+    ]);
+
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) return res.status(200).json({ insight: null, aiEnabled: false });
+
+    const facts = {
+      email: u.email,
+      joinedApp: u.created_at,
+      lastSignIn: u.last_sign_in_at,
+      emailConfirmed: !!u.email_confirmed_at,
+      householdsCount: (members || []).length,
+      regularExpensesLogged: (expenseRows || []).length,
+      fixedExpensesLogged: (recurringRows || []).length,
+      incomeEntriesLogged: (incomeRows || []).length,
+      savingsEntriesLogged: (savingsRows || []).length,
+      profileComplete: (members || []).some((m) => m.phone && m.location),
+    };
+
+    const systemPrompt = `You write a short (3-4 sentence) engagement summary for an app owner about one signed-up user of their household budget tracker app, Hearth. Be concise and factual, based only on the data given -- note how actively they seem to be using the app (which features they've touched, how recently active, whether their profile is filled in), not financial advice about their money. Plain prose, no headers or bullet points.`;
+
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 300,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: JSON.stringify(facts) }],
+      }),
+    });
+
+    if (!r.ok) {
+      console.error('Anthropic API error:', r.status, await r.text());
+      return res.status(200).json({ insight: null, aiEnabled: true });
+    }
+    const data = await r.json();
+    const insight = (data?.content?.[0]?.text || '').trim();
+    return res.status(200).json({ insight: insight || null, aiEnabled: true });
+  } catch (e) {
+    console.error('getInsights failed:', e);
+    return res.status(500).json({ error: e.message || 'Could not generate insights' });
   }
 }
