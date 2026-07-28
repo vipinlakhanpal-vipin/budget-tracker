@@ -686,6 +686,20 @@ button, input, select, textarea { font-family: inherit; }
   position: sticky; top: env(safe-area-inset-top); z-index: 60;
   background: var(--bg); overflow-x: clip; overflow-y: visible;
   padding-bottom: 4px;
+  /* v1.47: iOS Safari sometimes paints a frame or two of whatever list
+     row is scrolling underneath right through this header during a fast
+     fling -- a known WebKit quirk where a `position: sticky` element that
+     shares a paint layer with the scrolling content behind it can
+     visibly lag a repaint by a frame. Promoting the header to its own
+     GPU compositing layer (translateZ + will-change) makes Safari
+     recomposite it independently of the content behind it every frame,
+     instead of repainting both together, which is what removes the
+     flash-through. */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 .top-bar {
     display: flex; flex-direction: column; gap: 10px; margin-bottom: 6px;
@@ -2208,21 +2222,14 @@ row. */
   cursor: pointer; transition: background-color .15s ease, border-color .15s ease, color .15s ease;
 }
 .refresh-app-btn:hover { color: var(--accent); border-color: var(--accent); }
-/* v1.46: the "update available" state now uses --danger (a fixed red,
-   independent of the household's chosen accent color) instead of
-   --accent -- when the accent theme itself is blue/teal/whatever, a
-   button that also turns --accent-colored on update barely reads as
-   different from the rest of the header, which is exactly what made it
-   invisible. Red always contrasts with every accent choice, and reads
-   universally as "something needs your attention" regardless of theme. */
 .refresh-app-btn-new {
-  background: var(--danger); border-color: var(--danger); color: #fff;
+  background: var(--accent); border-color: var(--accent); color: #fff;
   animation: refresh-app-btn-pulse 1.6s ease-in-out infinite;
 }
 .refresh-app-btn-new:hover { color: #fff; filter: brightness(1.08); }
 @keyframes refresh-app-btn-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--danger) 55%, transparent); }
-  50% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--danger) 15%, transparent); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(13, 148, 136, .45); }
+  50% { box-shadow: 0 0 0 6px rgba(13, 148, 136, .12); }
 }
 @media (max-width: 640px) {
   /* On mobile the Aria icon itself is hidden (.chat-fab-btn.tab-hide-mobile
