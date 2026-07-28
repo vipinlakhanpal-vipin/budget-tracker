@@ -2594,20 +2594,27 @@ row. */
   overflow: hidden;
 }
 .header-tab-btn::before {
+  /* v1.44: bigger symbol on a wider, flatter (ellipse, not circle) orbit
+     so it visibly sweeps around the full width of the tab label instead
+     of staying small and centered behind it -- per explicit follow-up
+     feedback that the first pass read as "tiny" and didn't feel like it
+     was circling the title. overflow:hidden on .header-tab-btn clips it
+     cleanly at the button edge on narrower tabs (Help, Settings) instead
+     of spilling into neighboring buttons. */
   content: '\221E';
   position: absolute;
   top: 50%;
   left: 50%;
   width: 0;
   height: 0;
-  font-size: 15px;
+  font-size: 20px;
   line-height: 1;
-  color: rgba(255,255,255,0.4);
+  color: rgba(255,255,255,0.45);
   z-index: -1;
   pointer-events: none;
-  offset-path: circle(18px at center);
+  offset-path: ellipse(38px 15px at center);
   offset-rotate: 0deg;
-  animation: header-tab-infinity-orbit 4s linear infinite;
+  animation: header-tab-infinity-orbit 4.5s linear infinite;
 }
 @keyframes header-tab-infinity-orbit {
   from { offset-distance: 0%; }
