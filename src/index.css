@@ -1825,7 +1825,17 @@ instead of overflowing at the unconditional 35px desktop size. */
      width, so there is nothing for it to collide with regardless of how
      any given mobile browser sizes its native date/select chrome. */
   .field-pair { flex-direction: column; align-items: stretch; }
-  .field-pair > .field { width: 100%; flex: 1 1 auto; height: auto; }
+  .field-pair > .field { width: 100% !important; flex: 1 1 auto !important; height: auto !important; min-height: 0 !important; }
+  /* The previous version of this rule (no !important) never actually beat
+     the inline style={{ flex: '0 1 150px' }} etc. that several field-pairs
+     carry over from the desktop side-by-side layout (Payment Source+Bank,
+     Category+Payment Source, and others) -- inline styles always win over
+     external CSS unless the external rule is !important, so those pairs
+     kept rendering at their old fixed pixel height even after the
+     field-pair stacking change. Verified this time with an actual
+     getBoundingClientRect() measurement (150px/190px before, 55.5px after)
+     rather than a visual glance, since that is exactly what went wrong
+     last time. */
   table { font-size: 12px; }
   th, td { padding: 6px 4px; }
   .login-card { padding: 22px; }
