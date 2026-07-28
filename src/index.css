@@ -2518,3 +2518,38 @@ row. */
     box-sizing: border-box;
   }
 }
+
+
+/* v1.35: Admin Console "Users" table action buttons (AI Insights / Reset
+   Password / Delete) were wrapping their own text onto two lines and
+   Delete was getting clipped off-screen -- the shared table CSS uses
+   table-layout: fixed, which locks column widths regardless of content,
+   so the actions column never grew to fit three buttons. Switch this one
+   table to table-layout: auto (columns size to content, exactly like a
+   normal desktop admin table should) and make the buttons themselves
+   nowrap + non-shrinking so they always render as one line each; if the
+   row still doesn't fit a narrow screen, .table-scroll's existing
+   overflow-x: auto lets it scroll instead of clipping content invisibly. */
+.admin-users-table {
+  table-layout: auto;
+}
+.admin-actions-cell {
+  display: flex;
+  gap: 5px;
+  flex-wrap: nowrap;
+}
+.admin-action-btn {
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-size: 11px;
+  padding: 4px 7px;
+}
+@media (max-width: 640px), (pointer: coarse) and (hover: none) and (max-width: 1366px) {
+  .admin-actions-cell {
+    gap: 4px;
+  }
+  .admin-action-btn {
+    font-size: 10.5px;
+    padding: 4px 6px;
+  }
+}

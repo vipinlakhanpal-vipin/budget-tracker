@@ -307,7 +307,7 @@ function UserGroup({ title, users, onDelete, deletingEmail, onInsights, insightL
     <div style={{ marginBottom: 18 }}>
       <div className="muted-small" style={{ fontWeight: 700, fontSize: 14, marginBottom: 6 }}>{title}</div>
       <div className="table-scroll">
-        <table className="responsive-table">
+        <table className="responsive-table admin-users-table">
           <thead>
             <tr><th>Email</th><th>Status</th><th>Household(s)</th><th>Joined</th><th>Location</th><th>Usage</th><th></th></tr>
           </thead>
@@ -331,11 +331,11 @@ function UserGroup({ title, users, onDelete, deletingEmail, onInsights, insightL
                   {u.usagePercent === null || u.usagePercent === undefined ? '--' : `${u.usagePercent}%`}
                 </td>
                 <td>
-                  <div style={{ display: 'flex', gap: 6 }}>
+                  <div className="admin-actions-cell">
                     {onInsights && (
                       <button
                         type="button"
-                        className="btn secondary small"
+                        className="btn secondary small admin-action-btn"
                         onClick={() => onInsights(u)}
                         disabled={!u.userId || insightLoadingEmail === u.email}
                       >
@@ -345,7 +345,7 @@ function UserGroup({ title, users, onDelete, deletingEmail, onInsights, insightL
                     {onResetPassword && (
                       <button
                         type="button"
-                        className="btn secondary small"
+                        className="btn secondary small admin-action-btn"
                         onClick={() => onResetPassword(u)}
                         disabled={!u.userId || resettingEmail === u.email}
                       >
@@ -354,7 +354,7 @@ function UserGroup({ title, users, onDelete, deletingEmail, onInsights, insightL
                     )}
                     <button
                       type="button"
-                      className="btn secondary small"
+                      className="btn secondary small admin-action-btn"
                       onClick={() => onDelete(u)}
                       disabled={deletingEmail === u.email}
                     >
