@@ -104,6 +104,7 @@ html {
 body {
   margin: 0; font-family: inherit; font-weight: 300;
   background: var(--bg); color: var(--text);
+  overscroll-behavior-y: contain;
 }
 button, input, select, textarea { font-family: inherit; }
 .center-screen {
@@ -1824,7 +1825,7 @@ instead of overflowing at the unconditional 35px desktop size. */
      width, so there is nothing for it to collide with regardless of how
      any given mobile browser sizes its native date/select chrome. */
   .field-pair { flex-direction: column; align-items: stretch; }
-  .field-pair > .field { width: 100%; }
+  .field-pair > .field { width: 100%; flex: 1 1 auto; height: auto; }
   table { font-size: 12px; }
   th, td { padding: 6px 4px; }
   .login-card { padding: 22px; }
@@ -1992,11 +1993,12 @@ instead of overflowing at the unconditional 35px desktop size. */
      markup, validation, or auto-save changes -- only its position on
      screen does. */
   .mobile-sheet-backdrop {
-    position: fixed; inset: 0; background: rgba(15, 42, 46, .45); z-index: 44;
+    position: fixed; inset: 0; background: rgba(15, 42, 46, .45); z-index: 65;
+    overscroll-behavior: contain;
   }
   .mobile-add-sheet {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 45;
-    max-height: 82vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 66;
+    max-height: 82vh; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
     background: var(--card); border-radius: 18px 18px 0 0;
     padding: 4px 16px calc(16px + env(safe-area-inset-bottom));
     box-shadow: 0 -8px 24px rgba(15, 42, 46, .18);
