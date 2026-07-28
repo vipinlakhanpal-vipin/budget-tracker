@@ -826,7 +826,7 @@ sitting duplicated under the summary cards. */
 .header-tab-btn-active {
   background-color: var(--accent-active);
   box-shadow: inset 0 0 0 2px rgba(255,255,255,.55);
-  animation: tab-heartbeat 3.2s ease-in-out infinite, header-tab-ecg-scroll 2.6s linear infinite;
+  animation: tab-heartbeat 3.2s ease-in-out infinite, header-tab-eq-dance 1.6s ease-in-out infinite;
 }
 /* Shared "heartbeat" pulse -- same 3.2s ease-in-out rhythm as the Hearth
    logo's own breathing sphere (hearth-family-breathe, defined further
@@ -2421,7 +2421,27 @@ row. */
       tables elsewhere are untouched. The Pareto "Where Your Money Goes"
       bar chart stays full-width since it's a comparative bar chart, not a
       list of tiles. */
-.report-info-btn { display: none; }
+/* v1.40: the info icon + collapsible description now apply on desktop
+   too, not just mobile -- per explicit follow-up request. */
+.report-info-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  margin-bottom: 2px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--accent);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+.report-desc { display: none; }
+.report-desc.is-open { display: block; margin-top: -4px; }
 
 @media (max-width: 640px), (pointer: coarse) and (hover: none) and (max-width: 1366px) {
   .report-daterow > .field:nth-child(1),
@@ -2433,24 +2453,6 @@ row. */
     min-width: 100% !important;
     flex: 1 1 100% !important;
   }
-  .report-info-btn {
-    display: inline-flex !important;
-    align-items: center;
-    justify-content: center;
-    width: 34px;
-    height: 34px;
-    flex: 0 0 auto;
-    margin-bottom: 2px;
-    padding: 0;
-    border-radius: 50%;
-    border: 1px solid var(--border);
-    background: var(--card);
-    color: var(--accent);
-    font-size: 18px;
-    line-height: 1;
-  }
-  .report-desc { display: none; }
-  .report-desc.is-open { display: block; margin-top: -4px; }
 }
 
 @media (max-width: 720px) {
@@ -2576,15 +2578,45 @@ row. */
    animation together with its own tab-heartbeat scale pulse (see above) so
    the currently-open tab both pulses AND has the line scrolling under it. */
 .header-tab-btn {
+  /* v1.40: swapped the ECG waveform for a small "equalizer bars" motif --
+     the up/down line read as a medical/health-monitor cue rather than the
+     intended playful heartbeat theme. 5 vertical bars, each its own soft
+     "backlit" pastel color like an old stereo's spectrum display, grow
+     and shrink independently via one hand-authored multi-layer
+     background-size keyframe timeline. Anchored a few px up from the
+     bottom edge (not flush) so the bars read clearly instead of hugging
+     the button border. Pure CSS background-image, so it stays behind the
+     button's text/icon automatically, same as the line did. */
   position: relative;
   overflow: hidden;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='40' viewBox='0 0 90 40'%3E%3Cpath d='M0 20 L20 20 L24 10 L28 30 L32 4 L36 34 L40 20 L55 20 L59 14 L63 24 L67 20 L90 20' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linejoin='round' stroke-linecap='round' stroke-opacity='0.45'/%3E%3C/svg%3E");
-  background-repeat: repeat-x;
-  background-position: 0 center;
-  background-size: 90px 20px;
-  animation: header-tab-ecg-scroll 2.6s linear infinite;
+  background-repeat: no-repeat;
+  background-position: left 10px bottom 6px, left 16px bottom 6px, left 22px bottom 6px, left 28px bottom 6px, left 34px bottom 6px;
+  background-image:
+    linear-gradient(rgba(125,211,252,.65), rgba(125,211,252,.65)),
+    linear-gradient(rgba(196,181,253,.65), rgba(196,181,253,.65)),
+    linear-gradient(rgba(249,168,212,.65), rgba(249,168,212,.65)),
+    linear-gradient(rgba(167,243,208,.65), rgba(167,243,208,.65)),
+    linear-gradient(rgba(253,224,71,.65), rgba(253,224,71,.65));
+  background-size: 3px 35%, 3px 60%, 3px 25%, 3px 75%, 3px 45%;
+  animation: header-tab-eq-dance 1.6s ease-in-out infinite;
 }
-@keyframes header-tab-ecg-scroll {
-  from { background-position: 0 center; }
-  to   { background-position: -90px center; }
+@keyframes header-tab-eq-dance {
+  0%   { background-size: 3px 35%, 3px 60%, 3px 25%, 3px 75%, 3px 45%; }
+  20%  { background-size: 3px 70%, 3px 30%, 3px 55%, 3px 40%, 3px 65%; }
+  40%  { background-size: 3px 45%, 3px 80%, 3px 35%, 3px 60%, 3px 30%; }
+  60%  { background-size: 3px 60%, 3px 40%, 3px 70%, 3px 25%, 3px 55%; }
+  80%  { background-size: 3px 30%, 3px 55%, 3px 45%, 3px 70%, 3px 40%; }
+  100% { background-size: 3px 35%, 3px 60%, 3px 25%, 3px 75%, 3px 45%; }
+}
+/* Belt-and-braces: .header-tab-btn-active already lists both animations
+   (heartbeat + bars) above, but that rule sits earlier in this file than
+   the plain .header-tab-btn rule -- with equal (single-class) specificity
+   the later rule wins per property for elements that have both classes,
+   which is exactly what silently dropped the heartbeat pulse last time.
+   This compound selector has higher specificity than either alone, so the
+   pulse survives regardless of source order or whatever background
+   animation .header-tab-btn ends up with in the future -- keep this rule
+   whenever that background animation changes again. */
+.header-tab-btn.header-tab-btn-active {
+  animation: tab-heartbeat 3.2s ease-in-out infinite, header-tab-eq-dance 1.6s ease-in-out infinite;
 }
