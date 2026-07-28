@@ -2003,12 +2003,16 @@ instead of overflowing at the unconditional 35px desktop size. */
      markup, validation, or auto-save changes -- only its position on
      screen does. */
   .mobile-sheet-backdrop {
-    position: fixed; inset: 0; background: rgba(15, 42, 46, .45); z-index: 65;
+    position: fixed; top: 0; left: 0; right: 0;
+    bottom: calc(64px + env(safe-area-inset-bottom));
+    background: rgba(15, 42, 46, .82); z-index: 65;
     overscroll-behavior: contain;
   }
   .mobile-add-sheet {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 66;
-    max-height: 82vh; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+    position: fixed; left: 0; right: 0; z-index: 66;
+    bottom: calc(64px + env(safe-area-inset-bottom));
+    max-height: calc(82vh - 64px - env(safe-area-inset-bottom));
+    overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
     background: var(--card); border-radius: 18px 18px 0 0;
     padding: 4px 16px calc(16px + env(safe-area-inset-bottom));
     box-shadow: 0 -8px 24px rgba(15, 42, 46, .18);
