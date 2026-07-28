@@ -1967,6 +1967,19 @@ instead of overflowing at the unconditional 35px desktop size. */
    with clean "label on the left, value on the right" rows instead of a wide
    scrolling table -- this is what makes Expenses/Income/Fixed-expenses
    readable and simple to enter data on a phone without sideways scrolling. */
+/* v1.48: total-row highlight now applies on every screen size, not just
+   mobile (this used to be defined only inside the 720px media query
+   below, so desktop relied entirely on a hardcoded inline background
+   that never adapted to dark mode -- '#f1f5f9' with light near-white
+   text on top of it is illegible in dark mode, and washed out in light
+   mode too). This is the single source of truth now; the inline
+   background on the Total Outflow row itself has been removed so this
+   rule is the only thing controlling it. */
+.report-preview table.responsive-table tr.report-total-row {
+  background: color-mix(in srgb, var(--accent) 14%, var(--card));
+  border-radius: 8px;
+}
+
 @media (max-width: 720px) {
     .table-scroll { overflow-x: hidden; }
   table.responsive-table { border: none; }

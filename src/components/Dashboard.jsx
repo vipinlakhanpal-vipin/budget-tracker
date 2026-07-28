@@ -3538,7 +3538,7 @@ function ReportHtmlView({ data }) {
             <tr><td>Total Regular Expenses</td><td style={{ textAlign: 'right' }}>{fmt(data.expenseTotal)}</td></tr>
             <tr><td>Total Fixed Expenses</td><td style={{ textAlign: 'right' }}>{fmt(data.fixedTotal)}</td></tr>
             <tr><td>Total Savings</td><td style={{ textAlign: 'right' }}>{fmt(data.savingsGoalTotal)}</td></tr>
-            <tr className="report-total-row" style={{ fontWeight: 700, background: '#f1f5f9' }}><td>Total Outflow (Expenses + Savings)</td><td style={{ textAlign: 'right' }}>{fmt(data.expenseTotal + data.fixedTotal + data.savingsGoalTotal)}</td></tr>
+            <tr className="report-total-row" style={{ fontWeight: 700 }}><td>Total Outflow (Expenses + Savings)</td><td style={{ textAlign: 'right' }}>{fmt(data.expenseTotal + data.fixedTotal + data.savingsGoalTotal)}</td></tr>
             <tr className="report-total-row" style={{ fontWeight: 700, background: data.netTotal >= 0 ? '#dcfce7' : '#fee2e2', color: data.netTotal >= 0 ? '#166534' : '#991b1b' }}><td>Net (Income - Total Outflow)</td><td style={{ textAlign: 'right' }}>{fmt(data.netTotal)}</td></tr>
           </tbody>
         </table>
@@ -3549,7 +3549,7 @@ function ReportHtmlView({ data }) {
           <div style={{ marginBottom: 24 }}>
             {data.chartRows.map(([name, val], i) => (
               <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                <div style={{ width: 120, fontSize: 12, color: '#475569', flexShrink: 0 }}>{name}</div>
+                <div style={{ width: 120, fontSize: 12, fontWeight: 600, color: 'var(--text)', flexShrink: 0 }}>{name}</div>
                 <div style={{ flex: 1, background: '#f1f5f9', borderRadius: 4, height: 14 }}>
                   <div style={{ width: `${Math.max(2, (val / data.maxCategoryVal) * 100)}%`, background: COLORS[i % COLORS.length], height: '100%', borderRadius: 4 }} />
                 </div>
@@ -3643,7 +3643,7 @@ function ReportHtmlView({ data }) {
           <div style={{ marginBottom: 12 }}>
             {data.paretoRows.map((r, i) => (
               <div key={r.name} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                <div style={{ width: 120, fontSize: 12, color: '#475569', flexShrink: 0 }}>{r.name}</div>
+                <div style={{ width: 120, fontSize: 12, fontWeight: 600, color: 'var(--text)', flexShrink: 0 }}>{r.name}</div>
                 <div style={{ flex: 1, background: '#f1f5f9', borderRadius: 4, height: 14 }}>
                   <div style={{ width: `${Math.max(2, (r.val / data.maxCategoryVal) * 100)}%`, background: (r.cumPct <= 80 || i === 0) ? '#0d9488' : '#94a3b8', height: '100%', borderRadius: 4 }} />
                 </div>
