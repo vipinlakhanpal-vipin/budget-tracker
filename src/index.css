@@ -1980,6 +1980,64 @@ instead of overflowing at the unconditional 35px desktop size. */
   border-radius: 8px;
 }
 
+.report-preview table.responsive-table tr.report-total-outflow {
+  background: var(--accent);
+}
+.report-preview table.responsive-table tr.report-total-outflow td {
+  color: #fff;
+}
+.report-preview table.responsive-table tr.report-net-positive {
+  background: color-mix(in srgb, var(--ok) 22%, var(--card));
+}
+.report-preview table.responsive-table tr.report-net-positive td {
+  color: var(--ok);
+}
+.report-preview table.responsive-table tr.report-net-negative {
+  background: color-mix(in srgb, var(--danger) 22%, var(--card));
+}
+.report-preview table.responsive-table tr.report-net-negative td {
+  color: var(--danger);
+}
+.report-preview table.responsive-table tbody tr:nth-child(even):not(.report-total-row) {
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+}
+.report-bar-track {
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+}
+.report-suggestion-item {
+  color: var(--text);
+}
+.report-tip-box {
+  background: color-mix(in srgb, var(--accent) 6%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+  color: var(--muted);
+}
+.report-collapsible-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--card));
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  user-select: none;
+}
+.report-collapsible-toggle:hover {
+  background: color-mix(in srgb, var(--accent) 14%, var(--card));
+}
+.report-toggle-chevron {
+  display: inline-block;
+  transition: transform .15s ease;
+}
+.report-toggle-chevron-open {
+  transform: rotate(180deg);
+}
+
 @media (max-width: 720px) {
     .table-scroll { overflow-x: hidden; }
   table.responsive-table { border: none; }
@@ -2229,10 +2287,26 @@ row. */
    Desktop only (.tab-hide-mobile) -- on mobile there is no reason to check
    for updates mid-session the way there is on an always-open desktop tab. */
 .refresh-app-btn {
+  position: relative;
   display: inline-flex; align-items: center; justify-content: center;
   width: 34px; height: 34px; border-radius: 50%; margin-left: 10px; padding: 0;
   background: var(--card); border: 1.5px solid var(--border); color: var(--muted);
   cursor: pointer; transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+.refresh-app-btn-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--danger);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 15px;
+  text-align: center;
+  border: 1.5px solid var(--bg);
 }
 .refresh-app-btn:hover { color: var(--accent); border-color: var(--accent); }
 .refresh-app-btn-new {

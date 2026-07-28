@@ -3528,6 +3528,7 @@ const labelMaxLen = chartRows.length > 18 ? 12 : 15;
   }
 
 function ReportHtmlView({ data }) {
+    const [showExpenseDetail, setShowExpenseDetail] = useState(false);
     if (!data) return null;
     return (
       <div className="report-preview" style={{ padding: 20, maxHeight: 'min(80vh, 1400px)', overflowY: 'auto' }}>
@@ -3538,8 +3539,8 @@ function ReportHtmlView({ data }) {
             <tr><td>Total Regular Expenses</td><td style={{ textAlign: 'right' }}>{fmt(data.expenseTotal)}</td></tr>
             <tr><td>Total Fixed Expenses</td><td style={{ textAlign: 'right' }}>{fmt(data.fixedTotal)}</td></tr>
             <tr><td>Total Savings</td><td style={{ textAlign: 'right' }}>{fmt(data.savingsGoalTotal)}</td></tr>
-            <tr className="report-total-row" style={{ fontWeight: 700 }}><td>Total Outflow (Expenses + Savings)</td><td style={{ textAlign: 'right' }}>{fmt(data.expenseTotal + data.fixedTotal + data.savingsGoalTotal)}</td></tr>
-            <tr className="report-total-row" style={{ fontWeight: 700, background: data.netTotal >= 0 ? '#dcfce7' : '#fee2e2', color: data.netTotal >= 0 ? '#166534' : '#991b1b' }}><td>Net (Income - Total Outflow)</td><td style={{ textAlign: 'right' }}>{fmt(data.netTotal)}</td></tr>
+            <tr className="report-total-row report-total-outflow" style={{ fontWeight: 700 }}><td>Total Outflow (Expenses + Savings)</td><td style={{ textAlign: 'right' }}>{fmt(data.expenseTotal + data.fixedTotal + data.savingsGoalTotal)}</td></tr>
+            <tr className={`report-total-row report-net-row ${data.netTotal >= 0 ? 'report-net-positive' : 'report-net-negative'}`} style={{ fontWeight: 700 }}><td>Net (Income - Total Outflow)</td><td style={{ textAlign: 'right' }}>{fmt(data.netTotal)}</td></tr>
           </tbody>
         </table>
         <h4>Expenses by Category</h4>
@@ -3550,7 +3551,7 @@ function ReportHtmlView({ data }) {
             {data.chartRows.map(([name, val], i) => (
               <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                 <div style={{ width: 120, fontSize: 12, fontWeight: 600, color: 'var(--text)', flexShrink: 0 }}>{name}</div>
-                <div style={{ flex: 1, background: '#f1f5f9', borderRadius: 4, height: 14 }}>
+                <div className="report-bar-track" style={{ flex: 1, borderRadius: 4, height: 14 }}>
                   <div style={{ width: `${Math.max(2, (val / data.maxCategoryVal) * 100)}%`, background: COLORS[i % COLORS.length], height: '100%', borderRadius: 4 }} />
                 </div>
                 <div style={{ width: 90, fontSize: 12, textAlign: 'right', fontWeight: 600, flexShrink: 0 }}>{fmt(val)}</div>
@@ -3561,7 +3562,7 @@ function ReportHtmlView({ data }) {
         <h4>Income</h4>
         <div className="table-scroll" style={{ marginBottom: 24 }}>
           <table className="responsive-table">
-            <thead><tr><th>Month</th><th>Source</th><th>Amount</th></tr></thead>
+            <thead><tr><th>Month</th><th>Source</th><th style={{ textAlign: 'right' }}>Amount</th></tr></thead>
             <tbody>
               {data.rangeIncomes.map((i, idx) => (
                 <tr key={idx}><td>{i.start_date.slice(0, 7)}</td><td>{i.name}</td><td style={{ textAlign: 'right' }}>{fmt(i.amount)}</td></tr>
@@ -3571,9 +3572,19 @@ function ReportHtmlView({ data }) {
           </table>
         </div>
         <h4>Expenses</h4>
+        <div
+          className="report-collapsible-toggle"
+          onClick={() => setShowExpenseDetail((v) => !v)}
+          role="button"
+          tabIndex={0}
+        >
+          <span>{showExpenseDetail ? 'Hide' : 'Show'} {data.rangeExpenses.length} transactions ({fmt(data.expenseTotal)})</span>
+          <span className={`report-toggle-chevron${showExpenseDetail ? ' report-toggle-chevron-open' : ''}`}>&#9662;</span>
+        </div>
+        {showExpenseDetail && (
         <div className="table-scroll" style={{ marginBottom: 24 }}>
           <table className="responsive-table">
-            <thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th></tr></thead>
+            <thead><tr><th>Date</th><th>Category</th><th>Description</th><th style={{ textAlign: 'right' }}>Amount</th></tr></thead>
             <tbody>
               {data.rangeExpenses.map((e) => (
                 <tr key={e.id}><td>{fmtDate(e.expense_date)}</td><td>{categoryNameById[e.category_id] || 'Uncategorized'}</td><td>{e.description || ''}</td><td style={{ textAlign: 'right' }}>{fmt(e.amount)}</td></tr>
@@ -3582,13 +3593,14 @@ function ReportHtmlView({ data }) {
             <tfoot><tr className="report-total-row" style={{ fontWeight: 700 }}><td></td><td></td><td>Total</td><td style={{ textAlign: 'right' }}>{fmt(data.expenseTotal)}</td></tr></tfoot>
           </table>
         </div>
+        )}
         <h4>Fixed Expenses</h4>
         {data.rangeRecurringOccurrences.length === 0 ? (
           <div className="muted-small" style={{ marginBottom: 24 }}>No fixed expenses due in this period.</div>
         ) : (
           <div className="table-scroll" style={{ marginBottom: 24 }}>
             <table className="responsive-table">
-              <thead><tr><th>Name</th><th>Category</th><th>Frequency</th><th>Month Due</th><th>Amount</th></tr></thead>
+              <thead><tr><th>Name</th><th>Category</th><th>Frequency</th><th>Month Due</th><th style={{ textAlign: 'right' }}>Amount</th></tr></thead>
               <tbody>
                 {data.rangeRecurringOccurrences.map((r, idx) => (
                   <tr key={idx}>
@@ -3610,7 +3622,7 @@ function ReportHtmlView({ data }) {
         ) : (
           <div className="table-scroll" style={{ marginBottom: 24 }}>
             <table className="responsive-table">
-              <thead><tr><th>Month</th><th>Savings Goal</th><th>Amount</th></tr></thead>
+              <thead><tr><th>Month</th><th>Savings Goal</th><th style={{ textAlign: 'right' }}>Amount</th></tr></thead>
               <tbody>
                 {data.rangeSavingsOccurrences.map((s, idx) => (
                   <tr key={idx}><td>{s.occurredMonth}</td><td>{s.name}</td><td style={{ textAlign: 'right' }}>{fmt(s.amount)}</td></tr>
@@ -3644,11 +3656,11 @@ function ReportHtmlView({ data }) {
             {data.paretoRows.map((r, i) => (
               <div key={r.name} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                 <div style={{ width: 120, fontSize: 12, fontWeight: 600, color: 'var(--text)', flexShrink: 0 }}>{r.name}</div>
-                <div style={{ flex: 1, background: '#f1f5f9', borderRadius: 4, height: 14 }}>
-                  <div style={{ width: `${Math.max(2, (r.val / data.maxCategoryVal) * 100)}%`, background: (r.cumPct <= 80 || i === 0) ? '#0d9488' : '#94a3b8', height: '100%', borderRadius: 4 }} />
+                <div className="report-bar-track" style={{ flex: 1, borderRadius: 4, height: 14 }}>
+                  <div style={{ width: `${Math.max(2, (r.val / data.maxCategoryVal) * 100)}%`, background: (r.cumPct <= 80 || i === 0) ? 'var(--ok)' : 'var(--muted)', height: '100%', borderRadius: 4 }} />
                 </div>
                 <div style={{ width: 90, fontSize: 12, textAlign: 'right', fontWeight: 600, flexShrink: 0 }}>{fmt(r.val)}</div>
-                <div style={{ width: 44, fontSize: 12, textAlign: 'right', color: (r.cumPct <= 80 || i === 0) ? '#0d9488' : '#94a3b8', flexShrink: 0 }}>{Math.round(r.cumPct)}%</div>
+                <div style={{ width: 44, fontSize: 12, textAlign: 'right', color: (r.cumPct <= 80 || i === 0) ? 'var(--ok)' : 'var(--muted)', flexShrink: 0 }}>{Math.round(r.cumPct)}%</div>
               </div>
             ))}
             <div className="muted-small" style={{ marginTop: 8 }}>
@@ -3659,10 +3671,10 @@ function ReportHtmlView({ data }) {
         <h4>Where You Can Bring In Controls</h4>
         <ul style={{ paddingLeft: 20, marginBottom: 20 }}>
           {data.suggestions.map((s, i) => (
-            <li key={i} style={{ marginBottom: 8, fontSize: 13, color: '#334155' }}>{s}</li>
+            <li key={i} className="report-suggestion-item" style={{ marginBottom: 8, fontSize: 13 }}>{s}</li>
           ))}
         </ul>
-        <div style={{ marginTop: 8, padding: 12, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 12, color: '#5a6472' }}>
+        <div className="report-tip-box" style={{ marginTop: 8, padding: 12, borderRadius: 8, fontSize: 12 }}>
           <strong>Data & Privacy:</strong> The figures in this report are drawn directly from the data your household has entered into Hearth. This data is private to your household -- it is not visible to, or shared with, anyone outside your household's account, and it is not sold or provided to third parties. Once downloaded or emailed, this report becomes a standalone file outside the app, so please share it only with people you intend to see your household's financial information.
         </div>
       </div>
@@ -4784,6 +4796,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 onClick={() => window.location.reload()}
               >
                 <RefreshCw size={16} />
+                {updateAvailable && <span className="refresh-app-btn-badge">!</span>}
               </button>
           </div>
         </div>
