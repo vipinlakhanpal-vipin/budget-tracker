@@ -2018,12 +2018,12 @@ instead of overflowing at the unconditional 35px desktop size. */
   justify-content: space-between;
   gap: 8px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--accent);
   background: color-mix(in srgb, var(--accent) 8%, var(--card));
   border-radius: 6px;
-  padding: 8px 12px;
+  padding: 10px 14px;
   margin-bottom: 8px;
   user-select: none;
 }
@@ -2032,6 +2032,7 @@ instead of overflowing at the unconditional 35px desktop size. */
 }
 .report-toggle-chevron {
   display: inline-block;
+  flex-shrink: 0;
   transition: transform .15s ease;
 }
 .report-toggle-chevron-open {

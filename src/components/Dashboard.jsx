@@ -3579,7 +3579,7 @@ function ReportHtmlView({ data }) {
           tabIndex={0}
         >
           <span>{showExpenseDetail ? 'Hide' : 'Show'} {data.rangeExpenses.length} transactions ({fmt(data.expenseTotal)})</span>
-          <span className={`report-toggle-chevron${showExpenseDetail ? ' report-toggle-chevron-open' : ''}`}>&#9662;</span>
+          <ChevronDown size={22} strokeWidth={2.75} className={`report-toggle-chevron${showExpenseDetail ? ' report-toggle-chevron-open' : ''}`} />
         </div>
         {showExpenseDetail && (
         <div className="table-scroll" style={{ marginBottom: 24 }}>
