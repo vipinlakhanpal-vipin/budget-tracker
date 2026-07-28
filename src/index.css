@@ -101,10 +101,13 @@ html {
      instead of one single font-size for all text. */
   font-family: 'Nunito', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
+html {
+  overscroll-behavior-y: none;
+}
 body {
   margin: 0; font-family: inherit; font-weight: 300;
   background: var(--bg); color: var(--text);
-  overscroll-behavior-y: contain;
+  overscroll-behavior-y: none;
 }
 button, input, select, textarea { font-family: inherit; }
 .center-screen {
@@ -673,7 +676,14 @@ button, input, select, textarea { font-family: inherit; }
    it's stuck; sticky naturally closes the gap from .wrap's own top padding
    as the page scrolls, so no extra margin trick is needed for that. */
 .sticky-dashboard-frame {
-  position: sticky; top: 0; z-index: 60;
+  /* v1.39: top:0 let this stick (and, during iOS's elastic overscroll
+     bounce, briefly overshoot) right up to the physical top edge of the
+     screen -- which is UNDER the status bar/notch in a standalone PWA
+     (viewport-fit=cover draws the app full-bleed there on purpose, see
+     index.html). Sticking to the safe-area inset instead means the header
+     can never rest, or bounce, above the status bar -- exactly the "logo
+     and title get covered by the clock/battery" bug reported on iPhone. */
+  position: sticky; top: env(safe-area-inset-top); z-index: 60;
   background: var(--bg); overflow-x: clip; overflow-y: visible;
   padding-bottom: 4px;
 }
