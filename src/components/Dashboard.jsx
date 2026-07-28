@@ -1160,6 +1160,15 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   // set/review a different month's budget without leaving the tab.
   const [budgetMonthDraft, setBudgetMonthDraft] = useState(() => monthKey(currentMonth));
   const [totalBudgetDraft, setTotalBudgetDraft] = useState('');
+  // Opt-in per-user privacy: a member can mark their own income/expense/
+  // fixed-expense/savings entries private so only they (not the rest of
+  // the household) can see them. These four just hold the checkbox state
+  // for each add-form; myPrivacyEnabled (below, near commitMyDetailsField)
+  // gates whether the checkbox even renders.
+  const [expenseIsPrivate, setExpenseIsPrivate] = useState(false);
+  const [incomeIsPrivate, setIncomeIsPrivate] = useState(false);
+  const [recurringIsPrivate, setRecurringIsPrivate] = useState(false);
+  const [savingIsPrivate, setSavingIsPrivate] = useState(false);
 
   const [newRecurring, setNewRecurring] = useState({
     name: '',
@@ -1276,6 +1285,20 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   // a background refresh interrupting typing; the realtime subscription
   // still keeps everything else (other users' edits) in sync in the
   // background.
+  const myMemberRow = members.find((m) => m.email?.toLowerCase() === session.user.email.toLowerCase());
+  const myPrivacyEnabled = !!myMemberRow?.privacy_enabled;
+
+  async function togglePrivacyEnabled(next) {
+    const mine = members.find((m) => m.email?.toLowerCase() === session.user.email.toLowerCase());
+    if (!mine) return;
+    const { error } = await supabase.from('household_members').update({ privacy_enabled: next }).eq('id', mine.id);
+    if (error) {
+      alert('Could not save: ' + error.message);
+      return;
+    }
+    setMembers((prev) => prev.map((m) => (m.id === mine.id ? { ...m, privacy_enabled: next } : m)));
+  }
+
   async function commitMyDetailsField(field, value) {
     const mine = members.find((m) => m.email?.toLowerCase() === session.user.email.toLowerCase());
     if (!mine) return;
@@ -1948,6 +1971,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       notes: form.notes.trim() || null,
       created_by: session.user.id,
       created_by_email: session.user.email,
+      ...(myPrivacyEnabled ? { is_private: expenseIsPrivate } : {}),
     }).select().single();
     if (error) {
       alert('Could not save expense: ' + error.message);
@@ -2525,6 +2549,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       payment_bank: CARD_PAYMENT_SOURCES.includes(newRecurring.paymentSource) ? (newRecurring.paymentBank || null) : null,
       notes: newRecurring.notes.trim() || null,
       created_by: session.user.id,
+      ...(myPrivacyEnabled ? { is_private: recurringIsPrivate } : {}),
     }).select().single();
     if (error) {
       alert('Could not save fixed expense: ' + error.message);
@@ -2593,6 +2618,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       end_date: null,
       notes: newSaving.notes.trim() || null,
       created_by: session.user.id,
+      ...(myPrivacyEnabled ? { is_private: savingIsPrivate } : {}),
     }).select().single();
     if (error) {
       alert('Could not save: ' + error.message);
@@ -2742,6 +2768,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       end_date: null,
       notes: newIncome.notes.trim() || null,
       created_by: session.user.id,
+      ...(myPrivacyEnabled ? { is_private: incomeIsPrivate } : {}),
     }).select().single();
     if (error) {
       alert('Could not save income: ' + error.message);
@@ -3795,6 +3822,21 @@ function ReportHtmlView({ data }) {
                     </div>
                   </div>
                   <div className="muted-small" style={{ marginTop: 4 }}>Changes save automatically. Use this to fill in or fix your own info, including for accounts created before this field existed.</div>
+                </div>
+
+                <div className="my-details-box" style={{ marginBottom: 18, padding: 12, border: '1px solid var(--border)', borderRadius: 8 }}>
+                  <div className="muted-small" style={{ fontWeight: 600, marginBottom: 8 }}>Private entries</div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={myPrivacyEnabled}
+                      onChange={(e) => togglePrivacyEnabled(e.target.checked)}
+                    />
+                    Let me mark my own entries as private
+                  </label>
+                  <div className="muted-small" style={{ marginTop: 4 }}>
+                    Off by default. Once on, a "Private" option appears when you add an income, expense, fixed expense, or savings entry -- those entries are visible only to you, not the rest of the household (they're still excluded from what others see, including shared totals).
+                  </div>
                 </div>
 
                 <div className="muted-small" style={{ marginBottom: 4, fontWeight: 600 }}>
@@ -5093,7 +5135,13 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     style={{ display: 'none' }}
                     onChange={(e) => handleAttachmentPick(e.target.files, setExpenseFiles)}
                   />
-                  <button className="btn" type="submit" style={{ height: 40, flex: '0 0 auto' }}>Add</button>
+                  {myPrivacyEnabled && (
+                  <label className="muted-small" style={{ display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }} title="Only you will be able to see this entry">
+                    <input type="checkbox" checked={expenseIsPrivate} onChange={(e) => setExpenseIsPrivate(e.target.checked)} />
+                    Private
+                  </label>
+                )}
+                <button className="btn" type="submit" style={{ height: 40, flex: '0 0 auto' }}>Add</button>
                 </div>
               </div>
             </div>
@@ -5212,7 +5260,13 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     style={{ display: 'none' }}
                     onChange={(e) => handleAttachmentPick(e.target.files, setIncomeFiles)}
                   />
-                  <button className="btn" type="submit" style={{ height: 40, flex: '0 0 auto' }}>Add</button>
+                  {myPrivacyEnabled && (
+                  <label className="muted-small" style={{ display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }} title="Only you will be able to see this entry">
+                    <input type="checkbox" checked={incomeIsPrivate} onChange={(e) => setIncomeIsPrivate(e.target.checked)} />
+                    Private
+                  </label>
+                )}
+                <button className="btn" type="submit" style={{ height: 40, flex: '0 0 auto' }}>Add</button>
                 </div>
               </div>
             </div>
@@ -5640,7 +5694,13 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     style={{ display: 'none' }}
                     onChange={(e) => handleAttachmentPick(e.target.files, setRecurringFiles)}
                   />
-                  <button className="btn" type="submit" style={{ height: 40, flex: '0 0 auto' }}>Add</button>
+                  {myPrivacyEnabled && (
+                  <label className="muted-small" style={{ display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }} title="Only you will be able to see this entry">
+                    <input type="checkbox" checked={recurringIsPrivate} onChange={(e) => setRecurringIsPrivate(e.target.checked)} />
+                    Private
+                  </label>
+                )}
+                <button className="btn" type="submit" style={{ height: 40, flex: '0 0 auto' }}>Add</button>
                 </div>
               </div>
             </div>
@@ -6168,7 +6228,13 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     style={{ display: 'none' }}
                     onChange={(e) => handleAttachmentPick(e.target.files, setSavingFiles)}
                   />
-                  <button className="btn" type="submit" style={{ height: 40, flex: '0 0 auto' }}>Add</button>
+                  {myPrivacyEnabled && (
+                  <label className="muted-small" style={{ display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }} title="Only you will be able to see this entry">
+                    <input type="checkbox" checked={savingIsPrivate} onChange={(e) => setSavingIsPrivate(e.target.checked)} />
+                    Private
+                  </label>
+                )}
+                <button className="btn" type="submit" style={{ height: 40, flex: '0 0 auto' }}>Add</button>
                 </div>
               </div>
             </div>
