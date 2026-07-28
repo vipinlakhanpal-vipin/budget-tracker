@@ -1224,6 +1224,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   const [reportEmail, setReportEmail] = useState('');
   const [reportStatus, setReportStatus] = useState('');
   const [reportPreviewOpen, setReportPreviewOpen] = useState(false);
+  const [reportInfoOpen, setReportInfoOpen] = useState(false); // v1.29: mobile-only collapsible report description toggle
   // Tracks the current blob: URL used for the on-screen preview so it can be
   // revoked (freeing memory) whenever a new one is generated or the
   // component unmounts.
@@ -3502,7 +3503,7 @@ const labelMaxLen = chartRows.length > 18 ? 12 : 15;
 function ReportHtmlView({ data }) {
     if (!data) return null;
     return (
-      <div style={{ padding: 20, maxHeight: 'min(80vh, 1400px)', overflowY: 'auto' }}>
+      <div className="report-preview" style={{ padding: 20, maxHeight: 'min(80vh, 1400px)', overflowY: 'auto' }}>
         <h4 style={{ marginTop: 0 }}>Summary</h4>
         <table className="responsive-table" style={{ marginBottom: 24 }}>
           <tbody>
@@ -6878,7 +6879,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             {/* "Report" itself renders as a page-level centered title (see
                 the !inputTab block near the month nav) instead of cramped
                 inside this narrow content-grid column. */}
-            <div className="row" style={{ marginBottom: 12 }}>
+            <div className="row report-daterow" style={{ marginBottom: 12 }}>
               <div className="field">
                 <label>From</label>
                 <input
@@ -6895,11 +6896,20 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   onChange={(e) => { setReportTo(e.target.value); setReportDoc(null); setReportStatus(''); setReportPreviewOpen(false); }}
                 />
               </div>
+              <button
+                type="button"
+                className="report-info-btn"
+                aria-label="About this report"
+                title="About this report"
+                onClick={() => setReportInfoOpen((v) => !v)}
+              >
+                {'\u24D8'}
+              </button>
               <div className="field" style={{ justifyContent: 'flex-end' }}>
                 <button className="btn secondary small" onClick={handleGenerateReport}>Generate report</button>
               </div>
             </div>
-            <div className="muted-small" style={{ marginBottom: 12 }}>Generate a PDF for a date range, then view it on screen, download it, or email it. Category Breakdown and Summary share a page unless the chart runs long; Income, Expenses, Fixed Expenses, Savings, Spend Analysis, and Recommendations each get their own dedicated page. Tables auto-shrink to try to fit one page before flowing onto a second.<br /><br /><strong>What's New</strong> (Jul 23, 2026): Fixed Expenses now suggests a Category automatically as you type the Description, just like Regular Expenses, and Amount/month now comes before Category to match. The Fixed Expenses and Savings "Name" fields are now called "Description" for consistency. Aria's greeting is personalized and her chat window no longer gets hidden behind the page. Hovering the Aria icon now shows "Aria - Your AI Assistant".</div>
+            <div className={`muted-small report-desc${reportInfoOpen ? ' is-open' : ''}`} style={{ marginBottom: 12 }}>Generate a PDF for a date range, then view it on screen, download it, or email it. Category Breakdown and Summary share a page unless the chart runs long; Income, Expenses, Fixed Expenses, Savings, Spend Analysis, and Recommendations each get their own dedicated page. Tables auto-shrink to try to fit one page before flowing onto a second.<br /><br /><strong>What's New</strong> (Jul 23, 2026): Fixed Expenses now suggests a Category automatically as you type the Description, just like Regular Expenses, and Amount/month now comes before Category to match. The Fixed Expenses and Savings "Name" fields are now called "Description" for consistency. Aria's greeting is personalized and her chat window no longer gets hidden behind the page. Hovering the Aria icon now shows "Aria - Your AI Assistant".</div>
 
             {reportDoc && (
               <div style={{ marginTop: 8 }}>

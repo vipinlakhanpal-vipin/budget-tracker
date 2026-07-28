@@ -2391,3 +2391,75 @@ row. */
 @media (max-width: 640px) {
   .tour-tooltip { padding: 14px 16px; }
 }
+
+
+/* ---- v1.29: Report tab mobile-only redesign ----
+   1) Collapse the long "Generate a PDF..." description behind a small (i)
+      icon button placed next to the From/To date fields, instead of always
+      showing several lines of text under the Generate button. Desktop is
+      unaffected: .report-info-btn stays display:none outside the mobile
+      media query below, so .report-desc keeps rendering unconditionally
+      there.
+   2) Put From/To date fields on one row on mobile -- narrow native date
+      inputs can sit side by side even on a phone, unlike the wider
+      text/select field-pairs elsewhere that had to be stacked.
+   3) On the on-screen report preview only (.report-preview, shown by
+      "View on screen"), lay each responsive-table's rows out as a 2-per-row
+      grid of smaller cards on mobile instead of one full-width card per
+      row, per explicit request to shrink the report "tiles". Scoped to
+      .report-preview so the editable Income/Expenses/etc. data-entry
+      tables elsewhere are untouched. The Pareto "Where Your Money Goes"
+      bar chart stays full-width since it's a comparative bar chart, not a
+      list of tiles. */
+.report-info-btn { display: none; }
+
+@media (max-width: 640px), (pointer: coarse) and (hover: none) and (max-width: 1366px) {
+  .report-daterow > .field:nth-child(1),
+  .report-daterow > .field:nth-child(2) {
+    min-width: 0 !important;
+    flex: 1 1 0 !important;
+  }
+  .report-daterow > .field:last-child {
+    min-width: 100% !important;
+    flex: 1 1 100% !important;
+  }
+  .report-info-btn {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 auto;
+    margin-bottom: 2px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--accent);
+    font-size: 18px;
+    line-height: 1;
+  }
+  .report-desc { display: none; }
+  .report-desc.is-open { display: block; margin-top: -4px; }
+}
+
+@media (max-width: 720px) {
+  .report-preview table.responsive-table tbody {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .report-preview table.responsive-table tr {
+    margin-bottom: 0;
+    padding: 10px 12px 8px;
+    border-radius: 10px;
+  }
+  .report-preview table.responsive-table td {
+    padding: 4px 0;
+    font-size: 11.5px;
+  }
+  .report-preview table.responsive-table td[data-label]::before {
+    font-size: 9.5px;
+    margin-bottom: 3px;
+  }
+}
