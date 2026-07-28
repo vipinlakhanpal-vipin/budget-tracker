@@ -1553,6 +1553,44 @@ td.amount { font-weight: 600; text-align: right; }
   background: linear-gradient(160deg, #eff6ff, #ffffff);
   border-color: #bfdbfe;
 }
+
+/* Every editable table-cell field above (Name/Description text inputs,
+   Category/Repeats/Payment/Bank dropdowns, date/month fields) only ever
+   got a light pastel gradient background -- fine in light mode, but with
+   no color set explicitly the text inherits the app's dark-mode --text
+   (white), so white-on-near-white made every value in every list
+   essentially unreadable in dark mode. This is almost certainly the real
+   cause behind "values don't show in dark mode" -- not just on the
+   desktop app, this was broken in the regular browser and on mobile too,
+   just easy to miss since the add-form fields above each table (which
+   already use var(--card)/var(--text)) looked fine. Re-tints each field
+   type for dark mode using the same accent hues, mixed into the dark
+   card color instead of white, and sets explicit light text. */
+[data-mode="dark"] .table-scroll table td input[type="text"] {
+  background: color-mix(in srgb, var(--accent) 16%, var(--card));
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--card));
+  color: var(--text);
+}
+[data-mode="dark"] .table-scroll table td select {
+  background: color-mix(in srgb, var(--accent2) 18%, var(--card));
+  border-color: color-mix(in srgb, var(--accent2) 45%, var(--card));
+  color: var(--text);
+}
+[data-mode="dark"] .table-scroll table td[data-label="Payment"] select {
+  background: color-mix(in srgb, #f59e0b 18%, var(--card));
+  border-color: color-mix(in srgb, #f59e0b 45%, var(--card));
+  color: var(--text);
+}
+[data-mode="dark"] .table-scroll table td input[type="date"],
+[data-mode="dark"] .table-scroll table td input[type="month"] {
+  background: color-mix(in srgb, var(--accent2) 12%, var(--card));
+  border-color: color-mix(in srgb, var(--accent2) 35%, var(--card));
+  color: var(--text);
+}
+[data-mode="dark"] .table-scroll table td input:focus,
+[data-mode="dark"] .table-scroll table td select:focus {
+  background: var(--card);
+}
 .table-scroll table td input:hover,
 .table-scroll table td select:hover {
   border-color: #a9d9d5;
