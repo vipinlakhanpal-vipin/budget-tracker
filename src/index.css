@@ -2583,40 +2583,26 @@ row. */
    animation together with its own tab-heartbeat scale pulse (see above) so
    the currently-open tab both pulses AND has the line scrolling under it. */
 .header-tab-btn {
-  /* v1.42: the infinity symbol now orbits in a small circle behind the
-     tab label instead of scrolling across it, per explicit follow-up
-     request. Implemented as a ::before pseudo-element travelling a
-     circular CSS motion path (offset-path) -- a separate element from
-     the button itself, so its animation can never again compete with
-     the active-tab heartbeat pulse for the same `animation` property
-     (that was the root cause of the earlier bug; see .header-tab-btn-active). */
+  /* v1.45: replaced the orbiting infinity character with an actual
+     multi-color glowing infinity (figure-eight / lemniscate) line, drifting
+     slowly around its own loop -- matching the reference "glowing line
+     sliding in the shape of an infinity symbol" look the user pointed to,
+     recolored with the app's own accent palette (cyan/purple/pink/green/
+     amber, same family as the old equalizer bars) instead of a single
+     color. This is a static SVG background-image whose motion comes from
+     a SMIL <animate> tag on stroke-dashoffset inside the SVG itself --
+     SMIL keeps animating even though it's "just" a background-image,
+     which is what makes a moving background possible here without any
+     JS or inline SVG markup in Dashboard.jsx. Note .header-tab-btn no
+     longer declares its own `animation` property at all (the motion
+     lives inside the image now), so it can never again compete with
+     .header-tab-btn-active's heartbeat pulse for that property -- the
+     root cause of the very first version of this bug is now
+     structurally impossible, not just avoided. */
   position: relative;
   overflow: hidden;
-}
-.header-tab-btn::before {
-  /* v1.44: bigger symbol on a wider, flatter (ellipse, not circle) orbit
-     so it visibly sweeps around the full width of the tab label instead
-     of staying small and centered behind it -- per explicit follow-up
-     feedback that the first pass read as "tiny" and didn't feel like it
-     was circling the title. overflow:hidden on .header-tab-btn clips it
-     cleanly at the button edge on narrower tabs (Help, Settings) instead
-     of spilling into neighboring buttons. */
-  content: '\221E';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  font-size: 20px;
-  line-height: 1;
-  color: rgba(255,255,255,0.45);
-  z-index: -1;
-  pointer-events: none;
-  offset-path: ellipse(38px 15px at center);
-  offset-rotate: 0deg;
-  animation: header-tab-infinity-orbit 4.5s linear infinite;
-}
-@keyframes header-tab-infinity-orbit {
-  from { offset-distance: 0%; }
-  to   { offset-distance: 100%; }
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-100 -50 200 100'%3E%3Cdefs%3E%3ClinearGradient id='g' gradientUnits='userSpaceOnUse' x1='-90' y1='0' x2='90' y2='0'%3E%3Cstop offset='0' stop-color='%237dd3fc'/%3E%3Cstop offset='0.25' stop-color='%23a78bfa'/%3E%3Cstop offset='0.5' stop-color='%23f472b6'/%3E%3Cstop offset='0.75' stop-color='%2386efac'/%3E%3Cstop offset='1' stop-color='%23fde047'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M 85.0 0.0 L 84.4 5.9 L 82.6 11.5 L 79.7 16.6 L 75.9 20.9 L 71.5 24.5 L 66.6 27.1 L 61.5 28.9 L 56.3 29.8 L 51.1 30.0 L 46.1 29.6 L 41.2 28.6 L 36.6 27.2 L 32.3 25.4 L 28.2 23.4 L 24.3 21.0 L 20.6 18.5 L 17.1 15.9 L 13.8 13.1 L 10.6 10.3 L 7.5 7.4 L 4.5 4.4 L 1.5 1.5 L -1.5 -1.5 L -4.5 -4.4 L -7.5 -7.4 L -10.6 -10.3 L -13.8 -13.1 L -17.1 -15.9 L -20.6 -18.5 L -24.3 -21.0 L -28.2 -23.4 L -32.3 -25.4 L -36.6 -27.2 L -41.2 -28.6 L -46.1 -29.6 L -51.1 -30.0 L -56.3 -29.8 L -61.5 -28.9 L -66.6 -27.1 L -71.5 -24.5 L -75.9 -20.9 L -79.7 -16.6 L -82.6 -11.5 L -84.4 -5.9 L -85.0 -0.0 L -84.4 5.9 L -82.6 11.5 L -79.7 16.6 L -75.9 20.9 L -71.5 24.5 L -66.6 27.1 L -61.5 28.9 L -56.3 29.8 L -51.1 30.0 L -46.1 29.6 L -41.2 28.6 L -36.6 27.2 L -32.3 25.4 L -28.2 23.4 L -24.3 21.0 L -20.6 18.5 L -17.1 15.9 L -13.8 13.1 L -10.6 10.3 L -7.5 7.4 L -4.5 4.4 L -1.5 1.5 L 1.5 -1.5 L 4.5 -4.4 L 7.5 -7.4 L 10.6 -10.3 L 13.8 -13.1 L 17.1 -15.9 L 20.6 -18.5 L 24.3 -21.0 L 28.2 -23.4 L 32.3 -25.4 L 36.6 -27.2 L 41.2 -28.6 L 46.1 -29.6 L 51.1 -30.0 L 56.3 -29.8 L 61.5 -28.9 L 66.6 -27.1 L 71.5 -24.5 L 75.9 -20.9 L 79.7 -16.6 L 82.6 -11.5 L 84.4 -5.9 L 85.0 -0.0' pathLength='100' fill='none' stroke='%23ffffff' stroke-opacity='0.15' stroke-width='2'/%3E%3Cpath d='M 85.0 0.0 L 84.4 5.9 L 82.6 11.5 L 79.7 16.6 L 75.9 20.9 L 71.5 24.5 L 66.6 27.1 L 61.5 28.9 L 56.3 29.8 L 51.1 30.0 L 46.1 29.6 L 41.2 28.6 L 36.6 27.2 L 32.3 25.4 L 28.2 23.4 L 24.3 21.0 L 20.6 18.5 L 17.1 15.9 L 13.8 13.1 L 10.6 10.3 L 7.5 7.4 L 4.5 4.4 L 1.5 1.5 L -1.5 -1.5 L -4.5 -4.4 L -7.5 -7.4 L -10.6 -10.3 L -13.8 -13.1 L -17.1 -15.9 L -20.6 -18.5 L -24.3 -21.0 L -28.2 -23.4 L -32.3 -25.4 L -36.6 -27.2 L -41.2 -28.6 L -46.1 -29.6 L -51.1 -30.0 L -56.3 -29.8 L -61.5 -28.9 L -66.6 -27.1 L -71.5 -24.5 L -75.9 -20.9 L -79.7 -16.6 L -82.6 -11.5 L -84.4 -5.9 L -85.0 -0.0 L -84.4 5.9 L -82.6 11.5 L -79.7 16.6 L -75.9 20.9 L -71.5 24.5 L -66.6 27.1 L -61.5 28.9 L -56.3 29.8 L -51.1 30.0 L -46.1 29.6 L -41.2 28.6 L -36.6 27.2 L -32.3 25.4 L -28.2 23.4 L -24.3 21.0 L -20.6 18.5 L -17.1 15.9 L -13.8 13.1 L -10.6 10.3 L -7.5 7.4 L -4.5 4.4 L -1.5 1.5 L 1.5 -1.5 L 4.5 -4.4 L 7.5 -7.4 L 10.6 -10.3 L 13.8 -13.1 L 17.1 -15.9 L 20.6 -18.5 L 24.3 -21.0 L 28.2 -23.4 L 32.3 -25.4 L 36.6 -27.2 L 41.2 -28.6 L 46.1 -29.6 L 51.1 -30.0 L 56.3 -29.8 L 61.5 -28.9 L 66.6 -27.1 L 71.5 -24.5 L 75.9 -20.9 L 79.7 -16.6 L 82.6 -11.5 L 84.4 -5.9 L 85.0 -0.0' pathLength='100' fill='none' stroke='url(%23g)' stroke-width='7' stroke-linecap='round' opacity='0.35' stroke-dasharray='32 68'%3E%3Canimate attributeName='stroke-dashoffset' from='0' to='-100' dur='7s' repeatCount='indefinite'/%3E%3C/path%3E%3Cpath d='M 85.0 0.0 L 84.4 5.9 L 82.6 11.5 L 79.7 16.6 L 75.9 20.9 L 71.5 24.5 L 66.6 27.1 L 61.5 28.9 L 56.3 29.8 L 51.1 30.0 L 46.1 29.6 L 41.2 28.6 L 36.6 27.2 L 32.3 25.4 L 28.2 23.4 L 24.3 21.0 L 20.6 18.5 L 17.1 15.9 L 13.8 13.1 L 10.6 10.3 L 7.5 7.4 L 4.5 4.4 L 1.5 1.5 L -1.5 -1.5 L -4.5 -4.4 L -7.5 -7.4 L -10.6 -10.3 L -13.8 -13.1 L -17.1 -15.9 L -20.6 -18.5 L -24.3 -21.0 L -28.2 -23.4 L -32.3 -25.4 L -36.6 -27.2 L -41.2 -28.6 L -46.1 -29.6 L -51.1 -30.0 L -56.3 -29.8 L -61.5 -28.9 L -66.6 -27.1 L -71.5 -24.5 L -75.9 -20.9 L -79.7 -16.6 L -82.6 -11.5 L -84.4 -5.9 L -85.0 -0.0' pathLength='100' fill='none' stroke='url(%23g)' stroke-width='3' stroke-linecap='round' stroke-dasharray='32 68'%3E%3Canimate attributeName='stroke-dashoffset' from='0' to='-100' dur='7s' repeatCount='indefinite'/%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 64px 32px;
 }
