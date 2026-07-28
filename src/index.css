@@ -2502,4 +2502,19 @@ row. */
   .report-preview table.responsive-table tr.report-total-row td:last-child {
     flex: 0 0 auto;
   }
+  /* v1.33: the tfoot-based Total rows (Income/Expenses/Fixed Expenses/
+     Savings) were only as wide as their own content, not the full row --
+     because the table's display is forced to block for the mobile card
+     layout, but only "table" and "tbody" get width:100% in the base rule
+     above, not "tfoot". Blockify tfoot explicitly and give the total row
+     itself an explicit full width so it stretches edge to edge exactly
+     like every other row. */
+  .report-preview table.responsive-table tfoot {
+    display: block;
+    width: 100%;
+  }
+  .report-preview table.responsive-table tr.report-total-row {
+    width: 100%;
+    box-sizing: border-box;
+  }
 }
