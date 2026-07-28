@@ -29,6 +29,7 @@ export default function AdminConsole({ onClose, embedded = false }) {
   const [allUsersError, setAllUsersError] = useState('');
   const [deletingEmail, setDeletingEmail] = useState('');
   const [insightLoadingEmail, setInsightLoadingEmail] = useState('');
+  const [resettingEmail, setResettingEmail] = useState('');
 
   useEffect(() => {
     loadHouseholds();
@@ -128,6 +129,39 @@ export default function AdminConsole({ onClose, embedded = false }) {
       alert('Could not get insights: ' + (e.message || 'unknown error'));
     } finally {
       setInsightLoadingEmail('');
+    }
+  }
+
+  async function handleResetPassword(u) {
+    if (!u.userId) return;
+    const typed = window.prompt(
+      `Enter a new password for ${u.email} (at least 8 characters), or leave this blank to auto-generate one:`
+    );
+    if (typed === null) return;
+    const trimmed = typed.trim();
+    if (trimmed && trimmed.length < 8) {
+      alert('Password must be at least 8 characters. Leave it blank to auto-generate one instead.');
+      return;
+    }
+    if (!window.confirm(`Reset the password for ${u.email}? Their current password will stop working immediately.`)) return;
+    setResettingEmail(u.email);
+    try {
+      const headers = { 'Content-Type': 'application/json', ...(await authHeader()) };
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ action: 'resetPassword', userId: u.userId, newPassword: trimmed || undefined }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert('Could not reset password: ' + (json.error || 'unknown error'));
+        return;
+      }
+      alert(`Password reset for ${u.email}.\n\nNew password: ${json.password}\n\nShare this with them directly -- it won't be shown again.`);
+    } catch (e) {
+      alert('Could not reset password: ' + (e.message || 'unknown error'));
+    } finally {
+      setResettingEmail('');
     }
   }
 
@@ -252,7 +286,7 @@ export default function AdminConsole({ onClose, embedded = false }) {
                   {successfulUsers.length} successful signup{successfulUsers.length === 1 ? '' : 's'} -- {unsuccessfulUsers.length} unsuccessful / pending
                 </div>
 
-                <UserGroup title="Successful signups" users={successfulUsers} onDelete={handleDeleteUser} deletingEmail={deletingEmail} onInsights={handleGetInsights} insightLoadingEmail={insightLoadingEmail} />
+                <UserGroup title="Successful signups" users={successfulUsers} onDelete={handleDeleteUser} deletingEmail={deletingEmail} onInsights={handleGetInsights} insightLoadingEmail={insightLoadingEmail} onResetPassword={handleResetPassword} resettingEmail={resettingEmail} />
                 <UserGroup title="Unsuccessful / pending" users={unsuccessfulUsers} onDelete={handleDeleteUser} deletingEmail={deletingEmail} />
               </>
             )}
@@ -267,7 +301,7 @@ export default function AdminConsole({ onClose, embedded = false }) {
   );
 }
 
-function UserGroup({ title, users, onDelete, deletingEmail, onInsights, insightLoadingEmail }) {
+function UserGroup({ title, users, onDelete, deletingEmail, onInsights, insightLoadingEmail, onResetPassword, resettingEmail }) {
   if (!users.length) return null;
   return (
     <div style={{ marginBottom: 18 }}>
@@ -306,6 +340,16 @@ function UserGroup({ title, users, onDelete, deletingEmail, onInsights, insightL
                         disabled={!u.userId || insightLoadingEmail === u.email}
                       >
                         {insightLoadingEmail === u.email ? 'Thinking...' : 'AI Insights'}
+                      </button>
+                    )}
+                    {onResetPassword && (
+                      <button
+                        type="button"
+                        className="btn secondary small"
+                        onClick={() => onResetPassword(u)}
+                        disabled={!u.userId || resettingEmail === u.email}
+                      >
+                        {resettingEmail === u.email ? 'Resetting...' : 'Reset Password'}
                       </button>
                     )}
                     <button

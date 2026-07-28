@@ -9,7 +9,9 @@ import { createAdminClient, requireAdmin } from './_auth.js';
 export default async function handler(req, res) {
   if (req.method === 'GET') return listUsers(req, res);
   if (req.method === 'POST') {
-    if ((req.body || {}).action === 'insights') return getInsights(req, res);
+    const action = (req.body || {}).action;
+    if (action === 'insights') return getInsights(req, res);
+    if (action === 'resetPassword') return resetPassword(req, res);
     return deleteUser(req, res);
   }
   return res.status(405).json({ error: 'Method not allowed' });
@@ -277,5 +279,43 @@ async function getInsights(req, res) {
   } catch (e) {
     console.error('getInsights failed:', e);
     return res.status(500).json({ error: e.message || 'Could not generate insights' });
+  }
+}
+
+
+// Powers the "Reset Password" button in the Admin Console's Users tab.
+// Vipin explicitly asked for admin-set passwords (not a self-service
+// "email a reset link" flow), so this sets the password directly via the
+// Supabase service-role Admin API and hands the plaintext value back in
+// the response once so it can be shared with the user -- it is never
+// stored or logged anywhere.
+function generatePassword() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+  let pwd = '';
+  for (let i = 0; i < 12; i++) pwd += chars[Math.floor(Math.random() * chars.length)];
+  return pwd;
+}
+
+async function resetPassword(req, res) {
+  try {
+    await requireAdmin(req);
+  } catch (e) {
+    return res.status(e.status || 401).json({ error: e.message });
+  }
+  const { userId, newPassword } = req.body || {};
+  if (!userId) {
+    return res.status(400).json({ error: 'userId is required' });
+  }
+  const password = (newPassword && newPassword.trim()) || generatePassword();
+  if (password.length < 8) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters' });
+  }
+  const admin = createAdminClient();
+  try {
+    const { error } = await admin.auth.admin.updateUserById(userId, { password });
+    if (error) throw error;
+    res.status(200).json({ ok: true, password });
+  } catch (e) {
+    res.status(500).json({ error: e.message || 'Could not reset password' });
   }
 }
