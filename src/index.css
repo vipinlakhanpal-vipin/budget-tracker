@@ -814,9 +814,9 @@ sitting duplicated under the summary cards. */
    so picking a different color theme also recolors the active tab instead
    of leaving it stuck on teal -- per explicit bug report. */
 .header-tab-btn-active {
-  background: var(--accent-active);
+  background-color: var(--accent-active);
   box-shadow: inset 0 0 0 2px rgba(255,255,255,.55);
-  animation: tab-heartbeat 3.2s ease-in-out infinite;
+  animation: tab-heartbeat 3.2s ease-in-out infinite, header-tab-ecg-scroll 2.6s linear infinite;
 }
 /* Shared "heartbeat" pulse -- same 3.2s ease-in-out rhythm as the Hearth
    logo's own breathing sphere (hearth-family-breathe, defined further
@@ -2552,4 +2552,29 @@ row. */
     font-size: 10.5px;
     padding: 4px 6px;
   }
+}
+
+
+/* v1.36: light ECG/heart-monitor waveform scrolling behind the desktop
+   header tabs (Income/Fixed Expenses/Regular Expenses/Savings/Report/etc,
+   .header-tab-btn) -- a small extension of the existing "heartbeat" theme
+   (tab-heartbeat, hearth-family-breathe elsewhere in this file). Pure CSS:
+   a repeating SVG line tile as a second background-image layer (so it sits
+   behind the button's text/icon automatically, since background-image is
+   always painted before a box's normal content, no z-index needed), scrolled
+   via animated background-position. .header-tab-btn-active layers this
+   animation together with its own tab-heartbeat scale pulse (see above) so
+   the currently-open tab both pulses AND has the line scrolling under it. */
+.header-tab-btn {
+  position: relative;
+  overflow: hidden;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='40' viewBox='0 0 90 40'%3E%3Cpath d='M0 20 L20 20 L24 10 L28 30 L32 4 L36 34 L40 20 L55 20 L59 14 L63 24 L67 20 L90 20' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linejoin='round' stroke-linecap='round' stroke-opacity='0.45'/%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  background-position: 0 center;
+  background-size: 90px 20px;
+  animation: header-tab-ecg-scroll 2.6s linear infinite;
+}
+@keyframes header-tab-ecg-scroll {
+  from { background-position: 0 center; }
+  to   { background-position: -90px center; }
 }
