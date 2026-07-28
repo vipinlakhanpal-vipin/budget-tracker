@@ -2444,18 +2444,22 @@ row. */
 }
 
 @media (max-width: 720px) {
-  /* v1.30: single field per row (not the earlier 2-column grid) but each
-     row slimmed way down -- label and value sit on one line instead of
-     stacking onto two, so far more rows are visible at a glance without
-     scrolling. Safe to put label+value on one line here (unlike the
-     editable data-entry tables elsewhere) because every report row is a
-     short, static text pair, not an input that needs wrapping room. */
+  /* v1.31: one field per row, single line each -- v1.30 tried label-left/
+     value-right but only handled 2-column rows (Summary); the 4-column
+     rows (Income/Expenses/Fixed Expenses: Date, Category, Description,
+     Amount) had no flex-basis on the middle columns, so the browser
+     squeezed them down to each word's min-content width and wrapped the
+     text, making rows 2-3 lines tall instead of one. Fix: every td gets
+     flex: 1 1 0 + min-width: 0 (so it can actually shrink) plus
+     nowrap/ellipsis (so it truncates instead of wrapping); the amount
+     column alone is flex: 0 0 auto so currency values are never clipped.
+     This keeps every row -- 2-column or 4-column -- to a single, slim
+     line, so far more rows are visible at a glance without scrolling. */
   .report-preview table.responsive-table tr {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 7px 12px;
+    gap: 8px;
+    padding: 6px 12px;
     margin-bottom: 5px;
     border-radius: 8px;
   }
@@ -2463,21 +2467,21 @@ row. */
     display: block;
     border: none !important;
     padding: 0;
-    font-size: 12px;
+    font-size: 11.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1 1 0;
+    min-width: 0;
   }
   .report-preview table.responsive-table td:first-child {
     color: var(--muted);
-    flex: 1 1 auto;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
   .report-preview table.responsive-table td:last-child {
-    font-weight: 700;
     flex: 0 0 auto;
+    font-weight: 700;
     text-align: right;
-    white-space: nowrap;
+    color: inherit;
   }
   .report-preview table.responsive-table td[data-label]::before {
     display: none;
