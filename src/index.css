@@ -2208,14 +2208,21 @@ row. */
   cursor: pointer; transition: background-color .15s ease, border-color .15s ease, color .15s ease;
 }
 .refresh-app-btn:hover { color: var(--accent); border-color: var(--accent); }
+/* v1.46: the "update available" state now uses --danger (a fixed red,
+   independent of the household's chosen accent color) instead of
+   --accent -- when the accent theme itself is blue/teal/whatever, a
+   button that also turns --accent-colored on update barely reads as
+   different from the rest of the header, which is exactly what made it
+   invisible. Red always contrasts with every accent choice, and reads
+   universally as "something needs your attention" regardless of theme. */
 .refresh-app-btn-new {
-  background: var(--accent); border-color: var(--accent); color: #fff;
+  background: var(--danger); border-color: var(--danger); color: #fff;
   animation: refresh-app-btn-pulse 1.6s ease-in-out infinite;
 }
 .refresh-app-btn-new:hover { color: #fff; filter: brightness(1.08); }
 @keyframes refresh-app-btn-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(13, 148, 136, .45); }
-  50% { box-shadow: 0 0 0 6px rgba(13, 148, 136, .12); }
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--danger) 55%, transparent); }
+  50% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--danger) 15%, transparent); }
 }
 @media (max-width: 640px) {
   /* On mobile the Aria icon itself is hidden (.chat-fab-btn.tab-hide-mobile
