@@ -5347,6 +5347,11 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 )}
               </div>
             </div>
+            {filteredIncomeForMonth.length > 0 && (
+              <div className="muted-small" style={{ marginTop: -4, marginBottom: 10 }}>
+                {filteredIncomeForMonth.length} {filteredIncomeForMonth.length === 1 ? 'entry' : 'entries'} &middot; Total {fmt(filteredIncomeForMonth.reduce((s, i) => s + (Number(i.amount) || 0), 0))}
+              </div>
+            )}
 
             {incomeForMonth.length === 0 ? (
               <div className="empty">No income added for {monthLabel(currentMonth)} yet.</div>
@@ -5809,6 +5814,11 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 )}
               </div>
             </div>
+            {filteredRecurringForMonth.length > 0 && (
+              <div className="muted-small" style={{ marginTop: -4, marginBottom: 10 }}>
+                {filteredRecurringForMonth.length} {filteredRecurringForMonth.length === 1 ? 'entry' : 'entries'} &middot; Total {fmt(filteredRecurringForMonth.reduce((s, r) => s + (Number(r.amount) || 0), 0))}
+              </div>
+            )}
             {recurringExpenses.length === 0 ? (
               <div className="empty">No loans, EMIs, or fixed monthly bills added yet.</div>
             ) : recurringForMonth.length === 0 ? (
@@ -6303,6 +6313,11 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 )}
               </div>
             </div>
+            {filteredSavingsForMonth.length > 0 && (
+              <div className="muted-small" style={{ marginTop: -4, marginBottom: 10 }}>
+                {filteredSavingsForMonth.length} {filteredSavingsForMonth.length === 1 ? 'entry' : 'entries'} &middot; Total {fmt(filteredSavingsForMonth.reduce((s, sv) => s + (Number(sv.amount) || 0), 0))}
+              </div>
+            )}
 
             {savingsForMonth.length === 0 ? (
               <div className="empty">No savings added for {monthLabel(currentMonth)} yet.</div>
@@ -6568,6 +6583,11 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 )}
               </div>
             </div>
+            {filteredMonthExpenses.length > 0 && (
+              <div className="muted-small" style={{ marginTop: -4, marginBottom: 10 }}>
+                {filteredMonthExpenses.length} {filteredMonthExpenses.length === 1 ? 'entry' : 'entries'} &middot; Total {fmt(filteredMonthExpenses.reduce((s, e) => s + (Number(e.amount) || 0), 0))}
+              </div>
+            )}
             {monthExpenses.length === 0 ? (
               <div className="empty">No one-off expenses logged for this month yet.</div>
             ) : filteredMonthExpenses.length === 0 ? (
