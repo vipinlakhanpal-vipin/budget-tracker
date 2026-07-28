@@ -3511,8 +3511,8 @@ function ReportHtmlView({ data }) {
             <tr><td>Total Regular Expenses</td><td style={{ textAlign: 'right' }}>{fmt(data.expenseTotal)}</td></tr>
             <tr><td>Total Fixed Expenses</td><td style={{ textAlign: 'right' }}>{fmt(data.fixedTotal)}</td></tr>
             <tr><td>Total Savings</td><td style={{ textAlign: 'right' }}>{fmt(data.savingsGoalTotal)}</td></tr>
-            <tr style={{ fontWeight: 700, background: '#f1f5f9' }}><td>Total Outflow (Expenses + Savings)</td><td style={{ textAlign: 'right' }}>{fmt(data.expenseTotal + data.fixedTotal + data.savingsGoalTotal)}</td></tr>
-            <tr style={{ fontWeight: 700, background: data.netTotal >= 0 ? '#dcfce7' : '#fee2e2', color: data.netTotal >= 0 ? '#166534' : '#991b1b' }}><td>Net (Income - Total Outflow)</td><td style={{ textAlign: 'right' }}>{fmt(data.netTotal)}</td></tr>
+            <tr className="report-total-row" style={{ fontWeight: 700, background: '#f1f5f9' }}><td>Total Outflow (Expenses + Savings)</td><td style={{ textAlign: 'right' }}>{fmt(data.expenseTotal + data.fixedTotal + data.savingsGoalTotal)}</td></tr>
+            <tr className="report-total-row" style={{ fontWeight: 700, background: data.netTotal >= 0 ? '#dcfce7' : '#fee2e2', color: data.netTotal >= 0 ? '#166534' : '#991b1b' }}><td>Net (Income - Total Outflow)</td><td style={{ textAlign: 'right' }}>{fmt(data.netTotal)}</td></tr>
           </tbody>
         </table>
         <h4>Expenses by Category</h4>
@@ -3540,7 +3540,7 @@ function ReportHtmlView({ data }) {
                 <tr key={idx}><td>{i.start_date.slice(0, 7)}</td><td>{i.name}</td><td style={{ textAlign: 'right' }}>{fmt(i.amount)}</td></tr>
               ))}
             </tbody>
-            <tfoot><tr style={{ fontWeight: 700 }}><td></td><td>Total</td><td style={{ textAlign: 'right' }}>{fmt(data.incomeTotal)}</td></tr></tfoot>
+            <tfoot><tr className="report-total-row" style={{ fontWeight: 700 }}><td></td><td>Total</td><td style={{ textAlign: 'right' }}>{fmt(data.incomeTotal)}</td></tr></tfoot>
           </table>
         </div>
         <h4>Expenses</h4>
@@ -3552,7 +3552,7 @@ function ReportHtmlView({ data }) {
                 <tr key={e.id}><td>{fmtDate(e.expense_date)}</td><td>{categoryNameById[e.category_id] || 'Uncategorized'}</td><td>{e.description || ''}</td><td style={{ textAlign: 'right' }}>{fmt(e.amount)}</td></tr>
               ))}
             </tbody>
-            <tfoot><tr style={{ fontWeight: 700 }}><td></td><td></td><td>Total</td><td style={{ textAlign: 'right' }}>{fmt(data.expenseTotal)}</td></tr></tfoot>
+            <tfoot><tr className="report-total-row" style={{ fontWeight: 700 }}><td></td><td></td><td>Total</td><td style={{ textAlign: 'right' }}>{fmt(data.expenseTotal)}</td></tr></tfoot>
           </table>
         </div>
         <h4>Fixed Expenses</h4>
@@ -3573,7 +3573,7 @@ function ReportHtmlView({ data }) {
                   </tr>
                 ))}
               </tbody>
-              <tfoot><tr style={{ fontWeight: 700 }}><td></td><td></td><td></td><td>Total</td><td style={{ textAlign: 'right' }}>{fmt(data.fixedTotal)}</td></tr></tfoot>
+              <tfoot><tr className="report-total-row" style={{ fontWeight: 700 }}><td></td><td></td><td></td><td>Total</td><td style={{ textAlign: 'right' }}>{fmt(data.fixedTotal)}</td></tr></tfoot>
             </table>
           </div>
         )}
@@ -3589,7 +3589,7 @@ function ReportHtmlView({ data }) {
                   <tr key={idx}><td>{s.occurredMonth}</td><td>{s.name}</td><td style={{ textAlign: 'right' }}>{fmt(s.amount)}</td></tr>
                 ))}
               </tbody>
-              <tfoot><tr style={{ fontWeight: 700 }}><td></td><td>Total Savings</td><td style={{ textAlign: 'right' }}>{fmt(data.savingsGoalTotal)}</td></tr></tfoot>
+              <tfoot><tr className="report-total-row" style={{ fontWeight: 700 }}><td></td><td>Total Savings</td><td style={{ textAlign: 'right' }}>{fmt(data.savingsGoalTotal)}</td></tr></tfoot>
             </table>
           </div>
         )}
@@ -3604,7 +3604,7 @@ function ReportHtmlView({ data }) {
                     <tr key={mKey}><td>{mKey}</td><td style={{ textAlign: 'right' }}>{fmt(data.perMonthSavings[mKey] || 0)}</td></tr>
                   ))}
                 </tbody>
-                <tfoot><tr style={{ fontWeight: 700 }}><td>Total</td><td style={{ textAlign: 'right' }}>{fmt(data.savingsGoalTotal)}</td></tr></tfoot>
+                <tfoot><tr className="report-total-row" style={{ fontWeight: 700 }}><td>Total</td><td style={{ textAlign: 'right' }}>{fmt(data.savingsGoalTotal)}</td></tr></tfoot>
               </table>
             </div>
           </>

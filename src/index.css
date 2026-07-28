@@ -2486,4 +2486,20 @@ row. */
   .report-preview table.responsive-table td[data-label]::before {
     display: none;
   }
+  .report-preview table.responsive-table tr.report-total-row {
+    background: color-mix(in srgb, var(--accent) 14%, var(--card));
+    border-radius: 8px;
+  }
+  .report-preview table.responsive-table tr.report-total-row td {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    flex: 1 1 auto;
+  }
+  .report-preview table.responsive-table tr.report-total-row td:empty {
+    display: none;
+  }
+  .report-preview table.responsive-table tr.report-total-row td:last-child {
+    flex: 0 0 auto;
+  }
 }
