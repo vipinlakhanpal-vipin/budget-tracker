@@ -4929,7 +4929,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
               <span className="mobile-sheet-drag" />
               <button
                 className="mobile-sheet-close"
-                onClick={() => setAddSheetOpen(false)}
+                onClick={() => { setAddSheetOpen(false); window.scrollTo({ top: 0, behavior: 'auto' }); }}
                 aria-label="Close"
               >
                 ✕
@@ -7331,33 +7331,13 @@ I can help you track expenses, understand spending patterns, create budgets, and
       )}
 
       {addSheetOpen && (
-        <div className="mobile-sheet-backdrop" onClick={() => setAddSheetOpen(false)} />
+        <div className="mobile-sheet-backdrop" onClick={() => { setAddSheetOpen(false); window.scrollTo({ top: 0, behavior: 'auto' }); }} />
       )}
 
-      {/* Mobile-only bottom navigation + floating add button (hidden on
-          desktop via CSS, see .mobile-bottom-nav / .mobile-fab in
-          index.css). This reuses the exact same state and handlers as the
-          existing top action row and input tabs -- nothing about desktop
-          changes, this just gives a phone user a thumb-reachable way to
-          jump straight to the main destinations instead of scrolling back
-          up to the top of a long page every time.
-          Only shown with no panel open (Report/Settings/Help): those panels
-          are often short, and their own action buttons (Generate report,
-          Hide on-screen report, Download...) sit at a fixed spot near the
-          bottom of the screen -- exactly where this floating button also
-          sits -- so on a short panel the two would visually overlap/collide.
-          The Add FAB isn't the primary action while reading a panel anyway;
-          the bottom-nav "Add" button still works the same via goToAdd(). */}
-      {!activePanel && (
-        <button
-          className="mobile-fab"
-          onClick={() => goToAdd('expense')}
-          aria-label="Add a regular expense"
-          title="Add a regular expense"
-        >
-          <Plus size={26} strokeWidth={2.5} />
-        </button>
-      )}
+      {/* Mobile floating Add button removed per explicit request -- it duplicated
+          the bottom-nav "Add" button (both called goToAdd()), and having two
+          entry points for the same action on screen at once was confusing.
+          The bottom-nav Add button below is now the single entry point. */}
       <nav className="mobile-bottom-nav">
         <button data-tour="nav-home" className={!activePanel && !addSheetOpen ? 'active' : ''} onClick={goToOverview}>
           <Home size={20} strokeWidth={2.2} />
