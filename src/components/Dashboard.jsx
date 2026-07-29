@@ -4156,7 +4156,7 @@ function ReportHtmlView({ data }) {
                         labels either side; height shrinks to match so the
                         chart doesn't force an oversized scroll on a small
                         screen. Desktop's original 480/150 is untouched. */}
-                    <ResponsiveContainer width="100%" height={isMobile ? 380 : 480}>
+                    <ResponsiveContainer width="100%" height={isMobile ? 220 : 480}>
                       <PieChart margin={{ top: 4, right: 10, bottom: 0, left: 10 }}>
                         <Pie
                           data={chartPieData}

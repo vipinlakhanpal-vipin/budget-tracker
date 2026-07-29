@@ -100,6 +100,12 @@ html {
      stay scannable), so this keeps one font and one tightened size scale
      instead of one single font-size for all text. */
   font-family: 'Nunito', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  /* v1.60: defensive safety net against any accidental horizontal
+     overflow (e.g. a fixed-position child escaping an ancestor's own
+     overflow clipping) causing the whole page to sideways-scroll on
+     mobile -- nested scrollers like .table-scroll keep their own
+     overflow-x:auto and are unaffected by this. */
+  overflow-x: hidden;
 }
 html {
   overscroll-behavior-y: none;
