@@ -823,6 +823,22 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   // around using the same underlying state.
   const topRef = useRef(null);
   const stickyFrameRef = useRef(null);
+  const [stickyFrameSpacerHeight, setStickyFrameSpacerHeight] = useState(0);
+  useEffect(() => {
+    const el = stickyFrameRef.current;
+    if (!el) return undefined;
+    const update = () => setStickyFrameSpacerHeight(el.offsetHeight);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    window.addEventListener('resize', update);
+    window.addEventListener('orientationchange', update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', update);
+      window.removeEventListener('orientationchange', update);
+    };
+  }, []);
   const inputTabsSectionRef = useRef(null);
   // On mobile, tapping "+" or "Add" opens the exact same Add
   // expense/income/fixed/savings forms as a sliding bottom sheet instead of
@@ -4975,6 +4991,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
       </div>
 )}
       </div>
+      <div className="sticky-dashboard-frame-spacer" style={{ height: isMobile ? stickyFrameSpacerHeight : 0 }} />
 
       <div className="content-grid">
         <div ref={inputTabsSectionRef} className={addSheetOpen ? 'mobile-add-sheet' : undefined}>
