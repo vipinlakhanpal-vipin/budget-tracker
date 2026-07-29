@@ -827,7 +827,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   useEffect(() => {
     const el = stickyFrameRef.current;
     if (!el) return undefined;
-    const update = () => setStickyFrameSpacerHeight(el.offsetHeight + 60);
+    const update = () => setStickyFrameSpacerHeight(el.getBoundingClientRect().bottom + 16);
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
