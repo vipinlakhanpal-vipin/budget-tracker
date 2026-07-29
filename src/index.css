@@ -707,14 +707,15 @@ button, input, select, textarea { font-family: inherit; }
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
 }
-@media (max-width: 640px) {
-  .sticky-dashboard-frame {
-    position: fixed;
-    left: 0;
-    right: 0;
-    width: 100%;
-  }
-}
+/* v1.64: reverted the mobile position:fixed override -- it broke out of
+   .wrap's own side padding (position:fixed positions relative to the
+   viewport, ignoring an ancestor's padding box), which is why cards were
+   sitting flush against the physical screen edges, and it required a
+   fragile JS-measured spacer to avoid the header overlapping content
+   below it. position: sticky (the base rule above, now unconditional)
+   respects .wrap's padding and needs no manual spacer at all -- the
+   translateZ/backface-visibility compositing hints above remain in place
+   to prevent the original iOS fast-fling paint flash-through. */
 
 .top-bar {
     display: flex; flex-direction: column; gap: 10px; margin-bottom: 6px;

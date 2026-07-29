@@ -4993,7 +4993,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
       </div>
 )}
       </div>
-      <div className="sticky-dashboard-frame-spacer" style={{ height: isMobile ? stickyFrameSpacerHeight : 0 }} />
+      <div className="sticky-dashboard-frame-spacer" style={{ height: 0 }} />
 
       <div className="content-grid">
         <div ref={inputTabsSectionRef} className={addSheetOpen ? 'mobile-add-sheet' : undefined}>
