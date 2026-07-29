@@ -1170,18 +1170,24 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     if (!chatOpen) { setChatPos(null); return; }
     function updateChatPos() {
       if (isMobile) {
-        // The on-screen keyboard shrinks the *visual* viewport (not the
-        // layout viewport) on both iOS and Android -- anchoring to
-        // window.visualViewport instead of the layout viewport keeps the
-        // popup pinned to what's actually visible above the keyboard, and
-        // re-running this on every visualViewport resize/scroll event
-        // tracks the keyboard opening and closing smoothly instead of the
-        // popup appearing to jump as the page auto-scrolls the focused
-        // input into view.
+        // Anchor the popup near the BOTTOM of the screen (like a normal
+        // mobile chat sheet, and close to where the Aria icon actually
+        // lives in the bottom nav) instead of pinning it near the top --
+        // opening at the very top of the screen read as "it jumped up and
+        // got stuck" since a position:fixed element doesn't move when the
+        // page scrolls, which is exactly what page-scroll used to do for
+        // it before. bottomOffset is how far the *visible* area (above
+        // the on-screen keyboard, tracked via window.visualViewport) falls
+        // short of the true screen bottom, so the sheet naturally rises to
+        // clear the keyboard when it opens and settles just above the
+        // bottom nav when it's closed.
         const vv = window.visualViewport;
-        const top = vv ? vv.offsetTop + 10 : 10;
-        const maxHeight = Math.max(200, (vv ? vv.height : window.innerHeight) - 20);
-        setChatPos({ mobile: true, top, maxHeight });
+        const layoutH = window.innerHeight;
+        const vvBottom = vv ? vv.offsetTop + vv.height : layoutH;
+        const navClearance = 74;
+        const bottomOffset = Math.max(navClearance, (layoutH - vvBottom) + 12);
+        const maxHeight = Math.max(200, (vv ? vv.height : layoutH) - bottomOffset - 16);
+        setChatPos({ mobile: true, bottom: bottomOffset, maxHeight });
       } else {
         if (!chatMenuRef.current) return;
         const r = chatMenuRef.current.getBoundingClientRect();
@@ -4836,7 +4842,7 @@ function ReportHtmlView({ data }) {
               )}
               {chatOpen && (() => {
                 const chatWindowEl = (
-                  <div className="chat-window" ref={chatWindowRef} style={chatPos ? (chatPos.mobile ? { position: 'fixed', top: chatPos.top, left: '50%', right: 'auto', transform: 'translateX(-50%)', maxHeight: chatPos.maxHeight } : { position: 'fixed', top: chatPos.top, right: chatPos.right, left: 'auto' }) : undefined}>
+                  <div className="chat-window" ref={chatWindowRef} style={chatPos ? (chatPos.mobile ? { position: 'fixed', bottom: chatPos.bottom, top: 'auto', left: '50%', right: 'auto', transform: 'translateX(-50%)', maxHeight: chatPos.maxHeight } : { position: 'fixed', top: chatPos.top, right: chatPos.right, left: 'auto' }) : undefined}>
                   <div className="chat-header">
                               <span>Ask Aria about your Expenses, Budgets and Savings <AiTag /></span>
                     <div className="chat-header-actions">
