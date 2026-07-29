@@ -4654,6 +4654,10 @@ function ReportHtmlView({ data }) {
               <HelpCircle size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
               Help
             </button>
+            <button className={`btn-teal header-tab-btn tab-hide-mobile${activePanel === 'roadmap' ? ' header-tab-btn-active' : ''}`} data-tour="nav-roadmap" onClick={() => togglePanel('roadmap')}>
+              <Sparkles size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
+              Coming Soon
+            </button>
             {/* Color theme picker -- deliberately styled as a multi-color
                 swatch (conic-gradient ring) rather than matching the plain
                 teal/white icon-button family right next to it, so the
@@ -4853,6 +4857,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
       {activePanel === 'report' && <h2 className="page-title-themed">Report</h2>}
       {activePanel === 'settings' && <h2 className="page-title-themed">Settings</h2>}
       {activePanel === 'help' && <h2 className="page-title-themed">Help</h2>}
+      {activePanel === 'roadmap' && <h2 className="page-title-themed">Coming Soon</h2>}
 
       {/* Month selection has no purpose on Settings/Help -- neither ever
           shows monthly spending data, so the nav (and its date-range
@@ -6880,7 +6885,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             );
           })()}
         </div>
-                <div style={(activePanel === 'report' || activePanel === 'help' || activePanel === 'settings') ? { gridColumn: '1 / -1' } : undefined}>
+                <div style={(activePanel === 'report' || activePanel === 'help' || activePanel === 'settings' || activePanel === 'roadmap') ? { gridColumn: '1 / -1' } : undefined}>
           {/* This narrow chart/AI column only shows for the normal
               data-entry tabs now (inputTab truthy) -- Home has its own
               full-width, bigger version of the same three cards further
@@ -6989,6 +6994,35 @@ I can help you track expenses, understand spending patterns, create budgets, and
             </div>
             );
           })()}
+
+          {activePanel === 'roadmap' && (
+          <div className="panel" ref={panelRef}>
+            <div className="muted-small" style={{ fontWeight: 600, marginBottom: 14, fontSize: 14 }}>
+              What we're building next
+            </div>
+            <div className="my-details-box" style={{ marginBottom: 18, padding: 16, border: '1px solid var(--border)', borderRadius: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <span style={{ fontSize: 20 }}>&#127974;</span>
+                <span style={{ fontWeight: 700, fontSize: 15 }}>Bank & card integration</span>
+              </div>
+              <p style={{ margin: 0, color: 'var(--muted)' }}>
+                Connect your bank accounts and cards so income, expenses, and card transactions capture themselves automatically instead of manual entry -- transactions land in Hearth the moment they post. This is a bigger piece of work (it needs a secure banking-data provider behind the scenes), so it's planned for after the app is live and we've learned how the household actually uses it day to day.
+              </p>
+            </div>
+            <div className="my-details-box" style={{ marginBottom: 18, padding: 16, border: '1px solid var(--border)', borderRadius: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <span style={{ fontSize: 20 }}>&#128200;</span>
+                <span style={{ fontWeight: 700, fontSize: 15 }}>Investment portfolio tracking</span>
+              </div>
+              <p style={{ margin: 0, color: 'var(--muted)' }}>
+                A place to track stocks, funds, and other investments alongside your budget -- so Hearth shows the full financial picture, not just monthly spending.
+              </p>
+            </div>
+            <div className="muted-small" style={{ marginTop: 4 }}>
+              Have a feature you'd like to see next? Use the Suggestion link at the bottom of the app to let us know.
+            </div>
+          </div>
+          )}
 
           {activePanel === 'report' && (
  <div className="panel" ref={panelRef} style={{ maxWidth: '100%', marginBottom: 24 }}>
