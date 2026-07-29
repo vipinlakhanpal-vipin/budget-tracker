@@ -5348,7 +5348,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
               </div>
             </div>
             {filteredIncomeForMonth.length > 0 && (
-              <div className="muted-small" style={{ marginTop: -4, marginBottom: 10 }}>
+              <div className="section-total-badge">
                 {filteredIncomeForMonth.length} {filteredIncomeForMonth.length === 1 ? 'entry' : 'entries'} &middot; Total {fmt(filteredIncomeForMonth.reduce((s, i) => s + (Number(i.amount) || 0), 0))}
               </div>
             )}
@@ -5815,7 +5815,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
               </div>
             </div>
             {filteredRecurringForMonth.length > 0 && (
-              <div className="muted-small" style={{ marginTop: -4, marginBottom: 10 }}>
+              <div className="section-total-badge">
                 {filteredRecurringForMonth.length} {filteredRecurringForMonth.length === 1 ? 'entry' : 'entries'} &middot; Total {fmt(filteredRecurringForMonth.reduce((s, r) => s + (Number(r.amount) || 0), 0))}
               </div>
             )}
@@ -6314,7 +6314,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
               </div>
             </div>
             {filteredSavingsForMonth.length > 0 && (
-              <div className="muted-small" style={{ marginTop: -4, marginBottom: 10 }}>
+              <div className="section-total-badge">
                 {filteredSavingsForMonth.length} {filteredSavingsForMonth.length === 1 ? 'entry' : 'entries'} &middot; Total {fmt(filteredSavingsForMonth.reduce((s, sv) => s + (Number(sv.amount) || 0), 0))}
               </div>
             )}
@@ -6584,7 +6584,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
               </div>
             </div>
             {filteredMonthExpenses.length > 0 && (
-              <div className="muted-small" style={{ marginTop: -4, marginBottom: 10 }}>
+              <div className="section-total-badge">
                 {filteredMonthExpenses.length} {filteredMonthExpenses.length === 1 ? 'entry' : 'entries'} &middot; Total {fmt(filteredMonthExpenses.reduce((s, e) => s + (Number(e.amount) || 0), 0))}
               </div>
             )}
