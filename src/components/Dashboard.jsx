@@ -1,5 +1,6 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, LabelList,
@@ -1151,10 +1152,41 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   // pattern as the bell and profile menus) instead of fixed viewport
   // coordinates that had to be reclamped on every header change.
   const chatMenuRef = useRef(null);
+  // Aria's popup used to live nested inside the sticky header frame, but
+  // that frame clips descendant hit-testing (not just painting) to its own
+  // box height -- once the popup grew tall enough for its input row to sit
+  // below that boundary, real clicks/taps on the input passed straight
+  // through to whatever page content was underneath instead of reaching
+  // the input, and the outside-click handler below (seeing a click outside
+  // chatMenuRef) correctly-by-its-own-logic closed the chat before anyone
+  // could type. Fix: on desktop, portal the popup to document.body as a
+  // position:fixed element anchored under the header icon, so it's fully
+  // outside that clipped subtree. chatWindowRef lets the outside-click
+  // check treat the portaled content as "inside" too. Mobile keeps its
+  // existing (already-working) inline rendering untouched.
+  const chatWindowRef = useRef(null);
+  const [chatPos, setChatPos] = useState(null);
+  useEffect(() => {
+    if (!chatOpen || isMobile) { setChatPos(null); return; }
+    function updateChatPos() {
+      if (!chatMenuRef.current) return;
+      const r = chatMenuRef.current.getBoundingClientRect();
+      setChatPos({ top: r.bottom + 8, right: Math.max(8, window.innerWidth - r.right) });
+    }
+    updateChatPos();
+    window.addEventListener('resize', updateChatPos);
+    window.addEventListener('scroll', updateChatPos, true);
+    return () => {
+      window.removeEventListener('resize', updateChatPos);
+      window.removeEventListener('scroll', updateChatPos, true);
+    };
+  }, [chatOpen, isMobile]);
   useEffect(() => {
     if (!chatOpen) return;
     function onDocClick(e) {
-      if (chatMenuRef.current && !chatMenuRef.current.contains(e.target)) setChatOpen(false);
+      const inMenu = chatMenuRef.current && chatMenuRef.current.contains(e.target);
+      const inWindow = chatWindowRef.current && chatWindowRef.current.contains(e.target);
+      if (!inMenu && !inWindow) setChatOpen(false);
     }
     // Attach on the NEXT tick, not immediately -- if we attach synchronously
     // while still inside the same click that just opened the popup, some
@@ -4779,8 +4811,9 @@ function ReportHtmlView({ data }) {
             <span className="chat-fab-badge-title chat-fab-badge-below tab-hide-mobile">Aria</span>
                 </>
               )}
-              {chatOpen && (
-                <div className="chat-window">
+              {chatOpen && (() => {
+                const chatWindowEl = (
+                  <div className="chat-window" ref={chatWindowRef} style={(!isMobile && chatPos) ? { position: 'fixed', top: chatPos.top, right: chatPos.right, left: 'auto' } : undefined}>
                   <div className="chat-header">
                               <span>Ask Aria about your Expenses, Budgets and Savings <AiTag /></span>
                     <div className="chat-header-actions">
@@ -4823,7 +4856,9 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     <button type="submit" className="btn small" disabled={chatLoading || !chatInput.trim()}>Send</button>
                   </form>
                 </div>
-              )}
+                );
+                return (!isMobile && chatPos) ? createPortal(chatWindowEl, document.body) : chatWindowEl;
+              })()}
             </div>
             <button
                 type="button"
@@ -7405,6 +7440,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                       key={currencyDraft}
                       list="currency-options"
                       defaultValue={currencyDraft}
+                      onFocus={(e) => e.target.select()}
                       onChange={(e) => { const v = e.target.value; if (CURRENCIES.includes(v)) commitCurrency(v); }}
                       placeholder="Search currency..."
                     />
