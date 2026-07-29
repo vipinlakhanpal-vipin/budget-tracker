@@ -827,7 +827,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   useEffect(() => {
     const el = stickyFrameRef.current;
     if (!el) return undefined;
-    const update = () => setStickyFrameSpacerHeight(el.offsetHeight);
+    const update = () => setStickyFrameSpacerHeight(el.offsetHeight + 60);
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
@@ -848,6 +848,11 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   // section into an overlay, so nothing about desktop's layout or behavior
   // changes.
   const [addSheetOpen, setAddSheetOpen] = useState(false);
+
+  // Collapsed by default on the Home "Explore" pie card so the chart
+  // itself gets the available width/height instead of competing with a
+  // long category list next to (desktop) or above/below (mobile) it.
+  const [showTop10, setShowTop10] = useState(false);
 
   // Drives the mobile-only "Expenses this month" redesign below: on a
   // narrow screen, that list renders as tappable read-only rows (icon,
@@ -4163,7 +4168,7 @@ function ReportHtmlView({ data }) {
                           dataKey="value"
                           nameKey="name"
                           cy="42%"
-                          outerRadius={isMobile ? '50%' : 150}
+                          outerRadius={isMobile ? '58%' : 150}
                           isAnimationActive={false}
                           label={({ percent }) => (percent >= 0.04 ? `${Math.round(percent * 100)}%` : '')}
                           labelLine={false}
@@ -4178,7 +4183,16 @@ function ReportHtmlView({ data }) {
                     </ResponsiveContainer>
                   </div>
                   <div style={{ flex: '1 1 230px', minWidth: 0 }}>
-                    <div className="muted-small" style={{ textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 8 }}>Top 10 categories</div>
+                    <div
+                      className="report-collapsible-toggle"
+                      onClick={() => setShowTop10((v) => !v)}
+                      role="button"
+                      tabIndex={0}
+                    >
+                      <span>Top 10 categories</span>
+                      <ChevronDown size={22} strokeWidth={2.75} className={`report-toggle-chevron${showTop10 ? ' report-toggle-chevron-open' : ''}`} />
+                    </div>
+                    {showTop10 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                       {top5.map((c, i) => {
                         const pct = totalSpent > 0 ? Math.round((c.value / totalSpent) * 100) : 0;
@@ -4192,6 +4206,7 @@ function ReportHtmlView({ data }) {
                         );
                       })}
                     </div>
+                    )}
                   </div>
                 </div>
               );
