@@ -1195,18 +1195,22 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       }
     }
     updateChatPos();
-    window.addEventListener('resize', updateChatPos);
-    window.addEventListener('scroll', updateChatPos, true);
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', updateChatPos);
-      window.visualViewport.addEventListener('scroll', updateChatPos);
+    // On mobile, deliberately compute this ONCE per open and then leave it
+    // alone -- earlier versions re-ran this on every visualViewport
+    // resize/scroll (i.e. whenever the on-screen keyboard opened), which
+    // tracked the keyboard correctly but visibly "jumped" the whole sheet
+    // the instant someone tapped the input to start typing. That read as
+    // unpolished, so mobile now keeps its first-render position for the
+    // life of this chatOpen session; only desktop (where there's no
+    // on-screen keyboard to dodge) keeps live-tracking resize/scroll.
+    if (!isMobile) {
+      window.addEventListener('resize', updateChatPos);
+      window.addEventListener('scroll', updateChatPos, true);
     }
     return () => {
-      window.removeEventListener('resize', updateChatPos);
-      window.removeEventListener('scroll', updateChatPos, true);
-      if (window.visualViewport) {
-        window.visualViewport.removeEventListener('resize', updateChatPos);
-        window.visualViewport.removeEventListener('scroll', updateChatPos);
+      if (!isMobile) {
+        window.removeEventListener('resize', updateChatPos);
+        window.removeEventListener('scroll', updateChatPos, true);
       }
     };
   }, [chatOpen, isMobile]);
