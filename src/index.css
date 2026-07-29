@@ -985,6 +985,15 @@ sitting duplicated under the summary cards. */
 h1 { font-size: 22px; margin: 0 0 4px 0; }
 .sub { color: var(--muted); font-size: 13px; }
 .muted-small { color: var(--muted); font-size: 12px; }
+.card-budget .muted-small,
+.card-spent .muted-small,
+.card-remaining .muted-small,
+.card-income .muted-small,
+.card-expenses .muted-small,
+.card-net .muted-small {
+  color: var(--text);
+  font-weight: 600;
+}
 
 .page-title-row {
   display: grid;
@@ -2145,6 +2154,13 @@ instead of overflowing at the unconditional 35px desktop size. */
   }
   .mobile-bottom-nav button svg { display: block; }
   .mobile-bottom-nav button.active { color: var(--accent); background: var(--accent-light); }
+  .mobile-bottom-nav button[data-tour="nav-aria"] {
+    color: #a855f7;
+  }
+  .mobile-bottom-nav button[data-tour="nav-aria"].active {
+    color: #a855f7;
+    background: color-mix(in srgb, #a855f7 15%, transparent);
+  }
   .mobile-bottom-nav button:active { transform: scale(.94); }
 
   .mobile-fab {
