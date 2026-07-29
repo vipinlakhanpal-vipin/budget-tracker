@@ -991,8 +991,8 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
 .card-income .muted-small,
 .card-expenses .muted-small,
 .card-net .muted-small {
-  color: var(--text);
-  font-weight: 600;
+  color: #0f2a2e;
+  font-weight: 700;
 }
 
 .page-title-row {
@@ -1020,7 +1020,7 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
 
 .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr); gap: 14px; margin-bottom: 20px; }
 .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; }
-.card .k { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.card .k { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
 .card .v { font-size: 24px; font-weight: 700; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .card.over .v { color: var(--danger); }
 .card.ok .v { color: var(--ok); }
