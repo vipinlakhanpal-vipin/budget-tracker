@@ -4866,7 +4866,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
           (their own "for the month" lists are month-scoped, so the nav is
           just as relevant there as on Fixed/Regular Expenses) -- removed
           per explicit request so they now get it as well. */}
-{activePanel !== 'settings' && activePanel !== 'help' && (
+{activePanel !== 'settings' && activePanel !== 'help' && activePanel !== 'roadmap' && (
       <div className="month-nav">
         <button onClick={() => setCurrentMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))}>&lsaquo;</button>
         <div className="label">{monthLabel(currentMonth)}</div>
@@ -4874,7 +4874,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
         {/* No date range on Settings/Help -- neither shows any spending data,
             so narrowing "this month" to a sub-range has nothing to act on
             there. */}
-        {activePanel !== 'settings' && activePanel !== 'help' && (
+        {activePanel !== 'settings' && activePanel !== 'help' && activePanel !== 'roadmap' && (
         <div className="filter-wrap" ref={rangeRef}>
           <button
             type="button"
@@ -7407,7 +7407,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
           the freed-up screen for their own content on mobile instead of
           this Explore block tagging along underneath. Desktop keeps the
           original behavior (Explore still follows Report there). */}
-            {!inputTab && activePanel !== 'settings' && activePanel !== 'help' && (!isMobile || !activePanel) && (
+            {!inputTab && activePanel !== 'settings' && activePanel !== 'help' && activePanel !== 'roadmap' && (!isMobile || !activePanel) && (
         <div className="home-explore-frame">
           <h2 style={{ margin: '0 0 10px' }}>Explore</h2>
           {chartTypeToggle}
