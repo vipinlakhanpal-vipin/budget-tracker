@@ -4135,7 +4135,7 @@ function ReportHtmlView({ data }) {
               const totalSpent = pieData.reduce((s, d) => s + d.value, 0);
               const top5 = sortedPie.slice(0, 10);
               return (
-                <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 24, alignItems: isMobile ? 'flex-start' : 'center', flexWrap: 'wrap' }}>
                   <div style={{ flex: '0 0 150px' }}>
                     <div className="muted-small" style={{ textTransform: 'uppercase', letterSpacing: 0.4 }}>Total spent</div>
                     <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}><Amt value={totalSpent} /></div>
@@ -4156,7 +4156,7 @@ function ReportHtmlView({ data }) {
                         labels either side; height shrinks to match so the
                         chart doesn't force an oversized scroll on a small
                         screen. Desktop's original 480/150 is untouched. */}
-                    <ResponsiveContainer width="100%" height={isMobile ? 320 : 480}>
+                    <ResponsiveContainer width="100%" height={isMobile ? 380 : 480}>
                       <PieChart margin={{ top: 4, right: 10, bottom: 0, left: 10 }}>
                         <Pie
                           data={chartPieData}
