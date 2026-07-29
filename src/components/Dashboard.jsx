@@ -4161,14 +4161,14 @@ function ReportHtmlView({ data }) {
                         labels either side; height shrinks to match so the
                         chart doesn't force an oversized scroll on a small
                         screen. Desktop's original 480/150 is untouched. */}
-                    <ResponsiveContainer width="100%" height={isMobile ? 220 : 480}>
+                    <ResponsiveContainer width="100%" height={isMobile ? 280 : 480}>
                       <PieChart margin={{ top: 4, right: 10, bottom: 0, left: 10 }}>
                         <Pie
                           data={chartPieData}
                           dataKey="value"
                           nameKey="name"
                           cy="50%"
-                          outerRadius={isMobile ? '58%' : 150}
+                          outerRadius={isMobile ? '70%' : 150}
                           isAnimationActive={false}
                           label={({ percent }) => (percent >= 0.04 ? `${Math.round(percent * 100)}%` : '')}
                           labelLine={false}
