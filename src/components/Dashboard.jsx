@@ -114,9 +114,11 @@ const MAX_ADDITIONAL_USERS = Infinity; // No cap on household size
 // covers anything not listed rather than blocking entry.
 // Major banks across UAE/GCC, Levant & Egypt, North America, UK, Europe,
 // Australia/NZ, South Asia, East & Southeast Asia, Africa, and Latin America --
-// "Other" still covers anything not listed rather than blocking entry.
+// each bank name includes its country/region so a global list of similarly
+// named entries is still unambiguous at a glance. "Other" still covers
+// anything not listed rather than blocking entry.
 const BANKS = [
-  'Emirates NBD', 'ADCB', 'FAB (First Abu Dhabi Bank)', 'Dubai Islamic Bank', 'Mashreq', 'ADIB', 'RAKBANK', 'CBD (Commercial Bank of Dubai)', 'HSBC UAE', 'Standard Chartered UAE', 'Citibank UAE', 'Saudi National Bank', 'Al Rajhi Bank', 'Riyad Bank', 'SABB', 'Qatar National Bank', 'Doha Bank', 'National Bank of Kuwait', 'Gulf Bank', 'Bank Muscat', 'Bank of Bahrain and Kuwait', 'Ahli United Bank', 'Bank Audi', 'Byblos Bank', 'Arab Bank', 'Bank of Jordan', 'National Bank of Egypt', 'CIB (Commercial International Bank)', 'Banque Misr', 'JPMorgan Chase', 'Bank of America', 'Wells Fargo', 'Citibank', 'U.S. Bank', 'PNC Bank', 'Truist', 'Capital One', 'TD Bank', 'Goldman Sachs', 'American Express', 'Charles Schwab Bank', 'USAA', 'Ally Bank', 'RBC Royal Bank', 'TD Canada Trust', 'Scotiabank', 'BMO Bank of Montreal', 'CIBC', 'National Bank of Canada', 'Barclays', 'HSBC UK', 'Lloyds Bank', 'NatWest', 'Santander UK', 'Nationwide', 'TSB', 'Halifax', 'Monzo', 'Revolut', 'Starling Bank', 'Deutsche Bank', 'Commerzbank', 'BNP Paribas', 'Societe Generale', 'Credit Agricole', 'ING', 'Rabobank', 'ABN AMRO', 'UniCredit', 'Intesa Sanpaolo', 'Banco Santander', 'BBVA', 'CaixaBank', 'UBS', 'Credit Suisse', 'Nordea', 'Danske Bank', 'SEB', 'Swedbank', 'Erste Group', 'Raiffeisen Bank', 'KBC Bank', 'mBank', 'PKO Bank Polski', 'Commonwealth Bank', 'Westpac', 'ANZ', 'NAB (National Australia Bank)', 'Bendigo Bank', 'ASB Bank', 'ANZ New Zealand', 'BNZ', 'Kiwibank', 'State Bank of India', 'HDFC Bank', 'ICICI Bank', 'Axis Bank', 'Kotak Mahindra Bank', 'Punjab National Bank', 'Bank of Baroda', 'Yes Bank', 'IndusInd Bank', 'HBL (Habib Bank)', 'UBL (United Bank)', 'MCB Bank', 'Meezan Bank', 'Allied Bank', 'National Bank of Pakistan', 'Bank Alfalah', 'ICBC', 'China Construction Bank', 'Bank of China', 'Agricultural Bank of China', 'Bank of Communications', 'MUFG Bank', 'Sumitomo Mitsui Banking', 'Mizuho Bank', 'Japan Post Bank', 'KB Kookmin Bank', 'Shinhan Bank', 'Woori Bank', 'Hana Bank', 'DBS Bank', 'OCBC Bank', 'UOB', 'Maybank', 'CIMB', 'Bangkok Bank', 'Kasikornbank', 'BDO Unibank', 'BPI (Bank of the Philippine Islands)', 'Bank Mandiri', 'BCA', 'Vietcombank', 'Standard Bank', 'FirstRand/FNB', 'ABSA', 'Nedbank', 'Access Bank', 'GTBank', 'Zenith Bank', 'First Bank of Nigeria', 'UBA (United Bank for Africa)', 'Equity Bank', 'KCB Bank', 'Itau Unibanco', 'Banco do Brasil', 'Bradesco', 'Caixa Economica Federal', 'Santander Brasil', 'BBVA Mexico', 'Banorte', 'Citibanamex', 'Banco de Chile', 'BancoEstado', 'Bancolombia', 'Banco de Bogota', 'BBVA Argentina', 'Banco Galicia', 'Banco Santander Rio', 'Other',
+  'Emirates NBD (UAE)', 'ADCB (UAE)', 'FAB (First Abu Dhabi Bank) (UAE)', 'Dubai Islamic Bank (UAE)', 'Mashreq (UAE)', 'ADIB (UAE)', 'RAKBANK (UAE)', 'CBD (Commercial Bank of Dubai) (UAE)', 'HSBC UAE (UAE)', 'Standard Chartered UAE (UAE)', 'Citibank UAE (UAE)', 'Saudi National Bank (Saudi Arabia)', 'Al Rajhi Bank (Saudi Arabia)', 'Riyad Bank (Saudi Arabia)', 'SABB (Saudi Arabia)', 'Qatar National Bank (Qatar)', 'Doha Bank (Qatar)', 'National Bank of Kuwait (Kuwait)', 'Gulf Bank (Kuwait)', 'Bank Muscat (Oman)', 'Bank of Bahrain and Kuwait (Bahrain)', 'Ahli United Bank (Bahrain)', 'Bank Audi (Lebanon)', 'Byblos Bank (Lebanon)', 'Arab Bank (Jordan)', 'Bank of Jordan (Jordan)', 'National Bank of Egypt (Egypt)', 'CIB (Commercial International Bank) (Egypt)', 'Banque Misr (Egypt)', 'JPMorgan Chase (USA)', 'Bank of America (USA)', 'Wells Fargo (USA)', 'Citibank (USA)', 'U.S. Bank (USA)', 'PNC Bank (USA)', 'Truist (USA)', 'Capital One (USA)', 'TD Bank (USA)', 'Goldman Sachs (USA)', 'American Express (USA)', 'Charles Schwab Bank (USA)', 'USAA (USA)', 'Ally Bank (USA)', 'RBC Royal Bank (Canada)', 'TD Canada Trust (Canada)', 'Scotiabank (Canada)', 'BMO Bank of Montreal (Canada)', 'CIBC (Canada)', 'National Bank of Canada (Canada)', 'Barclays (UK)', 'HSBC UK (UK)', 'Lloyds Bank (UK)', 'NatWest (UK)', 'Santander UK (UK)', 'Nationwide (UK)', 'TSB (UK)', 'Halifax (UK)', 'Monzo (UK)', 'Revolut (UK)', 'Starling Bank (UK)', 'Deutsche Bank (Germany)', 'Commerzbank (Germany)', 'BNP Paribas (France)', 'Societe Generale (France)', 'Credit Agricole (France)', 'ING (Netherlands)', 'Rabobank (Netherlands)', 'ABN AMRO (Netherlands)', 'UniCredit (Italy)', 'Intesa Sanpaolo (Italy)', 'Banco Santander (Spain)', 'BBVA (Spain)', 'CaixaBank (Spain)', 'UBS (Switzerland)', 'Credit Suisse (Switzerland)', 'Nordea (Nordics)', 'Danske Bank (Nordics)', 'SEB (Nordics)', 'Swedbank (Nordics)', 'Erste Group (Austria)', 'Raiffeisen Bank (Austria)', 'KBC Bank (Belgium)', 'mBank (Poland)', 'PKO Bank Polski (Poland)', 'Commonwealth Bank (Australia)', 'Westpac (Australia)', 'ANZ (Australia)', 'NAB (National Australia Bank) (Australia)', 'Bendigo Bank (Australia)', 'ASB Bank (New Zealand)', 'ANZ New Zealand (New Zealand)', 'BNZ (New Zealand)', 'Kiwibank (New Zealand)', 'State Bank of India (India)', 'HDFC Bank (India)', 'ICICI Bank (India)', 'Axis Bank (India)', 'Kotak Mahindra Bank (India)', 'Punjab National Bank (India)', 'Bank of Baroda (India)', 'Yes Bank (India)', 'IndusInd Bank (India)', 'HBL (Habib Bank) (Pakistan)', 'UBL (United Bank) (Pakistan)', 'MCB Bank (Pakistan)', 'Meezan Bank (Pakistan)', 'Allied Bank (Pakistan)', 'National Bank of Pakistan (Pakistan)', 'Bank Alfalah (Pakistan)', 'ICBC (China)', 'China Construction Bank (China)', 'Bank of China (China)', 'Agricultural Bank of China (China)', 'Bank of Communications (China)', 'MUFG Bank (Japan)', 'Sumitomo Mitsui Banking (Japan)', 'Mizuho Bank (Japan)', 'Japan Post Bank (Japan)', 'KB Kookmin Bank (South Korea)', 'Shinhan Bank (South Korea)', 'Woori Bank (South Korea)', 'Hana Bank (South Korea)', 'DBS Bank (Singapore)', 'OCBC Bank (Singapore)', 'UOB (Singapore)', 'Maybank (Malaysia)', 'CIMB (Malaysia)', 'Bangkok Bank (Thailand)', 'Kasikornbank (Thailand)', 'BDO Unibank (Philippines)', 'BPI (Bank of the Philippine Islands) (Philippines)', 'Bank Mandiri (Indonesia)', 'BCA (Indonesia)', 'Vietcombank (Vietnam)', 'Standard Bank (South Africa)', 'FirstRand/FNB (South Africa)', 'ABSA (South Africa)', 'Nedbank (South Africa)', 'Access Bank (Nigeria)', 'GTBank (Nigeria)', 'Zenith Bank (Nigeria)', 'First Bank of Nigeria (Nigeria)', 'UBA (United Bank for Africa) (Nigeria)', 'Equity Bank (Kenya)', 'KCB Bank (Kenya)', 'Itau Unibanco (Brazil)', 'Banco do Brasil (Brazil)', 'Bradesco (Brazil)', 'Caixa Economica Federal (Brazil)', 'Santander Brasil (Brazil)', 'BBVA Mexico (Mexico)', 'Banorte (Mexico)', 'Citibanamex (Mexico)', 'Banco de Chile (Chile)', 'BancoEstado (Chile)', 'Bancolombia (Colombia)', 'Banco de Bogota (Colombia)', 'BBVA Argentina (Argentina)', 'Banco Galicia (Argentina)', 'Banco Santander Rio (Argentina)', 'Other',
 ];
 const FREQUENCY_MONTHS = { monthly: 1, alternate: 2, quarterly: 3, half_yearly: 6, yearly: 12 };
 
@@ -1151,18 +1153,22 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   const chatMenuRef = useRef(null);
   useEffect(() => {
     if (!chatOpen) return;
-    // Use 'click' (not 'mousedown') for outside-close detection -- with
-    // mousedown, any focus/layout shift between mousedown and mouseup on
-    // a click that starts inside the popup (typing, selecting text, even
-    // the very click that just opened it) can register as "outside" and
-    // slam the popup shut before the user can interact with it. 'click'
-    // fires once the full gesture completes on a single target, which is
-    // what every other press-and-drag-safe outside-click pattern uses.
     function onDocClick(e) {
       if (chatMenuRef.current && !chatMenuRef.current.contains(e.target)) setChatOpen(false);
     }
-    document.addEventListener('click', onDocClick);
-    return () => document.removeEventListener('click', onDocClick);
+    // Attach on the NEXT tick, not immediately -- if we attach synchronously
+    // while still inside the same click that just opened the popup, some
+    // browsers can treat that same in-flight click as the "outside" click
+    // and close it before it's even visible. Deferring by one tick (0ms)
+    // guarantees the opening click has fully finished before we start
+    // listening, without weakening the outside-click behavior at all.
+    const timer = setTimeout(() => {
+      document.addEventListener('mousedown', onDocClick);
+    }, 0);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('mousedown', onDocClick);
+    };
   }, [chatOpen]);
   useEffect(() => {
     if (chatMessagesRef.current) {
@@ -7396,10 +7402,10 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   <div className="field">
                     <label>Currency</label>
                     <input
+                      key={currencyDraft}
                       list="currency-options"
-                      value={currencyDraft}
+                      defaultValue={currencyDraft}
                       onChange={(e) => { const v = e.target.value; if (CURRENCIES.includes(v)) commitCurrency(v); }}
-                      onBlur={(e) => { if (!CURRENCIES.includes(e.target.value)) e.target.value = currencyDraft; }}
                       placeholder="Search currency..."
                     />
                     <datalist id="currency-options">
