@@ -4163,7 +4163,7 @@ function ReportHtmlView({ data }) {
                           dataKey="value"
                           nameKey="name"
                           cy="42%"
-                          outerRadius={isMobile ? 85 : 150}
+                          outerRadius={isMobile ? '50%' : 150}
                           isAnimationActive={false}
                           label={({ percent }) => (percent >= 0.04 ? `${Math.round(percent * 100)}%` : '')}
                           labelLine={false}
