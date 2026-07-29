@@ -1167,18 +1167,41 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   const chatWindowRef = useRef(null);
   const [chatPos, setChatPos] = useState(null);
   useEffect(() => {
-    if (!chatOpen || isMobile) { setChatPos(null); return; }
+    if (!chatOpen) { setChatPos(null); return; }
     function updateChatPos() {
-      if (!chatMenuRef.current) return;
-      const r = chatMenuRef.current.getBoundingClientRect();
-      setChatPos({ top: r.bottom + 8, right: Math.max(8, window.innerWidth - r.right) });
+      if (isMobile) {
+        // The on-screen keyboard shrinks the *visual* viewport (not the
+        // layout viewport) on both iOS and Android -- anchoring to
+        // window.visualViewport instead of the layout viewport keeps the
+        // popup pinned to what's actually visible above the keyboard, and
+        // re-running this on every visualViewport resize/scroll event
+        // tracks the keyboard opening and closing smoothly instead of the
+        // popup appearing to jump as the page auto-scrolls the focused
+        // input into view.
+        const vv = window.visualViewport;
+        const top = vv ? vv.offsetTop + 10 : 10;
+        const maxHeight = Math.max(200, (vv ? vv.height : window.innerHeight) - 20);
+        setChatPos({ mobile: true, top, maxHeight });
+      } else {
+        if (!chatMenuRef.current) return;
+        const r = chatMenuRef.current.getBoundingClientRect();
+        setChatPos({ mobile: false, top: r.bottom + 8, right: Math.max(8, window.innerWidth - r.right) });
+      }
     }
     updateChatPos();
     window.addEventListener('resize', updateChatPos);
     window.addEventListener('scroll', updateChatPos, true);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', updateChatPos);
+      window.visualViewport.addEventListener('scroll', updateChatPos);
+    }
     return () => {
       window.removeEventListener('resize', updateChatPos);
       window.removeEventListener('scroll', updateChatPos, true);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', updateChatPos);
+        window.visualViewport.removeEventListener('scroll', updateChatPos);
+      }
     };
   }, [chatOpen, isMobile]);
   useEffect(() => {
@@ -4813,7 +4836,7 @@ function ReportHtmlView({ data }) {
               )}
               {chatOpen && (() => {
                 const chatWindowEl = (
-                  <div className="chat-window" ref={chatWindowRef} style={(!isMobile && chatPos) ? { position: 'fixed', top: chatPos.top, right: chatPos.right, left: 'auto' } : undefined}>
+                  <div className="chat-window" ref={chatWindowRef} style={chatPos ? (chatPos.mobile ? { position: 'fixed', top: chatPos.top, left: '50%', right: 'auto', transform: 'translateX(-50%)', maxHeight: chatPos.maxHeight } : { position: 'fixed', top: chatPos.top, right: chatPos.right, left: 'auto' }) : undefined}>
                   <div className="chat-header">
                               <span>Ask Aria about your Expenses, Budgets and Savings <AiTag /></span>
                     <div className="chat-header-actions">
@@ -4857,7 +4880,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   </form>
                 </div>
                 );
-                return (!isMobile && chatPos) ? createPortal(chatWindowEl, document.body) : chatWindowEl;
+                return chatPos ? createPortal(chatWindowEl, document.body) : chatWindowEl;
               })()}
             </div>
             <button
@@ -7440,7 +7463,8 @@ I can help you track expenses, understand spending patterns, create budgets, and
                       key={currencyDraft}
                       list="currency-options"
                       defaultValue={currencyDraft}
-                      onFocus={(e) => e.target.select()}
+                      onFocus={(e) => { e.target.value = ''; }}
+                      onBlur={(e) => { if (!e.target.value) e.target.value = currencyDraft; }}
                       onChange={(e) => { const v = e.target.value; if (CURRENCIES.includes(v)) commitCurrency(v); }}
                       placeholder="Search currency..."
                     />
