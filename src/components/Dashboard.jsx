@@ -3852,20 +3852,7 @@ function ReportHtmlView({ data }) {
                   <div className="muted-small" style={{ marginTop: 4 }}>Changes save automatically. Use this to fill in or fix your own info, including for accounts created before this field existed.</div>
                 </div>
 
-                <div className="my-details-box" style={{ marginBottom: 18, padding: 12, border: '1px solid var(--border)', borderRadius: 8 }}>
-                  <div className="muted-small" style={{ fontWeight: 600, marginBottom: 8 }}>Private entries</div>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={myPrivacyEnabled}
-                      onChange={(e) => togglePrivacyEnabled(e.target.checked)}
-                    />
-                    Let me mark my own entries as private
-                  </label>
-                  <div className="muted-small" style={{ marginTop: 4 }}>
-                    Off by default. Once on, a "Private" option appears when you add an income, expense, fixed expense, or savings entry -- those entries are visible only to you, not the rest of the household (they're still excluded from what others see, including shared totals).
-                  </div>
-                </div>
+
 
                 <div className="muted-small" style={{ marginBottom: 4, fontWeight: 600 }}>
                   {members.length + pendingInvites.length} total -- {members.length} active, {pendingInvites.length} pending
@@ -4136,7 +4123,7 @@ function ReportHtmlView({ data }) {
         ) : chartType === 'pie' ? (
           <>
             {/* Home's big pie is now one 3-column row -- Total spent stats
-                on the left, the pie itself in the middle, Top 5 categories
+                on the left, the pie itself in the middle, Top 10 categories
                 on the right -- instead of a summary bar stacked above the
                 chart. That lifts the pie up level with the stat blocks
                 instead of sitting in its own row further down, and puts it
@@ -4146,9 +4133,9 @@ function ReportHtmlView({ data }) {
             {big ? (() => {
               const sortedPie = [...pieData].sort((a, b) => b.value - a.value);
               const totalSpent = pieData.reduce((s, d) => s + d.value, 0);
-              const top5 = sortedPie.slice(0, 5);
+              const top5 = sortedPie.slice(0, 10);
               return (
-                <div style={{ display: 'flex', gap: 24, alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', flexWrap: 'wrap' }}>
                   <div style={{ flex: '0 0 150px' }}>
                     <div className="muted-small" style={{ textTransform: 'uppercase', letterSpacing: 0.4 }}>Total spent</div>
                     <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}><Amt value={totalSpent} /></div>
@@ -4186,12 +4173,12 @@ function ReportHtmlView({ data }) {
                           ))}
                         </Pie>
                         <Tooltip formatter={(v) => fmt(v)} />
-                        <Legend wrapperStyle={{ fontSize: 12, lineHeight: '17px', paddingTop: 8 }} iconSize={10} />
+                        
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
                   <div style={{ flex: '1 1 230px', minWidth: 0 }}>
-                    <div className="muted-small" style={{ textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 8 }}>Top 5 categories</div>
+                    <div className="muted-small" style={{ textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 8 }}>Top 10 categories</div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                       {top5.map((c, i) => {
                         const pct = totalSpent > 0 ? Math.round((c.value / totalSpent) * 100) : 0;
@@ -7136,6 +7123,21 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 {/* "Settings" itself renders as a page-level centered title
                     (see the !inputTab block near the month nav) instead of
                     cramped inside this narrow content-grid column. */}
+                <div className="my-details-box" style={{ marginBottom: 18, padding: 12, border: '1px solid var(--border)', borderRadius: 8 }}>
+                  <div className="muted-small" style={{ fontWeight: 600, marginBottom: 8 }}>Private entries</div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={myPrivacyEnabled}
+                      onChange={(e) => togglePrivacyEnabled(e.target.checked)}
+                    />
+                    Let me mark my own entries as private
+                  </label>
+                  <div className="muted-small" style={{ marginTop: 4 }}>
+                    Off by default. Once on, a "Private" option appears when you add an income, expense, fixed expense, or savings entry -- those entries are visible only to you, not the rest of the household (they're still excluded from what others see, including shared totals).
+                  </div>
+                </div>
+
                 <div className="row" style={{ gap: 8, marginBottom: 16 }}>
                   <button
                     className={`btn-teal ${settingsSubTab === 'app' ? '' : 'secondary'}`}
