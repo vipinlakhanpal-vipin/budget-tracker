@@ -7535,6 +7535,10 @@ I can help you track expenses, understand spending patterns, create budgets, and
   <Bot size={20} strokeWidth={2.2} />
   <span>Aria</span>
 </button>
+        <button data-tour="nav-roadmap" className={activePanel === 'roadmap' ? 'active' : ''} onClick={() => togglePanel('roadmap')}>
+          <Sparkles size={20} strokeWidth={2.2} />
+          <span>Soon</span>
+        </button>
         {/* Users button removed from here too -- reach it via Settings >
             Users now, same as desktop. */}
         <button data-tour="nav-settings" className={activePanel === 'settings' ? 'active' : ''} onClick={() => togglePanel('settings')}>
