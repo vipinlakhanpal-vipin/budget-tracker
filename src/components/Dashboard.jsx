@@ -1151,11 +1151,18 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   const chatMenuRef = useRef(null);
   useEffect(() => {
     if (!chatOpen) return;
+    // Use 'click' (not 'mousedown') for outside-close detection -- with
+    // mousedown, any focus/layout shift between mousedown and mouseup on
+    // a click that starts inside the popup (typing, selecting text, even
+    // the very click that just opened it) can register as "outside" and
+    // slam the popup shut before the user can interact with it. 'click'
+    // fires once the full gesture completes on a single target, which is
+    // what every other press-and-drag-safe outside-click pattern uses.
     function onDocClick(e) {
       if (chatMenuRef.current && !chatMenuRef.current.contains(e.target)) setChatOpen(false);
     }
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
+    document.addEventListener('click', onDocClick);
+    return () => document.removeEventListener('click', onDocClick);
   }, [chatOpen]);
   useEffect(() => {
     if (chatMessagesRef.current) {
@@ -5116,12 +5123,17 @@ I can help you track expenses, understand spending patterns, create budgets, and
               {form.paymentSource !== 'Cash' && (
                 <div className="field" style={{ flex: '0 1 190px', minWidth: 150 }}>
                   <label>Bank</label>
-                  <select value={form.paymentBank} onChange={(e) => setForm({ ...form, paymentBank: e.target.value })}>
-                    <option value="">Select bank</option>
+                  <input
+                    list="bank-options-expense"
+                    value={form.paymentBank}
+                    onChange={(e) => setForm({ ...form, paymentBank: e.target.value })}
+                    placeholder="Search bank..."
+                  />
+                  <datalist id="bank-options-expense">
                     {BANKS.map((b) => (
-                      <option key={b} value={b}>{b}</option>
+                      <option key={b} value={b} />
                     ))}
-                  </select>
+                  </datalist>
                 </div>
               )}
               </div>
@@ -5690,12 +5702,17 @@ I can help you track expenses, understand spending patterns, create budgets, and
               {CARD_PAYMENT_SOURCES.includes(newRecurring.paymentSource) && (
                 <div className="field" style={{ flex: '0 1 190px', minWidth: 150 }}>
                   <label>Bank</label>
-                  <select value={newRecurring.paymentBank} onChange={(e) => setNewRecurring({ ...newRecurring, paymentBank: e.target.value })}>
-                    <option value="">Select bank</option>
+                  <input
+                    list="bank-options-recurring"
+                    value={newRecurring.paymentBank}
+                    onChange={(e) => setNewRecurring({ ...newRecurring, paymentBank: e.target.value })}
+                    placeholder="Search bank..."
+                  />
+                  <datalist id="bank-options-recurring">
                     {BANKS.map((b) => (
-                      <option key={b} value={b}>{b}</option>
+                      <option key={b} value={b} />
                     ))}
-                  </select>
+                  </datalist>
                 </div>
               )}
               {/* Note + Attach + Add now live together in ONE flex item, in
@@ -7378,11 +7395,18 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 <div className="row" style={{ marginBottom: 12 }}>
                   <div className="field">
                     <label>Currency</label>
-                    <select value={currencyDraft} onChange={(e) => commitCurrency(e.target.value)}>
+                    <input
+                      list="currency-options"
+                      value={currencyDraft}
+                      onChange={(e) => { const v = e.target.value; if (CURRENCIES.includes(v)) commitCurrency(v); }}
+                      onBlur={(e) => { if (!CURRENCIES.includes(e.target.value)) e.target.value = currencyDraft; }}
+                      placeholder="Search currency..."
+                    />
+                    <datalist id="currency-options">
                       {CURRENCIES.map((c) => (
-                        <option key={c} value={c}>{c}</option>
+                        <option key={c} value={c} />
                       ))}
-                    </select>
+                    </datalist>
                   </div>
                 </div>
                 <div className="muted-small">Changes save automatically as you edit -- there's no Save button to click.</div>
