@@ -4167,7 +4167,7 @@ function ReportHtmlView({ data }) {
                           data={chartPieData}
                           dataKey="value"
                           nameKey="name"
-                          cy="42%"
+                          cy="50%"
                           outerRadius={isMobile ? '58%' : 150}
                           isAnimationActive={false}
                           label={({ percent }) => (percent >= 0.04 ? `${Math.round(percent * 100)}%` : '')}
