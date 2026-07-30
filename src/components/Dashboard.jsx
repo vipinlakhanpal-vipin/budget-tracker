@@ -7903,7 +7903,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
           the freed-up screen for their own content on mobile instead of
           this Explore block tagging along underneath. Desktop keeps the
           original behavior (Explore still follows Report there). */}
-            {!inputTab && activePanel !== 'settings' && activePanel !== 'help' && activePanel !== 'roadmap' && (!isMobile || !activePanel) && (
+            {!inputTab && activePanel !== 'settings' && activePanel !== 'help' && activePanel !== 'roadmap' && activePanel !== 'investments' && (!isMobile || !activePanel) && (
         <div className="home-explore-frame">
           <h2 style={{ margin: '0 0 10px' }}>Explore</h2>
           {chartTypeToggle}
