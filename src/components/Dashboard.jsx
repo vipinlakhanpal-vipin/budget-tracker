@@ -5313,7 +5313,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
           `!activePanel` -- whenever an activePanel overlay is open, its
           title wins and is the only one shown. */}
       <div className="page-title-row">
-      {toastMsg && <div className="app-toast">{toastMsg}</div>}
+      {toastMsg && activePanel !== 'investments' && <div className="app-toast">{toastMsg}</div>}
       {!inputTab && !activePanel && (
         <h2 className="page-title-themed">Dashboard</h2>
       )}
@@ -5493,7 +5493,10 @@ I can help you track expenses, understand spending patterns, create budgets, and
           {isMe && activePanel === 'investments' ? (
  <>
  <div className="panel" ref={panelRef} style={{ maxWidth: '100%', marginBottom: 24 }}>
-            <h2 className="panel-title-themed">My Investments</h2>
+            <div className="panel-title-row-inline">
+              <h2 className="panel-title-themed">My Investments</h2>
+              {toastMsg && activePanel === 'investments' && <div className="app-toast">{toastMsg}</div>}
+            </div>
             <div className="muted-small" style={{ textAlign: 'left', marginTop: -6, marginBottom: 12 }}>
               Fixed Deposits and Mutual Fund / SIP investments, tracked separately from the household budget. Only you can see this tab.
               If you withdraw money from an FD or SIP and spend it, record that spend as a normal entry under Regular Expenses -- this tab only tracks what's invested, not day-to-day spending.
