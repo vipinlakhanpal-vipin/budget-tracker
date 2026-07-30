@@ -986,7 +986,7 @@ sitting duplicated under the summary cards. */
 .corner-badge-group {
   display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
 }
-.top-bar-row > .refresh-app-btn { margin-left: auto; align-self: center; }
+.top-bar-row > .refresh-app-btn { margin-left: auto; align-self: flex-start; }
 .corner-username-badge {
   font-size: 11px; font-weight: 700; color: var(--accent); white-space: nowrap;
 }
@@ -2764,4 +2764,16 @@ row. */
   background-repeat: no-repeat;
   background-position: center;
   background-size: 64px 32px;
+}
+
+
+/* v1.87: remove the "infinity circulation" scrolling glow-line background
+   layer on tab buttons per explicit user request -- the tab-heartbeat scale
+   pulse on the ACTIVE tab (and the always-on icon pulses) are a separate,
+   still-wanted effect and are untouched by this override; this only kills
+   the .header-tab-btn background-image/animation added in v1.45 for the
+   drifting lemniscate line. */
+.header-tab-btn {
+  background-image: none !important;
+  animation: none !important;
 }
