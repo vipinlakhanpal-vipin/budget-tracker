@@ -986,6 +986,7 @@ sitting duplicated under the summary cards. */
 .corner-badge-group {
   display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
 }
+.mobile-only-refresh-btn { display: none; }
 .corner-username-badge {
   font-size: 11px; font-weight: 700; color: var(--accent); white-space: nowrap;
 }
@@ -1821,6 +1822,8 @@ td.amount { font-weight: 600; text-align: right; }
             if the header row wraps to two lines on a narrow phone -- margin-left:
             auto pushes it to the far right of whichever line it ends up on. */
           .corner-badge-group { margin-left: auto; }
+  .mobile-only-refresh-btn { display: inline-flex; align-items: center; justify-content: center; margin-left: auto; }
+  .top-bar-row { align-items: center; }
     .tab-visible-mobile { display: inline-block; }
     /* !important -- some elements this hides on mobile (chat-fab-btn,
        refresh-app-btn) declare their own unconditional display value
@@ -1918,6 +1921,9 @@ instead of overflowing at the unconditional 35px desktop size. */
      any given mobile browser sizes its native date/select chrome. */
   .field-pair { flex-direction: column; align-items: stretch; }
   .field-pair > .field { width: 100% !important; flex: 1 1 auto !important; height: auto !important; min-height: 0 !important; }
+  .investments-field-row { display: grid !important; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+  .investments-field-row > .field { min-width: 0 !important; flex: unset !important; width: 100% !important; }
+  .investments-field-row > .field:last-child:nth-child(odd) { grid-column: 1 / -1; }
   /* The previous version of this rule (no !important) never actually beat
      the inline style={{ flex: '0 1 150px' }} etc. that several field-pairs
      carry over from the desktop side-by-side layout (Payment Source+Bank,
