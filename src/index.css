@@ -2383,6 +2383,14 @@ row. */
   background: var(--card); border: 1px solid var(--border); border-radius: 16px;
   box-shadow: 0 10px 30px rgba(15, 42, 46, .18);
   display: flex; flex-direction: column; overflow: hidden;
+  /* On mobile the popup's bottom/max-height are recalculated live as the
+     on-screen keyboard opens and closes (see the chatPos effect in
+     Dashboard.jsx) so the input row never ends up hidden behind the
+     keyboard. Animating those two properties turns that recalculation
+     into a smooth slide instead of the instant, jarring "jump" it was
+     before -- same underlying repositioning, just eased instead of
+     snapped. */
+  transition: bottom .22s ease, max-height .22s ease;
 }
 .chat-header {
   display: flex; align-items: center; justify-content: space-between;
