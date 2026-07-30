@@ -1556,6 +1556,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   const [reportStatus, setReportStatus] = useState('');
   const [reportPreviewOpen, setReportPreviewOpen] = useState(false);
   const [reportInfoOpen, setReportInfoOpen] = useState(false); // v1.29: mobile-only collapsible report description toggle
+  const [investmentsInfoOpen, setInvestmentsInfoOpen] = useState(false); // collapsible Investments description toggle, reusing the report-info-btn/report-desc pattern
   // Tracks the current blob: URL used for the on-screen preview so it can be
   // revoked (freeing memory) whenever a new one is generated or the
   // component unmounts.
@@ -5490,12 +5491,21 @@ I can help you track expenses, understand spending patterns, create budgets, and
           {activePanel === 'investments' ? (
  <>
  <div className="panel" ref={panelRef} style={{ maxWidth: '100%', marginBottom: 24 }}>
-            <div className="panel-title-row-inline">
-              <h2 className="panel-title-themed">My Investments</h2>
+            <div className="panel-title-row-inline" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <h2 className="panel-title-themed" style={{ marginBottom: 0 }}>My Investments</h2>
+              <button
+                type="button"
+                className="report-info-btn"
+                aria-label="About Investments"
+                title="About Investments"
+                onClick={() => setInvestmentsInfoOpen((v) => !v)}
+              >
+                {'\u24D8'}
+              </button>
               {toastMsg && activePanel === 'investments' && <div className="app-toast">{toastMsg}</div>}
             </div>
-            <div className="muted-small" style={{ textAlign: 'left', marginTop: -6, marginBottom: 12 }}>
-              Fixed Deposits and Mutual Fund / SIP investments, tracked separately from the household budget. Only you can see this tab.
+            <div className={`muted-small report-desc${investmentsInfoOpen ? ' is-open' : ''}`} style={{ textAlign: 'left', marginTop: -6, marginBottom: 12 }}>
+              Fixed Deposits and Mutual Fund / SIP investments, tracked separately from the household budget. Visible to everyone in your household.
               If you withdraw money from an FD or SIP and spend it, record that spend as a normal entry under Regular Expenses -- this tab only tracks what's invested, not day-to-day spending.
             </div>
             <div className="row investments-field-row" style={{ flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
