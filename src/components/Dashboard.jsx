@@ -2242,6 +2242,19 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     return PAYMENT_SOURCES.includes(detected) ? detected : 'Cash';
   }
 
+  // Auto-fill a bank for Credit Card / Debit Card payment sources by reusing
+  // whichever bank this household most recently used for that same source --
+  // saves re-picking the same bank on every single expense, and covers the
+  // AI receipt-scan path too (a receipt itself never states which bank issued
+  // the card, so that path used to leave payment_bank blank every time).
+  function getDefaultBankFor(source) {
+    if (source !== 'Credit Card' && source !== 'Debit Card') return '';
+    const match = expenses
+      .filter((x) => x.payment_source === source && x.payment_bank)
+      .sort((a, b) => new Date(b.expense_date) - new Date(a.expense_date))[0];
+    return match ? match.payment_bank : '';
+  }
+
   async function handleScanFileChange(e) {
     const file = e.target.files?.[0];
     e.target.value = ''; // lets the same file be re-picked later if needed
@@ -2283,7 +2296,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
             description: (item.description || '').trim(),
             amount: Number(item.amount),
             payment_source: paymentSource,
-            payment_bank: null,
+            payment_bank: getDefaultBankFor(paymentSource) || null,
             created_by: session.user.id,
             created_by_email: session.user.email,
           };
@@ -2511,8 +2524,8 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     setExpenseDrafts((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
   }
 
-  async function commitExpenseField(id, field, value) {
-    const merged = { ...(expenseDrafts[id] || {}), [field]: value };
+  async function commitExpenseField(id, field, value, extra) {
+    const merged = { ...(expenseDrafts[id] || {}), [field]: value, ...(extra || {}) };
     setExpenseDrafts((prev) => ({ ...prev, [id]: merged }));
     const amount = parseFloat(merged.amount);
     if (!merged.date || isNaN(amount) || amount <= 0) return;
@@ -2532,6 +2545,33 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       return;
     }
     loadAll();
+  }
+
+  async function handleAutofillBanks() {
+    const missing = expenses.filter((x) => (x.payment_source === 'Credit Card' || x.payment_source === 'Debit Card') && !x.payment_bank);
+    if (missing.length === 0) { alert('No expenses are missing a bank right now.'); return; }
+    const bySource = {};
+    for (const src of ['Credit Card', 'Debit Card']) {
+      const bank = getDefaultBankFor(src);
+      const count = missing.filter((x) => x.payment_source === src).length;
+      if (count > 0 && bank) bySource[src] = { bank, count };
+    }
+    const lines = Object.entries(bySource).map(([src, v]) => `${v.count} ${src} entr${v.count === 1 ? 'y' : 'ies'} -> ${v.bank}`);
+    if (lines.length === 0) {
+      alert("Can't auto-fill yet -- none of your existing Credit Card or Debit Card expenses have a bank saved to copy from. Pick a bank on one expense first, then try again.");
+      return;
+    }
+    const resolvedCount = Object.values(bySource).reduce((s, v) => s + v.count, 0);
+    const unresolved = missing.length - resolvedCount;
+    let msg = `Fill in the missing bank on:\n${lines.join('\n')}`;
+    if (unresolved > 0) msg += `\n\n${unresolved} more entr${unresolved === 1 ? 'y' : 'ies'} will stay as-is (no bank on file yet for that payment source).`;
+    if (!confirm(msg)) return;
+    for (const [src, v] of Object.entries(bySource)) {
+      const { error } = await supabase.from('expenses').update({ payment_bank: v.bank }).eq('household_id', householdId).eq('payment_source', src).is('payment_bank', null);
+      if (error) { alert('Could not update: ' + error.message); return; }
+    }
+    loadAll();
+    showToast('Banks filled in');
   }
 
   async function handleAddCategory() {
@@ -5214,7 +5254,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 <label>Payment Source</label>
                 <select
                   value={form.paymentSource}
-                  onChange={(e) => setForm({ ...form, paymentSource: e.target.value, paymentBank: e.target.value === 'Cash' ? '' : form.paymentBank })}
+                  onChange={(e) => { const src = e.target.value; setForm({ ...form, paymentSource: src, paymentBank: src === 'Cash' ? '' : (form.paymentBank || getDefaultBankFor(src)) }); }}
                 >
                   {PAYMENT_SOURCES.map((p) => (
                     <option key={p} value={p}>{p}</option>
@@ -6657,6 +6697,11 @@ I can help you track expenses, understand spending patterns, create budgets, and
             <div className="panel-heading-row">
               <h2 className="panel-title-themed">Regular Expenses for {monthLabel(currentMonth)}</h2>
               <div className="filter-wrap" ref={expenseFilterRef}>
+                {expenses.some((x) => (x.payment_source === 'Credit Card' || x.payment_source === 'Debit Card') && !x.payment_bank) && (
+                  <button type="button" className="filter-btn" onClick={handleAutofillBanks} title="Fill in the bank for card expenses that are missing one">
+                    Fix missing banks
+                  </button>
+                )}
                 <button
                   type="button"
                   className={`filter-btn ${expenseFilterActive ? 'active' : ''}`}
@@ -6845,7 +6890,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                         <select
                           style={{ fontSize: 11, width: '100%', minWidth: 0 }}
                           value={expenseDrafts[e.id]?.paymentSource ?? 'Cash'}
-                          onChange={(ev) => commitExpenseField(e.id, 'paymentSource', ev.target.value)}
+                          onChange={(ev) => { const src = ev.target.value; const curBank = expenseDrafts[e.id]?.paymentBank; commitExpenseField(e.id, 'paymentSource', src, src !== 'Cash' && !curBank ? { paymentBank: getDefaultBankFor(src) } : {}); }}
                         >
                           {PAYMENT_SOURCES.map((p) => (
                             <option key={p} value={p}>{p}</option>
@@ -6969,7 +7014,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     <label>Payment Source</label>
                     <select
                       value={expenseDrafts[e.id]?.paymentSource ?? 'Cash'}
-                      onChange={(ev) => commitExpenseField(e.id, 'paymentSource', ev.target.value)}
+                      onChange={(ev) => { const src = ev.target.value; const curBank = expenseDrafts[e.id]?.paymentBank; commitExpenseField(e.id, 'paymentSource', src, src !== 'Cash' && !curBank ? { paymentBank: getDefaultBankFor(src) } : {}); }}
                     >
                       {PAYMENT_SOURCES.map((p) => (
                         <option key={p} value={p}>{p}</option>
