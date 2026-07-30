@@ -567,6 +567,27 @@ function Amt({ value }) {
   );
 }
 
+// Same as Amt, but for a value in a currency other than the household's --
+// used by Investments, where each Fixed Deposit/SIP can be opened in a
+// different currency than the household's own. Reuses the same Dirham
+// glyph and CURRENCY_SYMBOLS map the rest of the app already uses (instead
+// of a plain "AED 250.00" text prefix), so investment amounts look and
+// feel exactly like every other amount in the app when they happen to be
+// in the household's currency, and fall back to the 3-letter code only for
+// currencies with no recognizable glyph.
+function AmtCur({ value, currency }) {
+  const v = Number(value) || 0;
+  const neg = v < 0;
+  const numStr = Math.abs(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const cur = currency || CURRENT_CURRENCY;
+  const symbol = cur === 'AED' ? <DirhamGlyph /> : (CURRENCY_SYMBOLS[cur] || cur + ' ');
+  return (
+    <span className="amt-tight">
+      {neg ? '-' : ''}{symbol}{numStr}
+    </span>
+  );
+}
+
 function monthKey(d) {
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
 }
@@ -4816,7 +4837,7 @@ function ReportHtmlView({ data }) {
           </div>
           <button
             type="button"
-            className={`refresh-app-btn mobile-only-refresh-btn${updateAvailable ? ' refresh-app-btn-new' : ''}`}
+            className={`refresh-app-btn${updateAvailable ? ' refresh-app-btn-new' : ''}`}
             title={updateAvailable ? 'New update available -- click to refresh' : 'Refresh app'}
             onClick={() => window.location.reload()}
           >
@@ -5162,16 +5183,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 return chatPos ? createPortal(chatWindowEl, document.body) : chatWindowEl;
               })()}
             </div>
-            <button
-                type="button"
-                className={`refresh-app-btn tab-hide-mobile${updateAvailable ? ' refresh-app-btn-new' : ''}`}
-                title={updateAvailable ? 'New update available -- click to refresh' : 'Refresh app'}
-                onClick={() => window.location.reload()}
-              >
-                <RefreshCw size={16} />
-                {updateAvailable && <span className="refresh-app-btn-badge">!</span>}
-              </button>
-          </div>
+            </div>
         </div>
 
       {/* Every header tab shows its own name as a small left-aligned title
@@ -5381,7 +5393,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
               Fixed Deposits and Mutual Fund / SIP investments, tracked separately from the household budget. Only you can see this tab.
               If you withdraw money from an FD or SIP and spend it, record that spend as a normal entry under Regular Expenses -- this tab only tracks what's invested, not day-to-day spending.
             </div>
-            <div className="row investments-field-row" style={{ flexWrap: 'wrap', gap: 12, alignItems: 'flex-end' }}>
+            <div className="row investments-field-row" style={{ flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
               <div className="field" style={{ flex: '0 1 170px' }}>
                 <label>Type</label>
                 <select
@@ -5445,7 +5457,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   </div>
                 )}
               </div>
-              <div className="field" style={{ flex: '0 1 160px' }}>
+              <div className="field" style={{ flex: '0 1 140px' }}>
                 <label>{investmentForm.investmentType === 'Fixed Deposit' ? 'Principal Amount' : 'Total Invested So Far'}</label>
                 <input
                   type="number" min="0" step="0.01"
@@ -5454,7 +5466,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   placeholder="0.00"
                 />
               </div>
-              <div className="field" style={{ flex: '0 1 160px' }}>
+              <div className="field" style={{ flex: '0 1 140px' }}>
                 <label>Current Value</label>
                 <input
                   type="number" min="0" step="0.01"
@@ -5464,7 +5476,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 />
               </div>
               {investmentForm.investmentType === 'Fixed Deposit' ? (
-                <div className="field" style={{ flex: '0 1 150px' }}>
+                <div className="field" style={{ flex: '0 1 130px' }}>
                   <label>Interest Rate (% p.a.)</label>
                   <input
                     type="number" min="0" step="0.01"
@@ -5474,7 +5486,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   />
                 </div>
               ) : (
-                <div className="field" style={{ flex: '0 1 150px' }}>
+                <div className="field" style={{ flex: '0 1 130px' }}>
                   <label>Monthly SIP Amount</label>
                   <input
                     type="number" min="0" step="0.01"
@@ -5484,7 +5496,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   />
                 </div>
               )}
-              <div className="field" style={{ flex: '0 1 150px' }}>
+              <div className="field" style={{ flex: '0 1 120px' }}>
                 <label>Start Date</label>
                 <input
                   type="date"
@@ -5493,7 +5505,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 />
               </div>
               {investmentForm.investmentType === 'Fixed Deposit' && (
-                <div className="field" style={{ flex: '0 1 150px' }}>
+                <div className="field" style={{ flex: '0 1 120px' }}>
                   <label>Maturity Date</label>
                   <input
                     type="date"
@@ -5526,10 +5538,13 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 )}
               </div>
             </div>
+          </div>
 
-            <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+          <div className="panel" style={{ maxWidth: '100%', marginBottom: 24 }}>
+            <h2 className="panel-title-themed" style={{ fontSize: 16 }}>Your Investment Records</h2>
+            <div>
               <div className="muted-small" style={{ marginBottom: 10, fontSize: 13 }}>
-                {investments.length} {investments.length === 1 ? 'entry' : 'entries'} -- Invested <strong>{fmt(investmentTotals.principal)}</strong> -- Current <strong style={{ color: '#0ea5e9' }}>{fmt(investmentTotals.current)}</strong> -- <strong style={{ color: investmentTotals.gain >= 0 ? '#1a7f37' : '#d1242f' }}>{investmentTotals.gain >= 0 ? 'Gain' : 'Loss'} {fmt(Math.abs(investmentTotals.gain))}</strong>
+                {investments.length} {investments.length === 1 ? 'entry' : 'entries'} -- Invested <strong><Amt value={investmentTotals.principal} /></strong> -- Current <strong style={{ color: '#0ea5e9' }}><Amt value={investmentTotals.current} /></strong> -- <strong style={{ color: investmentTotals.gain >= 0 ? '#1a7f37' : '#d1242f' }}>{investmentTotals.gain >= 0 ? 'Gain' : 'Loss'} <Amt value={Math.abs(investmentTotals.gain)} /></strong>
               </div>
               {investments.length === 0 ? (
                 <div className="empty">No investments added yet.</div>
@@ -5538,7 +5553,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   <table className="responsive-table" style={{ fontSize: 11 }}>
                     <thead>
                       <tr>
-                        <th>Type</th><th>Name</th><th>Institution</th><th>Principal</th><th>Current Value</th><th>Gain / Loss</th><th>Rate / SIP</th><th>Maturity</th><th>Status</th><th></th>
+                        <th>Type</th><th>Name</th><th>Institution</th><th>Principal</th><th>Current Value</th><th>Rate / SIP</th><th>Start Date</th><th>Maturity</th><th>Status</th><th>Gain / Loss</th><th></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -5551,18 +5566,19 @@ I can help you track expenses, understand spending patterns, create budgets, and
                             <td data-label="Type">{inv.investment_type}</td>
                             <td data-label="Name">{inv.name}</td>
                             <td data-label="Institution">{inv.institution || '--'}</td>
-                            <td data-label="Principal">{fmtCur(inv.principal_amount, inv.currency)}</td>
-                            <td data-label="Current Value">{fmtCur(cur, inv.currency)}{estFlag && <span className="muted-small" style={{ marginLeft: 4 }}>(est.)</span>}</td>
-                            <td data-label="Gain / Loss" style={{ color: gain >= 0 ? '#1a7f37' : '#d1242f', fontWeight: 600 }}>
-                              {gain >= 0 ? '+' : '-'}{fmtCur(Math.abs(gain), inv.currency)}
-                            </td>
+                            <td data-label="Principal"><AmtCur value={inv.principal_amount} currency={inv.currency} /></td>
+                            <td data-label="Current Value"><AmtCur value={cur} currency={inv.currency} />{estFlag && <span className="muted-small" style={{ marginLeft: 4 }}>(est.)</span>}</td>
                             <td data-label="Rate / SIP">
                               {inv.investment_type === 'Fixed Deposit'
                                 ? (inv.interest_rate != null ? `${inv.interest_rate}% p.a.` : '--')
                                 : (inv.sip_amount != null ? <>{fmt(inv.sip_amount)}/mo</> : '--')}
                             </td>
+                            <td data-label="Start Date">{inv.start_date || '--'}</td>
                             <td data-label="Maturity">{inv.maturity_date || '--'}</td>
                             <td data-label="Status">{investDisplayStatus(inv)}</td>
+                            <td data-label="Gain / Loss" style={{ color: gain >= 0 ? '#1a7f37' : '#d1242f', fontWeight: 600 }}>
+                              {gain >= 0 ? '+' : '-'}<AmtCur value={Math.abs(gain)} currency={inv.currency} />
+                            </td>
                             <td data-label="">
                               <button type="button" className="row-icon-btn" title="Edit" onClick={() => startEditInvestment(inv)}>
                                 <Pencil size={13} />
@@ -7578,9 +7594,9 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     );
                   })()}
                   <div className="muted-small" style={{ marginTop: 12, lineHeight: 1.6 }}>
-                    Fixed Deposits: {fmt(investments.filter((x) => x.investment_type === 'Fixed Deposit').reduce((s, x) => s + investToBase(investAccruedValue(x), x.currency), 0))} across {investments.filter((x) => x.investment_type === 'Fixed Deposit').length}
+                    Fixed Deposits: <Amt value={investments.filter((x) => x.investment_type === 'Fixed Deposit').reduce((s, x) => s + investToBase(investAccruedValue(x), x.currency), 0)} /> across {investments.filter((x) => x.investment_type === 'Fixed Deposit').length}
                     <br />
-                    Mutual Funds: {fmt(investments.filter((x) => x.investment_type === 'Mutual Fund').reduce((s, x) => s + investToBase(investAccruedValue(x), x.currency), 0))} across {investments.filter((x) => x.investment_type === 'Mutual Fund').length}
+                    Mutual Funds: <Amt value={investments.filter((x) => x.investment_type === 'Mutual Fund').reduce((s, x) => s + investToBase(investAccruedValue(x), x.currency), 0)} /> across {investments.filter((x) => x.investment_type === 'Mutual Fund').length}
                   </div>
                 </>
               )}
