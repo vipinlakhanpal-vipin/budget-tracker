@@ -1115,6 +1115,11 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
    active tab highlight and Expense Management title already use) so picking
    a new theme recolors these too. */
 .panel-title-themed { font-size: 40px; color: var(--accent); text-align: left; }
+/* Wraps panel-title-themed headings that live inside their own data-entry
+   frame (e.g. "My Investments") rather than the shared .page-title-row --
+   gives the toast a positioning context so it can center in that same row,
+   parallel to the title, per the same schema used up top. */
+.panel-title-row-inline { position: relative; }
 
 /* Small left-aligned title shown right above the month nav for every header
    tab (Dashboard/Income/Fixed Expenses/Regular Expenses/Savings/Report/
