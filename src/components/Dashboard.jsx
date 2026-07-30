@@ -79,6 +79,8 @@ const COLORS = [
 ];
 const RELATIONS = ['Self', 'Spouse', 'Partner', 'Child', 'Parent', 'Sibling', 'Roommate', 'Other'];
 const CURRENCIES = ['AED', 'AFN', 'ALL', 'AMD', 'ANG', 'AOA', 'ARS', 'AUD', 'AWG', 'AZN', 'BAM', 'BBD', 'BDT', 'BGN', 'BHD', 'BIF', 'BMD', 'BND', 'BOB', 'BRL', 'BSD', 'BTN', 'BWP', 'BYN', 'BZD', 'CAD', 'CDF', 'CHF', 'CLP', 'CNY', 'COP', 'CRC', 'CUP', 'CVE', 'CZK', 'DJF', 'DKK', 'DOP', 'DZD', 'EGP', 'ERN', 'ETB', 'EUR', 'FJD', 'FKP', 'GBP', 'GEL', 'GHS', 'GIP', 'GMD', 'GNF', 'GTQ', 'GYD', 'HKD', 'HNL', 'HTG', 'HUF', 'IDR', 'ILS', 'INR', 'IQD', 'IRR', 'ISK', 'JMD', 'JOD', 'JPY', 'KES', 'KGS', 'KHR', 'KMF', 'KPW', 'KRW', 'KWD', 'KYD', 'KZT', 'LAK', 'LBP', 'LKR', 'LRD', 'LSL', 'LYD', 'MAD', 'MDL', 'MGA', 'MKD', 'MMK', 'MNT', 'MOP', 'MRU', 'MUR', 'MVR', 'MWK', 'MXN', 'MYR', 'MZN', 'NAD', 'NGN', 'NIO', 'NOK', 'NPR', 'NZD', 'OMR', 'PAB', 'PEN', 'PGK', 'PHP', 'PKR', 'PLN', 'PYG', 'QAR', 'RON', 'RSD', 'RUB', 'RWF', 'SAR', 'SBD', 'SCR', 'SDG', 'SEK', 'SGD', 'SHP', 'SLE', 'SOS', 'SRD', 'SSP', 'STN', 'SYP', 'SZL', 'THB', 'TJS', 'TMT', 'TND', 'TOP', 'TRY', 'TTD', 'TWD', 'TZS', 'UAH', 'UGX', 'USD', 'UYU', 'UZS', 'VES', 'VND', 'VUV', 'WST', 'XAF', 'XCD', 'XOF', 'XPF', 'YER', 'ZAR', 'ZMW', 'ZWL'];
+const CURRENCY_REGIONS = { AED: 'United Arab Emirates', AFN: 'Afghanistan', ALL: 'Albania', AMD: 'Armenia', ANG: 'Curaçao & Sint Maarten', AOA: 'Angola', ARS: 'Argentina', AUD: 'Australia', AWG: 'Aruba', AZN: 'Azerbaijan', BAM: 'Bosnia & Herzegovina', BBD: 'Barbados', BDT: 'Bangladesh', BGN: 'Bulgaria', BHD: 'Bahrain', BIF: 'Burundi', BMD: 'Bermuda', BND: 'Brunei', BOB: 'Bolivia', BRL: 'Brazil', BSD: 'Bahamas', BTN: 'Bhutan', BWP: 'Botswana', BYN: 'Belarus', BZD: 'Belize', CAD: 'Canada', CDF: 'DR Congo', CHF: 'Switzerland', CLP: 'Chile', CNY: 'China', COP: 'Colombia', CRC: 'Costa Rica', CUP: 'Cuba', CVE: 'Cape Verde', CZK: 'Czech Republic', DJF: 'Djibouti', DKK: 'Denmark', DOP: 'Dominican Republic', DZD: 'Algeria', EGP: 'Egypt', ERN: 'Eritrea', ETB: 'Ethiopia', EUR: 'Eurozone', FJD: 'Fiji', FKP: 'Falkland Islands', GBP: 'United Kingdom', GEL: 'Georgia', GHS: 'Ghana', GIP: 'Gibraltar', GMD: 'Gambia', GNF: 'Guinea', GTQ: 'Guatemala', GYD: 'Guyana', HKD: 'Hong Kong', HNL: 'Honduras', HTG: 'Haiti', HUF: 'Hungary', IDR: 'Indonesia', ILS: 'Israel', INR: 'India', IQD: 'Iraq', IRR: 'Iran', ISK: 'Iceland', JMD: 'Jamaica', JOD: 'Jordan', JPY: 'Japan', KES: 'Kenya', KGS: 'Kyrgyzstan', KHR: 'Cambodia', KMF: 'Comoros', KPW: 'North Korea', KRW: 'South Korea', KWD: 'Kuwait', KYD: 'Cayman Islands', KZT: 'Kazakhstan', LAK: 'Laos', LBP: 'Lebanon', LKR: 'Sri Lanka', LRD: 'Liberia', LSL: 'Lesotho', LYD: 'Libya', MAD: 'Morocco', MDL: 'Moldova', MGA: 'Madagascar', MKD: 'North Macedonia', MMK: 'Myanmar', MNT: 'Mongolia', MOP: 'Macau', MRU: 'Mauritania', MUR: 'Mauritius', MVR: 'Maldives', MWK: 'Malawi', MXN: 'Mexico', MYR: 'Malaysia', MZN: 'Mozambique', NAD: 'Namibia', NGN: 'Nigeria', NIO: 'Nicaragua', NOK: 'Norway', NPR: 'Nepal', NZD: 'New Zealand', OMR: 'Oman', PAB: 'Panama', PEN: 'Peru', PGK: 'Papua New Guinea', PHP: 'Philippines', PKR: 'Pakistan', PLN: 'Poland', PYG: 'Paraguay', QAR: 'Qatar', RON: 'Romania', RSD: 'Serbia', RUB: 'Russia', RWF: 'Rwanda', SAR: 'Saudi Arabia', SBD: 'Solomon Islands', SCR: 'Seychelles', SDG: 'Sudan', SEK: 'Sweden', SGD: 'Singapore', SHP: 'Saint Helena', SLE: 'Sierra Leone', SOS: 'Somalia', SRD: 'Suriname', SSP: 'South Sudan', STN: 'São Tomé & Príncipe', SYP: 'Syria', SZL: 'Eswatini', THB: 'Thailand', TJS: 'Tajikistan', TMT: 'Turkmenistan', TND: 'Tunisia', TOP: 'Tonga', TRY: 'Turkey', TTD: 'Trinidad & Tobago', TWD: 'Taiwan', TZS: 'Tanzania', UAH: 'Ukraine', UGX: 'Uganda', USD: 'United States', UYU: 'Uruguay', UZS: 'Uzbekistan', VES: 'Venezuela', VND: 'Vietnam', VUV: 'Vanuatu', WST: 'Samoa', XAF: 'Central Africa (CEMAC)', XCD: 'Eastern Caribbean', XOF: 'West Africa (UEMOA)', XPF: 'French Pacific', YER: 'Yemen', ZAR: 'South Africa', ZMW: 'Zambia', ZWL: 'Zimbabwe' };
+
 // Shown as a prefix inside every amount field so what you're typing is
 // unambiguous at a glance -- codes without one universally-recognized
 // glyph (AED/SAR/PKR) just repeat the code itself, matching how fmt()
@@ -427,6 +429,42 @@ function fmt(n) {
   return CURRENT_CURRENCY + ' ' + v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function fmtCur(n, cur) {
+  const v = Number(n) || 0;
+  return (cur || CURRENT_CURRENCY) + ' ' + v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function investAccruedValue(inv) {
+  const principal = Number(inv.principal_amount || 0);
+  const cv = inv.current_value;
+  const hasOverride = cv !== null && cv !== undefined && cv !== '' && Number(cv) !== principal;
+  if (hasOverride) return Number(cv);
+  if (inv.investment_type === 'Fixed Deposit' && inv.interest_rate && inv.start_date) {
+    const rate = Number(inv.interest_rate) || 0;
+    const start = new Date(inv.start_date);
+    const maturity = inv.maturity_date ? new Date(inv.maturity_date) : null;
+    const today = new Date();
+    const end = (maturity && today > maturity) ? maturity : today;
+    const msPerYear = 365.25 * 24 * 3600 * 1000;
+    const years = Math.max(0, (end - start) / msPerYear);
+    return principal * (1 + (rate / 100) * years);
+  }
+  return cv !== null && cv !== undefined && cv !== '' ? Number(cv) : principal;
+}
+
+function investIsEstimated(inv) {
+  const principal = Number(inv.principal_amount || 0);
+  const cv = inv.current_value;
+  const hasOverride = cv !== null && cv !== undefined && cv !== '' && Number(cv) !== principal;
+  return !hasOverride && inv.investment_type === 'Fixed Deposit' && !!inv.interest_rate && !!inv.start_date;
+}
+
+function investDisplayStatus(inv) {
+  if (inv.status && inv.status !== 'Active') return inv.status;
+  if (inv.maturity_date && new Date() > new Date(inv.maturity_date)) return 'Matured';
+  return inv.status || 'Active';
+}
+
 // The little prefix shown inside every amount input (Add forms, edit
 // sheets, and the inline-editable tables) so the currency is always
 // visible right where you're typing, not just in the household's Settings.
@@ -582,13 +620,31 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   const [investmentForm, setInvestmentForm] = useState({
     investmentType: 'Fixed Deposit', name: '', institution: '', principal: '', currentValue: '',
     interestRate: '', sipAmount: '', startDate: new Date().toISOString().slice(0, 10), maturityDate: '', status: 'Active',
+    currency: CURRENT_CURRENCY,
   });
+  const [investFxRates, setInvestFxRates] = useState(null);
+  const [investChartType, setInvestChartType] = useState('bar-h');
   const [editingInvestmentId, setEditingInvestmentId] = useState(null);
+  function investToBase(amount, cur) {
+    if (!cur || cur === CURRENT_CURRENCY) return amount;
+    if (investFxRates && investFxRates[cur]) return amount / investFxRates[cur];
+    return amount;
+  }
   const investmentTotals = useMemo(() => {
-    const principal = investments.reduce((s, x) => s + Number(x.principal_amount || 0), 0);
-    const current = investments.reduce((s, x) => s + Number(x.current_value != null ? x.current_value : (x.principal_amount || 0)), 0);
+    const principal = investments.reduce((s, x) => s + investToBase(Number(x.principal_amount || 0), x.currency), 0);
+    const current = investments.reduce((s, x) => s + investToBase(investAccruedValue(x), x.currency), 0);
     return { principal, current, gain: current - principal };
-  }, [investments]);
+  }, [investments, investFxRates]);
+
+  useEffect(() => {
+    if (!isMe) return;
+    let cancelled = false;
+    fetch(`https://open.er-api.com/v6/latest/${CURRENT_CURRENCY}`)
+      .then((r) => r.json())
+      .then((j) => { if (!cancelled && j && j.rates) setInvestFxRates(j.rates); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [isMe]);
   // Total monthly budget now lives per-calendar-month (one row per month, in
   // the monthly_budgets table), exactly like Income/Savings, instead of one
   // flat number that applied to every month forever. `totalBudget` below is
@@ -2318,6 +2374,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     return {
       investmentType: 'Fixed Deposit', name: '', institution: '', principal: '', currentValue: '',
       interestRate: '', sipAmount: '', startDate: new Date().toISOString().slice(0, 10), maturityDate: '', status: 'Active',
+      currency: CURRENT_CURRENCY,
     };
   }
 
@@ -2334,6 +2391,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       startDate: inv.start_date || '',
       maturityDate: inv.maturity_date || '',
       status: inv.status || 'Active',
+      currency: inv.currency || CURRENT_CURRENCY,
     });
   }
 
@@ -2353,12 +2411,13 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       name: investmentForm.name.trim(),
       institution: investmentForm.institution.trim() || null,
       principal_amount: principal,
-      current_value: investmentForm.currentValue ? parseFloat(investmentForm.currentValue) : principal,
+      current_value: investmentForm.currentValue ? parseFloat(investmentForm.currentValue) : null,
       interest_rate: investmentForm.investmentType === 'Fixed Deposit' && investmentForm.interestRate ? parseFloat(investmentForm.interestRate) : null,
       sip_amount: investmentForm.investmentType === 'Mutual Fund' && investmentForm.sipAmount ? parseFloat(investmentForm.sipAmount) : null,
       start_date: investmentForm.startDate || null,
       maturity_date: investmentForm.investmentType === 'Fixed Deposit' ? (investmentForm.maturityDate || null) : null,
       status: investmentForm.status || 'Active',
+      currency: investmentForm.currency || CURRENT_CURRENCY,
     };
     let error;
     if (editingInvestmentId) {
@@ -4755,6 +4814,15 @@ function ReportHtmlView({ data }) {
               <h1 className="app-title-purple">{household.name || 'Hearth'}</h1>
             )}
           </div>
+          <button
+            type="button"
+            className={`refresh-app-btn mobile-only-refresh-btn${updateAvailable ? ' refresh-app-btn-new' : ''}`}
+            title={updateAvailable ? 'New update available -- click to refresh' : 'Refresh app'}
+            onClick={() => window.location.reload()}
+          >
+            <RefreshCw size={16} />
+            {updateAvailable && <span className="refresh-app-btn-badge">!</span>}
+          </button>
           <div className="corner-badge-group">
 <div className="profile-menu-wrap" ref={profileMenuRef}>
               <button
@@ -5096,7 +5164,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             </div>
             <button
                 type="button"
-                className={`refresh-app-btn${updateAvailable ? ' refresh-app-btn-new' : ''}`}
+                className={`refresh-app-btn tab-hide-mobile${updateAvailable ? ' refresh-app-btn-new' : ''}`}
                 title={updateAvailable ? 'New update available -- click to refresh' : 'Refresh app'}
                 onClick={() => window.location.reload()}
               >
@@ -5313,7 +5381,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
               Fixed Deposits and Mutual Fund / SIP investments, tracked separately from the household budget. Only you can see this tab.
               If you withdraw money from an FD or SIP and spend it, record that spend as a normal entry under Regular Expenses -- this tab only tracks what's invested, not day-to-day spending.
             </div>
-            <div className="row" style={{ flexWrap: 'wrap', gap: 12, alignItems: 'flex-end' }}>
+            <div className="row investments-field-row" style={{ flexWrap: 'wrap', gap: 12, alignItems: 'flex-end' }}>
               <div className="field" style={{ flex: '0 1 170px' }}>
                 <label>Type</label>
                 <select
@@ -5337,7 +5405,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 <label>{investmentForm.investmentType === 'Fixed Deposit' ? 'Bank' : 'Fund House'}</label>
                 {investmentForm.investmentType === 'Fixed Deposit' ? (
                   <input
-                    list="bank-options-expense"
+                    list="bank-options-investments"
                     value={investmentForm.institution}
                     onChange={(e) => setInvestmentForm({ ...investmentForm, institution: e.target.value })}
                     placeholder="Search bank..."
@@ -5349,6 +5417,32 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     onChange={(e) => setInvestmentForm({ ...investmentForm, institution: e.target.value })}
                     placeholder="e.g. HDFC Mutual Fund"
                   />
+                )}
+                <datalist id="bank-options-investments">
+                  {BANKS.map((b) => (
+                    <option key={b} value={b} />
+                  ))}
+                </datalist>
+              </div>
+              <div className="field" style={{ flex: '0 1 190px' }}>
+                <label>Currency</label>
+                <input
+                  list="currency-options-investments"
+                  value={investmentForm.currency}
+                  onChange={(e) => { const v = e.target.value.toUpperCase(); if (CURRENCIES.includes(v)) setInvestmentForm({ ...investmentForm, currency: v }); else setInvestmentForm({ ...investmentForm, currency: e.target.value }); }}
+                  placeholder="Search currency..."
+                />
+                <datalist id="currency-options-investments">
+                  {CURRENCIES.map((c) => (
+                    <option key={c} value={c}>{c} - {CURRENCY_REGIONS[c] || ''}</option>
+                  ))}
+                </datalist>
+                {investmentForm.currency && investmentForm.currency !== CURRENT_CURRENCY && (
+                  <div className="muted-small" style={{ marginTop: 4 }}>
+                    {investFxRates && investFxRates[investmentForm.currency]
+                      ? `Live rate: 1 ${investmentForm.currency} = ${(1 / investFxRates[investmentForm.currency]).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })} ${CURRENT_CURRENCY}`
+                      : 'Fetching live exchange rate...'}
+                  </div>
                 )}
               </div>
               <div className="field" style={{ flex: '0 1 160px' }}>
@@ -5433,9 +5527,9 @@ I can help you track expenses, understand spending patterns, create budgets, and
               </div>
             </div>
 
-            <div style={{ marginTop: 20 }}>
-              <div className="muted-small" style={{ marginBottom: 10 }}>
-                {investments.length} {investments.length === 1 ? 'entry' : 'entries'} -- Invested <Amt value={investmentTotals.principal} /> -- Current <Amt value={investmentTotals.current} /> -- {investmentTotals.gain >= 0 ? 'Gain' : 'Loss'} <Amt value={Math.abs(investmentTotals.gain)} />
+            <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+              <div className="muted-small" style={{ marginBottom: 10, fontSize: 13 }}>
+                {investments.length} {investments.length === 1 ? 'entry' : 'entries'} -- Invested <strong>{fmt(investmentTotals.principal)}</strong> -- Current <strong style={{ color: '#0ea5e9' }}>{fmt(investmentTotals.current)}</strong> -- <strong style={{ color: investmentTotals.gain >= 0 ? '#1a7f37' : '#d1242f' }}>{investmentTotals.gain >= 0 ? 'Gain' : 'Loss'} {fmt(Math.abs(investmentTotals.gain))}</strong>
               </div>
               {investments.length === 0 ? (
                 <div className="empty">No investments added yet.</div>
@@ -5449,17 +5543,18 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     </thead>
                     <tbody>
                       {investments.map((inv) => {
-                        const cur = inv.current_value != null ? Number(inv.current_value) : Number(inv.principal_amount || 0);
+                        const cur = investAccruedValue(inv);
                         const gain = cur - Number(inv.principal_amount || 0);
+                        const estFlag = investIsEstimated(inv);
                         return (
                           <tr key={inv.id}>
                             <td data-label="Type">{inv.investment_type}</td>
                             <td data-label="Name">{inv.name}</td>
                             <td data-label="Institution">{inv.institution || '--'}</td>
-                            <td data-label="Principal"><Amt value={inv.principal_amount} /></td>
-                            <td data-label="Current Value"><Amt value={cur} /></td>
+                            <td data-label="Principal">{fmtCur(inv.principal_amount, inv.currency)}</td>
+                            <td data-label="Current Value">{fmtCur(cur, inv.currency)}{estFlag && <span className="muted-small" style={{ marginLeft: 4 }}>(est.)</span>}</td>
                             <td data-label="Gain / Loss" style={{ color: gain >= 0 ? '#1a7f37' : '#d1242f', fontWeight: 600 }}>
-                              {gain >= 0 ? '+' : '-'}<Amt value={Math.abs(gain)} />
+                              {gain >= 0 ? '+' : '-'}{fmtCur(Math.abs(gain), inv.currency)}
                             </td>
                             <td data-label="Rate / SIP">
                               {inv.investment_type === 'Fixed Deposit'
@@ -5467,7 +5562,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                                 : (inv.sip_amount != null ? <>{fmt(inv.sip_amount)}/mo</> : '--')}
                             </td>
                             <td data-label="Maturity">{inv.maturity_date || '--'}</td>
-                            <td data-label="Status">{inv.status || 'Active'}</td>
+                            <td data-label="Status">{investDisplayStatus(inv)}</td>
                             <td data-label="">
                               <button type="button" className="row-icon-btn" title="Edit" onClick={() => startEditInvestment(inv)}>
                                 <Pencil size={13} />
@@ -7397,36 +7492,95 @@ I can help you track expenses, understand spending patterns, create budgets, and
             </>
           )}
 
-          {isMe && activePanel === 'investments' && !isMobile && (
+          {isMe && activePanel === 'investments' && (
             <div className="card" style={{ marginBottom: 24 }}>
               <h3 style={{ marginTop: 0 }}>Investment Overview</h3>
               {investments.length === 0 ? (
                 <div className="muted-small">Add a Fixed Deposit or Mutual Fund to see your chart here.</div>
               ) : (
                 <>
-                  <ResponsiveContainer width="100%" height={Math.max(220, investments.length * 46)}>
-                    <BarChart
-                      data={investments.map((x) => ({
-                        name: (x.name || '').length > 12 ? (x.name || '').slice(0, 12) + '…' : (x.name || ''),
-                        Invested: Number(x.principal_amount || 0),
-                        Current: Number(x.current_value != null ? x.current_value : (x.principal_amount || 0)),
-                      }))}
-                      layout="vertical"
-                      margin={{ top: 8, right: 16, left: 8, bottom: 8 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                      <XAxis type="number" tick={{ fontSize: 9 }} hide />
-                      <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 9 }} />
-                      <Tooltip formatter={(v) => fmt(v)} />
-                      <Legend wrapperStyle={{ fontSize: 11 }} />
-                      <Bar dataKey="Invested" fill="#8884d8" radius={[0, 4, 4, 0]} />
-                      <Bar dataKey="Current" fill="#22c55e" radius={[0, 4, 4, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <div className="input-tabs" style={{ marginBottom: 12, flexWrap: 'wrap' }}>
+                    <button className={`btn small ${investChartType === 'pie' ? '' : 'secondary'}`} onClick={() => setInvestChartType('pie')}>Pie</button>
+                    <button className={`btn small ${investChartType === 'bar-v' ? '' : 'secondary'}`} onClick={() => setInvestChartType('bar-v')}>Bar (V)</button>
+                    <button className={`btn small ${investChartType === 'bar-h' ? '' : 'secondary'}`} onClick={() => setInvestChartType('bar-h')}>Bar (H)</button>
+                    <button className={`btn small ${investChartType === 'pareto' ? '' : 'secondary'}`} onClick={() => setInvestChartType('pareto')}>Pareto</button>
+                  </div>
+                  {(() => {
+                    const chartData = investments.map((x) => ({
+                      name: (x.name || '').length > 12 ? (x.name || '').slice(0, 12) + '…' : (x.name || ''),
+                      Invested: investToBase(Number(x.principal_amount || 0), x.currency),
+                      Current: investToBase(investAccruedValue(x), x.currency),
+                    }));
+                    if (investChartType === 'pie') {
+                      return (
+                        <ResponsiveContainer width="100%" height={Math.max(220, investments.length * 30)}>
+                          <PieChart>
+                            <Pie data={chartData} dataKey="Current" nameKey="name" outerRadius={80} label={(e) => e.name}>
+                              {chartData.map((e, i) => (<Cell key={i} fill={COLORS[i % COLORS.length]} />))}
+                            </Pie>
+                            <Tooltip formatter={(v) => fmt(v)} />
+                            <Legend wrapperStyle={{ fontSize: 11 }} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      );
+                    }
+                    if (investChartType === 'pareto') {
+                      const sorted = [...chartData].sort((a, b) => b.Current - a.Current);
+                      const total = sorted.reduce((s, x) => s + x.Current, 0) || 1;
+                      let cum = 0;
+                      const paretoData = sorted.map((x) => { cum += x.Current; return { ...x, cumPct: (cum / total) * 100 }; });
+                      return (
+                        <ResponsiveContainer width="100%" height={Math.max(220, investments.length * 40)}>
+                          <ComposedChart data={paretoData} margin={{ top: 8, right: 24, left: 8, bottom: 40 }}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="name" tick={{ fontSize: 9 }} interval={0} angle={-40} textAnchor="end" height={60} />
+                            <YAxis yAxisId="left" tick={{ fontSize: 9 }} />
+                            <YAxis yAxisId="right" orientation="right" domain={[0, 100]} tick={{ fontSize: 9 }} />
+                            <Tooltip formatter={(v, n) => n === 'Cumulative %' ? `${Number(v).toFixed(1)}%` : fmt(v)} />
+                            <Legend wrapperStyle={{ fontSize: 11 }} />
+                            <Bar yAxisId="left" dataKey="Current" fill="#22c55e" />
+                            <Line yAxisId="right" dataKey="cumPct" stroke="#f97316" strokeWidth={2} dot={{ r: 3 }} name="Cumulative %" />
+                          </ComposedChart>
+                        </ResponsiveContainer>
+                      );
+                    }
+                    if (investChartType === 'bar-v') {
+                      return (
+                        <ResponsiveContainer width="100%" height={Math.max(220, investments.length * 40)}>
+                          <BarChart data={chartData} margin={{ top: 8, right: 16, left: 8, bottom: 40 }}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="name" tick={{ fontSize: 9 }} interval={0} angle={-40} textAnchor="end" height={60} />
+                            <YAxis tick={{ fontSize: 9 }} />
+                            <Tooltip formatter={(v) => fmt(v)} />
+                            <Legend wrapperStyle={{ fontSize: 11 }} />
+                            <Bar dataKey="Invested" fill="#8884d8" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="Current" fill="#22c55e" radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      );
+                    }
+                    return (
+                      <ResponsiveContainer width="100%" height={Math.max(220, investments.length * 46)}>
+                        <BarChart
+                          data={chartData}
+                          layout="vertical"
+                          margin={{ top: 8, right: 16, left: 8, bottom: 8 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                          <XAxis type="number" tick={{ fontSize: 9 }} hide />
+                          <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 9 }} />
+                          <Tooltip formatter={(v) => fmt(v)} />
+                          <Legend wrapperStyle={{ fontSize: 11 }} />
+                          <Bar dataKey="Invested" fill="#8884d8" radius={[0, 4, 4, 0]} />
+                          <Bar dataKey="Current" fill="#22c55e" radius={[0, 4, 4, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    );
+                  })()}
                   <div className="muted-small" style={{ marginTop: 12, lineHeight: 1.6 }}>
-                    Fixed Deposits: {fmt(investments.filter((x) => x.investment_type === 'Fixed Deposit').reduce((s, x) => s + Number(x.current_value != null ? x.current_value : (x.principal_amount || 0)), 0))} across {investments.filter((x) => x.investment_type === 'Fixed Deposit').length}
+                    Fixed Deposits: {fmt(investments.filter((x) => x.investment_type === 'Fixed Deposit').reduce((s, x) => s + investToBase(investAccruedValue(x), x.currency), 0))} across {investments.filter((x) => x.investment_type === 'Fixed Deposit').length}
                     <br />
-                    Mutual Funds: {fmt(investments.filter((x) => x.investment_type === 'Mutual Fund').reduce((s, x) => s + Number(x.current_value != null ? x.current_value : (x.principal_amount || 0)), 0))} across {investments.filter((x) => x.investment_type === 'Mutual Fund').length}
+                    Mutual Funds: {fmt(investments.filter((x) => x.investment_type === 'Mutual Fund').reduce((s, x) => s + investToBase(investAccruedValue(x), x.currency), 0))} across {investments.filter((x) => x.investment_type === 'Mutual Fund').length}
                   </div>
                 </>
               )}
@@ -7914,7 +8068,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     />
                     <datalist id="currency-options">
                       {CURRENCIES.map((c) => (
-                        <option key={c} value={c} />
+                        <option key={c} value={c}>{c} - {CURRENCY_REGIONS[c] || ''}</option>
                       ))}
                     </datalist>
                   </div>
