@@ -5082,12 +5082,10 @@ function ReportHtmlView({ data }) {
                 page right after that effect had already positioned things
                 correctly, which is why opening Report/Settings/Help looked
                 like it stopped doing anything. */}
-                        {isMe && (
-              <button className={`btn-teal header-tab-btn tab-visible-mobile${activePanel === 'investments' ? ' header-tab-btn-active' : ''}`} onClick={() => togglePanel('investments')}>
+                        <button className={`btn-teal header-tab-btn tab-visible-mobile${activePanel === 'investments' ? ' header-tab-btn-active' : ''}`} onClick={() => togglePanel('investments')}>
               <Landmark size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
               Investments
             </button>
-            )}
             <button className={`btn-teal header-tab-btn tab-visible-mobile${activePanel === 'report' ? ' header-tab-btn-active' : ''}`} onClick={() => togglePanel('report')}>
               <FileText size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
               Report
