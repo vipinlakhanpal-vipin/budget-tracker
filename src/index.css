@@ -1004,6 +1004,7 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
 }
 
 .page-title-row {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
@@ -1449,12 +1450,17 @@ input[type="number"] { text-align: right; }
   100% { opacity: 1; transform: translate(-50%, 0); }
 }
 .app-toast {
-  position: fixed; top: 14px; left: 50%; z-index: 9999;
-  transform: translate(-50%, 0);
+  position: absolute; top: 50%; left: 50%; z-index: 20;
+  transform: translate(-50%, -50%);
   background: var(--accent); color: #fff; font-weight: 700; font-size: 13px;
   padding: 9px 18px; border-radius: 999px;
   box-shadow: 0 8px 24px rgba(0,0,0,.2);
   animation: app-toast-in .2s ease-out;
+  pointer-events: none;
+  white-space: nowrap;
+  max-width: 90vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .btn {
   background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 9px 16px;
