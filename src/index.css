@@ -586,6 +586,10 @@ button, input, select, textarea { font-family: inherit; }
   background: var(--card); border: 1px solid var(--border); border-radius: 18px;
   padding: 32px; max-width: 380px; width: 100%; text-align: center;
 }
+.login-logo {
+  width: 64px; height: 64px; border-radius: 22%; display: block;
+  margin: 0 auto 12px; box-shadow: 0 4px 16px rgba(30,64,175,0.35);
+}
 .login-card h1 { font-size: 20px; margin: 0 0 8px; }
 .login-card form { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
 .login-card input {
