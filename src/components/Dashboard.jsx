@@ -754,7 +754,6 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   }, [investments, investFxRates]);
 
   useEffect(() => {
-    if (!isMe) return;
     let cancelled = false;
     fetch(`https://open.er-api.com/v6/latest/${CURRENT_CURRENCY}`)
       .then((r) => r.json())
@@ -1748,7 +1747,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       (raMap[k] = raMap[k] || []).push(a);
     });
     setRowAttachments(raMap);
-    if (isMe) {
+    {
       try {
         const { data: inv, error: invErr } = await supabase
           .from('investments')
@@ -5461,7 +5460,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
         <div className={`card card-net ${netCombined < 0 ? 'over' : 'ok'}`}>
           <div className="k">Net (income - expenses - savings)</div><div className="v"><Amt value={netCombined} /></div>
         </div>
-        {isMe && (
+        {(
           <div className={`card card-net ${investmentTotals.gain < 0 ? 'over' : 'ok'}`}>
             <div className="k">My Investments</div>
             <div className="v"><Amt value={investmentTotals.current} /></div>
@@ -5490,7 +5489,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
               </button>
             </div>
           )}
-          {isMe && activePanel === 'investments' ? (
+          {activePanel === 'investments' ? (
  <>
  <div className="panel" ref={panelRef} style={{ maxWidth: '100%', marginBottom: 24 }}>
             <div className="panel-title-row-inline">
@@ -7573,7 +7572,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             </>
           )}
 
-          {isMe && activePanel === 'investments' && (
+          {activePanel === 'investments' && (
             <div className="card" style={{ marginBottom: 24 }}>
               <h3 style={{ marginTop: 0 }}>Investment Overview</h3>
               {investments.length === 0 ? (
