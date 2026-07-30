@@ -2138,6 +2138,24 @@ instead of overflowing at the unconditional 35px desktop size. */
   table.responsive-table td:has(button.del) button.del {
     font-size: 22px; padding: 8px 10px; line-height: 1;
   }
+
+  /* Investments Records list: two fields per row on mobile instead of the
+     one-per-row stack every other .responsive-table uses, so the read-only
+     list matches the entry form's investments-field-row grid directly
+     above it. Scoped to this one table via the extra class so no other
+     list in the app is affected. */
+  table.responsive-table.investments-records-table tbody tr {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px;
+    padding: 14px 14px 10px 14px;
+  }
+  table.responsive-table.investments-records-table td {
+    padding: 6px 0; border-bottom: none;
+  }
+  table.responsive-table.investments-records-table td:has(button.row-icon-btn) {
+    position: static; grid-column: 1 / -1;
+    display: flex; justify-content: flex-end; gap: 4px;
+    padding-top: 8px; margin-top: 4px; border-top: 1px solid var(--bg);
+  }
 }
 
 /* Mobile-only bottom navigation + floating add button -- hidden entirely on
