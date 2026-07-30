@@ -28,22 +28,25 @@ import {
 function SearchableCombobox({ value, onChange, onCommit, options, placeholder, style }) {
   const [open, setOpen] = useState(false);
   const [rect, setRect] = useState(null);
+  const [displayValue, setDisplayValue] = useState(value || '');
   const inputRef = useRef(null);
+  useEffect(() => { setDisplayValue(value || ''); }, [value]);
   const norm = useMemo(
     () => options.map((o) => (typeof o === 'string' ? { value: o, label: o } : o)),
     [options]
   );
   const filtered = useMemo(() => {
-    const q = (value || '').toLowerCase().trim();
+    const q = (displayValue || '').toLowerCase().trim();
     const list = q
       ? norm.filter((o) => o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q))
       : norm;
     return list.slice(0, 60);
-  }, [value, norm]);
+  }, [displayValue, norm]);
   function updatePos() {
     if (inputRef.current) setRect(inputRef.current.getBoundingClientRect());
   }
   function selectOption(opt) {
+    setDisplayValue(opt.value);
     onChange(opt.value);
     if (onCommit) onCommit(opt.value);
     setOpen(false);
@@ -53,13 +56,29 @@ function SearchableCombobox({ value, onChange, onCommit, options, placeholder, s
       <input
         ref={inputRef}
         type="text"
-        value={value || ''}
+        value={displayValue}
         placeholder={placeholder}
         style={style}
         autoComplete="off"
-        onFocus={() => { updatePos(); setOpen(true); }}
-        onChange={(e) => { onChange(e.target.value); updatePos(); setOpen(true); }}
-        onBlur={(e) => { setOpen(false); if (onCommit) onCommit(e.target.value); }}
+        onFocus={() => {
+          // v1.90: clear the visible text on focus (same trick already used
+          // for the Settings Currency field) so the FULL option list shows
+          // immediately, instead of being filtered down to near-nothing by
+          // whatever value is already sitting in the field -- previously a
+          // user had to manually delete the existing text before any
+          // suggestions would appear, which looked broken.
+          setDisplayValue('');
+          updatePos();
+          setOpen(true);
+        }}
+        onChange={(e) => { setDisplayValue(e.target.value); onChange(e.target.value); updatePos(); setOpen(true); }}
+        onBlur={(e) => {
+          setOpen(false);
+          const finalValue = e.target.value || value || '';
+          setDisplayValue(finalValue);
+          onChange(finalValue);
+          if (onCommit) onCommit(finalValue);
+        }}
         onKeyDown={(e) => { if (e.key === 'Escape') { setOpen(false); e.currentTarget.blur(); } }}
       />
       {open && filtered.length > 0 && rect && createPortal(
