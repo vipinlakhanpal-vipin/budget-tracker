@@ -4883,6 +4883,28 @@ I can help you track expenses, understand spending patterns, create budgets, and
                       type="text"
                       value={chatInput}
                       onChange={(e) => setChatInput(e.target.value)}
+                      onFocus={() => {
+                        // iOS -- especially in standalone/home-screen PWA
+                        // mode -- auto-scrolls the whole page to reveal a
+                        // newly-focused input the instant it's tapped, even
+                        // though this one lives inside an always-visible
+                        // position:fixed popup that never needed scrolling
+                        // into view in the first place. WebKit's "scroll
+                        // focused element into view" heuristic doesn't seem
+                        // to account for fixed-position ancestors, so the
+                        // entire screen visibly jumps. Forcibly re-pinning
+                        // the scroll position across a few frames/timeouts
+                        // cancels that out-of-our-control auto-scroll
+                        // without touching the popup's own (already
+                        // static) position.
+                        if (!isMobile) return;
+                        const y = window.scrollY;
+                        const lock = () => window.scrollTo(0, y);
+                        requestAnimationFrame(lock);
+                        setTimeout(lock, 50);
+                        setTimeout(lock, 150);
+                        setTimeout(lock, 350);
+                      }}
                       placeholder="Ask a question..."
                       disabled={chatLoading}
                     />
