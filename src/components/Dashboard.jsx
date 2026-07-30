@@ -5306,7 +5306,188 @@ I can help you track expenses, understand spending patterns, create budgets, and
               </button>
             </div>
           )}
-          <div className="input-tabs data-entry-tabs">
+          {isMe && activePanel === 'investments' ? (
+ <div className="panel" ref={panelRef} style={{ maxWidth: '100%', marginBottom: 24 }}>
+            <h2 className="panel-title-themed">My Investments</h2>
+            <div className="muted-small" style={{ textAlign: 'left', marginTop: -6, marginBottom: 12 }}>
+              Fixed Deposits and Mutual Fund / SIP investments, tracked separately from the household budget. Only you can see this tab.
+              If you withdraw money from an FD or SIP and spend it, record that spend as a normal entry under Regular Expenses -- this tab only tracks what's invested, not day-to-day spending.
+            </div>
+            <div className="row" style={{ flexWrap: 'wrap', gap: 12, alignItems: 'flex-end' }}>
+              <div className="field" style={{ flex: '0 1 170px' }}>
+                <label>Type</label>
+                <select
+                  value={investmentForm.investmentType}
+                  onChange={(e) => setInvestmentForm({ ...investmentForm, investmentType: e.target.value })}
+                >
+                  <option value="Fixed Deposit">Fixed Deposit</option>
+                  <option value="Mutual Fund">Mutual Fund / SIP</option>
+                </select>
+              </div>
+              <div className="field" style={{ flex: '1 1 180px' }}>
+                <label>Name</label>
+                <input
+                  type="text"
+                  value={investmentForm.name}
+                  onChange={(e) => setInvestmentForm({ ...investmentForm, name: e.target.value })}
+                  placeholder={investmentForm.investmentType === 'Fixed Deposit' ? 'e.g. 1-Year FD' : 'e.g. HDFC Flexicap SIP'}
+                />
+              </div>
+              <div className="field" style={{ flex: '1 1 180px' }}>
+                <label>{investmentForm.investmentType === 'Fixed Deposit' ? 'Bank' : 'Fund House'}</label>
+                {investmentForm.investmentType === 'Fixed Deposit' ? (
+                  <input
+                    list="bank-options-expense"
+                    value={investmentForm.institution}
+                    onChange={(e) => setInvestmentForm({ ...investmentForm, institution: e.target.value })}
+                    placeholder="Search bank..."
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    value={investmentForm.institution}
+                    onChange={(e) => setInvestmentForm({ ...investmentForm, institution: e.target.value })}
+                    placeholder="e.g. HDFC Mutual Fund"
+                  />
+                )}
+              </div>
+              <div className="field" style={{ flex: '0 1 160px' }}>
+                <label>{investmentForm.investmentType === 'Fixed Deposit' ? 'Principal Amount' : 'Total Invested So Far'}</label>
+                <input
+                  type="number" min="0" step="0.01"
+                  value={investmentForm.principal}
+                  onChange={(e) => setInvestmentForm({ ...investmentForm, principal: e.target.value })}
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="field" style={{ flex: '0 1 160px' }}>
+                <label>Current Value</label>
+                <input
+                  type="number" min="0" step="0.01"
+                  value={investmentForm.currentValue}
+                  onChange={(e) => setInvestmentForm({ ...investmentForm, currentValue: e.target.value })}
+                  placeholder="Same as principal if unsure"
+                />
+              </div>
+              {investmentForm.investmentType === 'Fixed Deposit' ? (
+                <div className="field" style={{ flex: '0 1 150px' }}>
+                  <label>Interest Rate (% p.a.)</label>
+                  <input
+                    type="number" min="0" step="0.01"
+                    value={investmentForm.interestRate}
+                    onChange={(e) => setInvestmentForm({ ...investmentForm, interestRate: e.target.value })}
+                    placeholder="e.g. 4.5"
+                  />
+                </div>
+              ) : (
+                <div className="field" style={{ flex: '0 1 150px' }}>
+                  <label>Monthly SIP Amount</label>
+                  <input
+                    type="number" min="0" step="0.01"
+                    value={investmentForm.sipAmount}
+                    onChange={(e) => setInvestmentForm({ ...investmentForm, sipAmount: e.target.value })}
+                    placeholder="0.00"
+                  />
+                </div>
+              )}
+              <div className="field" style={{ flex: '0 1 150px' }}>
+                <label>Start Date</label>
+                <input
+                  type="date"
+                  value={investmentForm.startDate}
+                  onChange={(e) => setInvestmentForm({ ...investmentForm, startDate: e.target.value })}
+                />
+              </div>
+              {investmentForm.investmentType === 'Fixed Deposit' && (
+                <div className="field" style={{ flex: '0 1 150px' }}>
+                  <label>Maturity Date</label>
+                  <input
+                    type="date"
+                    value={investmentForm.maturityDate}
+                    onChange={(e) => setInvestmentForm({ ...investmentForm, maturityDate: e.target.value })}
+                  />
+                </div>
+              )}
+              {editingInvestmentId && (
+                <div className="field" style={{ flex: '0 1 140px' }}>
+                  <label>Status</label>
+                  <select
+                    value={investmentForm.status}
+                    onChange={(e) => setInvestmentForm({ ...investmentForm, status: e.target.value })}
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Matured">Matured</option>
+                    <option value="Closed">Closed</option>
+                  </select>
+                </div>
+              )}
+              <div className="field" style={{ flex: '0 0 auto', display: 'flex', gap: 8 }}>
+                <button className="btn" type="button" onClick={handleSaveInvestment} style={{ height: 40 }}>
+                  {editingInvestmentId ? 'Save Changes' : 'Add'}
+                </button>
+                {editingInvestmentId && (
+                  <button className="btn secondary" type="button" onClick={cancelEditInvestment} style={{ height: 40 }}>
+                    Cancel
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div style={{ marginTop: 20 }}>
+              <div className="muted-small" style={{ marginBottom: 10 }}>
+                {investments.length} {investments.length === 1 ? 'entry' : 'entries'} -- Invested <Amt value={investmentTotals.principal} /> -- Current <Amt value={investmentTotals.current} /> -- {investmentTotals.gain >= 0 ? 'Gain' : 'Loss'} <Amt value={Math.abs(investmentTotals.gain)} />
+              </div>
+              {investments.length === 0 ? (
+                <div className="empty">No investments added yet.</div>
+              ) : (
+                <div className="table-scroll">
+                  <table className="responsive-table" style={{ fontSize: 11 }}>
+                    <thead>
+                      <tr>
+                        <th>Type</th><th>Name</th><th>Institution</th><th>Principal</th><th>Current Value</th><th>Gain / Loss</th><th>Rate / SIP</th><th>Maturity</th><th>Status</th><th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {investments.map((inv) => {
+                        const cur = inv.current_value != null ? Number(inv.current_value) : Number(inv.principal_amount || 0);
+                        const gain = cur - Number(inv.principal_amount || 0);
+                        return (
+                          <tr key={inv.id}>
+                            <td data-label="Type">{inv.investment_type}</td>
+                            <td data-label="Name">{inv.name}</td>
+                            <td data-label="Institution">{inv.institution || '--'}</td>
+                            <td data-label="Principal"><Amt value={inv.principal_amount} /></td>
+                            <td data-label="Current Value"><Amt value={cur} /></td>
+                            <td data-label="Gain / Loss" style={{ color: gain >= 0 ? '#1a7f37' : '#d1242f', fontWeight: 600 }}>
+                              {gain >= 0 ? '+' : '-'}<Amt value={Math.abs(gain)} />
+                            </td>
+                            <td data-label="Rate / SIP">
+                              {inv.investment_type === 'Fixed Deposit'
+                                ? (inv.interest_rate != null ? `${inv.interest_rate}% p.a.` : '--')
+                                : (inv.sip_amount != null ? <>{fmt(inv.sip_amount)}/mo</> : '--')}
+                            </td>
+                            <td data-label="Maturity">{inv.maturity_date || '--'}</td>
+                            <td data-label="Status">{inv.status || 'Active'}</td>
+                            <td data-label="">
+                              <button type="button" className="row-icon-btn" title="Edit" onClick={() => startEditInvestment(inv)}>
+                                <Pencil size={13} />
+                              </button>
+                              <button type="button" className="row-icon-btn" title="Delete" onClick={() => handleDeleteInvestment(inv.id, inv.name)}>
+                                <Trash2 size={13} />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+) : (
+<>
+<div className="input-tabs data-entry-tabs">
             <button
               className={`btn small ${inputTab === 'income' ? '' : 'secondary'}`}
               onClick={() => setInputTab('income')}
@@ -7191,8 +7372,10 @@ I can help you track expenses, understand spending patterns, create budgets, and
               </>
             );
           })()}
+</>
+)}
         </div>
-                <div style={(activePanel === 'report' || activePanel === 'help' || activePanel === 'settings' || activePanel === 'roadmap' || activePanel === 'investments') ? { gridColumn: '1 / -1' } : undefined}>
+                <div style={(activePanel === 'report' || activePanel === 'help' || activePanel === 'settings' || activePanel === 'roadmap') ? { gridColumn: '1 / -1' } : undefined}>
           {/* This narrow chart/AI column only shows for the normal
               data-entry tabs now (inputTab truthy) -- Home has its own
               full-width, bigger version of the same three cards further
@@ -7205,13 +7388,49 @@ I can help you track expenses, understand spending patterns, create budgets, and
               for entering data -- the chart/AI/Coach cards are only useful
               once there's data to look at, and are still one tap away via
               the Dashboard tab. Desktop is unaffected. */}
-          {inputTab && !isMobile && (
+          {inputTab && !isMobile && activePanel !== 'investments' && (
             <>
               {chartTypeToggle}
               {renderChartCard(false)}
               {aiInsightsCard}
               {budgetCoachCard}
             </>
+          )}
+
+          {isMe && activePanel === 'investments' && !isMobile && (
+            <div className="card" style={{ marginBottom: 24 }}>
+              <h3 style={{ marginTop: 0 }}>Investment Overview</h3>
+              {investments.length === 0 ? (
+                <div className="muted-small">Add a Fixed Deposit or Mutual Fund to see your chart here.</div>
+              ) : (
+                <>
+                  <ResponsiveContainer width="100%" height={Math.max(220, investments.length * 46)}>
+                    <BarChart
+                      data={investments.map((x) => ({
+                        name: (x.name || '').length > 12 ? (x.name || '').slice(0, 12) + '…' : (x.name || ''),
+                        Invested: Number(x.principal_amount || 0),
+                        Current: Number(x.current_value != null ? x.current_value : (x.principal_amount || 0)),
+                      }))}
+                      layout="vertical"
+                      margin={{ top: 8, right: 16, left: 8, bottom: 8 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                      <XAxis type="number" tick={{ fontSize: 9 }} hide />
+                      <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 9 }} />
+                      <Tooltip formatter={(v) => fmt(v)} />
+                      <Legend wrapperStyle={{ fontSize: 11 }} />
+                      <Bar dataKey="Invested" fill="#8884d8" radius={[0, 4, 4, 0]} />
+                      <Bar dataKey="Current" fill="#22c55e" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                  <div className="muted-small" style={{ marginTop: 12, lineHeight: 1.6 }}>
+                    Fixed Deposits: {fmt(investments.filter((x) => x.investment_type === 'Fixed Deposit').reduce((s, x) => s + Number(x.current_value != null ? x.current_value : (x.principal_amount || 0)), 0))} across {investments.filter((x) => x.investment_type === 'Fixed Deposit').length}
+                    <br />
+                    Mutual Funds: {fmt(investments.filter((x) => x.investment_type === 'Mutual Fund').reduce((s, x) => s + Number(x.current_value != null ? x.current_value : (x.principal_amount || 0)), 0))} across {investments.filter((x) => x.investment_type === 'Mutual Fund').length}
+                  </div>
+                </>
+              )}
+            </div>
           )}
 
           {/* Only the standalone header-button route renders here now --
@@ -7331,187 +7550,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
           </div>
           )}
 
-          {isMe && activePanel === 'investments' && (
- <div className="panel" ref={panelRef} style={{ maxWidth: '100%', marginBottom: 24 }}>
-            <h2 className="panel-title-themed">My Investments</h2>
-            <div className="muted-small" style={{ textAlign: 'left', marginTop: -6, marginBottom: 12 }}>
-              Fixed Deposits and Mutual Fund / SIP investments, tracked separately from the household budget. Only you can see this tab.
-              If you withdraw money from an FD or SIP and spend it, record that spend as a normal entry under Regular Expenses -- this tab only tracks what's invested, not day-to-day spending.
-            </div>
-            <div className="row" style={{ flexWrap: 'wrap', gap: 12, alignItems: 'flex-end' }}>
-              <div className="field" style={{ flex: '0 1 170px' }}>
-                <label>Type</label>
-                <select
-                  value={investmentForm.investmentType}
-                  onChange={(e) => setInvestmentForm({ ...investmentForm, investmentType: e.target.value })}
-                >
-                  <option value="Fixed Deposit">Fixed Deposit</option>
-                  <option value="Mutual Fund">Mutual Fund / SIP</option>
-                </select>
-              </div>
-              <div className="field" style={{ flex: '1 1 180px' }}>
-                <label>Name</label>
-                <input
-                  type="text"
-                  value={investmentForm.name}
-                  onChange={(e) => setInvestmentForm({ ...investmentForm, name: e.target.value })}
-                  placeholder={investmentForm.investmentType === 'Fixed Deposit' ? 'e.g. 1-Year FD' : 'e.g. HDFC Flexicap SIP'}
-                />
-              </div>
-              <div className="field" style={{ flex: '1 1 180px' }}>
-                <label>{investmentForm.investmentType === 'Fixed Deposit' ? 'Bank' : 'Fund House'}</label>
-                {investmentForm.investmentType === 'Fixed Deposit' ? (
-                  <input
-                    list="bank-options-expense"
-                    value={investmentForm.institution}
-                    onChange={(e) => setInvestmentForm({ ...investmentForm, institution: e.target.value })}
-                    placeholder="Search bank..."
-                  />
-                ) : (
-                  <input
-                    type="text"
-                    value={investmentForm.institution}
-                    onChange={(e) => setInvestmentForm({ ...investmentForm, institution: e.target.value })}
-                    placeholder="e.g. HDFC Mutual Fund"
-                  />
-                )}
-              </div>
-              <div className="field" style={{ flex: '0 1 160px' }}>
-                <label>{investmentForm.investmentType === 'Fixed Deposit' ? 'Principal Amount' : 'Total Invested So Far'}</label>
-                <input
-                  type="number" min="0" step="0.01"
-                  value={investmentForm.principal}
-                  onChange={(e) => setInvestmentForm({ ...investmentForm, principal: e.target.value })}
-                  placeholder="0.00"
-                />
-              </div>
-              <div className="field" style={{ flex: '0 1 160px' }}>
-                <label>Current Value</label>
-                <input
-                  type="number" min="0" step="0.01"
-                  value={investmentForm.currentValue}
-                  onChange={(e) => setInvestmentForm({ ...investmentForm, currentValue: e.target.value })}
-                  placeholder="Same as principal if unsure"
-                />
-              </div>
-              {investmentForm.investmentType === 'Fixed Deposit' ? (
-                <div className="field" style={{ flex: '0 1 150px' }}>
-                  <label>Interest Rate (% p.a.)</label>
-                  <input
-                    type="number" min="0" step="0.01"
-                    value={investmentForm.interestRate}
-                    onChange={(e) => setInvestmentForm({ ...investmentForm, interestRate: e.target.value })}
-                    placeholder="e.g. 4.5"
-                  />
-                </div>
-              ) : (
-                <div className="field" style={{ flex: '0 1 150px' }}>
-                  <label>Monthly SIP Amount</label>
-                  <input
-                    type="number" min="0" step="0.01"
-                    value={investmentForm.sipAmount}
-                    onChange={(e) => setInvestmentForm({ ...investmentForm, sipAmount: e.target.value })}
-                    placeholder="0.00"
-                  />
-                </div>
-              )}
-              <div className="field" style={{ flex: '0 1 150px' }}>
-                <label>Start Date</label>
-                <input
-                  type="date"
-                  value={investmentForm.startDate}
-                  onChange={(e) => setInvestmentForm({ ...investmentForm, startDate: e.target.value })}
-                />
-              </div>
-              {investmentForm.investmentType === 'Fixed Deposit' && (
-                <div className="field" style={{ flex: '0 1 150px' }}>
-                  <label>Maturity Date</label>
-                  <input
-                    type="date"
-                    value={investmentForm.maturityDate}
-                    onChange={(e) => setInvestmentForm({ ...investmentForm, maturityDate: e.target.value })}
-                  />
-                </div>
-              )}
-              {editingInvestmentId && (
-                <div className="field" style={{ flex: '0 1 140px' }}>
-                  <label>Status</label>
-                  <select
-                    value={investmentForm.status}
-                    onChange={(e) => setInvestmentForm({ ...investmentForm, status: e.target.value })}
-                  >
-                    <option value="Active">Active</option>
-                    <option value="Matured">Matured</option>
-                    <option value="Closed">Closed</option>
-                  </select>
-                </div>
-              )}
-              <div className="field" style={{ flex: '0 0 auto', display: 'flex', gap: 8 }}>
-                <button className="btn" type="button" onClick={handleSaveInvestment} style={{ height: 40 }}>
-                  {editingInvestmentId ? 'Save Changes' : 'Add'}
-                </button>
-                {editingInvestmentId && (
-                  <button className="btn secondary" type="button" onClick={cancelEditInvestment} style={{ height: 40 }}>
-                    Cancel
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div style={{ marginTop: 20 }}>
-              <div className="muted-small" style={{ marginBottom: 10 }}>
-                {investments.length} {investments.length === 1 ? 'entry' : 'entries'} -- Invested <Amt value={investmentTotals.principal} /> -- Current <Amt value={investmentTotals.current} /> -- {investmentTotals.gain >= 0 ? 'Gain' : 'Loss'} <Amt value={Math.abs(investmentTotals.gain)} />
-              </div>
-              {investments.length === 0 ? (
-                <div className="empty">No investments added yet.</div>
-              ) : (
-                <div className="table-scroll">
-                  <table className="responsive-table" style={{ fontSize: 11 }}>
-                    <thead>
-                      <tr>
-                        <th>Type</th><th>Name</th><th>Institution</th><th>Principal</th><th>Current Value</th><th>Gain / Loss</th><th>Rate / SIP</th><th>Maturity</th><th>Status</th><th></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {investments.map((inv) => {
-                        const cur = inv.current_value != null ? Number(inv.current_value) : Number(inv.principal_amount || 0);
-                        const gain = cur - Number(inv.principal_amount || 0);
-                        return (
-                          <tr key={inv.id}>
-                            <td data-label="Type">{inv.investment_type}</td>
-                            <td data-label="Name">{inv.name}</td>
-                            <td data-label="Institution">{inv.institution || '--'}</td>
-                            <td data-label="Principal"><Amt value={inv.principal_amount} /></td>
-                            <td data-label="Current Value"><Amt value={cur} /></td>
-                            <td data-label="Gain / Loss" style={{ color: gain >= 0 ? '#1a7f37' : '#d1242f', fontWeight: 600 }}>
-                              {gain >= 0 ? '+' : '-'}<Amt value={Math.abs(gain)} />
-                            </td>
-                            <td data-label="Rate / SIP">
-                              {inv.investment_type === 'Fixed Deposit'
-                                ? (inv.interest_rate != null ? `${inv.interest_rate}% p.a.` : '--')
-                                : (inv.sip_amount != null ? <>{fmt(inv.sip_amount)}/mo</> : '--')}
-                            </td>
-                            <td data-label="Maturity">{inv.maturity_date || '--'}</td>
-                            <td data-label="Status">{inv.status || 'Active'}</td>
-                            <td data-label="">
-                              <button type="button" className="row-icon-btn" title="Edit" onClick={() => startEditInvestment(inv)}>
-                                <Pencil size={13} />
-                              </button>
-                              <button type="button" className="row-icon-btn" title="Delete" onClick={() => handleDeleteInvestment(inv.id, inv.name)}>
-                                <Trash2 size={13} />
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </div>
-)}
-{activePanel === 'report' && (
+          {activePanel === 'report' && (
  <div className="panel" ref={panelRef} style={{ maxWidth: '100%', marginBottom: 24 }}>
             {/* "Report" itself renders as a page-level centered title (see
                 the !inputTab block near the month nav) instead of cramped
