@@ -15,7 +15,7 @@ import {
   Home, Plus, FileText, Users as UsersIcon, Settings as SettingsIcon,
   Pencil, Trash2, X, ChevronLeft, ChevronRight, ChevronDown, Camera, MessageCircle, Bot, Sparkles, User,
   Palette, Check, StickyNote, Paperclip, ExternalLink, Mail, Lightbulb,
-  Wallet, CalendarClock, ShoppingCart, PiggyBank, HelpCircle, Filter, Sun, Moon, RefreshCw,
+  Wallet, CalendarClock, ShoppingCart, PiggyBank, HelpCircle, Filter, Sun, Moon, RefreshCw, Landmark,
 } from 'lucide-react';
 
 // Max size for a note/fixed-expense attachment (images or PDF only). Kept as
@@ -563,6 +563,10 @@ function hexToRgb(hex) {
 export default function Dashboard({ session, household, onHouseholdChange, isAdmin, onOpenAdmin }) {
   const householdId = household.id;
   const isOwner = household.role === 'owner';
+  // Investments (Fixed Deposits / Mutual Fund SIPs) is a private tab -- only
+  // Vipin's own login sees it; everyone else in the household continues to
+  // see just the existing "Coming Soon" placeholder, untouched.
+  const isMe = (session.user.email || '').trim().toLowerCase() === 'vipinlakhanpal@gmail.com';
 
   const [currentMonth, setCurrentMonth] = useState(() => {
     const d = new Date();
@@ -574,6 +578,17 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   const [expenses, setExpenses] = useState([]);
   const [recurringExpenses, setRecurringExpenses] = useState([]);
   const [incomes, setIncomes] = useState([]);
+  const [investments, setInvestments] = useState([]);
+  const [investmentForm, setInvestmentForm] = useState({
+    investmentType: 'Fixed Deposit', name: '', institution: '', principal: '', currentValue: '',
+    interestRate: '', sipAmount: '', startDate: new Date().toISOString().slice(0, 10), maturityDate: '', status: 'Active',
+  });
+  const [editingInvestmentId, setEditingInvestmentId] = useState(null);
+  const investmentTotals = useMemo(() => {
+    const principal = investments.reduce((s, x) => s + Number(x.principal_amount || 0), 0);
+    const current = investments.reduce((s, x) => s + Number(x.current_value != null ? x.current_value : (x.principal_amount || 0)), 0);
+    return { principal, current, gain: current - principal };
+  }, [investments]);
   // Total monthly budget now lives per-calendar-month (one row per month, in
   // the monthly_budgets table), exactly like Income/Savings, instead of one
   // flat number that applied to every month forever. `totalBudget` below is
@@ -1560,6 +1575,20 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       (raMap[k] = raMap[k] || []).push(a);
     });
     setRowAttachments(raMap);
+    if (isMe) {
+      try {
+        const { data: inv, error: invErr } = await supabase
+          .from('investments')
+          .select('*')
+          .eq('household_id', householdId)
+          .order('start_date', { ascending: false });
+        if (!invErr) setInvestments(inv || []);
+      } catch (e) {
+        // investments table may not exist yet until the one-time SQL
+        // migration has been run -- fail quietly instead of breaking
+        // the rest of the app.
+      }
+    }
     setCategories(cats || []);
     setExpenses(exps || []);
     const eDrafts = {};
@@ -2283,6 +2312,75 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       .filter((x) => x.payment_source === source && x.payment_bank)
       .sort((a, b) => new Date(b.expense_date) - new Date(a.expense_date))[0];
     return match ? match.payment_bank : '';
+  }
+
+  function blankInvestmentForm() {
+    return {
+      investmentType: 'Fixed Deposit', name: '', institution: '', principal: '', currentValue: '',
+      interestRate: '', sipAmount: '', startDate: new Date().toISOString().slice(0, 10), maturityDate: '', status: 'Active',
+    };
+  }
+
+  function startEditInvestment(inv) {
+    setEditingInvestmentId(inv.id);
+    setInvestmentForm({
+      investmentType: inv.investment_type,
+      name: inv.name,
+      institution: inv.institution || '',
+      principal: String(inv.principal_amount || ''),
+      currentValue: inv.current_value != null ? String(inv.current_value) : '',
+      interestRate: inv.interest_rate != null ? String(inv.interest_rate) : '',
+      sipAmount: inv.sip_amount != null ? String(inv.sip_amount) : '',
+      startDate: inv.start_date || '',
+      maturityDate: inv.maturity_date || '',
+      status: inv.status || 'Active',
+    });
+  }
+
+  function cancelEditInvestment() {
+    setEditingInvestmentId(null);
+    setInvestmentForm(blankInvestmentForm());
+  }
+
+  async function handleSaveInvestment() {
+    const principal = parseFloat(investmentForm.principal);
+    if (!investmentForm.name.trim() || isNaN(principal) || principal <= 0) {
+      alert('Please enter a name and a valid principal / invested amount.');
+      return;
+    }
+    const payload = {
+      investment_type: investmentForm.investmentType,
+      name: investmentForm.name.trim(),
+      institution: investmentForm.institution.trim() || null,
+      principal_amount: principal,
+      current_value: investmentForm.currentValue ? parseFloat(investmentForm.currentValue) : principal,
+      interest_rate: investmentForm.investmentType === 'Fixed Deposit' && investmentForm.interestRate ? parseFloat(investmentForm.interestRate) : null,
+      sip_amount: investmentForm.investmentType === 'Mutual Fund' && investmentForm.sipAmount ? parseFloat(investmentForm.sipAmount) : null,
+      start_date: investmentForm.startDate || null,
+      maturity_date: investmentForm.investmentType === 'Fixed Deposit' ? (investmentForm.maturityDate || null) : null,
+      status: investmentForm.status || 'Active',
+    };
+    let error;
+    if (editingInvestmentId) {
+      ({ error } = await supabase.from('investments').update(payload).eq('id', editingInvestmentId));
+    } else {
+      ({ error } = await supabase.from('investments').insert({
+        household_id: householdId, created_by: session.user.id, created_by_email: session.user.email, ...payload,
+      }));
+    }
+    if (error) { alert('Could not save investment: ' + error.message); return; }
+    const wasEditing = !!editingInvestmentId;
+    cancelEditInvestment();
+    loadAll();
+    showToast(wasEditing ? 'Investment updated' : 'Investment added');
+  }
+
+  async function handleDeleteInvestment(id, name) {
+    if (!confirm(`Remove "${name}" from your investments? This can't be undone.`)) return;
+    const { error } = await supabase.from('investments').delete().eq('id', id);
+    if (error) { alert('Could not delete: ' + error.message); return; }
+    if (editingInvestmentId === id) cancelEditInvestment();
+    loadAll();
   }
 
   async function handleScanFileChange(e) {
@@ -4793,7 +4891,13 @@ function ReportHtmlView({ data }) {
                 page right after that effect had already positioned things
                 correctly, which is why opening Report/Settings/Help looked
                 like it stopped doing anything. */}
-                        <button className={`btn-teal header-tab-btn tab-visible-mobile${activePanel === 'report' ? ' header-tab-btn-active' : ''}`} onClick={() => togglePanel('report')}>
+                        {isMe && (
+              <button className={`btn-teal header-tab-btn tab-visible-mobile${activePanel === 'investments' ? ' header-tab-btn-active' : ''}`} onClick={() => togglePanel('investments')}>
+              <Landmark size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
+              Investments
+            </button>
+            )}
+            <button className={`btn-teal header-tab-btn tab-visible-mobile${activePanel === 'report' ? ' header-tab-btn-active' : ''}`} onClick={() => togglePanel('report')}>
               <FileText size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
               Report
             </button>
@@ -5173,6 +5277,15 @@ I can help you track expenses, understand spending patterns, create budgets, and
         <div className={`card card-net ${netCombined < 0 ? 'over' : 'ok'}`}>
           <div className="k">Net (income - expenses - savings)</div><div className="v"><Amt value={netCombined} /></div>
         </div>
+        {isMe && (
+          <div className={`card card-net ${investmentTotals.gain < 0 ? 'over' : 'ok'}`}>
+            <div className="k">My Investments</div>
+            <div className="v"><Amt value={investmentTotals.current} /></div>
+            <div className="muted-small" style={{ marginTop: 4 }}>
+              Invested <Amt value={investmentTotals.principal} /> -- {investmentTotals.gain >= 0 ? 'Gain' : 'Loss'} <Amt value={Math.abs(investmentTotals.gain)} />
+            </div>
+          </div>
+        )}
       </div>
       </div>
 )}
@@ -7218,7 +7331,187 @@ I can help you track expenses, understand spending patterns, create budgets, and
           </div>
           )}
 
-          {activePanel === 'report' && (
+          {isMe && activePanel === 'investments' && (
+ <div className="panel" ref={panelRef} style={{ maxWidth: '100%', marginBottom: 24 }}>
+            <h2 className="panel-title-themed">My Investments</h2>
+            <div className="muted-small" style={{ textAlign: 'left', marginTop: -6, marginBottom: 12 }}>
+              Fixed Deposits and Mutual Fund / SIP investments, tracked separately from the household budget. Only you can see this tab.
+              If you withdraw money from an FD or SIP and spend it, record that spend as a normal entry under Regular Expenses -- this tab only tracks what's invested, not day-to-day spending.
+            </div>
+            <div className="row" style={{ flexWrap: 'wrap', gap: 12, alignItems: 'flex-end' }}>
+              <div className="field" style={{ flex: '0 1 170px' }}>
+                <label>Type</label>
+                <select
+                  value={investmentForm.investmentType}
+                  onChange={(e) => setInvestmentForm({ ...investmentForm, investmentType: e.target.value })}
+                >
+                  <option value="Fixed Deposit">Fixed Deposit</option>
+                  <option value="Mutual Fund">Mutual Fund / SIP</option>
+                </select>
+              </div>
+              <div className="field" style={{ flex: '1 1 180px' }}>
+                <label>Name</label>
+                <input
+                  type="text"
+                  value={investmentForm.name}
+                  onChange={(e) => setInvestmentForm({ ...investmentForm, name: e.target.value })}
+                  placeholder={investmentForm.investmentType === 'Fixed Deposit' ? 'e.g. 1-Year FD' : 'e.g. HDFC Flexicap SIP'}
+                />
+              </div>
+              <div className="field" style={{ flex: '1 1 180px' }}>
+                <label>{investmentForm.investmentType === 'Fixed Deposit' ? 'Bank' : 'Fund House'}</label>
+                {investmentForm.investmentType === 'Fixed Deposit' ? (
+                  <input
+                    list="bank-options-expense"
+                    value={investmentForm.institution}
+                    onChange={(e) => setInvestmentForm({ ...investmentForm, institution: e.target.value })}
+                    placeholder="Search bank..."
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    value={investmentForm.institution}
+                    onChange={(e) => setInvestmentForm({ ...investmentForm, institution: e.target.value })}
+                    placeholder="e.g. HDFC Mutual Fund"
+                  />
+                )}
+              </div>
+              <div className="field" style={{ flex: '0 1 160px' }}>
+                <label>{investmentForm.investmentType === 'Fixed Deposit' ? 'Principal Amount' : 'Total Invested So Far'}</label>
+                <input
+                  type="number" min="0" step="0.01"
+                  value={investmentForm.principal}
+                  onChange={(e) => setInvestmentForm({ ...investmentForm, principal: e.target.value })}
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="field" style={{ flex: '0 1 160px' }}>
+                <label>Current Value</label>
+                <input
+                  type="number" min="0" step="0.01"
+                  value={investmentForm.currentValue}
+                  onChange={(e) => setInvestmentForm({ ...investmentForm, currentValue: e.target.value })}
+                  placeholder="Same as principal if unsure"
+                />
+              </div>
+              {investmentForm.investmentType === 'Fixed Deposit' ? (
+                <div className="field" style={{ flex: '0 1 150px' }}>
+                  <label>Interest Rate (% p.a.)</label>
+                  <input
+                    type="number" min="0" step="0.01"
+                    value={investmentForm.interestRate}
+                    onChange={(e) => setInvestmentForm({ ...investmentForm, interestRate: e.target.value })}
+                    placeholder="e.g. 4.5"
+                  />
+                </div>
+              ) : (
+                <div className="field" style={{ flex: '0 1 150px' }}>
+                  <label>Monthly SIP Amount</label>
+                  <input
+                    type="number" min="0" step="0.01"
+                    value={investmentForm.sipAmount}
+                    onChange={(e) => setInvestmentForm({ ...investmentForm, sipAmount: e.target.value })}
+                    placeholder="0.00"
+                  />
+                </div>
+              )}
+              <div className="field" style={{ flex: '0 1 150px' }}>
+                <label>Start Date</label>
+                <input
+                  type="date"
+                  value={investmentForm.startDate}
+                  onChange={(e) => setInvestmentForm({ ...investmentForm, startDate: e.target.value })}
+                />
+              </div>
+              {investmentForm.investmentType === 'Fixed Deposit' && (
+                <div className="field" style={{ flex: '0 1 150px' }}>
+                  <label>Maturity Date</label>
+                  <input
+                    type="date"
+                    value={investmentForm.maturityDate}
+                    onChange={(e) => setInvestmentForm({ ...investmentForm, maturityDate: e.target.value })}
+                  />
+                </div>
+              )}
+              {editingInvestmentId && (
+                <div className="field" style={{ flex: '0 1 140px' }}>
+                  <label>Status</label>
+                  <select
+                    value={investmentForm.status}
+                    onChange={(e) => setInvestmentForm({ ...investmentForm, status: e.target.value })}
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Matured">Matured</option>
+                    <option value="Closed">Closed</option>
+                  </select>
+                </div>
+              )}
+              <div className="field" style={{ flex: '0 0 auto', display: 'flex', gap: 8 }}>
+                <button className="btn" type="button" onClick={handleSaveInvestment} style={{ height: 40 }}>
+                  {editingInvestmentId ? 'Save Changes' : 'Add'}
+                </button>
+                {editingInvestmentId && (
+                  <button className="btn secondary" type="button" onClick={cancelEditInvestment} style={{ height: 40 }}>
+                    Cancel
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div style={{ marginTop: 20 }}>
+              <div className="muted-small" style={{ marginBottom: 10 }}>
+                {investments.length} {investments.length === 1 ? 'entry' : 'entries'} -- Invested <Amt value={investmentTotals.principal} /> -- Current <Amt value={investmentTotals.current} /> -- {investmentTotals.gain >= 0 ? 'Gain' : 'Loss'} <Amt value={Math.abs(investmentTotals.gain)} />
+              </div>
+              {investments.length === 0 ? (
+                <div className="empty">No investments added yet.</div>
+              ) : (
+                <div className="table-scroll">
+                  <table className="responsive-table" style={{ fontSize: 11 }}>
+                    <thead>
+                      <tr>
+                        <th>Type</th><th>Name</th><th>Institution</th><th>Principal</th><th>Current Value</th><th>Gain / Loss</th><th>Rate / SIP</th><th>Maturity</th><th>Status</th><th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {investments.map((inv) => {
+                        const cur = inv.current_value != null ? Number(inv.current_value) : Number(inv.principal_amount || 0);
+                        const gain = cur - Number(inv.principal_amount || 0);
+                        return (
+                          <tr key={inv.id}>
+                            <td data-label="Type">{inv.investment_type}</td>
+                            <td data-label="Name">{inv.name}</td>
+                            <td data-label="Institution">{inv.institution || '--'}</td>
+                            <td data-label="Principal"><Amt value={inv.principal_amount} /></td>
+                            <td data-label="Current Value"><Amt value={cur} /></td>
+                            <td data-label="Gain / Loss" style={{ color: gain >= 0 ? '#1a7f37' : '#d1242f', fontWeight: 600 }}>
+                              {gain >= 0 ? '+' : '-'}<Amt value={Math.abs(gain)} />
+                            </td>
+                            <td data-label="Rate / SIP">
+                              {inv.investment_type === 'Fixed Deposit'
+                                ? (inv.interest_rate != null ? `${inv.interest_rate}% p.a.` : '--')
+                                : (inv.sip_amount != null ? <>{fmt(inv.sip_amount)}/mo</> : '--')}
+                            </td>
+                            <td data-label="Maturity">{inv.maturity_date || '--'}</td>
+                            <td data-label="Status">{inv.status || 'Active'}</td>
+                            <td data-label="">
+                              <button type="button" className="row-icon-btn" title="Edit" onClick={() => startEditInvestment(inv)}>
+                                <Pencil size={13} />
+                              </button>
+                              <button type="button" className="row-icon-btn" title="Delete" onClick={() => handleDeleteInvestment(inv.id, inv.name)}>
+                                <Trash2 size={13} />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+)}
+{activePanel === 'report' && (
  <div className="panel" ref={panelRef} style={{ maxWidth: '100%', marginBottom: 24 }}>
             {/* "Report" itself renders as a page-level centered title (see
                 the !inputTab block near the month nav) instead of cramped
