@@ -2451,7 +2451,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     if (error) { alert('Could not save investment: ' + error.message); return; }
     const wasEditing = !!editingInvestmentId;
     cancelEditInvestment();
-    loadAll();
+    await loadAll();
     showToast(wasEditing ? 'Investment updated' : 'Investment added');
   }
 
