@@ -2976,6 +2976,13 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
 
   async function handleSignOut() {
     await supabase.auth.signOut();
+    // v1.91: force a hard reload after sign-out. The app's top-level
+    // session listener wasn't reliably flipping the UI back to the login
+    // screen after signOut() resolved -- session cleared server-side, but
+    // the Dashboard kept rendering with stale local state. A full reload
+    // re-runs the initial session check from scratch, which we know
+    // correctly shows the login screen when there's no active session.
+    window.location.reload();
   }
 
   async function handleAddRecurring(e) {
