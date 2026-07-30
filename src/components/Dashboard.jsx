@@ -5387,6 +5387,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             </div>
           )}
           {isMe && activePanel === 'investments' ? (
+ <>
  <div className="panel" ref={panelRef} style={{ maxWidth: '100%', marginBottom: 24 }}>
             <h2 className="panel-title-themed">My Investments</h2>
             <div className="muted-small" style={{ textAlign: 'left', marginTop: -6, marginBottom: 12 }}>
@@ -5596,6 +5597,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
               )}
             </div>
           </div>
+</>
 ) : (
 <>
 <div className="input-tabs data-entry-tabs">
