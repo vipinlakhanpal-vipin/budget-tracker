@@ -661,7 +661,7 @@ button, input, select, textarea { font-family: inherit; }
   font-size: 11px; color: var(--muted); line-height: 1.5;
 }
 .app-footer {
-  text-align: center; font-size: 11px; color: var(--muted); padding: 18px 0 6px;
+  text-align: left; font-size: 11px; color: var(--muted); padding: 18px 0 6px;
 }
 .app-footer-link { color: var(--accent); font-weight: 700; text-decoration: underline; }
 /* The Suggestion link is a <button> (not an <a>, since it opens a modal
@@ -986,7 +986,7 @@ sitting duplicated under the summary cards. */
 .corner-badge-group {
   display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
 }
-.mobile-only-refresh-btn { display: none; }
+.top-bar-row > .refresh-app-btn { margin-left: auto; align-self: center; }
 .corner-username-badge {
   font-size: 11px; font-weight: 700; color: var(--accent); white-space: nowrap;
 }
@@ -1822,8 +1822,6 @@ td.amount { font-weight: 600; text-align: right; }
             if the header row wraps to two lines on a narrow phone -- margin-left:
             auto pushes it to the far right of whichever line it ends up on. */
           .corner-badge-group { margin-left: auto; }
-  .mobile-only-refresh-btn { display: inline-flex; align-items: center; justify-content: center; margin-left: auto; }
-  .top-bar-row { align-items: center; }
     .tab-visible-mobile { display: inline-block; }
     /* !important -- some elements this hides on mobile (chat-fab-btn,
        refresh-app-btn) declare their own unconditional display value
