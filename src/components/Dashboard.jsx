@@ -18,6 +18,83 @@ import {
   Wallet, CalendarClock, ShoppingCart, PiggyBank, HelpCircle, Filter, Sun, Moon, RefreshCw, Landmark,
 } from 'lucide-react';
 
+// v1.89: cross-browser searchable dropdown, replacing the old
+// <input list="..."> + <datalist> combo. Native HTML5 datalist support is
+// inconsistent across browsers/engines (and can silently fail to show
+// suggestions depending on the page's rendering state), which was causing
+// Bank/Currency selection to appear broken for some users even though the
+// underlying save logic worked. This component renders its own dropdown
+// list via a portal, so it behaves identically everywhere.
+function SearchableCombobox({ value, onChange, onCommit, options, placeholder, style }) {
+  const [open, setOpen] = useState(false);
+  const [rect, setRect] = useState(null);
+  const inputRef = useRef(null);
+  const norm = useMemo(
+    () => options.map((o) => (typeof o === 'string' ? { value: o, label: o } : o)),
+    [options]
+  );
+  const filtered = useMemo(() => {
+    const q = (value || '').toLowerCase().trim();
+    const list = q
+      ? norm.filter((o) => o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q))
+      : norm;
+    return list.slice(0, 60);
+  }, [value, norm]);
+  function updatePos() {
+    if (inputRef.current) setRect(inputRef.current.getBoundingClientRect());
+  }
+  function selectOption(opt) {
+    onChange(opt.value);
+    if (onCommit) onCommit(opt.value);
+    setOpen(false);
+  }
+  return (
+    <div style={{ position: 'relative', width: '100%' }}>
+      <input
+        ref={inputRef}
+        type="text"
+        value={value || ''}
+        placeholder={placeholder}
+        style={style}
+        autoComplete="off"
+        onFocus={() => { updatePos(); setOpen(true); }}
+        onChange={(e) => { onChange(e.target.value); updatePos(); setOpen(true); }}
+        onBlur={(e) => { setOpen(false); if (onCommit) onCommit(e.target.value); }}
+        onKeyDown={(e) => { if (e.key === 'Escape') { setOpen(false); e.currentTarget.blur(); } }}
+      />
+      {open && filtered.length > 0 && rect && createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            top: rect.bottom + 2,
+            left: rect.left,
+            width: Math.max(rect.width, 160),
+            maxHeight: 220,
+            overflowY: 'auto',
+            background: '#1c2333',
+            border: '1px solid #3a445c',
+            borderRadius: 6,
+            zIndex: 99999,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+          }}
+        >
+          {filtered.map((opt) => (
+            <div
+              key={opt.value}
+              onMouseDown={(e) => { e.preventDefault(); selectOption(opt); }}
+              style={{ padding: '7px 10px', fontSize: 12, cursor: 'pointer', color: '#e6e9f0' }}
+            >
+              {opt.label}
+            </div>
+          ))}
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}
+
+
 // Max size for a note/fixed-expense attachment (images or PDF only). Kept as
 // a constant so the Add-expense form, Fixed Expenses form, and the shared
 // upload helper all enforce exactly the same limit.
@@ -5417,12 +5494,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
               <div className="field" style={{ flex: '1 1 180px' }}>
                 <label>{investmentForm.investmentType === 'Fixed Deposit' ? 'Bank' : 'Fund House'}</label>
                 {investmentForm.investmentType === 'Fixed Deposit' ? (
-                  <input
-                    list="bank-options-investments"
-                    value={investmentForm.institution}
-                    onChange={(e) => setInvestmentForm({ ...investmentForm, institution: e.target.value })}
-                    placeholder="Search bank..."
-                  />
+                  <SearchableCombobox value={investmentForm.institution} onChange={(v) => setInvestmentForm({ ...investmentForm, institution: v })} options={BANKS} placeholder="Search bank..." />
                 ) : (
                   <input
                     type="text"
@@ -5431,25 +5503,10 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     placeholder="e.g. HDFC Mutual Fund"
                   />
                 )}
-                <datalist id="bank-options-investments">
-                  {BANKS.map((b) => (
-                    <option key={b} value={b} />
-                  ))}
-                </datalist>
               </div>
               <div className="field" style={{ flex: '0 1 190px' }}>
                 <label>Currency</label>
-                <input
-                  list="currency-options-investments"
-                  value={investmentForm.currency}
-                  onChange={(e) => { const v = e.target.value.toUpperCase(); if (CURRENCIES.includes(v)) setInvestmentForm({ ...investmentForm, currency: v }); else setInvestmentForm({ ...investmentForm, currency: e.target.value }); }}
-                  placeholder="Search currency..."
-                />
-                <datalist id="currency-options-investments">
-                  {CURRENCIES.map((c) => (
-                    <option key={c} value={c}>{c} - {CURRENCY_REGIONS[c] || ''}</option>
-                  ))}
-                </datalist>
+                <SearchableCombobox value={investmentForm.currency} onChange={(v) => { const vv = v.toUpperCase(); if (CURRENCIES.includes(vv)) setInvestmentForm({ ...investmentForm, currency: vv }); else setInvestmentForm({ ...investmentForm, currency: v }); }} options={CURRENCIES.map((c) => ({ value: c, label: c + (CURRENCY_REGIONS[c] ? ' - ' + CURRENCY_REGIONS[c] : '') }))} placeholder="Search currency..." />
                 {investmentForm.currency && investmentForm.currency !== CURRENT_CURRENCY && (
                   <div className="muted-small" style={{ marginTop: 4 }}>
                     {investFxRates && investFxRates[investmentForm.currency]
@@ -5702,17 +5759,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
               {form.paymentSource !== 'Cash' && (
                 <div className="field" style={{ flex: '0 1 190px', minWidth: 150 }}>
                   <label>Bank</label>
-                  <input
-                    list="bank-options-expense"
-                    value={form.paymentBank}
-                    onChange={(e) => setForm({ ...form, paymentBank: e.target.value })}
-                    placeholder="Search bank..."
-                  />
-                  <datalist id="bank-options-expense">
-                    {BANKS.map((b) => (
-                      <option key={b} value={b} />
-                    ))}
-                  </datalist>
+                  <SearchableCombobox value={form.paymentBank} onChange={(v) => setForm({ ...form, paymentBank: v })} options={BANKS} placeholder="Search bank..." />
                 </div>
               )}
               </div>
@@ -6281,17 +6328,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
               {CARD_PAYMENT_SOURCES.includes(newRecurring.paymentSource) && (
                 <div className="field" style={{ flex: '0 1 190px', minWidth: 150 }}>
                   <label>Bank</label>
-                  <input
-                    list="bank-options-recurring"
-                    value={newRecurring.paymentBank}
-                    onChange={(e) => setNewRecurring({ ...newRecurring, paymentBank: e.target.value })}
-                    placeholder="Search bank..."
-                  />
-                  <datalist id="bank-options-recurring">
-                    {BANKS.map((b) => (
-                      <option key={b} value={b} />
-                    ))}
-                  </datalist>
+                  <SearchableCombobox value={newRecurring.paymentBank} onChange={(v) => setNewRecurring({ ...newRecurring, paymentBank: v })} options={BANKS} placeholder="Search bank..." />
                 </div>
               )}
               {/* Note + Attach + Add now live together in ONE flex item, in
@@ -7345,22 +7382,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                             broken). Still hidden (not unmounted) via visibility so row height
                             stays constant. Commits onBlur like every other inline text field
                             in this row (Description, Amount) rather than on every keystroke. */}
-                        <input
-                          list="bank-options-expense-row"
-                          style={{
-                            fontSize: 11, width: '100%', minWidth: 0, marginTop: 4,
-                            visibility: (expenseDrafts[e.id]?.paymentSource ?? 'Cash') !== 'Cash' ? 'visible' : 'hidden',
-                          }}
-                          value={expenseDrafts[e.id]?.paymentBank ?? ''}
-                          onChange={(ev) => updateExpenseDraftField(e.id, 'paymentBank', ev.target.value)}
-                          onBlur={(ev) => commitExpenseField(e.id, 'paymentBank', ev.target.value)}
-                          placeholder="Search bank..."
-                        />
-                        <datalist id="bank-options-expense-row">
-                          {BANKS.map((b) => (
-                            <option key={b} value={b}>{b}</option>
-                          ))}
-                        </datalist>
+                        <SearchableCombobox value={expenseDrafts[e.id]?.paymentBank ?? ''} onChange={(v) => updateExpenseDraftField(e.id, 'paymentBank', v)} onCommit={(v) => commitExpenseField(e.id, 'paymentBank', v)} options={BANKS} placeholder="Search bank..." style={{ fontSize: 11, width: '100%', minWidth: 0, marginTop: 4, visibility: (expenseDrafts[e.id]?.paymentSource ?? 'Cash') !== 'Cash' ? 'visible' : 'hidden' }} />
                       </td>
                       <td data-label="By" className="muted-small" style={{ textAlign: 'center' }}>{displayNameForEmail(e.created_by_email)}</td>
                       <td>
