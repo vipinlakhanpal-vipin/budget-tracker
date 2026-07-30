@@ -5638,7 +5638,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 <div className="empty">No investments added yet.</div>
               ) : (
                 <div className="table-scroll">
-                  <table className="responsive-table" style={{ fontSize: 11 }}>
+                  <table className="responsive-table investments-records-table" style={{ fontSize: 11 }}>
                     <thead>
                       <tr>
                         <th>Type</th><th>Name</th><th>Institution</th><th>Principal</th><th>Current Value</th><th>Rate / SIP</th><th>Start Date</th><th>Maturity</th><th>Status</th><th>Gain / Loss</th><th></th>
