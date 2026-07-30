@@ -1219,6 +1219,36 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       }
     };
   }, [chatOpen, isMobile]);
+  // iOS's native "scroll the focused input into view" behaviour jumps the
+  // WHOLE page the instant the chat input is tapped, even though the chat
+  // itself is a position:fixed sheet that never needed scrolling into view
+  // in the first place -- confirmed by the user still seeing a visible
+  // jump-and-snap-back after the earlier fix (v1.76) that re-pins scrollY
+  // AFTER the jump happens. Reacting after the fact still shows one frame
+  // of the jump, which reads as unpolished. The reliable fix is to remove
+  // iOS's ability to scroll the page AT ALL while the chat is open, using
+  // the standard iOS body-scroll-lock trick (pin body as position:fixed at
+  // its current scroll offset) -- with nothing scrollable to move, there's
+  // nothing for the native behaviour to jump.
+  useEffect(() => {
+    if (!chatOpen || !isMobile) return;
+    const scrollY = window.scrollY;
+    const body = document.body;
+    const prev = { position: body.style.position, top: body.style.top, left: body.style.left, right: body.style.right, width: body.style.width };
+    body.style.position = 'fixed';
+    body.style.top = `-${scrollY}px`;
+    body.style.left = '0';
+    body.style.right = '0';
+    body.style.width = '100%';
+    return () => {
+      body.style.position = prev.position;
+      body.style.top = prev.top;
+      body.style.left = prev.left;
+      body.style.right = prev.right;
+      body.style.width = prev.width;
+      window.scrollTo(0, scrollY);
+    };
+  }, [chatOpen, isMobile]);
   useEffect(() => {
     if (!chatOpen) return;
     function onDocClick(e) {
