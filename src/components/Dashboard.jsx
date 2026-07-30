@@ -5544,7 +5544,8 @@ I can help you track expenses, understand spending patterns, create budgets, and
           <div className="panel" style={{ maxWidth: '100%', marginBottom: 24 }}>
             <h2 className="panel-title-themed" style={{ fontSize: 16 }}>Your Investment Records</h2>
             <div>
-              <div className="muted-small" style={{ marginBottom: 10, fontSize: 13 }}>
+              <div className="muted-small" style={{ marginBottom: 14, fontSize: 13, background: 'rgba(14,165,233,0.12)', border: '1px solid rgba(14,165,233,0.35)', borderRadius: 8, padding: '10px 12px' }}>
+                <span style={{ fontWeight: 700, color: '#0ea5e9', marginRight: 4 }}>ⓘ</span>
                 {investments.length} {investments.length === 1 ? 'entry' : 'entries'} -- Invested <strong><Amt value={investmentTotals.principal} /></strong> -- Current <strong style={{ color: '#0ea5e9' }}><Amt value={investmentTotals.current} /></strong> -- <strong style={{ color: investmentTotals.gain >= 0 ? '#1a7f37' : '#d1242f' }}>{investmentTotals.gain >= 0 ? 'Gain' : 'Loss'} <Amt value={Math.abs(investmentTotals.gain)} /></strong>
               </div>
               {investments.length === 0 ? (
