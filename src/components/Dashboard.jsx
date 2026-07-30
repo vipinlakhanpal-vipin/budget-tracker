@@ -7334,23 +7334,33 @@ I can help you track expenses, understand spending patterns, create budgets, and
                             <option key={p} value={p}>{p}</option>
                           ))}
                         </select>
-                        {/* Always rendered -- just hidden (not unmounted) when this row's
-                            payment source doesn't need a bank name -- so the Payment cell
-                            reserves the same two-select height on every row, keeping every
-                            row in the table the same height regardless of content. */}
-                        <select
+                        {/* v1.87: swapped the old plain <select> (162 hardcoded <option>
+                            elements) for the same searchable input+datalist combobox already
+                            used for Bank on the Investments form and the Add-expense form
+                            above -- a native <select> with this many options is exactly the
+                            kind of control that behaves unreliably via touch/mobile pickers,
+                            which is the most likely cause of repeated "bank field stuck"
+                            reports on this specific inline-edit row (the Add-expense form's
+                            own Bank field uses this same combobox and was never reported as
+                            broken). Still hidden (not unmounted) via visibility so row height
+                            stays constant. Commits onBlur like every other inline text field
+                            in this row (Description, Amount) rather than on every keystroke. */}
+                        <input
+                          list="bank-options-expense-row"
                           style={{
                             fontSize: 11, width: '100%', minWidth: 0, marginTop: 4,
                             visibility: (expenseDrafts[e.id]?.paymentSource ?? 'Cash') !== 'Cash' ? 'visible' : 'hidden',
                           }}
                           value={expenseDrafts[e.id]?.paymentBank ?? ''}
-                          onChange={(ev) => commitExpenseField(e.id, 'paymentBank', ev.target.value)}
-                        >
-                          <option value="">Bank</option>
+                          onChange={(ev) => updateExpenseDraftField(e.id, 'paymentBank', ev.target.value)}
+                          onBlur={(ev) => commitExpenseField(e.id, 'paymentBank', ev.target.value)}
+                          placeholder="Search bank..."
+                        />
+                        <datalist id="bank-options-expense-row">
                           {BANKS.map((b) => (
                             <option key={b} value={b}>{b}</option>
                           ))}
-                        </select>
+                        </datalist>
                       </td>
                       <td data-label="By" className="muted-small" style={{ textAlign: 'center' }}>{displayNameForEmail(e.created_by_email)}</td>
                       <td>
