@@ -142,6 +142,7 @@ export default function Login() {
   return (
     <div className="center-screen">
       <div className="login-card">
+        <img src="/icon-192.png" alt="Hearth" className="login-logo" />
         <h1>Hearth</h1>
 
         <div className="auth-tabs">
