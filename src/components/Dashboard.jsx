@@ -7192,7 +7192,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             );
           })()}
         </div>
-                <div style={(activePanel === 'report' || activePanel === 'help' || activePanel === 'settings' || activePanel === 'roadmap') ? { gridColumn: '1 / -1' } : undefined}>
+                <div style={(activePanel === 'report' || activePanel === 'help' || activePanel === 'settings' || activePanel === 'roadmap' || activePanel === 'investments') ? { gridColumn: '1 / -1' } : undefined}>
           {/* This narrow chart/AI column only shows for the normal
               data-entry tabs now (inputTab truthy) -- Home has its own
               full-width, bigger version of the same three cards further
