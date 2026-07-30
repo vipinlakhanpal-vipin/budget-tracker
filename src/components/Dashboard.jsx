@@ -4896,7 +4896,7 @@ function ReportHtmlView({ data }) {
     <div className="wrap">
       {/* "Updated" confirmation toast -- fires on manual Add (Regular
           Expenses) and on receipt auto-add; auto-dismisses itself. */}
-      {toastMsg && <div className="app-toast">{toastMsg}</div>}
+      {toastMsg && <div className="app-toast" style={{ top: stickyFrameSpacerHeight + 12 }}>{toastMsg}</div>}
       {/* Header, month nav, and both summary-card rows are wrapped in one
           sticky block (see .sticky-dashboard-frame) so the whole "dashboard
           frame" stays frozen at the top while only the tabs/panels/lists
