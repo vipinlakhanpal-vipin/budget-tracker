@@ -1195,22 +1195,27 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       }
     }
     updateChatPos();
-    // On mobile, deliberately compute this ONCE per open and then leave it
-    // alone -- earlier versions re-ran this on every visualViewport
-    // resize/scroll (i.e. whenever the on-screen keyboard opened), which
-    // tracked the keyboard correctly but visibly "jumped" the whole sheet
-    // the instant someone tapped the input to start typing. That read as
-    // unpolished, so mobile now keeps its first-render position for the
-    // life of this chatOpen session; only desktop (where there's no
-    // on-screen keyboard to dodge) keeps live-tracking resize/scroll.
-    if (!isMobile) {
-      window.addEventListener('resize', updateChatPos);
-      window.addEventListener('scroll', updateChatPos, true);
+    // Mobile DOES need to keep tracking window.visualViewport live (via
+    // these listeners) -- without it, the sheet stays glued to its
+    // opening position and the keyboard simply covers the input/Send
+    // button once it opens (confirmed: that's exactly what not tracking
+    // it caused). The earlier "jump" complaint wasn't really about
+    // tracking the keyboard at all -- it was that the position snapped
+    // instantly instead of sliding, which the .chat-window CSS transition
+    // (bottom/max-height) now smooths out. So: keep live-tracking on both
+    // mobile and desktop, and let the CSS transition handle the "feel".
+    window.addEventListener('resize', updateChatPos);
+    window.addEventListener('scroll', updateChatPos, true);
+    if (isMobile && window.visualViewport) {
+      window.visualViewport.addEventListener('resize', updateChatPos);
+      window.visualViewport.addEventListener('scroll', updateChatPos);
     }
     return () => {
-      if (!isMobile) {
-        window.removeEventListener('resize', updateChatPos);
-        window.removeEventListener('scroll', updateChatPos, true);
+      window.removeEventListener('resize', updateChatPos);
+      window.removeEventListener('scroll', updateChatPos, true);
+      if (isMobile && window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', updateChatPos);
+        window.visualViewport.removeEventListener('scroll', updateChatPos);
       }
     };
   }, [chatOpen, isMobile]);
