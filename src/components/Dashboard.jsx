@@ -3935,6 +3935,34 @@ const labelMaxLen = chartRows.length > 18 ? 12 : 15;
     });
     const chartRows = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]);
     const maxCategoryVal = Math.max(1, ...chartRows.map(([, v]) => v));
+
+    // Payment-Source-wise category breakdown (point #6): same combined
+    // Regular + Fixed data as the category chart above, grouped by payment
+    // source first, then by category within each source. Cash has no bank;
+    // Credit Card / Debit Card / Bank get the bank name appended so
+    // "Credit Card - HSBC" and "Credit Card - Citi" don't collapse together.
+    const sourceLabelFor = (item) => {
+      const src = item.payment_source || 'Cash';
+      return item.payment_bank ? `${src} - ${item.payment_bank}` : src;
+    };
+    const paymentSourceMap = {};
+    const addToSourceMap = (item) => {
+      const src = sourceLabelFor(item);
+      const cat = categoryNameById[item.category_id] || 'Uncategorized';
+      if (!paymentSourceMap[src]) paymentSourceMap[src] = { total: 0, categories: {} };
+      paymentSourceMap[src].total += Number(item.amount);
+      paymentSourceMap[src].categories[cat] = (paymentSourceMap[src].categories[cat] || 0) + Number(item.amount);
+    };
+    rangeExpenses.forEach(addToSourceMap);
+    rangeRecurringOccurrences.forEach(addToSourceMap);
+    const paymentSourceRows = Object.entries(paymentSourceMap)
+      .map(([source, v]) => ({
+        source,
+        total: v.total,
+        categories: Object.entries(v.categories).sort((a, b) => b[1] - a[1]),
+      }))
+      .sort((a, b) => b.total - a.total);
+    const maxSourceVal = Math.max(1, ...paymentSourceRows.map((r) => r.total));
     const totalSpend = chartRows.reduce((s, [, v]) => s + v, 0);
     let cum = 0;
     const paretoRows = chartRows.map(([name, val]) => {
@@ -3980,6 +4008,7 @@ const labelMaxLen = chartRows.length > 18 ? 12 : 15;
       rangeMonths, perMonthSavings,
       expenseTotal, incomeTotal, fixedTotal, savingsGoalTotal, netTotal,
       chartRows, maxCategoryVal, totalSpend, paretoRows, vitalFewNames, suggestions,
+      paymentSourceRows, maxSourceVal,
     };
   }
 
@@ -4011,6 +4040,32 @@ function ReportHtmlView({ data }) {
                   <div style={{ width: `${Math.max(2, (val / data.maxCategoryVal) * 100)}%`, background: COLORS[i % COLORS.length], height: '100%', borderRadius: 4 }} />
                 </div>
                 <div style={{ width: 90, fontSize: 12, textAlign: 'right', fontWeight: 600, flexShrink: 0 }}>{fmt(val)}</div>
+              </div>
+            ))}
+          </div>
+        )}
+        <h4>Spend by Payment Source</h4>
+        {data.paymentSourceRows.length === 0 ? (
+          <div className="muted-small" style={{ marginBottom: 24 }}>No expenses in this period.</div>
+        ) : (
+          <div style={{ marginBottom: 24 }}>
+            {data.paymentSourceRows.map((row, i) => (
+              <div key={row.source} style={{ marginBottom: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                  <div style={{ width: 120, fontSize: 12, fontWeight: 700, color: 'var(--text)', flexShrink: 0 }}>{row.source}</div>
+                  <div className="report-bar-track" style={{ flex: 1, borderRadius: 4, height: 14 }}>
+                    <div style={{ width: `${Math.max(2, (row.total / data.maxSourceVal) * 100)}%`, background: COLORS[i % COLORS.length], height: '100%', borderRadius: 4 }} />
+                  </div>
+                  <div style={{ width: 90, fontSize: 12, textAlign: 'right', fontWeight: 700, flexShrink: 0 }}>{fmt(row.total)}</div>
+                </div>
+                <div style={{ paddingLeft: 128 }}>
+                  {row.categories.map(([name, val]) => (
+                    <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                      <div style={{ flex: 1, fontSize: 11, color: 'var(--muted)' }}>{name}</div>
+                      <div style={{ width: 90, fontSize: 11, textAlign: 'right', color: 'var(--muted)', flexShrink: 0 }}>{fmt(val)}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
             ))}
           </div>
