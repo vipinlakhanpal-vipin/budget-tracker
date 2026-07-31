@@ -2892,24 +2892,51 @@ row. */
   position: absolute; inset: 0;
   transform-style: preserve-3d;
   transform-origin: left center;
-  transition: transform .65s cubic-bezier(.4, .1, .2, 1);
+  /* v2.14: slowed way down (was .65s) and switched to an ease-in/ease-out
+     curve that lingers at the start and end, like a hand actually turning
+     a page, per explicit feedback that the flip was too fast to notice --
+     especially early pages where the eye hasn't caught up yet. */
+  transition: transform 1.15s cubic-bezier(.65, 0, .35, 1);
   transform: rotateY(0deg);
+  will-change: transform;
 }
 .manual-page-flipped { transform: rotateY(-180deg); }
 .manual-page-face {
   position: absolute; inset: 0;
   backface-visibility: hidden;
-  background: var(--card);
-  border: 1px solid var(--border);
+  /* v2.14: warm "paper" tone instead of the app's own dark card color --
+     on a dark background the page and its shadow barely read as a distinct
+     object mid-flip, so the turn looked like nothing was happening. A
+     lighter, slightly creamy page (like real book paper) stays visible
+     and legible at every rotation angle, and gives the manual its own
+     book-like identity separate from the rest of the (dark) app chrome. */
+  background: linear-gradient(160deg, #fdfaf3, #f3ecd9 88%);
+  color: #2a2420;
+  border: 1px solid #e4d9bd;
   border-radius: 10px;
-  box-shadow: 2px 0 12px rgba(15, 42, 46, .12);
+  box-shadow: 3px 0 18px rgba(15, 42, 46, .35);
   overflow-y: auto;
   padding: 28px 26px;
 }
+.manual-page-face::after {
+  /* Soft shadow hugging the spine (left edge) so pages read as curved
+     paper rather than a flat rectangle, strongest on the leaf currently
+     mid-turn. */
+  content: '';
+  position: absolute; inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(0,0,0,.12), transparent 18%);
+  border-radius: inherit;
+}
 .manual-page-back {
   transform: rotateY(180deg);
-  background: linear-gradient(135deg, var(--accent-light), var(--card));
+  background: linear-gradient(200deg, #f6efdd, #ece2c8 85%);
 }
+.manual-topic, .manual-cover, .manual-closing { color: #2a2420; }
+.manual-topic-num { color: #8a7a5c !important; }
+.manual-topic h2, .manual-cover h1, .manual-closing h2 { color: #2a2420 !important; }
+.manual-topic p, .manual-closing p { color: #3a332c !important; }
+.manual-cover-tag { color: #6b6053 !important; }
 .manual-cover {
   height: 100%; display: flex; flex-direction: column;
   align-items: center; justify-content: center; text-align: center;
