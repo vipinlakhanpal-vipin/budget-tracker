@@ -175,7 +175,7 @@ const COLORS = [
 ];
 const RELATIONS = ['Self', 'Spouse', 'Partner', 'Child', 'Parent', 'Sibling', 'Roommate', 'Other'];
 const CURRENCIES = ['AED', 'AFN', 'ALL', 'AMD', 'ANG', 'AOA', 'ARS', 'AUD', 'AWG', 'AZN', 'BAM', 'BBD', 'BDT', 'BGN', 'BHD', 'BIF', 'BMD', 'BND', 'BOB', 'BRL', 'BSD', 'BTN', 'BWP', 'BYN', 'BZD', 'CAD', 'CDF', 'CHF', 'CLP', 'CNY', 'COP', 'CRC', 'CUP', 'CVE', 'CZK', 'DJF', 'DKK', 'DOP', 'DZD', 'EGP', 'ERN', 'ETB', 'EUR', 'FJD', 'FKP', 'GBP', 'GEL', 'GHS', 'GIP', 'GMD', 'GNF', 'GTQ', 'GYD', 'HKD', 'HNL', 'HTG', 'HUF', 'IDR', 'ILS', 'INR', 'IQD', 'IRR', 'ISK', 'JMD', 'JOD', 'JPY', 'KES', 'KGS', 'KHR', 'KMF', 'KPW', 'KRW', 'KWD', 'KYD', 'KZT', 'LAK', 'LBP', 'LKR', 'LRD', 'LSL', 'LYD', 'MAD', 'MDL', 'MGA', 'MKD', 'MMK', 'MNT', 'MOP', 'MRU', 'MUR', 'MVR', 'MWK', 'MXN', 'MYR', 'MZN', 'NAD', 'NGN', 'NIO', 'NOK', 'NPR', 'NZD', 'OMR', 'PAB', 'PEN', 'PGK', 'PHP', 'PKR', 'PLN', 'PYG', 'QAR', 'RON', 'RSD', 'RUB', 'RWF', 'SAR', 'SBD', 'SCR', 'SDG', 'SEK', 'SGD', 'SHP', 'SLE', 'SOS', 'SRD', 'SSP', 'STN', 'SYP', 'SZL', 'THB', 'TJS', 'TMT', 'TND', 'TOP', 'TRY', 'TTD', 'TWD', 'TZS', 'UAH', 'UGX', 'USD', 'UYU', 'UZS', 'VES', 'VND', 'VUV', 'WST', 'XAF', 'XCD', 'XOF', 'XPF', 'YER', 'ZAR', 'ZMW', 'ZWL'];
-const CURRENCY_REGIONS = { AED: 'United Arab Emirates', AFN: 'Afghanistan', ALL: 'Albania', AMD: 'Armenia', ANG: 'CuraÃÂ§ao & Sint Maarten', AOA: 'Angola', ARS: 'Argentina', AUD: 'Australia', AWG: 'Aruba', AZN: 'Azerbaijan', BAM: 'Bosnia & Herzegovina', BBD: 'Barbados', BDT: 'Bangladesh', BGN: 'Bulgaria', BHD: 'Bahrain', BIF: 'Burundi', BMD: 'Bermuda', BND: 'Brunei', BOB: 'Bolivia', BRL: 'Brazil', BSD: 'Bahamas', BTN: 'Bhutan', BWP: 'Botswana', BYN: 'Belarus', BZD: 'Belize', CAD: 'Canada', CDF: 'DR Congo', CHF: 'Switzerland', CLP: 'Chile', CNY: 'China', COP: 'Colombia', CRC: 'Costa Rica', CUP: 'Cuba', CVE: 'Cape Verde', CZK: 'Czech Republic', DJF: 'Djibouti', DKK: 'Denmark', DOP: 'Dominican Republic', DZD: 'Algeria', EGP: 'Egypt', ERN: 'Eritrea', ETB: 'Ethiopia', EUR: 'Eurozone', FJD: 'Fiji', FKP: 'Falkland Islands', GBP: 'United Kingdom', GEL: 'Georgia', GHS: 'Ghana', GIP: 'Gibraltar', GMD: 'Gambia', GNF: 'Guinea', GTQ: 'Guatemala', GYD: 'Guyana', HKD: 'Hong Kong', HNL: 'Honduras', HTG: 'Haiti', HUF: 'Hungary', IDR: 'Indonesia', ILS: 'Israel', INR: 'India', IQD: 'Iraq', IRR: 'Iran', ISK: 'Iceland', JMD: 'Jamaica', JOD: 'Jordan', JPY: 'Japan', KES: 'Kenya', KGS: 'Kyrgyzstan', KHR: 'Cambodia', KMF: 'Comoros', KPW: 'North Korea', KRW: 'South Korea', KWD: 'Kuwait', KYD: 'Cayman Islands', KZT: 'Kazakhstan', LAK: 'Laos', LBP: 'Lebanon', LKR: 'Sri Lanka', LRD: 'Liberia', LSL: 'Lesotho', LYD: 'Libya', MAD: 'Morocco', MDL: 'Moldova', MGA: 'Madagascar', MKD: 'North Macedonia', MMK: 'Myanmar', MNT: 'Mongolia', MOP: 'Macau', MRU: 'Mauritania', MUR: 'Mauritius', MVR: 'Maldives', MWK: 'Malawi', MXN: 'Mexico', MYR: 'Malaysia', MZN: 'Mozambique', NAD: 'Namibia', NGN: 'Nigeria', NIO: 'Nicaragua', NOK: 'Norway', NPR: 'Nepal', NZD: 'New Zealand', OMR: 'Oman', PAB: 'Panama', PEN: 'Peru', PGK: 'Papua New Guinea', PHP: 'Philippines', PKR: 'Pakistan', PLN: 'Poland', PYG: 'Paraguay', QAR: 'Qatar', RON: 'Romania', RSD: 'Serbia', RUB: 'Russia', RWF: 'Rwanda', SAR: 'Saudi Arabia', SBD: 'Solomon Islands', SCR: 'Seychelles', SDG: 'Sudan', SEK: 'Sweden', SGD: 'Singapore', SHP: 'Saint Helena', SLE: 'Sierra Leone', SOS: 'Somalia', SRD: 'Suriname', SSP: 'South Sudan', STN: 'SÃÂ£o TomÃÂ© & PrÃÂ­ncipe', SYP: 'Syria', SZL: 'Eswatini', THB: 'Thailand', TJS: 'Tajikistan', TMT: 'Turkmenistan', TND: 'Tunisia', TOP: 'Tonga', TRY: 'Turkey', TTD: 'Trinidad & Tobago', TWD: 'Taiwan', TZS: 'Tanzania', UAH: 'Ukraine', UGX: 'Uganda', USD: 'United States', UYU: 'Uruguay', UZS: 'Uzbekistan', VES: 'Venezuela', VND: 'Vietnam', VUV: 'Vanuatu', WST: 'Samoa', XAF: 'Central Africa (CEMAC)', XCD: 'Eastern Caribbean', XOF: 'West Africa (UEMOA)', XPF: 'French Pacific', YER: 'Yemen', ZAR: 'South Africa', ZMW: 'Zambia', ZWL: 'Zimbabwe' };
+const CURRENCY_REGIONS = { AED: 'United Arab Emirates', AFN: 'Afghanistan', ALL: 'Albania', AMD: 'Armenia', ANG: 'Curaçao & Sint Maarten', AOA: 'Angola', ARS: 'Argentina', AUD: 'Australia', AWG: 'Aruba', AZN: 'Azerbaijan', BAM: 'Bosnia & Herzegovina', BBD: 'Barbados', BDT: 'Bangladesh', BGN: 'Bulgaria', BHD: 'Bahrain', BIF: 'Burundi', BMD: 'Bermuda', BND: 'Brunei', BOB: 'Bolivia', BRL: 'Brazil', BSD: 'Bahamas', BTN: 'Bhutan', BWP: 'Botswana', BYN: 'Belarus', BZD: 'Belize', CAD: 'Canada', CDF: 'DR Congo', CHF: 'Switzerland', CLP: 'Chile', CNY: 'China', COP: 'Colombia', CRC: 'Costa Rica', CUP: 'Cuba', CVE: 'Cape Verde', CZK: 'Czech Republic', DJF: 'Djibouti', DKK: 'Denmark', DOP: 'Dominican Republic', DZD: 'Algeria', EGP: 'Egypt', ERN: 'Eritrea', ETB: 'Ethiopia', EUR: 'Eurozone', FJD: 'Fiji', FKP: 'Falkland Islands', GBP: 'United Kingdom', GEL: 'Georgia', GHS: 'Ghana', GIP: 'Gibraltar', GMD: 'Gambia', GNF: 'Guinea', GTQ: 'Guatemala', GYD: 'Guyana', HKD: 'Hong Kong', HNL: 'Honduras', HTG: 'Haiti', HUF: 'Hungary', IDR: 'Indonesia', ILS: 'Israel', INR: 'India', IQD: 'Iraq', IRR: 'Iran', ISK: 'Iceland', JMD: 'Jamaica', JOD: 'Jordan', JPY: 'Japan', KES: 'Kenya', KGS: 'Kyrgyzstan', KHR: 'Cambodia', KMF: 'Comoros', KPW: 'North Korea', KRW: 'South Korea', KWD: 'Kuwait', KYD: 'Cayman Islands', KZT: 'Kazakhstan', LAK: 'Laos', LBP: 'Lebanon', LKR: 'Sri Lanka', LRD: 'Liberia', LSL: 'Lesotho', LYD: 'Libya', MAD: 'Morocco', MDL: 'Moldova', MGA: 'Madagascar', MKD: 'North Macedonia', MMK: 'Myanmar', MNT: 'Mongolia', MOP: 'Macau', MRU: 'Mauritania', MUR: 'Mauritius', MVR: 'Maldives', MWK: 'Malawi', MXN: 'Mexico', MYR: 'Malaysia', MZN: 'Mozambique', NAD: 'Namibia', NGN: 'Nigeria', NIO: 'Nicaragua', NOK: 'Norway', NPR: 'Nepal', NZD: 'New Zealand', OMR: 'Oman', PAB: 'Panama', PEN: 'Peru', PGK: 'Papua New Guinea', PHP: 'Philippines', PKR: 'Pakistan', PLN: 'Poland', PYG: 'Paraguay', QAR: 'Qatar', RON: 'Romania', RSD: 'Serbia', RUB: 'Russia', RWF: 'Rwanda', SAR: 'Saudi Arabia', SBD: 'Solomon Islands', SCR: 'Seychelles', SDG: 'Sudan', SEK: 'Sweden', SGD: 'Singapore', SHP: 'Saint Helena', SLE: 'Sierra Leone', SOS: 'Somalia', SRD: 'Suriname', SSP: 'South Sudan', STN: 'São Tomé & Príncipe', SYP: 'Syria', SZL: 'Eswatini', THB: 'Thailand', TJS: 'Tajikistan', TMT: 'Turkmenistan', TND: 'Tunisia', TOP: 'Tonga', TRY: 'Turkey', TTD: 'Trinidad & Tobago', TWD: 'Taiwan', TZS: 'Tanzania', UAH: 'Ukraine', UGX: 'Uganda', USD: 'United States', UYU: 'Uruguay', UZS: 'Uzbekistan', VES: 'Venezuela', VND: 'Vietnam', VUV: 'Vanuatu', WST: 'Samoa', XAF: 'Central Africa (CEMAC)', XCD: 'Eastern Caribbean', XOF: 'West Africa (UEMOA)', XPF: 'French Pacific', YER: 'Yemen', ZAR: 'South Africa', ZMW: 'Zambia', ZWL: 'Zimbabwe' };
 
 // Shown as a prefix inside every amount field so what you're typing is
 // unambiguous at a glance -- codes without one universally-recognized
@@ -350,7 +350,7 @@ function TreemapTile(props) {
   const color = COLORS[index % COLORS.length];
   const canLabel = width > 46 && height > 24;
   const canShowValue = width > 60 && height > 40;
-  const label = name && name.length > 14 ? name.slice(0, 14) + 'Ã¢ÂÂ¦' : name;
+  const label = name && name.length > 14 ? name.slice(0, 14) + '…' : name;
   return (
     <g>
       <rect x={x} y={y} width={width} height={height} style={{ fill: color, stroke: '#fff', strokeWidth: 1.5 }} />
@@ -404,7 +404,7 @@ const TOUR_STEPS = [
   {
     selector: '[data-tour="nav-settings"]',
     title: 'Smart Budget',
-    body: 'Set a monthly budget per category here -- go over, and youÃ¢ÂÂll get a heads-up in the bell icon next.',
+    body: 'Set a monthly budget per category here -- go over, and you’ll get a heads-up in the bell icon next.',
   },
   {
     selector: '[data-tour="notif-bell"]',
@@ -599,7 +599,7 @@ function DirhamGlyph({ size = '1em' }) {
 
 // Prefix shown inside every amount field: the real Dirham glyph for AED
 // households, or the plain text symbol for any other currency (those all
-// already have a normal Unicode symbol -- $, ÃÂ£, Ã¢ÂÂ¬, Ã¢ÂÂ¹ -- so there's nothing
+// already have a normal Unicode symbol -- $, £, €, ₹ -- so there's nothing
 // to substitute there).
 function CurrencyPrefix() {
   if (CURRENT_CURRENCY === 'AED') return <DirhamGlyph />;
@@ -651,7 +651,7 @@ function formAmountPx(value) {
 // same "$4,500" convention the editable amount fields already use, instead
 // of the old "AED 4,500.00" (code + space) text format. A leading minus
 // sign (for negative/over-budget figures) is pulled out in front of the
-// symbol -- "-AED50" reads oddly, "-ÃÂ50" reads the way "-$50" would.
+// symbol -- "-AED50" reads oddly, "-₹50" reads the way "-$50" would.
 function Amt({ value }) {
   const v = Number(value) || 0;
   const neg = v < 0;
@@ -2355,7 +2355,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       const match = categories.find((c) => c.name === json.categoryName);
       if (!match) return;
       setForm((f) => (f.description.trim() === trimmed ? { ...f, categoryId: match.id } : f));
-      setAiCategoryHint(`Ã¢ÂÂ¨ AI-suggested: ${match.name}`);
+      setAiCategoryHint(`✨ AI-suggested: ${match.name}`);
       setTimeout(() => setAiCategoryHint((h) => (h.includes(match.name) ? '' : h)), 4000);
     } catch {
       // AI suggestion is a nice-to-have -- silently skip on any failure.
@@ -2381,7 +2381,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       const match = categories.find((c) => c.name === json.categoryName);
       if (!match) return;
       setNewRecurring((f) => (f.name.trim() === trimmed ? { ...f, categoryId: match.id } : f));
-      setFixedAiCategoryHint(`Ã¢ÂÂ¨ AI-suggested: ${match.name}`);
+      setFixedAiCategoryHint(`✨ AI-suggested: ${match.name}`);
       setTimeout(() => setFixedAiCategoryHint((h) => (h.includes(match.name) ? '' : h)), 4000);
     } catch {
       // AI suggestion is a nice-to-have -- worst case, nothing gets suggested.
@@ -4852,7 +4852,7 @@ function ReportHtmlView({ data }) {
                 textAnchor="end"
                 height={80}
                 tick={{ fontSize: 11 }}
-                tickFormatter={(name) => (name.length > 14 ? name.slice(0, 14) + 'Ã¢ÂÂ¦' : name)}
+                tickFormatter={(name) => (name.length > 14 ? name.slice(0, 14) + '…' : name)}
               />
               <YAxis type="number" tick={{ fontSize: 11 }} />
               <Tooltip formatter={(v) => fmt(v)} />
@@ -4905,7 +4905,7 @@ function ReportHtmlView({ data }) {
                   dataKey="name"
                   width={big ? (isMobile ? 95 : 140) : 95}
                   tick={{ fontSize: big ? 11 : 8.5 }}
-                  tickFormatter={(name) => (name.length > (big ? (isMobile ? 13 : 20) : 13) ? name.slice(0, big ? (isMobile ? 13 : 20) : 13) + 'Ã¢ÂÂ¦' : name)}
+                  tickFormatter={(name) => (name.length > (big ? (isMobile ? 13 : 20) : 13) ? name.slice(0, big ? (isMobile ? 13 : 20) : 13) + '…' : name)}
                 />
                 <Tooltip formatter={(v) => fmt(v)} />
                 <Bar dataKey="value" barSize={big ? 10 : 9} radius={[0, 3, 3, 0]} isAnimationActive={false}>
@@ -4941,7 +4941,7 @@ function ReportHtmlView({ data }) {
                 angle={-50}
                 textAnchor="end"
                 height={75}
-                tickFormatter={(name) => (name.length > paretoMaxNameLen ? name.slice(0, paretoMaxNameLen) + 'Ã¢ÂÂ¦' : name)}
+                tickFormatter={(name) => (name.length > paretoMaxNameLen ? name.slice(0, paretoMaxNameLen) + '…' : name)}
               />
               <YAxis yAxisId="left" tick={{ fontSize: big ? 11 : 9 }} width={big ? 50 : 40} />
               <YAxis
@@ -5104,7 +5104,7 @@ function ReportHtmlView({ data }) {
                 onClick={() => setProfileMenuOpen((o) => !o)}
               >
                 <User size={18} />
-<span className="corner-profile-label" title="This updates automatically -- if a change doesn't look right, reload the page.">{displayNameForEmail(session.user.email)} | {formatVersionBadge().replace(' ÃÂ· ', ' | ')}</span>
+<span className="corner-profile-label" title="This updates automatically -- if a change doesn't look right, reload the page.">{displayNameForEmail(session.user.email)} | {formatVersionBadge().replace(' · ', ' | ')}</span>
               </button>
               {profileMenuOpen && (
                 <div className="profile-dropdown">
@@ -5572,7 +5572,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             </>
           ) : (
             <>
-              <div className="v">Ã¢ÂÂ</div>
+              <div className="v">—</div>
               <div className="muted-small" style={{ marginTop: 4 }}>Set a monthly budget to track this</div>
             </>
           )}
@@ -5632,7 +5632,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 onClick={() => { setAddSheetOpen(false); window.scrollTo({ top: 0, behavior: 'auto' }); }}
                 aria-label="Close"
               >
-                Ã¢ÂÂ
+                ✕
               </button>
             </div>
           )}
@@ -5787,7 +5787,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             <h2 className="panel-title-themed" style={{ fontSize: 16 }}>Your Investment Records</h2>
             <div>
               <div className="muted-small" style={{ marginBottom: 14, fontSize: 13, background: 'rgba(14,165,233,0.12)', border: '1px solid rgba(14,165,233,0.35)', borderRadius: 8, padding: '10px 12px' }}>
-                <span style={{ fontWeight: 700, color: '#0ea5e9', marginRight: 4 }}>Ã¢ÂÂ</span>
+                <span style={{ fontWeight: 700, color: '#0ea5e9', marginRight: 4 }}>ⓘ</span>
                 {investments.length} {investments.length === 1 ? 'entry' : 'entries'} -- Invested <strong><Amt value={investmentTotals.principal} /></strong> -- Current <strong style={{ color: '#0ea5e9' }}><Amt value={investmentTotals.current} /></strong> -- <strong style={{ color: investmentTotals.gain >= 0 ? '#1a7f37' : '#d1242f' }}>{investmentTotals.gain >= 0 ? 'Gain' : 'Loss'} <Amt value={Math.abs(investmentTotals.gain)} /></strong>
               </div>
               {investments.length === 0 ? (
@@ -7755,7 +7755,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   </div>
                   {(() => {
                     const chartData = investments.map((x) => ({
-                      name: (x.name || '').length > 12 ? (x.name || '').slice(0, 12) + 'Ã¢ÂÂ¦' : (x.name || ''),
+                      name: (x.name || '').length > 12 ? (x.name || '').slice(0, 12) + '…' : (x.name || ''),
                       Invested: investToBase(Number(x.principal_amount || 0), x.currency),
                       Current: investToBase(investAccruedValue(x), x.currency),
                     }));
@@ -8077,7 +8077,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     onClick={() => setMobileReportOpen(false)}
                     style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: 16, fontWeight: 600, cursor: 'pointer', padding: 0 }}
                   >
-                    {'Ã¢ÂÂ'} Back to App
+                    {'←'} Back to App
                   </button>
                 </div>
                 <iframe
