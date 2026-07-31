@@ -117,9 +117,6 @@ export default function EManual({ open, onClose }) {
   const dragInfo = useRef({ dx: 0 });
   const pageRefs = useRef([]);
   const bookRef = useRef(null);
-  const dragInfo = useRef({ dx: 0 });
-  const pageRefs = useRef([]);
-  const bookRef = useRef(null);
 
   useEffect(() => {
     if (open) setPage(0);
