@@ -7854,6 +7854,11 @@ I can help you track expenses, understand spending patterns, create budgets, and
             // of always-visible paragraphs -- per explicit request, mirrors
             // how clicking Home/Regular Expenses/etc. in the header itself
             // jumps straight to that one thing.
+            // Bump this manually whenever helpTopics' content below changes (not on
+            // every app release -- only when Help itself is edited), so the
+            // little "Help updated as of vX.XX" marker next to the tour button
+            // tells users this text is actually in sync with what they're using.
+            const HELP_LAST_UPDATED_VERSION = '2.08';
             const helpTopics = [
 { key: 'updates', title: "What's New", body: <>Latest updates (Jul 31, 2026): Added a private Investments tracker (Fixed Deposits and Mutual Funds/SIPs) with its own tab, currency + live FX conversion, auto-calculated gain/loss, and a pencil icon to edit any entry. The Report now includes a Payment-Source-wise spend breakdown on screen and in the downloadable/emailed PDF. PDF report category names no longer get cut off -- long names now auto-shrink to fit instead of truncating with "...". Every row across Income, Fixed Expenses, Regular Expenses, and Savings now has a pencil icon (matching Investments) that opens a proper edit sheet instead of relying only on inline editing. The small "Updated" confirmation toast, and the popup for reading a saved note, now always appear centered in the app instead of sometimes drifting toward the browser's own tab bar on mobile.</> },
               { key: 'home', title: 'Dashboard', body: <>Shows just the dashboard (summary cards and totals), nothing else. Below it, a bigger "Explore" section holds the same Spending by category chart (Pie/Bar/Pareto/Treemap), AI Insights, and Budget Coach, sized larger so there's more room to look through them. Clicking Income, Fixed Expenses, Regular Expenses, Savings, Report, Settings, or Help scrolls back up to the top and switches to that tab as usual.</> },
@@ -7895,6 +7900,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
               >
                 Take the tour again
               </button>
+              <span className="muted-small" style={{ marginLeft: 10, marginBottom: 14, display: 'inline-block', verticalAlign: 'middle' }}>Help updated as of v{HELP_LAST_UPDATED_VERSION}</span>
                                   <div className="help-accordion" style={{ display: 'flex', flexDirection: 'column', gap: '8px 32px' }}>
                 {helpTopics.map((t) => {
                   const open = helpOpenTopic === t.key;
