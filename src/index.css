@@ -1822,6 +1822,16 @@ td.amount { font-weight: 600; text-align: right; }
 
 @media (max-width: 640px), (pointer: coarse) and (hover: none) and (max-width: 1366px) {
     .wrap { padding: 14px 8px 14px 12px; }
+  /* v2.03: the toast was inheriting its centering from .page-title-row,
+     but that row's own title text is display:none on mobile (see the
+     July-2026-wrapping fix above), so the row collapses down to just the
+     month-nav bar near the very top of the page -- putting the toast right
+     up against the sticky header, close enough to the phone's own browser
+     chrome that it read as a stray system notification rather than
+     in-app feedback. Switching to position:fixed centers it on the actual
+     visible viewport instead, the same fix applied to every panel (not
+     just Investments) since they all share this one .app-toast element. */
+  .app-toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); }
   .top-bar .btn.secondary.small { align-self: flex-start; }
   .action-row-teal { width: 100%; }
   .btn-teal { flex: 1 1 auto; text-align: center; }
