@@ -6320,7 +6320,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             )}
 
             {/* Mobile edit sheet for a tapped income row -- same fields/handlers as desktop's inline row. */}
-            {isMobile && editingIncomeId && (() => {
+            {editingIncomeId && (() => {
               const i = incomeForMonth.find((x) => x.id === editingIncomeId);
               if (!i) return null;
               return (
@@ -6893,7 +6893,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             )}
 
             {/* Mobile edit sheet for a tapped fixed-expense row -- same fields/handlers as desktop's inline row. */}
-            {isMobile && editingRecurringId && (() => {
+            {editingRecurringId && (() => {
               const r = recurringExpenses.find((x) => x.id === editingRecurringId);
               if (!r) return null;
               return (
@@ -7280,7 +7280,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             )}
 
             {/* Mobile edit sheet for a tapped savings row -- same fields/handlers as desktop's inline row. */}
-            {isMobile && editingSavingId && (() => {
+            {editingSavingId && (() => {
               const s = savingsForMonth.find((x) => x.id === editingSavingId);
               if (!s) return null;
               return (
@@ -7610,7 +7610,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
               auto-save-on-blur handlers as desktop's inline row, just
               presented as a focused sheet instead of four permanently open
               inputs. */}
-          {isMobile && editingExpenseId && (() => {
+          {editingExpenseId && (() => {
             const e = monthExpenses.find((x) => x.id === editingExpenseId);
             if (!e) return null;
             return (
