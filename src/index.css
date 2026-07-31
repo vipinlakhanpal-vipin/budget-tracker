@@ -2207,13 +2207,14 @@ instead of overflowing at the unconditional 35px desktop size. */
     transition: color .15s ease, background-color .15s ease;
   }
   .mobile-bottom-nav button svg { display: block; }
-  .mobile-bottom-nav button.active { color: var(--accent); background: var(--accent-light); }
+  .mobile-bottom-nav button.active { color: var(--accent); background: var(--accent-light); animation: tab-heartbeat 3.2s ease-in-out infinite; }
   .mobile-bottom-nav button[data-tour="nav-aria"] {
     color: #a855f7;
   }
   .mobile-bottom-nav button[data-tour="nav-aria"].active {
     color: #a855f7;
     background: color-mix(in srgb, #a855f7 15%, transparent);
+    animation: tab-heartbeat 3.2s ease-in-out infinite;
   }
   .mobile-bottom-nav button:active { transform: scale(.94); }
 
