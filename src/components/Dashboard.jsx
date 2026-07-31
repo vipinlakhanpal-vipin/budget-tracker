@@ -3516,6 +3516,78 @@ const labelMaxLen = chartRows.length > 18 ? 12 : 15;
     });
 
     // ---------- Income ----------
+    // ---------- Payment Sources ----------
+    // Point #6 PDF parity: same payment-source grouping as the on-screen
+    // Report view -- total per payment source (bank name appended for
+    // card/bank sources), then a category breakdown nested under each one,
+    // sorted by total desc. Its own dedicated page, same as Income/Expenses
+    // below, so it reads as its own chapter rather than being squeezed in.
+    doc.addPage();
+    y = drawHeader('Payment Sources');
+
+    drawEyebrow('By Payment Method', y);
+    y += 7;
+    doc.setFontSize(12.5);
+    doc.setFont(undefined, 'bold');
+    doc.text('Spend by Payment Source', M, y);
+    doc.setFont(undefined, 'normal');
+    y += 4;
+
+    const pdfSourceLabelFor = (item) => {
+      const src = item.payment_source || 'Cash';
+      return item.payment_bank ? `${src} - ${item.payment_bank}` : src;
+    };
+    const pdfPaymentSourceMap = {};
+    const pdfAddToSourceMap = (item) => {
+      const src = pdfSourceLabelFor(item);
+      const cat = categoryNameById[item.category_id] || 'Uncategorized';
+      if (!pdfPaymentSourceMap[src]) pdfPaymentSourceMap[src] = { total: 0, categories: {} };
+      pdfPaymentSourceMap[src].total += Number(item.amount);
+      pdfPaymentSourceMap[src].categories[cat] = (pdfPaymentSourceMap[src].categories[cat] || 0) + Number(item.amount);
+    };
+    rangeExpenses.forEach(pdfAddToSourceMap);
+    rangeRecurringOccurrences.forEach(pdfAddToSourceMap);
+    const pdfPaymentSourceRows = Object.entries(pdfPaymentSourceMap)
+      .map(([source, v]) => ({
+        source,
+        total: v.total,
+        categories: Object.entries(v.categories).sort((a, b) => b[1] - a[1]),
+      }))
+      .sort((a, b) => b.total - a.total);
+
+    if (pdfPaymentSourceRows.length === 0) {
+      doc.setFontSize(9);
+      doc.setTextColor(120);
+      doc.text('No expenses in this period.', M, y);
+      doc.setTextColor(0);
+    } else {
+      const pdfSourceHeaderRows = new Set();
+      const pdfSourceBody = [];
+      pdfPaymentSourceRows.forEach((row) => {
+        pdfSourceHeaderRows.add(pdfSourceBody.length);
+        pdfSourceBody.push([row.source, fmt(row.total)]);
+        row.categories.forEach(([name, val]) => {
+          pdfSourceBody.push([`     ${name}`, fmt(val)]);
+        });
+      });
+      autoTable(doc, {
+        theme: 'plain',
+        startY: y,
+        body: pdfSourceBody,
+        styles: { fontSize: 10.5, cellPadding: 2.4 },
+        columnStyles: { 0: { cellWidth: 130 }, 1: { halign: 'right' } },
+        margin: { left: M, right: M },
+        didParseCell: (data) => {
+          if (pdfSourceHeaderRows.has(data.row.index)) {
+            data.cell.styles.fontStyle = 'bold';
+            data.cell.styles.fillColor = [241, 245, 249];
+          } else {
+            data.cell.styles.textColor = [90, 90, 90];
+          }
+        },
+      });
+    }
+
     // Income and Expenses each get their own dedicated page (previously
     // they shared one page, which -- combined with the bar chart on page 1
     // already showing per-category expense totals -- made it look like
