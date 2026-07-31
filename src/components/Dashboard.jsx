@@ -10,12 +10,13 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { supabase } from '../supabaseClient';
 import AdminConsole from './AdminConsole.jsx';
+import EManual from './EManual.jsx';
 import { formatVersionBadge, APP_VERSION } from '../version.js';
 import {
   Home, Plus, FileText, Users as UsersIcon, Settings as SettingsIcon,
   Pencil, Trash2, X, ChevronLeft, ChevronRight, ChevronDown, Camera, MessageCircle, Bot, Sparkles, User,
   Palette, Check, StickyNote, Paperclip, ExternalLink, Mail, Lightbulb,
-  Wallet, CalendarClock, ShoppingCart, PiggyBank, HelpCircle, Filter, Sun, Moon, RefreshCw, Landmark,
+  Wallet, CalendarClock, ShoppingCart, PiggyBank, HelpCircle, Filter, Sun, Moon, RefreshCw, Landmark, BookOpen,
 } from 'lucide-react';
 
 // v1.89: cross-browser searchable dropdown, replacing the old
@@ -1287,6 +1288,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   // element. Reuses the existing attachment-viewer-overlay/modal styling
   // for a consistent, properly viewport-centered popup.
   const [notePopup, setNotePopup] = useState(null);
+  const [showManual, setShowManual] = useState(false);
 
   // AI feature #4 (chat assistant): a floating Q&A bubble, available from
   // anywhere in the app (not tied to a specific tab/panel), that answers
@@ -7892,14 +7894,23 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   once for this browser -- lets anyone (a returning user who
                   wants a refresher, or someone who skipped it the first
                   time) walk through it again on demand. */}
-              <button
-                type="button"
-                className="btn small secondary"
-                style={{ marginBottom: 14 }}
-                onClick={() => { setActivePanel(null); startTour(); }}
-              >
-                Take the tour again
-              </button>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 14 }}>
+                <button
+                  type="button"
+                  className="btn small secondary"
+                  onClick={() => { setActivePanel(null); startTour(); }}
+                >
+                  Take the tour again
+                </button>
+                <button
+                  type="button"
+                  className="btn small secondary"
+                  onClick={() => setShowManual(true)}
+                >
+                  <BookOpen size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
+                  Read Full Manual
+                </button>
+              </div>
               <div className="muted-small" style={{ textAlign: 'center', marginBottom: 14 }}>Help updated as of v{HELP_LAST_UPDATED_VERSION}</div>
                                   <div className="help-accordion" style={{ display: 'flex', flexDirection: 'column', gap: '8px 32px' }}>
                 {helpTopics.map((t) => {
@@ -8490,6 +8501,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
           opens the existing single-file attachmentViewer modal below for
           that exact file, so View/Open/Email/WhatsApp all keep working
           per-attachment without any duplicated logic. */}
+      <EManual open={showManual} onClose={() => setShowManual(false)} />
       {notePopup && (
         <div className="attachment-viewer-overlay" onClick={() => setNotePopup(null)}>
           <div className="attachment-viewer-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
