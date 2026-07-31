@@ -1280,6 +1280,14 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     toastTimerRef.current = setTimeout(() => setToastMsg(''), 2200);
   }
 
+  // Centered popup for viewing a row's saved note -- replaces the old
+  // alert(x.notes) calls on the Income/Fixed Expenses/Savings/Regular
+  // Expenses row note icons, which rendered as the browser's native alert
+  // dialog pinned to the tab/address-bar chrome instead of an in-app
+  // element. Reuses the existing attachment-viewer-overlay/modal styling
+  // for a consistent, properly viewport-centered popup.
+  const [notePopup, setNotePopup] = useState(null);
+
   // AI feature #4 (chat assistant): a floating Q&A bubble, available from
   // anywhere in the app (not tied to a specific tab/panel), that answers
   // questions using this household's own data -- spending by category,
@@ -6257,7 +6265,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                             other home. */}
                         {i.notes && (
                           <div className="row-attach-icons">
-                            <button type="button" className="row-icon-btn" title={i.notes} onClick={() => alert(i.notes)}>
+                            <button type="button" className="row-icon-btn" title={i.notes} onClick={() => setNotePopup(i.notes)}>
                               <StickyNote size={11} />
                             </button>
                           </div>
@@ -6754,7 +6762,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                             other home. */}
                         {r.notes && (
                           <div className="row-attach-icons">
-                            <button type="button" className="row-icon-btn" title={r.notes} onClick={() => alert(r.notes)}>
+                            <button type="button" className="row-icon-btn" title={r.notes} onClick={() => setNotePopup(r.notes)}>
                               <StickyNote size={11} />
                             </button>
                           </div>
@@ -7212,7 +7220,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                             other home. */}
                         {s.notes && (
                           <div className="row-attach-icons">
-                            <button type="button" className="row-icon-btn" title={s.notes} onClick={() => alert(s.notes)}>
+                            <button type="button" className="row-icon-btn" title={s.notes} onClick={() => setNotePopup(s.notes)}>
                               <StickyNote size={11} />
                             </button>
                           </div>
@@ -7518,7 +7526,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                             other home. */}
                         {e.notes && (
                           <div className="row-attach-icons">
-                            <button type="button" className="row-icon-btn" title={e.notes} onClick={() => alert(e.notes)}>
+                            <button type="button" className="row-icon-btn" title={e.notes} onClick={() => setNotePopup(e.notes)}>
                               <StickyNote size={11} />
                             </button>
                           </div>
@@ -8472,6 +8480,21 @@ I can help you track expenses, understand spending patterns, create budgets, and
           opens the existing single-file attachmentViewer modal below for
           that exact file, so View/Open/Email/WhatsApp all keep working
           per-attachment without any duplicated logic. */}
+      {notePopup && (
+        <div className="attachment-viewer-overlay" onClick={() => setNotePopup(null)}>
+          <div className="attachment-viewer-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
+            <div className="attachment-viewer-head">
+              <span className="attachment-viewer-title">Note</span>
+              <button type="button" className="mobile-sheet-close" onClick={() => setNotePopup(null)} aria-label="Close">
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ padding: 16, whiteSpace: 'pre-wrap', lineHeight: 1.5, color: 'var(--text)', fontSize: 14 }}>
+              {notePopup}
+            </div>
+          </div>
+        </div>
+      )}
       {attachmentListModal && (() => {
         const list = getRowAttachments(attachmentListModal.table, attachmentListModal.rowId);
         return (
