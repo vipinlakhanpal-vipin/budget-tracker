@@ -2820,3 +2820,28 @@ row. */
   background-image: none !important;
   animation: none !important;
 }
+
+
+/* v2.06: the row-edit sheet (.mobile-add-sheet / .mobile-sheet-backdrop)
+   was built mobile-only (see the max-width:640px block above) since it
+   was originally only reachable by tapping a row on the mobile card list.
+   Now that a desktop pencil icon can open the same sheet (see row-actions
+   edit button in Dashboard.jsx), give it real desktop positioning too --
+   a centered floating card over a dimmed backdrop, instead of the
+   unstyled/unpositioned fallback it would otherwise get above 640px. */
+@media (min-width: 641px) {
+  .mobile-sheet-backdrop {
+    position: fixed; inset: 0; z-index: 65;
+    background: rgba(15, 42, 46, .55);
+  }
+  .mobile-add-sheet {
+    position: fixed; top: 50%; left: 50%; z-index: 66;
+    transform: translate(-50%, -50%);
+    width: 90%; max-width: 480px; max-height: 88vh;
+    overflow-y: auto; overscroll-behavior: contain;
+    background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+    padding: 16px 20px 20px;
+    box-shadow: 0 20px 50px rgba(15, 42, 46, .3);
+    animation: none;
+  }
+}
