@@ -3426,7 +3426,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     } else {
       const maxVal = Math.max(...chartRows.map(([, v]) => v)) || 1;
       const labelX = M;
-      const barX = M + 48;
+      const barX = M + 62; // widened from 48mm (v2.02) so long category names have room to fit without truncating
       const barMaxWidth = pageWidth - barX - M - 26;
       // Capped low (5.5) rather than growing to fill whatever space is left
       // on the page -- with only a handful of categories this used to
@@ -3438,11 +3438,13 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       const rowUnit = Math.min(5.5, Math.max(3, usableHeight / chartRows.length));
       const barHeight = Math.max(2, rowUnit * 0.63);
       const rowGap = Math.max(0.9, rowUnit * 0.37);
-      // Readability comes first here: label size only drops a little even
-      // for a long category list, rather than shrinking down to a size
-      // that's hard to read on screen, in print, or on a phone.
-const labelFontSize = 11.25; // Uniform with every other table/section
-const labelMaxLen = chartRows.length > 18 ? 12 : 15;
+      // v2.02: no more hard character-count truncation ("Home Cleanin...").
+      // Every category name is measured with doc.getTextWidth and only
+      // shrinks -- from this uniform base size down to a 7pt readability
+      // floor -- just far enough to fit the widened label gutter in full.
+      const labelFontSize = 11.25; // Uniform with every other table/section -- the max/base size
+      const labelMinFontSize = 7; // floor a long name is allowed to shrink to before it would otherwise overflow
+      const labelMaxWidth = barX - labelX - 4; // gutter width minus a little breathing room before the bar
       chartRows.forEach(([name, val], i) => {
         // Shrinking only goes so far before bars get unreadably thin -- once
         // an extreme number of categories exists (well beyond a typical
@@ -3455,11 +3457,16 @@ const labelMaxLen = chartRows.length > 18 ? 12 : 15;
         doc.roundedRect(barX, y, barMaxWidth, barHeight, 1, 1, 'F');
         doc.setFillColor(r, g, b);
         doc.roundedRect(barX, y, barWidth, barHeight, 1, 1, 'F');
-        doc.setFontSize(labelFontSize);
         doc.setTextColor(50);
-        const label = name.length > labelMaxLen ? name.slice(0, labelMaxLen) + '...' : name;
+        let fitSize = labelFontSize;
+        doc.setFontSize(fitSize);
+        while (fitSize > labelMinFontSize && doc.getTextWidth(name) > labelMaxWidth) {
+          fitSize -= 0.25;
+          doc.setFontSize(fitSize);
+        }
         const textY = y + barHeight - Math.min(1.3, barHeight * 0.3);
-        doc.text(label, labelX, textY);
+        doc.text(name, labelX, textY);
+        doc.setFontSize(labelFontSize);
         doc.setFont(undefined, 'bold');
         doc.text(fmt(val), barX + barMaxWidth + 3, textY);
         doc.setFont(undefined, 'normal');
@@ -3778,7 +3785,7 @@ const labelMaxLen = chartRows.length > 18 ? 12 : 15;
 
       const maxVal = Math.max(...paretoRows.map((r) => r.val)) || 1;
       const labelX = M;
-      const barX = M + 48;
+      const barX = M + 62; // widened (v2.02) to match the page 1 fix, matching the label gutter width there
       // Two separate right-aligned columns -- Amount and Cumulative % -- each
       // with a fixed x position and enough width for their longest possible
       // value ("AED 12,880.00" / "100%"). Previously the amount was drawn
@@ -3808,8 +3815,9 @@ const labelMaxLen = chartRows.length > 18 ? 12 : 15;
       const rowGap = Math.max(1, rowUnit * 0.4);
       // Readability comes first here too -- see the matching note on the
       // page 1 bar chart above.
-      const labelFontSize = paretoRows.length > 24 ? 7.5 : paretoRows.length > 14 ? 8.5 : 9.5;
-      const labelMaxLen = paretoRows.length > 24 ? 9 : paretoRows.length > 14 ? 12 : 15;
+      const labelFontSize = paretoRows.length > 24 ? 7.5 : paretoRows.length > 14 ? 8.5 : 9.5; // base/max size for this row density
+      const labelMinFontSize = 6; // floor a long name is allowed to shrink to before it would otherwise overflow
+      const labelMaxWidth = barX - labelX - 4; // gutter width minus a little breathing room before the bar
       doc.setFontSize(7.8);
       doc.setFont(undefined, 'bold');
       doc.setTextColor(140);
@@ -3830,11 +3838,16 @@ const labelMaxLen = chartRows.length > 18 ? 12 : 15;
         doc.roundedRect(barX, y, barMaxWidth, barHeight, 1, 1, 'F');
         if (isVitalFew) doc.setFillColor(vr, vg, vb); else doc.setFillColor(tr, tg, tb);
         doc.roundedRect(barX, y, barWidth, barHeight, 1, 1, 'F');
-        doc.setFontSize(labelFontSize);
         doc.setTextColor(50);
-        const label = r.name.length > labelMaxLen ? r.name.slice(0, labelMaxLen) + '...' : r.name;
+        let fitSize = labelFontSize;
+        doc.setFontSize(fitSize);
+        while (fitSize > labelMinFontSize && doc.getTextWidth(r.name) > labelMaxWidth) {
+          fitSize -= 0.25;
+          doc.setFontSize(fitSize);
+        }
         const textY = y + barHeight - Math.min(1.3, barHeight * 0.3);
-        doc.text(label, labelX, textY);
+        doc.text(r.name, labelX, textY);
+        doc.setFontSize(labelFontSize);
         doc.setFont(undefined, 'bold');
         doc.text(fmt(r.val), amtX, textY, { align: 'right' });
         doc.setTextColor(isVitalFew ? accentR : 150, isVitalFew ? accentG : 150, isVitalFew ? accentB : 150);
