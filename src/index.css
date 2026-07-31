@@ -2819,6 +2819,14 @@ row. */
    drifting lemniscate line. */
 .header-tab-btn {
   background-image: none !important;
+}
+/* v2.11: scoped out of .header-tab-btn-active -- this blanket rule was
+   silently cancelling the tab-heartbeat pulse on the *active* tab too,
+   since that element also carries the plain .header-tab-btn class and
+   this !important beat the non-!important animation on
+   .header-tab-btn-active (equal specificity, this rule sits later in the
+   cascade). Per explicit bug report ("tabs are not having heart beat"). */
+.header-tab-btn:not(.header-tab-btn-active) {
   animation: none !important;
 }
 
