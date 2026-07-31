@@ -6296,6 +6296,9 @@ I can help you track expenses, understand spending patterns, create budgets, and
                       </td>
                       <td>
                         <div className="row-actions">
+                          <button type="button" className="row-icon-btn" title="Edit" onClick={() => setEditingIncomeId(i.id)}>
+                            <Pencil size={12} />
+                          </button>
                           {getRowAttachments('incomes', i.id).length > 0 && (
                             <button type="button" className="row-icon-btn" title="View attachments" onClick={() => openAttachmentList('incomes', i.id, i.name)}>
                               <Paperclip size={12} />
@@ -6863,6 +6866,9 @@ I can help you track expenses, understand spending patterns, create budgets, and
                       </td>
                       <td>
                         <div className="row-actions">
+                          <button type="button" className="row-icon-btn" title="Edit" onClick={() => setEditingRecurringId(r.id)}>
+                            <Pencil size={12} />
+                          </button>
                           {getRowAttachments('recurring_expenses', r.id).length > 0 && (
                             <button type="button" className="row-icon-btn" title="View attachments" onClick={() => openAttachmentList('recurring_expenses', r.id, r.name)}>
                               <Paperclip size={12} />
@@ -7250,6 +7256,9 @@ I can help you track expenses, understand spending patterns, create budgets, and
                       </td>
                       <td>
                         <div className="row-actions">
+                          <button type="button" className="row-icon-btn" title="Edit" onClick={() => setEditingSavingId(s.id)}>
+                            <Pencil size={12} />
+                          </button>
                           {getRowAttachments('savings_goals', s.id).length > 0 && (
                             <button type="button" className="row-icon-btn" title="View attachments" onClick={() => openAttachmentList('savings_goals', s.id, s.name)}>
                               <Paperclip size={12} />
@@ -7572,6 +7581,9 @@ I can help you track expenses, understand spending patterns, create budgets, and
                       <td data-label="By" className="muted-small" style={{ textAlign: 'center' }}>{displayNameForEmail(e.created_by_email)}</td>
                       <td>
                         <div className="row-actions">
+                          <button type="button" className="row-icon-btn" title="Edit" onClick={() => setEditingExpenseId(e.id)}>
+                            <Pencil size={12} />
+                          </button>
                           {getRowAttachments('expenses', e.id).length > 0 && (
                             <button type="button" className="row-icon-btn" title="View attachments" onClick={() => openAttachmentList('expenses', e.id, expenseDrafts[e.id]?.description || 'Expense')}>
                               <Paperclip size={12} />
