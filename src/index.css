@@ -2914,14 +2914,27 @@ row. */
 .manual-close-btn {
   display: inline-flex; align-items: center; justify-content: center;
   background: none; border: none; color: var(--muted); cursor: pointer;
-  padding: 6px; border-radius: 8px; flex-shrink: 0;
+  min-width: 44px; min-height: 44px; padding: 6px; border-radius: 10px; flex-shrink: 0;
 }
 .manual-close-btn:hover { background: var(--accent-light); color: var(--text); }
+.manual-close-btn:active { background: var(--accent-light); }
+/* v2.17: a second, unmistakably-a-button way to close on mobile (the corner
+   X was reported unreachable/too small to hit reliably on phones) -- sits
+   in the footer row with Prev/Next so there's always a big, obvious target. */
+.manual-close-cta { color: var(--danger, #ef4444); }
 .manual-book {
   position: relative;
   width: 100%; height: min(64vh, 520px);
   perspective: 2200px;
   margin: 20px 0;
+}
+/* Lets --curl (below) interpolate smoothly through transitions/JS drags
+   instead of snapping in one jump -- without this the shading sweep would
+   just pop on/off instead of sliding across the page with the fold. */
+@property --curl {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
 }
 .manual-page {
   position: absolute; inset: 0;
@@ -2931,11 +2944,17 @@ row. */
      curve that lingers at the start and end, like a hand actually turning
      a page, per explicit feedback that the flip was too fast to notice --
      especially early pages where the eye hasn't caught up yet. */
-  transition: transform 1.15s cubic-bezier(.65, 0, .35, 1);
+  transition: transform 1.15s cubic-bezier(.65, 0, .35, 1), --curl 1.15s cubic-bezier(.65, 0, .35, 1);
   transform: rotateY(0deg);
+  --curl: 0;
   will-change: transform;
 }
-.manual-page-flipped { transform: rotateY(-180deg); }
+.manual-page-flipped { transform: rotateY(-180deg); --curl: 1; }
+/* v2.17: the top (currently turnable) page is grabbable with the mouse on
+   desktop, exactly like a finger on mobile -- was click-only before, which
+   read as "rigid" since nothing responded to the cursor mid-drag. */
+.manual-page-face { cursor: grab; }
+.manual-shell:active .manual-page-face { cursor: grabbing; }
 .manual-page-face {
   position: absolute; inset: 0;
   backface-visibility: hidden;
@@ -2963,9 +2982,38 @@ row. */
   background: linear-gradient(90deg, rgba(0,0,0,.12), transparent 18%);
   border-radius: inherit;
 }
+/* v2.17: a diagonal band of shadow/highlight that sweeps across the page
+   as --curl goes 0 -> 1 (set live during a drag, or animated on click),
+   mimicking the light a real page catches as its corner lifts and curls
+   over rather than the page just spinning flat like a rigid slab. */
+.manual-page-face::before {
+  content: '';
+  position: absolute; inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  opacity: var(--curl, 0);
+  background: linear-gradient(
+    115deg,
+    transparent calc(var(--curl, 0) * 100% - 38%),
+    rgba(15, 20, 10, .22) calc(var(--curl, 0) * 100% - 6%),
+    rgba(255, 250, 235, .5) calc(var(--curl, 0) * 100%),
+    rgba(15, 20, 10, .16) calc(var(--curl, 0) * 100% + 10%),
+    transparent calc(var(--curl, 0) * 100% + 34%)
+  );
+  border-radius: inherit;
+}
 .manual-page-back {
   transform: rotateY(180deg);
   background: linear-gradient(200deg, #f6efdd, #ece2c8 85%);
+}
+/* Small folded-corner hint on the top page so it's obvious there's
+   something to grab and drag, not just Prev/Next to click. */
+.manual-page-dogear {
+  position: absolute; top: 0; right: 0;
+  width: 26px; height: 26px;
+  background: linear-gradient(135deg, transparent 50%, rgba(15, 42, 46, .16) 50%);
+  border-radius: 0 10px 0 8px;
+  pointer-events: none;
 }
 .manual-topic, .manual-cover, .manual-closing { color: #2a2420; }
 .manual-topic-num { color: #8a7a5c !important; }
@@ -3004,6 +3052,9 @@ row. */
 @media (max-width: 640px) {
   .manual-overlay { padding: 0; }
   .manual-shell { max-width: 100%; height: 100%; max-height: 100%; border-radius: 0; }
+  .manual-head { padding: 14px 12px 14px 16px; }
   .manual-book { height: auto; flex: 1; margin: 12px; }
   .manual-page-face { padding: 20px 18px; }
+  .manual-controls { flex-wrap: wrap; row-gap: 8px; }
+  .manual-close-cta { order: 3; flex-basis: 100%; justify-content: center; }
 }
