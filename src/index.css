@@ -2973,6 +2973,19 @@ row. */
 .manual-page-face {
   position: absolute; inset: 0;
   backface-visibility: hidden;
+  /* v2.19: without these, a mousedown/touchstart that lands on page text
+     or the cover logo kicks off the browser's own native text-selection
+     or image-drag gesture *in addition to* our JS-driven turn -- on
+     desktop that shows up as highlighted title/paragraph text while
+     dragging, and on mobile the native gesture can win outright and
+     swallow the touchmove events our drag math needs, so the page never
+     visibly curls and just sits there looking "stuck flat". pan-y (not
+     none) keeps native vertical scrolling working for long manual pages
+     while handing horizontal drag fully to our pointerMove() logic. */
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
   /* v2.14: warm "paper" tone instead of the app's own dark card color --
      on a dark background the page and its shadow barely read as a distinct
      object mid-flip, so the turn looked like nothing was happening. A
