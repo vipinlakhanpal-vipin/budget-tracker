@@ -872,6 +872,15 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   // the actual cause). Rendering the dropdown as position:fixed, measured
   // from the toggle button the moment it opens, escapes that clipping
   // ancestor entirely so clicks land on the real buttons again.
+  //
+  // v2.26: position:fixed alone still wasn't enough -- .sticky-dashboard-frame
+  // also carries will-change:transform (an iOS repaint-lag fix, see v1.47
+  // above), and ANY transform on an ancestor makes it the containing block
+  // for position:fixed descendants too, not just absolute ones. So the
+  // "fixed" dropdown was still being sized/clipped relative to that frame
+  // instead of the viewport. Rendering it through a portal straight into
+  // document.body sidesteps both the clipping and the transform-containment
+  // issue for good.
   useEffect(() => {
     if (!profileMenuOpen) return;
     if (profileMenuRef.current) {
@@ -5126,8 +5135,8 @@ function ReportHtmlView({ data }) {
                 <User size={18} />
 <span className="corner-profile-label" title="This updates automatically -- if a change doesn't look right, reload the page.">{displayNameForEmail(session.user.email)} | {formatVersionBadge().replace(' � ', ' | ')}</span>
               </button>
-              {profileMenuOpen && (
-                <div className="profile-dropdown" style={profileDropdownPos ? { position: 'fixed', top: profileDropdownPos.top, right: profileDropdownPos.right } : undefined}>
+              {profileMenuOpen && profileDropdownPos && createPortal(
+                <div className="profile-dropdown" style={{ position: 'fixed', top: profileDropdownPos.top, right: profileDropdownPos.right, zIndex: 500 }}>
                   {/* Per explicit request: a clear "Signed in as {name}
                       ({email})" line, plus role and account-created date --
                       everything else (phone/location) is already editable
@@ -5171,7 +5180,8 @@ function ReportHtmlView({ data }) {
                   </div>
                   <div className="muted-small" style={{ marginBottom: 12 }}>Changes save automatically.</div>
                   <button className="btn-teal profile-signout-btn" onClick={handleSignOut}>Sign out</button>
-                </div>
+                </div>,
+                document.body
               )}
             </div>
                   </div>
