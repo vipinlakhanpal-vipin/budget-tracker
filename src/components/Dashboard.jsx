@@ -858,15 +858,26 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   // last action in the dropdown instead of its own top-bar button.
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef(null);
-  // v2.24: was closing on 'mousedown' before the button's own 'click' (which
-  // fires later, after mouseup) could run -- on a real mouse click this
-  // sometimes raced ahead and unmounted the "Sign out" button before its
-  // onClick ever fired, so Sign out silently did nothing. Listening on
-  // 'click' instead guarantees the button's own onClick={handleSignOut}
-  // (attached further down the DOM tree) always runs first during the
-  // bubble phase, before this outside-click check ever sees the event.
+  const [profileDropdownPos, setProfileDropdownPos] = useState(null);
+  // v2.25: the REAL bug behind "Sign out does nothing" -- .sticky-dashboard-frame
+  // (the header's sticky container) sets overflow-x: clip with overflow-y:
+  // visible. Per the CSS overflow spec, when one axis is non-visible the
+  // other axis silently becomes 'auto' instead of staying 'visible' -- so
+  // that header frame was ACTUALLY clipping anything extending past its own
+  // bottom edge, even though it kept painting the dropdown fine visually.
+  // The dropdown is tall enough to extend well past the frame, so every
+  // real click on "Sign out" (or the fields above it) was hit-testing
+  // straight through to whatever dashboard content sits behind it -- not a
+  // mousedown/click race after all (that v2.24 fix was harmless but not
+  // the actual cause). Rendering the dropdown as position:fixed, measured
+  // from the toggle button the moment it opens, escapes that clipping
+  // ancestor entirely so clicks land on the real buttons again.
   useEffect(() => {
     if (!profileMenuOpen) return;
+    if (profileMenuRef.current) {
+      const r = profileMenuRef.current.getBoundingClientRect();
+      setProfileDropdownPos({ top: r.bottom + 8, right: Math.max(8, window.innerWidth - r.right) });
+    }
     function onDocClick(e) {
       if (profileMenuRef.current && !profileMenuRef.current.contains(e.target)) setProfileMenuOpen(false);
     }
@@ -5116,7 +5127,7 @@ function ReportHtmlView({ data }) {
 <span className="corner-profile-label" title="This updates automatically -- if a change doesn't look right, reload the page.">{displayNameForEmail(session.user.email)} | {formatVersionBadge().replace(' � ', ' | ')}</span>
               </button>
               {profileMenuOpen && (
-                <div className="profile-dropdown">
+                <div className="profile-dropdown" style={profileDropdownPos ? { position: 'fixed', top: profileDropdownPos.top, right: profileDropdownPos.right } : undefined}>
                   {/* Per explicit request: a clear "Signed in as {name}
                       ({email})" line, plus role and account-created date --
                       everything else (phone/location) is already editable
