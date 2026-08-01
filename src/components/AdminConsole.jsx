@@ -203,7 +203,16 @@ export default function AdminConsole({ onClose, embedded = false }) {
   const cardClass = embedded ? '' : 'login-card';
 
   const successfulUsers = allUsers.filter((u) => SUCCESSFUL_STATUSES.has(u.status));
-  const unsuccessfulUsers = allUsers.filter((u) => !SUCCESSFUL_STATUSES.has(u.status));
+  const unsuccessfulUsers = allUsers.filter((u) => !SUCCESSFUL_STATUSES.has(u.status))
+
+  // v2.23: group the Users tab by household -- sort so everyone in the
+  // same household is adjacent, then UserGroup inserts a header row each
+  // time the household name changes.
+  const successfulUsersSorted = [...successfulUsers].sort((a, b) => {
+    const ah = a.households[0]?.householdName || 'zzz No household'
+    const bh = b.households[0]?.householdName || 'zzz No household'
+    return ah.localeCompare(bh) || a.email.localeCompare(b.email)
+  });
 
   return (
     <Wrap className={wrapClass}>
@@ -286,7 +295,7 @@ export default function AdminConsole({ onClose, embedded = false }) {
                   {successfulUsers.length} successful signup{successfulUsers.length === 1 ? '' : 's'} -- {unsuccessfulUsers.length} unsuccessful / pending
                 </div>
 
-                <UserGroup title="Successful signups" users={successfulUsers} onDelete={handleDeleteUser} deletingEmail={deletingEmail} onInsights={handleGetInsights} insightLoadingEmail={insightLoadingEmail} onResetPassword={handleResetPassword} resettingEmail={resettingEmail} />
+                <UserGroup title="Successful signups" users={successfulUsersSorted} onDelete={handleDeleteUser} deletingEmail={deletingEmail} onInsights={handleGetInsights} insightLoadingEmail={insightLoadingEmail} onResetPassword={handleResetPassword} resettingEmail={resettingEmail} />
                 <UserGroup title="Unsuccessful / pending" users={unsuccessfulUsers} onDelete={handleDeleteUser} deletingEmail={deletingEmail} />
               </>
             )}
@@ -309,61 +318,95 @@ function UserGroup({ title, users, onDelete, deletingEmail, onInsights, insightL
       <div className="table-scroll">
         <table className="responsive-table admin-users-table">
           <thead>
-            <tr><th>Email</th><th>Status</th><th>Household(s)</th><th>Joined</th><th>Location</th><th>Usage</th><th></th></tr>
+            <tr><th>Email</th><th>Status</th><th>Household(s)</th><th>Joined</th><th>Last Login</th><th>Device</th><th>Location</th><th>Last seen</th><th>Usage</th><th></th></tr>
           </thead>
           <tbody>
-            {users.map((u) => (
-              <tr key={u.email}>
-                <td data-label="Email">{u.email}</td>
-                <td data-label="Status">{STATUS_LABEL[u.status] || u.status}</td>
-                <td data-label="Household(s)" className="muted-small">
-                  {u.households.length
-                    ? u.households.map((h) => h.householdName).join(', ')
-                    : (u.invites[0]?.householdName || '--')}
-                </td>
-                <td data-label="Joined" className="muted-small">
-                  {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '--'}
-                </td>
-                <td data-label="Location" className="muted-small">
-                  {u.households.map((h) => h.location).find(Boolean) || '--'}
-                </td>
-                <td data-label="Usage" className="muted-small">
-                  {u.usagePercent === null || u.usagePercent === undefined ? '--' : `${u.usagePercent}%`}
-                </td>
-                <td>
-                  <div className="admin-actions-cell">
-                    {onInsights && (
+            {users.flatMap((u, idx) => {
+              // v2.23: group rows by household so it's easy to see who's in
+              // the same household at a glance -- callers pre-sort `users`
+              // by household name (see successfulUsersSorted below), so a
+              // group header only needs to appear when the name changes.
+              const householdName = u.households[0]?.householdName || 'No household';
+              const prevHouseholdName = idx > 0
+                ? (users[idx - 1].households[0]?.householdName || 'No household')
+                : null;
+              const rows = [];
+              if (householdName !== prevHouseholdName) {
+                rows.push(
+                  <tr key={`group-${householdName}-${idx}`} className="admin-household-group-header">
+                    <td colSpan={10}>
+                      {householdName}{u.households.length > 1 ? ` (+${u.households.length - 1} more)` : ''}
+                    </td>
+                  </tr>
+                );
+              }
+              rows.push(
+                <tr key={u.email}>
+                  <td data-label="Email">{u.email}</td>
+                  <td data-label="Status">{STATUS_LABEL[u.status] || u.status}</td>
+                  <td data-label="Household(s)" className="muted-small">
+                    {u.households.length
+                      ? u.households.map((h) => h.householdName).join(', ')
+                      : (u.invites[0]?.householdName || '--')}
+                  </td>
+                  <td data-label="Joined" className="muted-small">
+                    {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '--'}
+                  </td>
+                  <td data-label="Last Login" className="muted-small">
+                    {u.lastSignInAt ? new Date(u.lastSignInAt).toLocaleDateString() : '--'}
+                  </td>
+                  <td data-label="Device" className="muted-small">
+                    {u.device || '--'}
+                  </td>
+                  <td data-label="Location" className="muted-small">
+                    {u.households.map((h) => h.location).find(Boolean) || '--'}
+                  </td>
+                  <td data-label="Last seen" className="muted-small">
+                    {u.lastSeenLocation || '--'}
+                    {u.recentLocations && u.recentLocations.length > 1 && (
+                      <div style={{ fontSize: 11, opacity: 0.7, marginTop: 2 }}>
+                        Recently: {u.recentLocations.join(' -- ')}
+                      </div>
+                    )}
+                  </td>
+                  <td data-label="Usage" className="muted-small">
+                    {u.usagePercent === null || u.usagePercent === undefined ? '--' : `${u.usagePercent}%`}
+                  </td>
+                  <td>
+                    <div className="admin-actions-cell">
+                      {onInsights && (
+                        <button
+                          type="button"
+                          className="btn secondary small admin-action-btn"
+                          onClick={() => onInsights(u)}
+                        >
+                          {insightLoadingEmail === u.email ? 'Thinking...' : 'AI Insights'}
+                        </button>
+                      )}
+                      {onResetPassword && (
+                        <button
+                          type="button"
+                          className="btn secondary small admin-action-btn"
+                          onClick={() => onResetPassword(u)}
+                          disabled={!u.userId || resettingEmail === u.email}
+                        >
+                          {resettingEmail === u.email ? 'Resetting...' : 'Reset Password'}
+                        </button>
+                      )}
                       <button
                         type="button"
                         className="btn secondary small admin-action-btn"
-                        onClick={() => onInsights(u)}
-                        disabled={!u.userId || insightLoadingEmail === u.email}
+                        onClick={() => onDelete(u)}
+                        disabled={deletingEmail === u.email}
                       >
-                        {insightLoadingEmail === u.email ? 'Thinking...' : 'AI Insights'}
+                        {deletingEmail === u.email ? 'Deleting...' : 'Delete'}
                       </button>
-                    )}
-                    {onResetPassword && (
-                      <button
-                        type="button"
-                        className="btn secondary small admin-action-btn"
-                        onClick={() => onResetPassword(u)}
-                        disabled={!u.userId || resettingEmail === u.email}
-                      >
-                        {resettingEmail === u.email ? 'Resetting...' : 'Reset Password'}
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      className="btn secondary small admin-action-btn"
-                      onClick={() => onDelete(u)}
-                      disabled={deletingEmail === u.email}
-                    >
-                      {deletingEmail === u.email ? 'Deleting...' : 'Delete'}
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+                    </div>
+                  </td>
+                </tr>
+              );
+              return rows;
+            })}
           </tbody>
         </table>
       </div>
