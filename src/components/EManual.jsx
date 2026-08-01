@@ -141,6 +141,13 @@ export default function EManual({ open, onClose }) {
   const mouseUpHandler = useRef(null);
   const flapRefs = useRef([]);
   const dragStartY = useRef(null);
+  // v2.22: guards the modal-close handler against a click event whose
+  // target resolves to .manual-overlay itself -- this happens when a
+  // mouseup lands inside the corner-peel's clip-path hole (the folded-away
+  // triangle), which makes that pixel hit-test past the page straight to
+  // the overlay behind it, so the browser's synthesized click event never
+  // passes through manual-shell's stopPropagation() at all.
+  const justDraggedRef = useRef(false);
 
   useEffect(() => {
     if (open) setPage(0);
@@ -282,6 +289,15 @@ export default function EManual({ open, onClose }) {
   function pointerUp() {
     if (dragStartX.current == null) return;
     const dx = dragInfo.current.dx || 0;
+    if (dx !== 0) {
+      // v2.22: a real drag happened -- the click the browser fires right
+      // after this mouseup may spuriously target .manual-overlay (see
+      // justDraggedRef declaration above), so suppress the very next click
+      // from closing the modal. Cleared on the next tick, well after that
+      // synchronous mouseup->click sequence has already run.
+      justDraggedRef.current = true;
+      setTimeout(() => { justDraggedRef.current = false; }, 0);
+    }
     const width = (bookRef.current && bookRef.current.offsetWidth) || 320;
     const threshold = width * 0.22;
     if (dx < 0 && page < total - 1) {
@@ -360,7 +376,7 @@ export default function EManual({ open, onClose }) {
   const pages = Array.from({ length: total }, (_, i) => i);
 
   return (
-    <div className="manual-overlay" onClick={onClose}>
+    <div className="manual-overlay" onClick={(e) => { if (justDraggedRef.current) return; onClose(e); }}>
       <div
         className="manual-shell"
         onClick={(e) => e.stopPropagation()}
