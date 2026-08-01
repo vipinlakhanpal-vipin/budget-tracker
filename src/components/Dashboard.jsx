@@ -858,13 +858,20 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   // last action in the dropdown instead of its own top-bar button.
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef(null);
+  // v2.24: was closing on 'mousedown' before the button's own 'click' (which
+  // fires later, after mouseup) could run -- on a real mouse click this
+  // sometimes raced ahead and unmounted the "Sign out" button before its
+  // onClick ever fired, so Sign out silently did nothing. Listening on
+  // 'click' instead guarantees the button's own onClick={handleSignOut}
+  // (attached further down the DOM tree) always runs first during the
+  // bubble phase, before this outside-click check ever sees the event.
   useEffect(() => {
     if (!profileMenuOpen) return;
     function onDocClick(e) {
       if (profileMenuRef.current && !profileMenuRef.current.contains(e.target)) setProfileMenuOpen(false);
     }
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
+    document.addEventListener('click', onDocClick);
+    return () => document.removeEventListener('click', onDocClick);
   }, [profileMenuOpen]);
   // Color theme picker -- swaps the app's --accent/--accent2 pairs (see the
   // [data-theme="..."] rules in index.css) via a data-theme attribute on
