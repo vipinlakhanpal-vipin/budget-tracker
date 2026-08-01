@@ -233,6 +233,10 @@ export default function EManual({ open, onClose }) {
   // this a fast drag off the edge would get "stuck" mid-flip.
   function handleMouseDown(e) {
     if (e.button !== 0) return;
+    // v2.19: stop the browser's own text-selection / image-drag gesture
+    // from starting at the same time as our JS-driven page turn -- see
+    // the matching comment on .manual-page-face in index.css.
+    e.preventDefault();
     pointerDown(e.clientX);
     mouseMoveHandler.current = (ev) => pointerMove(ev.clientX);
     mouseUpHandler.current = () => {
