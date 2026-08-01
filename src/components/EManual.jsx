@@ -139,6 +139,8 @@ export default function EManual({ open, onClose }) {
   const bookRef = useRef(null);
   const mouseMoveHandler = useRef(null);
   const mouseUpHandler = useRef(null);
+  const flapRefs = useRef([]);
+  const dragStartY = useRef(null);
 
   useEffect(() => {
     if (open) setPage(0);
@@ -164,41 +166,115 @@ export default function EManual({ open, onClose }) {
 
   if (!open) return null;
 
-  function pointerDown(clientX) {
+  function applyCornerPeel(idx, side, Fx, Fy, W, H) {
+    const pageEl = pageRefs.current[idx];
+    const flapEl = flapRefs.current[idx];
+    if (!pageEl || !flapEl) return;
+    const cornerX = side === 'right' ? W : 0;
+    const cornerY = 0;
+    const vx = Fx - cornerX, vy = Fy - cornerY;
+    const vlen = Math.hypot(vx, vy);
+    if (vlen < 6) {
+      pageEl.style.clipPath = '';
+      flapEl.style.clipPath = 'polygon(0% 0%, 0% 0%, 0% 0%)';
+      return;
+    }
+    const mx = (cornerX + Fx) / 2, my = (cornerY + Fy) / 2;
+    let dx2 = -vy, dy2 = vx;
+    const dlen = Math.hypot(dx2, dy2) || 1;
+    dx2 /= dlen; dy2 /= dlen;
+    let Tx;
+    if (Math.abs(dy2) < 1e-6) { Tx = mx; } else { Tx = mx + (-my / dy2) * dx2; }
+    Tx = Math.max(0, Math.min(W, Tx));
+    const edgeX = cornerX;
+    let edgeY;
+    if (Math.abs(dx2) < 1e-6) { edgeY = my; } else { edgeY = my + ((edgeX - mx) / dx2) * dy2; }
+    edgeY = Math.max(0, Math.min(H, edgeY));
+    const A = dx2 * dx2, B = dx2 * dy2, C = dy2 * dy2;
+    const a = 2 * A - 1, b = 2 * B, c = 2 * B, d = 2 * C - 1;
+    const e = mx - a * mx - c * my;
+    const f = my - b * mx - d * my;
+    const pct = (v, total) => (v / total * 100).toFixed(3) + '%';
+    if (side === 'right') {
+      pageEl.style.clipPath = 'polygon(0% 0%, ' + pct(Tx, W) + ' 0%, 100% ' + pct(edgeY, H) + ', 100% 100%, 0% 100%)';
+      flapEl.style.clipPath = 'polygon(' + pct(Tx, W) + ' 0%, 100% 0%, 100% ' + pct(edgeY, H) + ')';
+    } else {
+      pageEl.style.clipPath = 'polygon(' + pct(Tx, W) + ' 0%, 100% 0%, 100% 100%, 0% 100%, 0% ' + pct(edgeY, H) + ')';
+      flapEl.style.clipPath = 'polygon(0% 0%, ' + pct(Tx, W) + ' 0%, 0% ' + pct(edgeY, H) + ')';
+    }
+    flapEl.style.transform = 'matrix(' + a.toFixed(4) + ',' + b.toFixed(4) + ',' + c.toFixed(4) + ',' + d.toFixed(4) + ',' + e.toFixed(2) + ',' + f.toFixed(2) + ')';
+    const angleDeg = Math.atan2(vy, vx) * 180 / Math.PI;
+    flapEl.style.backgroundImage =
+      'linear-gradient(' + (angleDeg + 90) + 'deg, rgba(20,30,20,.32), rgba(20,30,20,0) 55%), ' +
+      'linear-gradient(135deg, #fdfaf3 0%, #f3ecd9 55%, #e2d6b8 100%)';
+  }
+
+  // Clears any inline clip-path/transform/--curl left on a page or its flap
+  // by an in-progress or reversed drag -- called before handing a page off
+  // to the class-driven rotateY snap transition (settleDrag) so the two
+  // mechanisms never fight over the same element's styles.
+  function resetCornerPeel(idx) {
+    const pageEl = pageRefs.current[idx];
+    const flapEl = flapRefs.current[idx];
+    if (pageEl) { pageEl.style.clipPath = ''; pageEl.style.transform = ''; pageEl.style.removeProperty('--curl'); }
+    if (flapEl) { flapEl.style.clipPath = 'polygon(0% 0%, 0% 0%, 0% 0%)'; flapEl.style.transform = ''; }
+  }
+
+  function pointerDown(clientX, clientY) {
     dragStartX.current = clientX;
+    dragStartY.current = clientY;
     dragInfo.current = { dx: 0 };
   }
-  function pointerMove(clientX) {
+  // v2.21: real corner-fold drag. Forward turns (dx<0) peel the current
+  // page from its top-right corner using an actual mirror-image flap that
+  // follows the pointer -- the fold line is the perpendicular bisector
+  // between the page's resting corner and the live pointer position, and
+  // the flap is that corner's content reflected across the fold line, per
+  // explicit feedback that a bowed-but-flat rectangle (v2.18) didn't read
+  // as a real paper fold. Backward drags (dx>0, un-turning a page already
+  // flipped past -180deg) keep the earlier rotateY+curl approach, since a
+  // 2D corner-peel doesn't compose cleanly with a page that's already
+  // resting in a 3D-rotated state.
+  function pointerMove(clientX, clientY) {
     if (dragStartX.current == null) return;
     const dx = clientX - dragStartX.current;
     dragInfo.current.dx = dx;
-    const width = (bookRef.current && bookRef.current.offsetWidth) || 320;
     if (dx < 0 && page < total - 1) {
-      const el = pageRefs.current[page];
+      const idx = page;
+      const el = pageRefs.current[idx];
       if (el) {
-        const progress = Math.min(1, -dx / width);
+        const rect = el.getBoundingClientRect();
+        const W = rect.width, H = rect.height;
+        const Fx = Math.max(0, Math.min(W, clientX - rect.left));
+        const Fy = Math.max(H * 0.06, Math.min(H * 0.42, clientY - rect.top));
         el.style.transition = 'none';
-        el.style.transform = `rotateY(${-180 * progress}deg)`;
-        el.style.setProperty('--curl', progress);
+        el.style.transform = '';
+        applyCornerPeel(idx, 'right', Fx, Fy, W, H);
       }
+      resetCornerPeel(page - 1);
     } else if (dx > 0 && page > 0) {
-      const el = pageRefs.current[page - 1];
+      const idx = page - 1;
+      const el = pageRefs.current[idx];
       if (el) {
+        const width = (bookRef.current && bookRef.current.offsetWidth) || 320;
         const progress = Math.min(1, dx / width);
         el.style.transition = 'none';
-        el.style.transform = `rotateY(${-180 + 180 * progress}deg)`;
+        el.style.transform = 'rotateY(' + (-180 + 180 * progress) + 'deg)';
         el.style.setProperty('--curl', 1 - progress);
       }
+      resetCornerPeel(page);
     }
   }
   function settleDrag(el, toFlipped, finish) {
     if (!el) { finish(); return; }
+    el.style.clipPath = '';
     el.style.transition = 'transform 0.6s cubic-bezier(.4,.0,.2,1), --curl 0.6s cubic-bezier(.4,.0,.2,1)';
     el.style.transform = toFlipped ? 'rotateY(-180deg)' : 'rotateY(0deg)';
     el.style.setProperty('--curl', toFlipped ? 1 : 0);
     window.setTimeout(() => {
       el.style.transition = '';
       el.style.transform = '';
+      el.style.clipPath = '';
       el.style.removeProperty('--curl');
       finish();
     }, 610);
@@ -210,20 +286,23 @@ export default function EManual({ open, onClose }) {
     const threshold = width * 0.22;
     if (dx < 0 && page < total - 1) {
       const el = pageRefs.current[page];
+      resetCornerPeel(page);
       const shouldAdvance = -dx > threshold;
       settleDrag(el, shouldAdvance, () => { if (shouldAdvance) goNext(); });
     } else if (dx > 0 && page > 0) {
       const el = pageRefs.current[page - 1];
+      resetCornerPeel(page - 1);
       const shouldRetreat = dx > threshold;
       settleDrag(el, !shouldRetreat, () => { if (shouldRetreat) goPrev(); });
     }
     dragStartX.current = null;
+    dragStartY.current = null;
     dragInfo.current = { dx: 0 };
   }
 
   // Touch (mobile) -- straightforward, the touch itself is the pointer.
-  function handleTouchStart(e) { pointerDown(e.touches[0].clientX); }
-  function handleTouchMove(e) { pointerMove(e.touches[0].clientX); }
+  function handleTouchStart(e) { pointerDown(e.touches[0].clientX, e.touches[0].clientY); }
+  function handleTouchMove(e) { pointerMove(e.touches[0].clientX, e.touches[0].clientY); }
   function handleTouchEnd() { pointerUp(); }
 
   // Mouse (desktop) -- same physics as touch, so dragging a page with the
@@ -237,8 +316,8 @@ export default function EManual({ open, onClose }) {
     // from starting at the same time as our JS-driven page turn -- see
     // the matching comment on .manual-page-face in index.css.
     e.preventDefault();
-    pointerDown(e.clientX);
-    mouseMoveHandler.current = (ev) => pointerMove(ev.clientX);
+    pointerDown(e.clientX, e.clientY);
+    mouseMoveHandler.current = (ev) => pointerMove(ev.clientX, ev.clientY);
     mouseUpHandler.current = () => {
       pointerUp();
       window.removeEventListener('mousemove', mouseMoveHandler.current);
@@ -324,6 +403,7 @@ export default function EManual({ open, onClose }) {
               >
                 <div className="manual-page-face manual-page-front"><span className="manual-page-dogear" aria-hidden="true" />{renderPageContent(i)}</div>
                 <div className="manual-page-face manual-page-back" />
+                <div ref={(el) => { flapRefs.current[i] = el; }} className="manual-page-flap" />
               </div>
             );
           })}
