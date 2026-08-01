@@ -3000,6 +3000,27 @@ row. */
   overflow-y: auto;
   padding: 28px 26px;
 }
+/* v2.21: the flap that peels away during an active forward drag (see
+   applyCornerPeel() in EManual.jsx). It sits on top of the page faces,
+   invisible at rest (zero-area clip-path), and JS drives its clip-path
+   + transform + gradient every pointermove so its shape/position/shading
+   always match the real corner-fold reflection math -- CSS alone can't
+   express that, since it depends on the live pointer position each frame.
+   transform-origin is pinned to the top-left corner so the JS reflection
+   matrix (computed in a top-left-origin coordinate system, matching how
+   clip-path percentages are anchored) lines up with the clipped shape. */
+.manual-page-flap {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(0% 0%, 0% 0%, 0% 0%);
+  background: linear-gradient(135deg, #fdfaf3 0%, #f3ecd9 55%, #e2d6b8 100%);
+  box-shadow: -8px 8px 20px rgba(15, 42, 46, .4);
+  border-radius: 10px;
+  pointer-events: none;
+  transform-origin: 0 0;
+  will-change: clip-path, transform;
+  z-index: 5;
+}
 .manual-page-face::after {
   /* Soft shadow hugging the spine (left edge) so pages read as curved
      paper rather than a flat rectangle, strongest on the leaf currently
