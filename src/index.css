@@ -2948,6 +2948,21 @@ row. */
   transform: rotateY(0deg);
   --curl: 0;
   will-change: transform;
+  /* v2.18: the page's own silhouette bows inward along its free (right)
+     edge while mid-turn -- not just a flat rectangle rotating in 3D. Uses
+     a parabola of --curl (0 at rest either side, peaking at the midpoint
+     of the turn) so the curve appears and relaxes away exactly like paper
+     actually flexing, instead of a permanent notch. Tapered top-to-bottom
+     (22% / 10% / 3%) so the lift reads as coming from the top-right corner
+     rather than an even bow across the whole edge, per explicit feedback
+     asking for a top-right-corner-style curl like an e-reader. */
+  clip-path: polygon(
+    0% 0%,
+    calc(100% - (4 * var(--curl) * (1 - var(--curl))) * 22%) 0%,
+    calc(100% - (4 * var(--curl) * (1 - var(--curl))) * 10%) 50%,
+    calc(100% - (4 * var(--curl) * (1 - var(--curl))) * 3%) 100%,
+    0% 100%
+  );
 }
 .manual-page-flipped { transform: rotateY(-180deg); --curl: 1; }
 /* v2.17: the top (currently turnable) page is grabbable with the mouse on
