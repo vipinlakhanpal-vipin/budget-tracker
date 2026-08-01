@@ -2797,6 +2797,35 @@ row. */
     padding: 4px 6px;
   }
 }
+/* v2.23: household group-header row inside the Admin Console Users table
+   (see UserGroup's flatMap in AdminConsole.jsx) -- a plain full-width
+   divider on desktop; on mobile table.responsive-table's <720px rule turns
+   every <tr> into its own bordered/padded card (see the rule above this
+   comment block), which would otherwise wrap this label in the exact same
+   heavy card styling as a real user row, so it's stripped back down to a
+   plain label there instead. */
+.admin-household-group-header td {
+  background: color-mix(in srgb, var(--accent) 10%, var(--card));
+  font-weight: 700;
+  font-size: 12.5px;
+  padding: 8px 10px !important;
+  border-radius: 6px;
+}
+@media (max-width: 720px) {
+  table.responsive-table tr.admin-household-group-header {
+    border: none;
+    background: none;
+    box-shadow: none;
+    padding: 0;
+    margin-bottom: 4px;
+  }
+  table.responsive-table tr.admin-household-group-header td {
+    padding: 6px 2px !important;
+    border-radius: 0;
+    background: none;
+  }
+}
+
 
 
 /* v1.36: light ECG/heart-monitor waveform scrolling behind the desktop

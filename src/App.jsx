@@ -7,6 +7,75 @@ import AdminConsole from './components/AdminConsole.jsx';
 import Splash from './components/Splash.jsx';
 import ResetPassword from './components/ResetPassword.jsx';
 
+// v2.23: best-effort login tracking for the Admin Console's Device and
+// "Last seen" columns (see login_events in supabase/migration_login_tracking.sql).
+// Fired once per real sign-in from the onAuthStateChange listener below --
+// never on a page-refresh session restore (that's a separate 'INITIAL_SESSION'
+// event in supabase-js v2, which this deliberately does not hook). Every
+// step here is wrapped so a slow/blocked network request, an ad blocker, or
+// a rate-limited geolocation lookup can never delay or break an actual login.
+function parseLoginDevice(ua) {
+  ua = ua || ''
+  let os = 'Unknown OS'
+  if (/iPhone|iPad|iPod/.test(ua)) os = 'iOS'
+  else if (/Android/.test(ua)) os = 'Android'
+  else if (/Windows/.test(ua)) os = 'Windows'
+  else if (/Mac OS X/.test(ua)) os = 'macOS'
+  else if (/Linux/.test(ua)) os = 'Linux'
+
+  let browser = 'Unknown browser'
+  if (/Edg\//.test(ua)) browser = 'Edge'
+  else if (/OPR\//.test(ua)) browser = 'Opera'
+  else if (/CriOS\//.test(ua)) browser = 'Chrome'
+  else if (/FxiOS\//.test(ua)) browser = 'Firefox'
+  else if (/Chrome\//.test(ua)) browser = 'Chrome'
+  else if (/Firefox\//.test(ua)) browser = 'Firefox'
+  else if (/Safari\//.test(ua) && /Version\//.test(ua)) browser = 'Safari'
+
+  let deviceType = 'Desktop'
+  if (/iPad|Tablet/.test(ua)) deviceType = 'Tablet'
+  else if (/Mobi|iPhone|Android.*Mobile/.test(ua)) deviceType = 'Mobile'
+
+  return { os, browser, deviceType }
+}
+
+async function trackLogin(session) {
+  try {
+    if (!session || !session.user) return
+    const flagKey = 'hearthLoginTracked_' + session.user.id
+    if (sessionStorage.getItem(flagKey)) return
+    sessionStorage.setItem(flagKey, '1')
+
+    const { os, browser, deviceType } = parseLoginDevice(navigator.userAgent)
+    let city = null, region = null, country = null
+    try {
+      const geoRes = await fetch('https://ipapi.co/json/')
+      if (geoRes.ok) {
+        const geo = await geoRes.json()
+        city = geo.city || null
+        region = geo.region || null
+        country = geo.country_name || null
+      }
+    } catch (_) {
+      // IP geolocation is best-effort -- a blocked/offline lookup just
+      // means this login shows up without a location, never a broken login.
+    }
+
+    await supabase.from('login_events').insert({
+      user_id: session.user.id,
+      email: session.user.email,
+      device_type: deviceType,
+      os,
+      browser,
+      city,
+      region,
+      country,
+    })
+  } catch (_) {
+    // Never let login tracking break sign-in.
+  }
+}
+
 const ADMIN_EMAIL = 'vipinlakhanpal@gmail.com';
 
 export default function App() {
@@ -45,6 +114,9 @@ export default function App() {
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
         setPasswordRecovery(true);
+      }
+      if (event === 'SIGNED_IN') {
+        trackLogin(session)
       }
       setSession(session);
     });
