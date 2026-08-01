@@ -35,14 +35,32 @@ async function listUsers(req, res) {
       page += 1;
     }
 
-    const [{ data: households, error: hErr }, { data: members, error: mErr }, { data: invites, error: iErr }] = await Promise.all([
+    const [{ data: households, error: hErr }, { data: members, error: mErr }, { data: invites, error: iErr }, { data: loginEvents, error: leErr }] = await Promise.all([
       admin.from('households').select('id, name, created_at'),
       admin.from('household_members').select('id, household_id, user_id, email, role, relation, name, joined_at, phone, location, invited_by'),
       admin.from('household_invites').select('id, household_id, email, relation, status, name, created_at, invited_by'),
+      // v2.23: powers the Users tab's Device and "Last seen" columns -- see
+      // login_events in supabase/migration_login_tracking.sql (client
+      // inserts a best-effort row on every real sign-in, from App.jsx).
+      // Ordered newest-first so the reduce below can just keep the first
+      // row it sees per user as "latest".
+      admin.from('login_events').select('user_id, device_type, os, browser, city, region, country, created_at').order('created_at', { ascending: false }),
     ]);
     if (hErr) throw hErr;
     if (mErr) throw mErr;
-    if (iErr) throw iErr;
+    if (iErr) throw iErr
+    if (leErr) throw leErr
+
+    const latestLoginByUser = {}
+    const recentLocationsByUser = {}
+    for (const ev of loginEvents || []) {
+      if (!latestLoginByUser[ev.user_id]) latestLoginByUser[ev.user_id] = ev
+      const loc = [ev.city, ev.country].filter(Boolean).join(', ')
+      if (loc) {
+        const list = recentLocationsByUser[ev.user_id] || (recentLocationsByUser[ev.user_id] = [])
+        if (!list.includes(loc) && list.length < 3) list.push(loc)
+      }
+    };
 
     // Feature-coverage usage % -- computed from data that already exists
     // (no new tracking table needed): does this person have at least one row
@@ -118,6 +136,13 @@ async function listUsers(req, res) {
         createdAt: authUser?.created_at || inviteRows[0]?.created_at || null,
         emailConfirmedAt: authUser?.email_confirmed_at || null,
         lastSignInAt: authUser?.last_sign_in_at || null,
+        device: authUser && latestLoginByUser[authUser.id]
+          ? [latestLoginByUser[authUser.id].device_type, latestLoginByUser[authUser.id].os, latestLoginByUser[authUser.id].browser].filter(Boolean).join(' / ') || null
+          : null,
+        lastSeenLocation: authUser && latestLoginByUser[authUser.id]
+          ? ([latestLoginByUser[authUser.id].city, latestLoginByUser[authUser.id].country].filter(Boolean).join(', ') || null)
+          : null,
+        recentLocations: authUser ? (recentLocationsByUser[authUser.id] || []) : [],
         status,
         households: memberRows.map((m) => ({
           householdId: m.household_id,
