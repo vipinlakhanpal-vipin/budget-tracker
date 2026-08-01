@@ -1,5 +1,25 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, ChevronLeft, ChevronRight, BookOpen } from 'lucide-react';
+// Same circular "platform" badge used as the app's header logo (Dashboard.jsx's
+// HearthMark) -- duplicated here (rather than imported) since EManual is meant
+// to stay a fully self-contained component. Real logo on the cover per explicit
+// request, replacing the earlier plain placeholder circle.
+function HearthMark({ size = 72 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="manualCoverSphere" cx="34%" cy="28%" r="78%">
+          <stop offset="0" stopColor="#7fabf7" />
+          <stop offset="48%" stopColor="#33509f" />
+          <stop offset="100%" stopColor="#0e1a3f" />
+        </radialGradient>
+      </defs>
+      <circle cx="50" cy="50" r="38" fill="url(#manualCoverSphere)" />
+      <text x="50" y="36" textAnchor="middle" className="header-badge-kicker">AI POWERED</text>
+      <text x="50" y="54" textAnchor="middle" className="header-badge-brand">Hearth</text>
+    </svg>
+  );
+}
 
 // Auto-generated from the Help panel's helpTopics content -- see Dashboard.jsx.
 // Keep this list roughly in sync whenever Help itself changes (same cadence
@@ -199,7 +219,7 @@ export default function EManual({ open, onClose }) {
     if (i === 0) {
       return (
         <div className="manual-cover">
-          <div className="manual-cover-ring" />
+          <HearthMark size={76} />
           <h1>Hearth</h1>
           <p className="manual-cover-sub">The Complete Guide</p>
           <p className="manual-cover-tag">The heart of your home's finances.</p>
@@ -238,7 +258,7 @@ export default function EManual({ open, onClose }) {
       >
         <div className="manual-head">
           <span className="manual-head-title"><BookOpen size={16} style={{ marginRight: 6, verticalAlign: -3 }} />Hearth Manual</span>
-          <button type="button" className="mobile-sheet-close" onClick={onClose} aria-label="Close">
+          <button type="button" className="manual-close-btn" onClick={onClose} aria-label="Close">
             <X size={18} />
           </button>
         </div>
