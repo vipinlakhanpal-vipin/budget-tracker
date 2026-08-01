@@ -133,10 +133,12 @@ const MANUAL_TOPICS = [
 export default function EManual({ open, onClose }) {
   const total = MANUAL_TOPICS.length + 2; // cover + topics + closing
   const [page, setPage] = useState(0);
-  const touchStartX = useRef(null);
+  const dragStartX = useRef(null);
   const dragInfo = useRef({ dx: 0 });
   const pageRefs = useRef([]);
   const bookRef = useRef(null);
+  const mouseMoveHandler = useRef(null);
+  const mouseUpHandler = useRef(null);
 
   useEffect(() => {
     if (open) setPage(0);
@@ -162,13 +164,13 @@ export default function EManual({ open, onClose }) {
 
   if (!open) return null;
 
-  function handleTouchStart(e) {
-    touchStartX.current = e.touches[0].clientX;
+  function pointerDown(clientX) {
+    dragStartX.current = clientX;
     dragInfo.current = { dx: 0 };
   }
-  function handleTouchMove(e) {
-    if (touchStartX.current == null) return;
-    const dx = e.touches[0].clientX - touchStartX.current;
+  function pointerMove(clientX) {
+    if (dragStartX.current == null) return;
+    const dx = clientX - dragStartX.current;
     dragInfo.current.dx = dx;
     const width = (bookRef.current && bookRef.current.offsetWidth) || 320;
     if (dx < 0 && page < total - 1) {
@@ -177,6 +179,7 @@ export default function EManual({ open, onClose }) {
         const progress = Math.min(1, -dx / width);
         el.style.transition = 'none';
         el.style.transform = `rotateY(${-180 * progress}deg)`;
+        el.style.setProperty('--curl', progress);
       }
     } else if (dx > 0 && page > 0) {
       const el = pageRefs.current[page - 1];
@@ -184,21 +187,24 @@ export default function EManual({ open, onClose }) {
         const progress = Math.min(1, dx / width);
         el.style.transition = 'none';
         el.style.transform = `rotateY(${-180 + 180 * progress}deg)`;
+        el.style.setProperty('--curl', 1 - progress);
       }
     }
   }
   function settleDrag(el, toFlipped, finish) {
     if (!el) { finish(); return; }
-    el.style.transition = 'transform 0.55s cubic-bezier(.4,.0,.2,1)';
+    el.style.transition = 'transform 0.6s cubic-bezier(.4,.0,.2,1), --curl 0.6s cubic-bezier(.4,.0,.2,1)';
     el.style.transform = toFlipped ? 'rotateY(-180deg)' : 'rotateY(0deg)';
+    el.style.setProperty('--curl', toFlipped ? 1 : 0);
     window.setTimeout(() => {
       el.style.transition = '';
       el.style.transform = '';
+      el.style.removeProperty('--curl');
       finish();
-    }, 560);
+    }, 610);
   }
-  function handleTouchEnd(e) {
-    if (touchStartX.current == null) return;
+  function pointerUp() {
+    if (dragStartX.current == null) return;
     const dx = dragInfo.current.dx || 0;
     const width = (bookRef.current && bookRef.current.offsetWidth) || 320;
     const threshold = width * 0.22;
@@ -211,8 +217,31 @@ export default function EManual({ open, onClose }) {
       const shouldRetreat = dx > threshold;
       settleDrag(el, !shouldRetreat, () => { if (shouldRetreat) goPrev(); });
     }
-    touchStartX.current = null;
+    dragStartX.current = null;
     dragInfo.current = { dx: 0 };
+  }
+
+  // Touch (mobile) -- straightforward, the touch itself is the pointer.
+  function handleTouchStart(e) { pointerDown(e.touches[0].clientX); }
+  function handleTouchMove(e) { pointerMove(e.touches[0].clientX); }
+  function handleTouchEnd() { pointerUp(); }
+
+  // Mouse (desktop) -- same physics as touch, so dragging a page with the
+  // cursor turns it exactly like a finger would. mousemove/mouseup are
+  // attached to the window for the duration of the drag (not just the
+  // shell) since the cursor can move outside the modal mid-drag; without
+  // this a fast drag off the edge would get "stuck" mid-flip.
+  function handleMouseDown(e) {
+    if (e.button !== 0) return;
+    pointerDown(e.clientX);
+    mouseMoveHandler.current = (ev) => pointerMove(ev.clientX);
+    mouseUpHandler.current = () => {
+      pointerUp();
+      window.removeEventListener('mousemove', mouseMoveHandler.current);
+      window.removeEventListener('mouseup', mouseUpHandler.current);
+    };
+    window.addEventListener('mousemove', mouseMoveHandler.current);
+    window.addEventListener('mouseup', mouseUpHandler.current);
   }
 
   function renderPageContent(i) {
@@ -255,6 +284,7 @@ export default function EManual({ open, onClose }) {
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        onMouseDown={handleMouseDown}
       >
         <div className="manual-head">
           <span className="manual-head-title"><BookOpen size={16} style={{ marginRight: 6, verticalAlign: -3 }} />Hearth Manual</span>
@@ -273,7 +303,7 @@ export default function EManual({ open, onClose }) {
                 className={`manual-page${flipped ? ' manual-page-flipped' : ''}`}
                 style={{ zIndex }}
               >
-                <div className="manual-page-face manual-page-front">{renderPageContent(i)}</div>
+                <div className="manual-page-face manual-page-front"><span className="manual-page-dogear" aria-hidden="true" />{renderPageContent(i)}</div>
                 <div className="manual-page-face manual-page-back" />
               </div>
             );
@@ -286,6 +316,9 @@ export default function EManual({ open, onClose }) {
           <span className="manual-page-count">{page + 1} / {total}</span>
           <button type="button" className="btn small secondary" onClick={goNext} disabled={page === total - 1}>
             Next <ChevronRight size={16} />
+          </button>
+          <button type="button" className="btn small secondary manual-close-cta" onClick={onClose}>
+            <X size={14} /> Close
           </button>
         </div>
       </div>
