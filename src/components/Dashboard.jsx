@@ -5356,7 +5356,7 @@ function ReportHtmlView({ data }) {
                         title={chatOpen ? 'Close chat' : 'Aria - Your AI Assistant'}
                 onClick={() => setChatOpen((o) => !o)}
               >
-                          {chatOpen ? <X size={18} /> : <Bot size={18} strokeWidth={2.2} />}
+                          {chatOpen ? <X size={18} /> : <Bot size={18} strokeWidth={2.2} className="aria-icon-motion" />}
               </button>
               {!chatOpen && (
                 <>
@@ -8478,7 +8478,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
     unchanged, just the thumb-reachable entry point moved down per
     explicit request. Desktop keeps the original top-bar icon. */}
 <button data-tour="nav-aria" className={chatOpen ? 'active' : ''} onClick={() => setChatOpen((o) => !o)}>
-  <Bot size={20} strokeWidth={2.2} />
+  <Bot size={20} strokeWidth={2.2} className={chatOpen ? '' : 'aria-icon-motion'} />
   <span>Aria</span>
 </button>
         <button data-tour="nav-roadmap" className={activePanel === 'roadmap' ? 'active' : ''} onClick={() => togglePanel('roadmap')}>
