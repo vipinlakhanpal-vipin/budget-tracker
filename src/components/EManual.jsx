@@ -302,6 +302,21 @@ export default function EManual({ open, onClose }) {
                 ref={(el) => { pageRefs.current[i] = el; }}
                 className={`manual-page${flipped ? ' manual-page-flipped' : ''}`}
                 style={{ zIndex }}
+                onTransitionEnd={(e) => {
+                  // v2.18: the bow/shading is only meant to be visible while a
+                  // page is actively mid-turn (see the --curl parabola in
+                  // index.css) -- once the transform transition settles at
+                  // either resting angle, snap --curl back to 0 immediately
+                  // (transition disabled for one frame) so a turned page lies
+                  // flat with a straight edge again instead of keeping a
+                  // permanent curved notch/shadow.
+                  if (e.propertyName !== 'transform' || e.target !== e.currentTarget) return;
+                  const el = e.currentTarget;
+                  const prevTransition = el.style.transition;
+                  el.style.transition = 'none';
+                  el.style.setProperty('--curl', '0');
+                  requestAnimationFrame(() => { el.style.transition = prevTransition; });
+                }}
               >
                 <div className="manual-page-face manual-page-front"><span className="manual-page-dogear" aria-hidden="true" />{renderPageContent(i)}</div>
                 <div className="manual-page-face manual-page-back" />
