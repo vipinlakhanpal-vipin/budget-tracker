@@ -2906,6 +2906,17 @@ row. */
   flex-shrink: 0;
 }
 .manual-head-title { font-weight: 700; font-size: 15px; color: var(--text); }
+/* Dedicated close button for the manual header -- deliberately NOT reusing
+   ".mobile-sheet-close" (that class carries position:absolute scoped for a
+   different component's mobile sheet header; reused here it got misplaced/
+   covered on phones, which was the root cause of the manual being unclosable
+   on mobile). Plain flex child, identical on every viewport. */
+.manual-close-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: none; border: none; color: var(--muted); cursor: pointer;
+  padding: 6px; border-radius: 8px; flex-shrink: 0;
+}
+.manual-close-btn:hover { background: var(--accent-light); color: var(--text); }
 .manual-book {
   position: relative;
   width: 100%; height: min(64vh, 520px);
