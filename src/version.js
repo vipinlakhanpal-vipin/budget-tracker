@@ -11,9 +11,9 @@
 // date-suffixed value).
 // The visible BADGE, on the other hand, is free to show more than just
 // the version -- formatVersionBadge() below adds today's date for display
-// purposes only, restoring the "Jul 30, 2026 ÃÂÃÂ· v1.87" style badge from
+// purposes only, restoring the "Jul 30, 2026 ÃÂÃÂÃÂÃÂ· v1.87" style badge from
 // before v1.86, without reintroducing the comparison bug.
-export const APP_VERSION = '2.43';
+export const APP_VERSION = '2.44';
 
 export function formatVersionBadge() {
   const dateLabel = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
