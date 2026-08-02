@@ -1565,6 +1565,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   const [recurringDrafts, setRecurringDrafts] = useState({});
   // Same note/attachment pattern as the one-off expense form above.
   const [showRecurringNotes, setShowRecurringNotes] = useState(false);
+  const [showRecurringMoreDates, setShowRecurringMoreDates] = useState(false);
   const [recurringFiles, setRecurringFiles] = useState([]);
   const recurringFilesInputRef = useRef(null);
 
@@ -6652,7 +6653,8 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   onChange={(e) => setNewRecurring({ ...newRecurring, startDate: e.target.value })}
                 />
               </div>
-              <div className="field" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : { flex: '0 1 190px', minWidth: 170 }}>
+              {showRecurringMoreDates && (
+<div className="field" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : { flex: '0 1 190px', minWidth: 170 }}>
                 <label>End date (optional)</label>
                 <input
                   type="date"
@@ -6660,9 +6662,11 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   onChange={(e) => setNewRecurring({ ...newRecurring, endDate: e.target.value })}
                 />
               </div>
+              )}
               </div>
               <div className="field-pair">
-              <div className="field" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : { flex: '0 1 170px', minWidth: 150 }}>
+              {showRecurringMoreDates && (
+<div className="field" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : { flex: '0 1 170px', minWidth: 150 }}>
                 <label>Due date (optional, for reminders)</label>
                 <input
                   type="date"
@@ -6670,6 +6674,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   onChange={(e) => setNewRecurring({ ...newRecurring, dueDate: e.target.value })}
                 />
               </div>
+              )}
               {/* Payment Source sits right next to Due date in this same row now
                   (previously it was pushed onto its own separate row below, which
                   made it look disconnected/unaligned from the rest of the form). */}
@@ -6691,6 +6696,15 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   <SearchableCombobox value={newRecurring.paymentBank} onChange={(v) => setNewRecurring({ ...newRecurring, paymentBank: v })} options={BANKS} placeholder="Search bank..." />
                 </div>
               )}
+              <div className="field" style={{ flex: '0 0 auto', alignSelf: 'flex-end' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowRecurringMoreDates((s) => !s)}
+                  style={{ background: 'none', border: 'none', color: 'var(--muted)', textDecoration: 'underline', cursor: 'pointer', fontSize: 12, padding: '10px 0', whiteSpace: 'nowrap' }}
+                >
+                  {showRecurringMoreDates ? 'Hide end/due date' : '+ End or due date'}
+                </button>
+              </div>
               {/* Note + Attach + Add now live together in ONE flex item, in
                   that order, immediately before Add -- per explicit request
                   that these icons sit right before the Add button on every
