@@ -363,11 +363,6 @@ function UserGroup({ title, users, onDelete, deletingEmail, onInsights, insightL
                   </td>
                   <td data-label="Last seen" className="muted-small">
                     {u.lastSeenLocation || '--'}
-                    {u.recentLocations && u.recentLocations.length > 1 && (
-                      <div style={{ fontSize: 11, opacity: 0.7, marginTop: 2 }}>
-                        Recently: {u.recentLocations.join(' -- ')}
-                      </div>
-                    )}
                   </td>
                   <td data-label="Usage" className="muted-small">
                     {u.usagePercent === null || u.usagePercent === undefined ? '--' : `${u.usagePercent}%`}

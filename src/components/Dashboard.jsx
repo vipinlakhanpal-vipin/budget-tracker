@@ -291,10 +291,10 @@ function DirhamBarLabel(props) {
   const numStr = Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   return (
     <g>
-      <text x={startX} y={cy} dy={3.5} fontSize={10} fontWeight={700} fill="#0f2a2e" fontFamily="Arial, sans-serif">D</text>
-      <line x1={startX - 1} y1={cy - 2.5} x2={startX + 6.5} y2={cy - 2.5} stroke="#0f2a2e" strokeWidth={1} />
-      <line x1={startX - 1} y1={cy + 2.5} x2={startX + 6.5} y2={cy + 2.5} stroke="#0f2a2e" strokeWidth={1} />
-      <text x={startX + 10} y={cy} dy={3.5} fontSize={10} fill="#0f2a2e">{numStr}</text>
+      <text x={startX} y={cy} dy={3.5} fontSize={10} fontWeight={700} fill="var(--text)" fontFamily="Arial, sans-serif">D</text>
+      <line x1={startX - 1} y1={cy - 2.5} x2={startX + 6.5} y2={cy - 2.5} stroke="var(--text)" strokeWidth={1} />
+      <line x1={startX - 1} y1={cy + 2.5} x2={startX + 6.5} y2={cy + 2.5} stroke="var(--text)" strokeWidth={1} />
+      <text x={startX + 10} y={cy} dy={3.5} fontSize={10} fill="var(--text)">{numStr}</text>
     </g>
   );
 }
@@ -311,16 +311,20 @@ function DirhamBarLabel(props) {
 // (the bar's edge), then rotating the whole group -90 degrees around that
 // same pivot, which swings +x to point straight up.
 function DirhamBarLabelVerticalSideways(props) {
+  // v2.35: per explicit request, value labels next to the sideways Bar
+  // chart's bars must read horizontally (flowing right off the bar's tip),
+  // not rotated vertical -- so this now shares the same horizontal layout
+  // as DirhamBarLabel above instead of a -90deg rotated <g>.
   const { x, y, width, height, value } = props;
-  const px = x + width;
-  const py = y + height / 2;
+  const cy = y + height / 2;
+  const startX = x + width + 6;
   const numStr = Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   return (
-    <g transform={`rotate(-90, ${px}, ${py})`}>
-      <text x={px + 3} y={py} dy={3} fontSize={8.5} fontWeight={700} fill="#0f2a2e" fontFamily="Arial, sans-serif">D</text>
-      <line x1={px + 2} y1={py - 2} x2={px + 8} y2={py - 2} stroke="#0f2a2e" strokeWidth={1} />
-      <line x1={px + 2} y1={py + 2} x2={px + 8} y2={py + 2} stroke="#0f2a2e" strokeWidth={1} />
-      <text x={px + 11} y={py} dy={3} fontSize={8.5} fill="#0f2a2e">{numStr}</text>
+    <g>
+      <text x={startX} y={cy} dy={3} fontSize={8.5} fontWeight={700} fill="var(--text)" fontFamily="Arial, sans-serif">D</text>
+      <line x1={startX - 1} y1={cy - 2} x2={startX + 6} y2={cy - 2} stroke="var(--text)" strokeWidth={1} />
+      <line x1={startX - 1} y1={cy + 2} x2={startX + 6} y2={cy + 2} stroke="var(--text)" strokeWidth={1} />
+      <text x={startX + 9.5} y={cy} dy={3} fontSize={8.5} fill="var(--text)">{numStr}</text>
     </g>
   );
 }
@@ -331,10 +335,10 @@ function DirhamBarLabelVerticalColumn(props) {
   const numStr = Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   return (
     <g transform={`rotate(-90, ${px}, ${py})`}>
-      <text x={px + 3} y={py} dy={3} fontSize={9} fontWeight={700} fill="#0f2a2e" fontFamily="Arial, sans-serif">D</text>
-      <line x1={px + 2} y1={py - 2.2} x2={px + 8.5} y2={py - 2.2} stroke="#0f2a2e" strokeWidth={1} />
-      <line x1={px + 2} y1={py + 2.2} x2={px + 8.5} y2={py + 2.2} stroke="#0f2a2e" strokeWidth={1} />
-      <text x={px + 11.5} y={py} dy={3} fontSize={9} fill="#0f2a2e">{numStr}</text>
+      <text x={px + 3} y={py} dy={3} fontSize={9} fontWeight={700} fill="var(--text)" fontFamily="Arial, sans-serif">D</text>
+      <line x1={px + 2} y1={py - 2.2} x2={px + 8.5} y2={py - 2.2} stroke="var(--text)" strokeWidth={1} />
+      <line x1={px + 2} y1={py + 2.2} x2={px + 8.5} y2={py + 2.2} stroke="var(--text)" strokeWidth={1} />
+      <text x={px + 11.5} y={py} dy={3} fontSize={9} fill="var(--text)">{numStr}</text>
     </g>
   );
 }
@@ -918,6 +922,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   });
   const [themeMenuOpen, setThemeMenuOpen] = useState(false);
   const themeMenuRef = useRef(null);
+  const [themeDropdownPos, setThemeDropdownPos] = useState(null);
   useEffect(() => {
     if (theme === 'teal') {
       document.documentElement.removeAttribute('data-theme');
@@ -957,6 +962,10 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
 
   useEffect(() => {
     if (!themeMenuOpen) return;
+    if (themeMenuRef.current) {
+      const r = themeMenuRef.current.getBoundingClientRect();
+      setThemeDropdownPos({ top: r.bottom + 8, right: Math.max(8, window.innerWidth - r.right) });
+    }
     function onDocClick(e) {
       if (themeMenuRef.current && !themeMenuRef.current.contains(e.target)) setThemeMenuOpen(false);
     }
@@ -1765,14 +1774,14 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       // broken: committing the Payment Source triggered a reload, ties
       // re-sorted, and the row the user was mid-selection on jumped to a
       // different position before they could pick the bank.
-      supabase.from('expenses').select('*').eq('household_id', householdId).order('expense_date', { ascending: false }).order('id', { ascending: false }),
+      supabase.from('expenses').select('*').eq('household_id', householdId).order('id', { ascending: false }),
       supabase.from('settings').select('*').eq('household_id', householdId).maybeSingle(),
       // Same tiebreaker reasoning as expenses above.
-      supabase.from('recurring_expenses').select('*').eq('household_id', householdId).order('start_date').order('id'),
+      supabase.from('recurring_expenses').select('*').eq('household_id', householdId).order('id', { ascending: false }),
       supabase.from('household_members').select('*').eq('household_id', householdId).order('joined_at'),
       supabase.from('household_invites').select('*').eq('household_id', householdId).eq('status', 'pending'),
-      supabase.from('incomes').select('*').eq('household_id', householdId).order('start_date').order('id'),
-      supabase.from('savings_goals').select('*').eq('household_id', householdId).order('start_date').order('id'),
+      supabase.from('incomes').select('*').eq('household_id', householdId).order('id', { ascending: false }),
+      supabase.from('savings_goals').select('*').eq('household_id', householdId).order('id', { ascending: false }),
       supabase.from('monthly_budgets').select('*').eq('household_id', householdId).order('month'),
       supabase.from('row_attachments').select('*').eq('household_id', householdId).order('created_at'),
     ]);
@@ -2178,12 +2187,17 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   const byPaymentSource = useMemo(() => {
     const m = {};
     const label = (src) => (src === 'Bank' ? 'Bank Account' : src === 'Salary' ? 'Salary Deduction' : src);
+    const BANK_BREAKDOWN_SOURCES = ['Credit Card', 'Debit Card', 'Bank Account'];
+    const keyFor = (rawSrc, bank) => {
+      const name = label(rawSrc || 'Cash');
+      return BANK_BREAKDOWN_SOURCES.includes(name) && bank ? `${name} (${bank})` : name;
+    };
     rangeExpenses.forEach((e) => {
-      const name = label(e.payment_source || 'Cash');
+      const name = keyFor(e.payment_source, e.payment_bank);
       m[name] = (m[name] || 0) + Number(e.amount);
     });
     recurringForMonth.forEach((r) => {
-      const name = label(r.payment_source || 'Cash');
+      const name = keyFor(r.payment_source, r.payment_bank);
       m[name] = (m[name] || 0) + Number(r.amount);
     });
     return m;
@@ -4982,7 +4996,7 @@ function ReportHtmlView({ data }) {
                 plot area "cover more of the data elegantly": longer bars,
                 more categories visible per screen, per explicit request. */}
             <ResponsiveContainer width="100%" height={barNeededHeight}>
-              <BarChart data={pieData} layout="vertical" margin={{ top: 5, right: big ? 26 : 55, left: 10, bottom: 5 }} barCategoryGap={big ? '35%' : '30%'}>
+              <BarChart data={pieData} layout="vertical" margin={{ top: 5, right: big ? 60 : 55, left: 10, bottom: 5 }} barCategoryGap={big ? '35%' : '30%'}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                 <XAxis type="number" tick={{ fontSize: big ? 11 : 8.5 }} hide />
                 <YAxis
@@ -5024,12 +5038,18 @@ function ReportHtmlView({ data }) {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={-20} textAnchor="end" height={50} />
               <YAxis tickFormatter={(v) => fmt(v)} width={80} tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(v) => fmt(v)} />
-              <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+              <Tooltip
+                cursor={{ fill: 'var(--border)', opacity: 0.35 }}
+                formatter={(v) => fmt(v)}
+                contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8 }}
+                labelStyle={{ color: 'var(--text)' }}
+                itemStyle={{ color: 'var(--text)' }}
+              />
+              <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={26}>
                 {paymentSourceData.map((_, i) => (
                   <Cell key={i} fill={COLORS[i % COLORS.length]} />
                 ))}
-                <LabelList dataKey="value" position="top" formatter={(v) => fmt(v)} style={{ fontSize: 11 }} />
+                <LabelList dataKey="value" content={DirhamBarLabelVerticalColumn} />
               </Bar>
             </BarChart>
           </ResponsiveContainer>
@@ -5370,8 +5390,8 @@ function ReportHtmlView({ data }) {
               >
                 <Palette size={16} />
               </button>
-              {themeMenuOpen && (
-                <div className="theme-dropdown">
+              {themeMenuOpen && themeDropdownPos && createPortal(
+                <div className="theme-dropdown" style={{ position: 'fixed', top: themeDropdownPos.top, right: themeDropdownPos.right, zIndex: 500 }}>
                     <div className="theme-dropdown-title">Appearance</div>
                     <div className="theme-mode-row">
             <button
@@ -5402,7 +5422,8 @@ function ReportHtmlView({ data }) {
                       {theme === t.id && <Check size={14} style={{ marginLeft: 'auto' }} />}
                     </button>
                   ))}
-                </div>
+                </div>,
+                document.body
               )}
             </div>
             {/* Profile icon replaces the old standalone Sign out button --
