@@ -1044,10 +1044,7 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
    as Spent so far (both represent outflow). The 3 payment-method tiles
    reuse the exact hue already used for their own label just above,
    so each tile reads as one coherent color-coded unit. */
-.card-expenses .v { color: #f5b95c; }
-.card-cc .v { color: #7c3aed; }
-.card-dc .v { color: #db2777; }
-.card-ba .v { color: #0891b2; }
+
 
 .page-title-row {
   position: relative;
@@ -1163,6 +1160,16 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
 .card-remaining.ok .v { color: #6fd88a; }
 .card-income.ok .v { color: #6fd88a; }
 .card-invest.ok .v { color: #4fd8c4; }
+
+/* v2.54 -- moved from right after the .muted-small fix above, where it sat
+   BEFORE the flat "color: var(--text)" rule from v2.50 and so the later,
+   equal-specificity flat rule always won and these 4 colors silently never
+   rendered. Same rules, just relocated after everything else that touches
+   these tiles' .v so this now actually wins. */
+.card-expenses .v { color: #f5b95c; }
+.card-cc .v { color: #7c3aed; }
+.card-dc .v { color: #db2777; }
+.card-ba .v { color: #0891b2; }
 
 /* The 6 KPI cards (Monthly Budget -> Net) were reported as taking up more
    than half a laptop's visible screen before the rest of the app (forms,
@@ -2925,8 +2932,6 @@ row. */
     background: none;
   }
 }
-
-
 
 /* v1.36: light ECG/heart-monitor waveform scrolling behind the desktop
    header tabs (Income/Fixed Expenses/Regular Expenses/Savings/Report/etc,
