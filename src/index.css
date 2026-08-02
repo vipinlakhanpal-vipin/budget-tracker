@@ -3263,6 +3263,22 @@ row. */
   .mobile-txn-row:hover { border-color: var(--accent); background: var(--bg); }
   .mobile-txn-row:active { background: var(--bg); }
   .mobile-txn-row:last-child { border-bottom: none; }
+  .mobile-txn-icon {
+    flex: 0 0 auto; width: 38px; height: 38px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: #ffffff; font-weight: 800; font-size: 15px;
+  }
+  .mobile-txn-mid {
+    flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px;
+  }
+  .mobile-txn-title {
+    font-weight: 700; font-size: 14.5px; color: var(--text); line-height: 1.35; display: block; max-width: 100%;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .mobile-txn-sub {
+    font-size: 12.5px; color: var(--muted); display: block; max-width: 100%;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
 
   /* Reuse the mobile edit sheet as a centered dialog instead of a bottom
      sheet -- same backdrop/content, just repositioned for a wide screen. */
