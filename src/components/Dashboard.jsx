@@ -4431,6 +4431,34 @@ function ReportHtmlView({ data }) {
   // React to unmount/remount this whole subtree on every keystroke (since
   // typing in any draft field re-renders the parent) and drop focus out of
   // whichever input the person was mid-edit in.
+  // Coming Soon / roadmap content, reused two ways (same pattern as
+  // usersPanelBody just below): the mobile bottom-nav "Soon" button still
+  // sets activePanel to 'roadmap' directly, while the desktop entry point
+  // (a pill inside Settings, per explicit request to declutter the top
+  // nav row) switches settingsSubTab instead so the rest of the Settings
+  // sub-tab row stays visible -- previously it used togglePanel('roadmap')
+  // too, which navigated clean away from Settings and made every other
+  // sub-tab pill disappear, per explicit bug report.
+  const roadmapPanelBody = (
+          <div className="panel" ref={panelRef}>
+            <div className="muted-small" style={{ fontWeight: 600, marginBottom: 14, fontSize: 14 }}>
+              What we're building next
+            </div>
+            <div className="my-details-box" style={{ marginBottom: 18, padding: 16, border: '1px solid var(--border)', borderRadius: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <span style={{ fontSize: 20 }}>&#127974;</span>
+                <span style={{ fontWeight: 700, fontSize: 15 }}>Bank & card integration</span>
+              </div>
+              <p style={{ margin: 0, color: 'var(--muted)' }}>
+                Connect your bank accounts and cards so income, expenses, and card transactions capture themselves automatically instead of manual entry -- transactions land in Hearth the moment they post. This is a bigger piece of work (it needs a secure banking-data provider behind the scenes), so it's planned for after the app is live and we've learned how the household actually uses it day to day.
+              </p>
+            </div>
+            <div className="muted-small" style={{ marginTop: 4 }}>
+              Have a feature you'd like to see next? Use the Suggestion link at the bottom of the app to let us know.
+            </div>
+          </div>
+          );
+
   const usersPanelBody = (
               <div>
                 <h2>Users</h2>
@@ -7966,25 +7994,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             );
           })()}
 
-          {activePanel === 'roadmap' && (
-          <div className="panel" ref={panelRef}>
-            <div className="muted-small" style={{ fontWeight: 600, marginBottom: 14, fontSize: 14 }}>
-              What we're building next
-            </div>
-            <div className="my-details-box" style={{ marginBottom: 18, padding: 16, border: '1px solid var(--border)', borderRadius: 8 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <span style={{ fontSize: 20 }}>&#127974;</span>
-                <span style={{ fontWeight: 700, fontSize: 15 }}>Bank & card integration</span>
-              </div>
-              <p style={{ margin: 0, color: 'var(--muted)' }}>
-                Connect your bank accounts and cards so income, expenses, and card transactions capture themselves automatically instead of manual entry -- transactions land in Hearth the moment they post. This is a bigger piece of work (it needs a secure banking-data provider behind the scenes), so it's planned for after the app is live and we've learned how the household actually uses it day to day.
-              </p>
-            </div>
-            <div className="muted-small" style={{ marginTop: 4 }}>
-              Have a feature you'd like to see next? Use the Suggestion link at the bottom of the app to let us know.
-            </div>
-          </div>
-          )}
+          {activePanel === 'roadmap' && roadmapPanelBody}
 
           {activePanel === 'report' && (
  <div className="panel" ref={panelRef} style={{ maxWidth: '100%', marginBottom: 24 }}>
@@ -8191,9 +8201,9 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     </button>
                   )}
                   <button
-                    className={`btn-teal ${activePanel === 'roadmap' ? '' : 'secondary'}`}
+                    className={`btn-teal ${settingsSubTab === 'roadmap' ? '' : 'secondary'}`}
                     data-tour="nav-roadmap"
-                    onClick={() => togglePanel('roadmap')}
+                    onClick={() => setSettingsSubTab('roadmap')}
                   >
                     <Sparkles size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
                     Coming Soon
@@ -8300,6 +8310,8 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   // here below the sub-tab row, the same way every other
                   // sub-tab's content appears.
                   usersPanelBody
+                ) : settingsSubTab === 'roadmap' ? (
+                  roadmapPanelBody
                 ) : settingsSubTab === 'category' ? (
                 <>
                 {/* Add Category tab -- split out on its own, separate from
