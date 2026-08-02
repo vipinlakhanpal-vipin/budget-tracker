@@ -1024,15 +1024,30 @@ sitting duplicated under the summary cards. */
 h1 { font-size: 22px; margin: 0 0 4px 0; }
 .sub { color: var(--muted); font-size: 13px; }
 .muted-small { color: var(--muted); font-size: 12px; }
-.card-budget .muted-small,
-.card-spent .muted-small,
-.card-remaining .muted-small,
-.card-income .muted-small,
-.card-expenses .muted-small,
-.card-net .muted-small {
-  color: #0f2a2e;
-  font-weight: 700;
-}
+/* v2.53 -- this block's #0f2a2e (near-black) was written back when
+   these 9 KPI cards had light pastel backgrounds and needed a dark-on-light
+   sub-text color; v2.50 flattened them to the mockup's dark navy card
+   surface but this rule was missed, so the description line under each
+   value (e.g. "Expenses X + Savings Y") went dark-on-dark and disappeared.
+   Vipin: "descrition below the values in tiles is not visible... make it
+   visible with colors that would appear visible to read." Fixed by letting
+   it fall through to the plain .muted-small { color: var(--muted) } rule
+   above instead (the readable light gray-blue already used for every other
+   secondary/meta line in the app) -- so this whole override is removed
+   rather than re-pointed at a new hardcoded color. */
+
+/* v2.53 -- value colors for the tiles that were still plain white after
+   v2.52's amber/green/teal pass (Vipin: "white color values to have any
+   good color or u want to keep it asis"). Monthly Budget intentionally
+   stays plain/uncolored -- that matches the approved mockup's own
+   Monthly Budget tile exactly. Combined Expenses picks up the same amber
+   as Spent so far (both represent outflow). The 3 payment-method tiles
+   reuse the exact hue already used for their own label just above,
+   so each tile reads as one coherent color-coded unit. */
+.card-expenses .v { color: #f5b95c; }
+.card-cc .v { color: #7c3aed; }
+.card-dc .v { color: #db2777; }
+.card-ba .v { color: #0891b2; }
 
 .page-title-row {
   position: relative;
