@@ -864,6 +864,24 @@ sitting duplicated under the summary cards. */
 .header-tab-btn-active {
   background-color: var(--accent-active);
   box-shadow: inset 0 0 0 2px rgba(255,255,255,.55), 0 2px 6px rgba(0,0,0,.18);
+/* v2.28: Phase 1 follow-up -- the v2.27 pass (card top-bar + subtle shadow)
+   turned out too subtle to actually notice at a glance. This makes the
+   header nav buttons genuinely read as a modern "pill" nav (full 999px
+   radius, roomier padding, a real resting shadow) matching the approved
+   mockup's nav.primary-nav treatment -- scoped to .header-tab-btn only
+   (not the base .btn-teal) so Settings' .btn-teal.secondary toggle and any
+   other plain .btn-teal usage elsewhere in the app are untouched. Colors
+   still come from var(--accent)/var(--accent-active) via the inherited
+   .btn-teal / .header-tab-btn-active rules above -- nothing hardcoded. */
+.header-tab-btn {
+  border-radius: 999px;
+  padding: 10px 20px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.15);
+}
+.header-tab-btn:hover {
+  box-shadow: 0 4px 10px rgba(0,0,0,.22);
+}
+
   /* v1.42: the orbiting infinity symbol now lives on .header-tab-btn's
      own ::before pseudo-element (a separate element), not on this
      button's own `animation` property -- so it can never again silently
