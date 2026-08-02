@@ -1079,12 +1079,24 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
 .card-expenses .k { color: #e11d48; }
 .card-net { background: linear-gradient(160deg, #eff6ff, #ffffff); border-color: #bfdbfe; }
 .card-net .k { color: #0284c7; }
+/* Phase 2 dashboard tiles (v2.48): Credit/Debit/Bank Account type-level
+   spend totals. Same soft-pastel-card treatment as the 6 KPI cards above,
+   picking 3 hues not already used by them (violet/pink/cyan vs. the
+   existing indigo/orange/teal/green/rose/sky) so all 9 cards read as one
+   coherent family without any two adjacent tiles looking alike. */
+.card-cc { background: linear-gradient(160deg, #f5f3ff, #ffffff); border-color: #ddd6fe; }
+.card-cc .k { color: #7c3aed; }
+.card-dc { background: linear-gradient(160deg, #fdf2f8, #ffffff); border-color: #fbcfe8; }
+.card-dc .k { color: #db2777; }
+.card-ba { background: linear-gradient(160deg, #ecfeff, #ffffff); border-color: #a5f3fc; }
+.card-ba .k { color: #0891b2; }
 /* These 6 cards keep a soft light-tinted background in both light AND dark
    mode by design (see comment above) -- so their big value number needs a
    fixed dark color instead of following --text, otherwise it goes light-on-
    light and disappears once dark mode flips --text to a pale color. */
 .card-budget .v, .card-spent .v, .card-remaining .v,
-.card-income .v, .card-expenses .v, .card-net .v { color: #0f2a2e; }
+.card-income .v, .card-expenses .v, .card-net .v,
+.card-cc .v, .card-dc .v, .card-ba .v { color: #0f2a2e; }
 
 /* The 6 KPI cards (Monthly Budget -> Net) were reported as taking up more
    than half a laptop's visible screen before the rest of the app (forms,
