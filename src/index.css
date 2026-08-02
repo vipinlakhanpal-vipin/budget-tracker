@@ -1098,6 +1098,32 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
 .card-income .v, .card-expenses .v, .card-net .v,
 .card-cc .v, .card-dc .v, .card-ba .v { color: #0f2a2e; }
 
+/* v2.50 -- redesign match: Vipin shared hearth-redesign-mockup.html and
+   asked for the same look and feel. That mockup's .metric-card is a single
+   flat surface (no gradient/tint), with a uniformly muted label and a
+   plain value color -- only a couple of values (Spent/Remaining/gain) get
+   a semantic color, which .card.over/.card.ok already handle above at
+   higher specificity (.card.over .v / .card.ok .v = 3 class selectors,
+   beats the 2-class rules here and below regardless of source order) so
+   that behavior is untouched. This block only removes the rainbow pastel-
+   gradient identity the 9 KPI/tile cards accumulated from v1.something
+   through v2.48 and returns them to one flat theme-driven surface, matching
+   the mockup -- added as a later override rather than rewriting the 9
+   existing rules above, so this is one clean diff instead of nine. */
+.card-budget, .card-spent, .card-remaining, .card-income,
+.card-expenses, .card-net, .card-cc, .card-dc, .card-ba {
+  background: var(--card);
+  border-color: var(--border);
+}
+.card-budget .k, .card-spent .k, .card-remaining .k, .card-income .k,
+.card-expenses .k, .card-net .k, .card-cc .k, .card-dc .k, .card-ba .k {
+  color: var(--muted);
+}
+.card-budget .v, .card-spent .v, .card-remaining .v, .card-income .v,
+.card-expenses .v, .card-net .v, .card-cc .v, .card-dc .v, .card-ba .v {
+  color: var(--text);
+}
+
 /* The 6 KPI cards (Monthly Budget -> Net) were reported as taking up more
    than half a laptop's visible screen before the rest of the app (forms,
    lists, charts) even started -- two stacked 3-card .grid rows, each with
