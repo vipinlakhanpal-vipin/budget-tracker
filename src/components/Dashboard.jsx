@@ -176,7 +176,7 @@ const COLORS = [
 ];
 const RELATIONS = ['Self', 'Spouse', 'Partner', 'Child', 'Parent', 'Sibling', 'Roommate', 'Other'];
 const CURRENCIES = ['AED', 'AFN', 'ALL', 'AMD', 'ANG', 'AOA', 'ARS', 'AUD', 'AWG', 'AZN', 'BAM', 'BBD', 'BDT', 'BGN', 'BHD', 'BIF', 'BMD', 'BND', 'BOB', 'BRL', 'BSD', 'BTN', 'BWP', 'BYN', 'BZD', 'CAD', 'CDF', 'CHF', 'CLP', 'CNY', 'COP', 'CRC', 'CUP', 'CVE', 'CZK', 'DJF', 'DKK', 'DOP', 'DZD', 'EGP', 'ERN', 'ETB', 'EUR', 'FJD', 'FKP', 'GBP', 'GEL', 'GHS', 'GIP', 'GMD', 'GNF', 'GTQ', 'GYD', 'HKD', 'HNL', 'HTG', 'HUF', 'IDR', 'ILS', 'INR', 'IQD', 'IRR', 'ISK', 'JMD', 'JOD', 'JPY', 'KES', 'KGS', 'KHR', 'KMF', 'KPW', 'KRW', 'KWD', 'KYD', 'KZT', 'LAK', 'LBP', 'LKR', 'LRD', 'LSL', 'LYD', 'MAD', 'MDL', 'MGA', 'MKD', 'MMK', 'MNT', 'MOP', 'MRU', 'MUR', 'MVR', 'MWK', 'MXN', 'MYR', 'MZN', 'NAD', 'NGN', 'NIO', 'NOK', 'NPR', 'NZD', 'OMR', 'PAB', 'PEN', 'PGK', 'PHP', 'PKR', 'PLN', 'PYG', 'QAR', 'RON', 'RSD', 'RUB', 'RWF', 'SAR', 'SBD', 'SCR', 'SDG', 'SEK', 'SGD', 'SHP', 'SLE', 'SOS', 'SRD', 'SSP', 'STN', 'SYP', 'SZL', 'THB', 'TJS', 'TMT', 'TND', 'TOP', 'TRY', 'TTD', 'TWD', 'TZS', 'UAH', 'UGX', 'USD', 'UYU', 'UZS', 'VES', 'VND', 'VUV', 'WST', 'XAF', 'XCD', 'XOF', 'XPF', 'YER', 'ZAR', 'ZMW', 'ZWL'];
-const CURRENCY_REGIONS = { AED: 'United Arab Emirates', AFN: 'Afghanistan', ALL: 'Albania', AMD: 'Armenia', ANG: 'CuraÃÂÃÂ¯ÃÂÃÂ¿ÃÂÃÂ½ao & Sint Maarten', AOA: 'Angola', ARS: 'Argentina', AUD: 'Australia', AWG: 'Aruba', AZN: 'Azerbaijan', BAM: 'Bosnia & Herzegovina', BBD: 'Barbados', BDT: 'Bangladesh', BGN: 'Bulgaria', BHD: 'Bahrain', BIF: 'Burundi', BMD: 'Bermuda', BND: 'Brunei', BOB: 'Bolivia', BRL: 'Brazil', BSD: 'Bahamas', BTN: 'Bhutan', BWP: 'Botswana', BYN: 'Belarus', BZD: 'Belize', CAD: 'Canada', CDF: 'DR Congo', CHF: 'Switzerland', CLP: 'Chile', CNY: 'China', COP: 'Colombia', CRC: 'Costa Rica', CUP: 'Cuba', CVE: 'Cape Verde', CZK: 'Czech Republic', DJF: 'Djibouti', DKK: 'Denmark', DOP: 'Dominican Republic', DZD: 'Algeria', EGP: 'Egypt', ERN: 'Eritrea', ETB: 'Ethiopia', EUR: 'Eurozone', FJD: 'Fiji', FKP: 'Falkland Islands', GBP: 'United Kingdom', GEL: 'Georgia', GHS: 'Ghana', GIP: 'Gibraltar', GMD: 'Gambia', GNF: 'Guinea', GTQ: 'Guatemala', GYD: 'Guyana', HKD: 'Hong Kong', HNL: 'Honduras', HTG: 'Haiti', HUF: 'Hungary', IDR: 'Indonesia', ILS: 'Israel', INR: 'India', IQD: 'Iraq', IRR: 'Iran', ISK: 'Iceland', JMD: 'Jamaica', JOD: 'Jordan', JPY: 'Japan', KES: 'Kenya', KGS: 'Kyrgyzstan', KHR: 'Cambodia', KMF: 'Comoros', KPW: 'North Korea', KRW: 'South Korea', KWD: 'Kuwait', KYD: 'Cayman Islands', KZT: 'Kazakhstan', LAK: 'Laos', LBP: 'Lebanon', LKR: 'Sri Lanka', LRD: 'Liberia', LSL: 'Lesotho', LYD: 'Libya', MAD: 'Morocco', MDL: 'Moldova', MGA: 'Madagascar', MKD: 'North Macedonia', MMK: 'Myanmar', MNT: 'Mongolia', MOP: 'Macau', MRU: 'Mauritania', MUR: 'Mauritius', MVR: 'Maldives', MWK: 'Malawi', MXN: 'Mexico', MYR: 'Malaysia', MZN: 'Mozambique', NAD: 'Namibia', NGN: 'Nigeria', NIO: 'Nicaragua', NOK: 'Norway', NPR: 'Nepal', NZD: 'New Zealand', OMR: 'Oman', PAB: 'Panama', PEN: 'Peru', PGK: 'Papua New Guinea', PHP: 'Philippines', PKR: 'Pakistan', PLN: 'Poland', PYG: 'Paraguay', QAR: 'Qatar', RON: 'Romania', RSD: 'Serbia', RUB: 'Russia', RWF: 'Rwanda', SAR: 'Saudi Arabia', SBD: 'Solomon Islands', SCR: 'Seychelles', SDG: 'Sudan', SEK: 'Sweden', SGD: 'Singapore', SHP: 'Saint Helena', SLE: 'Sierra Leone', SOS: 'Somalia', SRD: 'Suriname', SSP: 'South Sudan', STN: 'SÃÂÃÂ¯ÃÂÃÂ¿ÃÂÃÂ½o TomÃÂÃÂ¯ÃÂÃÂ¿ÃÂÃÂ½ & PrÃÂÃÂ¯ÃÂÃÂ¿ÃÂÃÂ½ncipe', SYP: 'Syria', SZL: 'Eswatini', THB: 'Thailand', TJS: 'Tajikistan', TMT: 'Turkmenistan', TND: 'Tunisia', TOP: 'Tonga', TRY: 'Turkey', TTD: 'Trinidad & Tobago', TWD: 'Taiwan', TZS: 'Tanzania', UAH: 'Ukraine', UGX: 'Uganda', USD: 'United States', UYU: 'Uruguay', UZS: 'Uzbekistan', VES: 'Venezuela', VND: 'Vietnam', VUV: 'Vanuatu', WST: 'Samoa', XAF: 'Central Africa (CEMAC)', XCD: 'Eastern Caribbean', XOF: 'West Africa (UEMOA)', XPF: 'French Pacific', YER: 'Yemen', ZAR: 'South Africa', ZMW: 'Zambia', ZWL: 'Zimbabwe' };
+const CURRENCY_REGIONS = { AED: 'United Arab Emirates', AFN: 'Afghanistan', ALL: 'Albania', AMD: 'Armenia', ANG: 'CuraÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂ¿ÃÂÃÂÃÂÃÂ½ao & Sint Maarten', AOA: 'Angola', ARS: 'Argentina', AUD: 'Australia', AWG: 'Aruba', AZN: 'Azerbaijan', BAM: 'Bosnia & Herzegovina', BBD: 'Barbados', BDT: 'Bangladesh', BGN: 'Bulgaria', BHD: 'Bahrain', BIF: 'Burundi', BMD: 'Bermuda', BND: 'Brunei', BOB: 'Bolivia', BRL: 'Brazil', BSD: 'Bahamas', BTN: 'Bhutan', BWP: 'Botswana', BYN: 'Belarus', BZD: 'Belize', CAD: 'Canada', CDF: 'DR Congo', CHF: 'Switzerland', CLP: 'Chile', CNY: 'China', COP: 'Colombia', CRC: 'Costa Rica', CUP: 'Cuba', CVE: 'Cape Verde', CZK: 'Czech Republic', DJF: 'Djibouti', DKK: 'Denmark', DOP: 'Dominican Republic', DZD: 'Algeria', EGP: 'Egypt', ERN: 'Eritrea', ETB: 'Ethiopia', EUR: 'Eurozone', FJD: 'Fiji', FKP: 'Falkland Islands', GBP: 'United Kingdom', GEL: 'Georgia', GHS: 'Ghana', GIP: 'Gibraltar', GMD: 'Gambia', GNF: 'Guinea', GTQ: 'Guatemala', GYD: 'Guyana', HKD: 'Hong Kong', HNL: 'Honduras', HTG: 'Haiti', HUF: 'Hungary', IDR: 'Indonesia', ILS: 'Israel', INR: 'India', IQD: 'Iraq', IRR: 'Iran', ISK: 'Iceland', JMD: 'Jamaica', JOD: 'Jordan', JPY: 'Japan', KES: 'Kenya', KGS: 'Kyrgyzstan', KHR: 'Cambodia', KMF: 'Comoros', KPW: 'North Korea', KRW: 'South Korea', KWD: 'Kuwait', KYD: 'Cayman Islands', KZT: 'Kazakhstan', LAK: 'Laos', LBP: 'Lebanon', LKR: 'Sri Lanka', LRD: 'Liberia', LSL: 'Lesotho', LYD: 'Libya', MAD: 'Morocco', MDL: 'Moldova', MGA: 'Madagascar', MKD: 'North Macedonia', MMK: 'Myanmar', MNT: 'Mongolia', MOP: 'Macau', MRU: 'Mauritania', MUR: 'Mauritius', MVR: 'Maldives', MWK: 'Malawi', MXN: 'Mexico', MYR: 'Malaysia', MZN: 'Mozambique', NAD: 'Namibia', NGN: 'Nigeria', NIO: 'Nicaragua', NOK: 'Norway', NPR: 'Nepal', NZD: 'New Zealand', OMR: 'Oman', PAB: 'Panama', PEN: 'Peru', PGK: 'Papua New Guinea', PHP: 'Philippines', PKR: 'Pakistan', PLN: 'Poland', PYG: 'Paraguay', QAR: 'Qatar', RON: 'Romania', RSD: 'Serbia', RUB: 'Russia', RWF: 'Rwanda', SAR: 'Saudi Arabia', SBD: 'Solomon Islands', SCR: 'Seychelles', SDG: 'Sudan', SEK: 'Sweden', SGD: 'Singapore', SHP: 'Saint Helena', SLE: 'Sierra Leone', SOS: 'Somalia', SRD: 'Suriname', SSP: 'South Sudan', STN: 'SÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂ¿ÃÂÃÂÃÂÃÂ½o TomÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂ¿ÃÂÃÂÃÂÃÂ½ & PrÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂ¿ÃÂÃÂÃÂÃÂ½ncipe', SYP: 'Syria', SZL: 'Eswatini', THB: 'Thailand', TJS: 'Tajikistan', TMT: 'Turkmenistan', TND: 'Tunisia', TOP: 'Tonga', TRY: 'Turkey', TTD: 'Trinidad & Tobago', TWD: 'Taiwan', TZS: 'Tanzania', UAH: 'Ukraine', UGX: 'Uganda', USD: 'United States', UYU: 'Uruguay', UZS: 'Uzbekistan', VES: 'Venezuela', VND: 'Vietnam', VUV: 'Vanuatu', WST: 'Samoa', XAF: 'Central Africa (CEMAC)', XCD: 'Eastern Caribbean', XOF: 'West Africa (UEMOA)', XPF: 'French Pacific', YER: 'Yemen', ZAR: 'South Africa', ZMW: 'Zambia', ZWL: 'Zimbabwe' };
 
 // Shown as a prefix inside every amount field so what you're typing is
 // unambiguous at a glance -- codes without one universally-recognized
@@ -327,6 +327,18 @@ function DirhamBarLabelVerticalSideways(props) {
       <text x={startX + 9.5} y={cy} dy={3} fontSize={8.5} fill="var(--text)">{numStr}</text>
     </g>
   );
+}
+function shortSourceLabel(fullName) {
+  if (!fullName) return fullName;
+  const CODE = { 'Credit Card': 'CC', 'Debit Card': 'DC', 'Bank Account': 'BA', 'Salary Deduction': 'Salary' };
+  const m = fullName.match(/^([^(]+?)\s*(?:\((.+)\))?$/);
+  if (!m) return fullName;
+  const base = m[1].trim();
+  const inner = m[2];
+  const code = CODE[base] || base;
+  if (!inner) return code;
+  const bankCode = inner.split('(')[0].trim();
+  return bankCode ? `${code}-${bankCode}` : code;
 }
 function DirhamBarLabelVerticalColumn(props) {
   const { x, y, width, value } = props;
@@ -604,7 +616,7 @@ function DirhamGlyph({ size = '1em' }) {
 
 // Prefix shown inside every amount field: the real Dirham glyph for AED
 // households, or the plain text symbol for any other currency (those all
-// already have a normal Unicode symbol -- $, ÃÂÃÂ¯ÃÂÃÂ¿ÃÂÃÂ½, ÃÂÃÂ¯ÃÂÃÂ¿ÃÂÃÂ½, ÃÂÃÂ¯ÃÂÃÂ¿ÃÂÃÂ½ -- so there's nothing
+// already have a normal Unicode symbol -- $, ÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂ¿ÃÂÃÂÃÂÃÂ½, ÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂ¿ÃÂÃÂÃÂÃÂ½, ÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂ¿ÃÂÃÂÃÂÃÂ½ -- so there's nothing
 // to substitute there).
 function CurrencyPrefix() {
   if (CURRENT_CURRENCY === 'AED') return <DirhamGlyph />;
@@ -656,7 +668,7 @@ function formAmountPx(value) {
 // same "$4,500" convention the editable amount fields already use, instead
 // of the old "AED 4,500.00" (code + space) text format. A leading minus
 // sign (for negative/over-budget figures) is pulled out in front of the
-// symbol -- "-AED50" reads oddly, "-ÃÂÃÂ¯ÃÂÃÂ¿ÃÂÃÂ½50" reads the way "-$50" would.
+// symbol -- "-AED50" reads oddly, "-ÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂ¿ÃÂÃÂÃÂÃÂ½50" reads the way "-$50" would.
 function Amt({ value }) {
   const v = Number(value) || 0;
   const neg = v < 0;
@@ -5033,9 +5045,9 @@ function ReportHtmlView({ data }) {
           // Payment-source breakdown -- Phase 2 addition (Credit Card / Debit
           // Card / Bank Account / Cash spend as a chart, per explicit request
           // to use a chart-toggle option here instead of new dashboard tiles).
-          <ResponsiveContainer width="100%" height={big ? (isMobile ? 420 : 480) : 400}>
-            <BarChart data={paymentSourceData} margin={{ top: 55, right: 20, left: 20, bottom: 20 }}>
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={-90} textAnchor="end" height={big ? 190 : 150} />
+          <ResponsiveContainer width="100%" height={big ? (isMobile ? 340 : 400) : 320}>
+            <BarChart data={paymentSourceData} margin={{ top: 55, right: 20, left: 30, bottom: 20 }}>
+              <XAxis dataKey="name" tickFormatter={shortSourceLabel} tick={{ fontSize: 11 }} interval={0} angle={-20} textAnchor="end" height={50} />
               <YAxis tickFormatter={(v) => fmt(v)} width={80} tick={{ fontSize: 11 }} />
               <Tooltip formatter={(v) => fmt(v)} cursor={false} labelStyle={{ color: '#1a1a1a', fontWeight: 600 }} />
               <Bar dataKey="value" radius={[6, 6, 0, 0]} isAnimationActive={false} barSize={big ? undefined : 26}>
@@ -5220,7 +5232,7 @@ function ReportHtmlView({ data }) {
                 onClick={() => setProfileMenuOpen((o) => !o)}
               >
                 <User size={18} />
-<span className="corner-profile-label" title="This updates automatically -- if a change doesn't look right, reload the page.">{displayNameForEmail(session.user.email)} | {formatVersionBadge().replace(' ÃÂÃÂ¯ÃÂÃÂ¿ÃÂÃÂ½ ', ' | ')}</span>
+<span className="corner-profile-label" title="This updates automatically -- if a change doesn't look right, reload the page.">{displayNameForEmail(session.user.email)} | {formatVersionBadge().replace(' ÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂ¿ÃÂÃÂÃÂÃÂ½ ', ' | ')}</span>
               </button>
               {profileMenuOpen && profileDropdownPos && createPortal(
                 <div className="profile-dropdown" style={{ position: 'fixed', top: profileDropdownPos.top, right: profileDropdownPos.right, zIndex: 500 }}>
@@ -5902,7 +5914,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             <h2 className="panel-title-themed" style={{ fontSize: 16 }}>Your Investment Records</h2>
             <div>
               <div className="muted-small" style={{ marginBottom: 14, fontSize: 13, background: 'rgba(14,165,233,0.12)', border: '1px solid rgba(14,165,233,0.35)', borderRadius: 8, padding: '10px 12px' }}>
-                <span style={{ fontWeight: 700, color: '#0ea5e9', marginRight: 4 }}>ÃÂÃÂ¯ÃÂÃÂ¿ÃÂÃÂ½</span>
+                <span style={{ fontWeight: 700, color: '#0ea5e9', marginRight: 4 }}>ÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂ¿ÃÂÃÂÃÂÃÂ½</span>
                 {investments.length} {investments.length === 1 ? 'entry' : 'entries'} -- Invested <strong><Amt value={investmentTotals.principal} /></strong> -- Current <strong style={{ color: '#0ea5e9' }}><Amt value={investmentTotals.current} /></strong> -- <strong style={{ color: investmentTotals.gain >= 0 ? '#1a7f37' : '#d1242f' }}>{investmentTotals.gain >= 0 ? 'Gain' : 'Loss'} <Amt value={Math.abs(investmentTotals.gain)} /></strong>
               </div>
               {investments.length === 0 ? (
@@ -8183,7 +8195,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     onClick={() => setMobileReportOpen(false)}
                     style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: 16, fontWeight: 600, cursor: 'pointer', padding: 0 }}
                   >
-                    {'ÃÂÃÂ¯ÃÂÃÂ¿ÃÂÃÂ½'} Back to App
+                    {'ÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂ¿ÃÂÃÂÃÂÃÂ½'} Back to App
                   </button>
                 </div>
                 <iframe
