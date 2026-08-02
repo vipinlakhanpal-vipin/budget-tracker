@@ -6375,7 +6375,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
               <div className="empty">No income added for {monthLabel(currentMonth)} yet.</div>
             ) : filteredIncomeForMonth.length === 0 ? (
               <div className="empty">No income matches the current filter.</div>
-            ) : isMobile ? (
+            ) : (
               <div className="mobile-txn-list">
                 {filteredIncomeForMonth.map((i) => {
                   const title = (incomeDrafts[i.id]?.name || i.name || 'Income').trim();
@@ -6401,86 +6401,6 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     </button>
                   );
                 })}
-              </div>
-            ) : (
-              <div className="table-scroll">
-              <table className="responsive-table" style={{ marginTop: 6, fontSize: 11 }}>
-                <colgroup>
-                  {/* Member only ever shows a first name now (displayNameForEmail),
-                      so its old 26% (same as Source) was reserving far more room
-                      than it needs -- that unused space read as a big gap next to
-                      the Amount column. Narrowed to 16% and redistributed to
-                      Source/Month/delete. */}
-                  <col style={{ width: '30%' }} /><col style={{ width: '16%' }} /><col style={{ width: '16%' }} />
-                  <col style={{ width: '24%' }} /><col style={{ width: '14%' }} />
-                </colgroup>
-                <thead>
-                  <tr><th>Source</th><th>Member</th><th>Amount</th><th>Month</th><th></th></tr>
-                </thead>
-                <tbody>
-                  {filteredIncomeForMonth.map((i) => (
-                    <tr key={i.id}>
-                      <td data-label="Source">
-                        <input
-                          type="text"
-                          style={{ fontSize: 11 }}
-                          value={incomeDrafts[i.id]?.name ?? ''}
-                          onChange={(e) => updateIncomeDraftField(i.id, 'name', e.target.value)}
-                          onBlur={(e) => commitIncomeField(i.id, 'name', e.target.value)}
-                        />
-                        {/* Attachment icon removed from here -- it already
-                            shows next to the delete icon on the right (see
-                            .row-actions below), so showing it twice per row
-                            was redundant. Note icon stays, since it has no
-                            other home. */}
-                        {i.notes && (
-                          <div className="row-attach-icons">
-                            <button type="button" className="row-icon-btn" title={i.notes} onClick={() => setNotePopup(i.notes)}>
-                              <StickyNote size={11} />
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                      <td className="muted-small" data-label="Member">{displayNameForEmail(i.member_email)}</td>
-                      <td data-label="Amount">
-                        <div className="amount-field-wrap tight">
-                          <span className="currency-prefix"><CurrencyPrefix /></span>
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            style={{ fontSize: 11, '--amt-px': tightAmountPx(incomeDrafts[i.id]?.amount) + 'px' }}
-                            value={incomeDrafts[i.id]?.amount ?? ''}
-                            onChange={(e) => updateIncomeDraftField(i.id, 'amount', e.target.value)}
-                            onBlur={(e) => commitIncomeField(i.id, 'amount', e.target.value)}
-                          />
-                        </div>
-                      </td>
-                      <td data-label="Month">
-                        <input
-                          type="month"
-                          style={{ fontSize: 11, width: '100%', textAlign: 'right' }}
-                          value={incomeDrafts[i.id]?.month ?? ''}
-                          onChange={(e) => commitIncomeField(i.id, 'month', e.target.value)}
-                        />
-                      </td>
-                      <td>
-                        <div className="row-actions">
-                          <button type="button" className="row-icon-btn" title="Edit" onClick={() => setEditingIncomeId(i.id)}>
-                            <Pencil size={12} />
-                          </button>
-                          {getRowAttachments('incomes', i.id).length > 0 && (
-                            <button type="button" className="row-icon-btn" title="View attachments" onClick={() => openAttachmentList('incomes', i.id, i.name)}>
-                              <Paperclip size={12} />
-                            </button>
-                          )}
-                          <button className="del" onClick={() => handleDeleteIncome(i.id, i.name)} title="Delete"><Trash2 size={14} /></button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
               </div>
             )}
             {incomeForMonth.length > 0 && (
@@ -6866,7 +6786,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
               <div className="empty">No fixed expenses apply to {monthLabel(currentMonth)}.</div>
             ) : filteredRecurringForMonth.length === 0 ? (
               <div className="empty">No fixed expenses match the current filter.</div>
-            ) : isMobile ? (
+            ) : (
               <div className="mobile-txn-list">
                 {filteredRecurringForMonth.map((r) => {
                   const catIdx = categories.findIndex((c) => c.id === r.category_id);
@@ -6896,174 +6816,6 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     </button>
                   );
                 })}
-              </div>
-            ) : (
-              <div className="table-scroll">
-              {/* Switched from percentage columns to fixed pixel widths (with
-                  min-width on the table itself) after repeatedly having to
-                  steal a percentage point from one column to fix another --
-                  every column here is already at the smallest width its own
-                  content needs, so there was no more percentage slack left
-                  to give Name more room without re-clipping something we'd
-                  just fixed. Fixed px widths give every column exactly what
-                  it needs; if that adds up to more than the panel's visible
-                  width, .table-scroll's horizontal scroll handles the rest
-                  (same technique already used for .users-table). */}
-              <table className="responsive-table" style={{ marginTop: 14, fontSize: 11, minWidth: 851 }}>
-                <colgroup>
-                  {/* Widened Start/End/Due date so the native dd/mm/yyyy text
-                      never clips its year, and widened Payment so its own
-                      dropdown arrow + a stacked bank name aren't clipped --
-                      both confirmed live. But NOT wide enough to reintroduce
-                      horizontal scroll: per explicit feedback the table must
-                      fit the panel with zero scroll, so Name/Category/Amount/
-                      delete gave up width to compensate. Total (851px) was
-                      confirmed live to sit safely under this panel's actual
-                      content width (~882px measured live), and every date/
-                      payment/delete value was individually re-confirmed
-                      non-clipped (scrollWidth <= clientWidth) at these exact
-                      widths before shipping. */}
-                  <col style={{ width: '110px' }} /><col style={{ width: '105px' }} /><col style={{ width: '80px' }} />
-                  <col style={{ width: '100px' }} /><col style={{ width: '100px' }} /><col style={{ width: '110px' }} />
-                  <col style={{ width: '105px' }} /><col style={{ width: '101px' }} /><col style={{ width: '40px' }} />
-                </colgroup>
-                <thead>
-                  <tr><th>Name</th><th>Category</th><th>Amount</th><th>Start</th><th>End</th><th>Repeats</th><th>Due date</th><th>Payment</th><th></th></tr>
-                </thead>
-                <tbody>
-                  {filteredRecurringForMonth.map((r) => (
-                    <tr key={r.id}>
-                      <td data-label="Name">
-                        <input
-                          type="text"
-                          style={{ width: '100%', minWidth: 0, fontSize: 11 }}
-                          value={recurringDrafts[r.id]?.name ?? ''}
-                          onChange={(e) => updateRecurringDraftField(r.id, 'name', e.target.value)}
-                          onBlur={(e) => commitRecurringField(r.id, 'name', e.target.value)}
-                        />
-                        {/* Attachment icon removed from here -- it already
-                            shows next to the delete icon on the right (see
-                            .row-actions below), so showing it twice per row
-                            was redundant. Note icon stays, since it has no
-                            other home. */}
-                        {r.notes && (
-                          <div className="row-attach-icons">
-                            <button type="button" className="row-icon-btn" title={r.notes} onClick={() => setNotePopup(r.notes)}>
-                              <StickyNote size={11} />
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                      <td data-label="Category">
-                        <select
-                          style={{ fontSize: 11, width: '100%' }}
-                          value={recurringDrafts[r.id]?.categoryId ?? ''}
-                          onChange={(e) => commitRecurringField(r.id, 'categoryId', e.target.value)}
-                        >
-                          {categories.map((c) => (
-                            <option key={c.id} value={c.id}>{c.name}</option>
-                          ))}
-                        </select>
-                      </td>
-                      <td data-label="Amount">
-                        <div className="amount-field-wrap tight">
-                          <span className="currency-prefix"><CurrencyPrefix /></span>
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            style={{ fontSize: 11, '--amt-px': tightAmountPx(recurringDrafts[r.id]?.amount) + 'px' }}
-                            value={recurringDrafts[r.id]?.amount ?? ''}
-                            onChange={(e) => updateRecurringDraftField(r.id, 'amount', e.target.value)}
-                            onBlur={(e) => commitRecurringField(r.id, 'amount', e.target.value)}
-                          />
-                        </div>
-                      </td>
-                      <td data-label="Start">
-                        <input
-                          type="date"
-                          style={{ width: '100%', minWidth: 0, fontSize: 11 }}
-                          value={recurringDrafts[r.id]?.startDate ?? ''}
-                          onChange={(e) => updateRecurringDraftField(r.id, 'startDate', e.target.value)}
-                          onBlur={(e) => commitRecurringField(r.id, 'startDate', e.target.value)}
-                        />
-                      </td>
-                      <td data-label="End">
-                        <input
-                          type="date"
-                          style={{ width: '100%', minWidth: 0, fontSize: 11 }}
-                          value={recurringDrafts[r.id]?.endDate ?? ''}
-                          onChange={(e) => updateRecurringDraftField(r.id, 'endDate', e.target.value)}
-                          onBlur={(e) => commitRecurringField(r.id, 'endDate', e.target.value)}
-                        />
-                      </td>
-                      <td data-label="Repeats">
-                        <select
-                          style={{ fontSize: 11, width: '100%' }}
-                          value={recurringDrafts[r.id]?.frequency ?? 'monthly'}
-                          onChange={(e) => commitRecurringField(r.id, 'frequency', e.target.value)}
-                        >
-                          {FREQUENCIES.map((f) => (
-                            <option key={f.value} value={f.value}>{f.label}</option>
-                          ))}
-                        </select>
-                      </td>
-                      <td data-label="Due date">
-                        <input
-                          type="date"
-                          style={{ width: '100%', minWidth: 0, fontSize: 11 }}
-                          value={recurringDrafts[r.id]?.dueDate ?? ''}
-                          onChange={(e) => updateRecurringDraftField(r.id, 'dueDate', e.target.value)}
-                          onBlur={(e) => commitRecurringField(r.id, 'dueDate', e.target.value)}
-                        />
-                      </td>
-                      <td data-label="Payment">
-                        <select
-                          style={{ fontSize: 11, width: '100%', minWidth: 0 }}
-                          value={recurringDrafts[r.id]?.paymentSource ?? 'Cash'}
-                          onChange={(e) => commitRecurringField(r.id, 'paymentSource', e.target.value)}
-                        >
-                          {RECURRING_PAYMENT_SOURCES.map((p) => (
-                            <option key={p} value={p}>{p}</option>
-                          ))}
-                        </select>
-                        {/* Always rendered -- just hidden (not unmounted) when this row's
-                            payment source doesn't need a bank name -- so the Payment cell
-                            reserves the same two-select height on every row regardless of
-                            content, which is what keeps every row in the table the same
-                            height instead of the shorter "Cash" rows looking squashed next
-                            to taller "Bank"/card rows. */}
-                        <select
-                          style={{
-                            fontSize: 11, width: '100%', minWidth: 0, marginTop: 4,
-                            visibility: CARD_PAYMENT_SOURCES.includes(recurringDrafts[r.id]?.paymentSource ?? 'Cash') ? 'visible' : 'hidden',
-                          }}
-                          value={recurringDrafts[r.id]?.paymentBank ?? ''}
-                          onChange={(e) => commitRecurringField(r.id, 'paymentBank', e.target.value)}
-                        >
-                          <option value="">Bank</option>
-                          {BANKS.map((b) => (
-                            <option key={b} value={b}>{b}</option>
-                          ))}
-                        </select>
-                      </td>
-                      <td>
-                        <div className="row-actions">
-                          <button type="button" className="row-icon-btn" title="Edit" onClick={() => setEditingRecurringId(r.id)}>
-                            <Pencil size={12} />
-                          </button>
-                          {getRowAttachments('recurring_expenses', r.id).length > 0 && (
-                            <button type="button" className="row-icon-btn" title="View attachments" onClick={() => openAttachmentList('recurring_expenses', r.id, r.name)}>
-                              <Paperclip size={12} />
-                            </button>
-                          )}
-                          <button className="del" onClick={() => handleDeleteRecurring(r.id, r.name)} title="Delete"><Trash2 size={14} /></button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
               </div>
             )}
             <div className="muted-small" style={{ marginTop: 6 }}>
@@ -7355,7 +7107,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
               <div className="empty">No savings added for {monthLabel(currentMonth)} yet.</div>
             ) : filteredSavingsForMonth.length === 0 ? (
               <div className="empty">No savings match the current filter.</div>
-            ) : isMobile ? (
+            ) : (
               <div className="mobile-txn-list">
                 {filteredSavingsForMonth.map((s) => {
                   const title = (savingsDrafts[s.id]?.name || s.name || 'Savings').trim();
@@ -7381,79 +7133,6 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     </button>
                   );
                 })}
-              </div>
-            ) : (
-              <div className="table-scroll">
-              <table className="responsive-table" style={{ marginTop: 6, fontSize: 11 }}>
-                <colgroup>
-                  <col style={{ width: '32%' }} /><col style={{ width: '24%' }} /><col style={{ width: '24%' }} /><col style={{ width: '10%' }} />
-                </colgroup>
-                <thead>
-                  <tr><th>Name</th><th style={{ textAlign: 'center' }}>Amount</th><th>Month</th><th></th></tr>
-                </thead>
-                <tbody>
-                  {filteredSavingsForMonth.map((s) => (
-                    <tr key={s.id}>
-                      <td data-label="Name">
-                        <input
-                          type="text"
-                          style={{ width: '100%', minWidth: 0, fontSize: 11 }}
-                          value={savingsDrafts[s.id]?.name ?? ''}
-                          onChange={(e) => updateSavingDraftField(s.id, 'name', e.target.value)}
-                          onBlur={(e) => commitSavingField(s.id, 'name', e.target.value)}
-                        />
-                        {/* Attachment icon removed from here -- it already
-                            shows next to the delete icon on the right (see
-                            .row-actions below), so showing it twice per row
-                            was redundant. Note icon stays, since it has no
-                            other home. */}
-                        {s.notes && (
-                          <div className="row-attach-icons">
-                            <button type="button" className="row-icon-btn" title={s.notes} onClick={() => setNotePopup(s.notes)}>
-                              <StickyNote size={11} />
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                      <td data-label="Amount">
-                        <div className="amount-field-wrap tight" style={{ margin: '0 auto' }}>
-                          <span className="currency-prefix"><CurrencyPrefix /></span>
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            style={{ fontSize: 11, '--amt-px': tightAmountPx(savingsDrafts[s.id]?.amount) + 'px' }}
-                            value={savingsDrafts[s.id]?.amount ?? ''}
-                            onChange={(e) => updateSavingDraftField(s.id, 'amount', e.target.value)}
-                            onBlur={(e) => commitSavingField(s.id, 'amount', e.target.value)}
-                          />
-                        </div>
-                      </td>
-                      <td data-label="Month">
-                        <input
-                          type="month"
-                          style={{ width: '100%', fontSize: 11, textAlign: 'right' }}
-                          value={savingsDrafts[s.id]?.month ?? ''}
-                          onChange={(e) => commitSavingField(s.id, 'month', e.target.value)}
-                        />
-                      </td>
-                      <td>
-                        <div className="row-actions">
-                          <button type="button" className="row-icon-btn" title="Edit" onClick={() => setEditingSavingId(s.id)}>
-                            <Pencil size={12} />
-                          </button>
-                          {getRowAttachments('savings_goals', s.id).length > 0 && (
-                            <button type="button" className="row-icon-btn" title="View attachments" onClick={() => openAttachmentList('savings_goals', s.id, s.name)}>
-                              <Paperclip size={12} />
-                            </button>
-                          )}
-                          <button className="del" onClick={() => handleDeleteSaving(s.id, s.name)} title="Delete"><Trash2 size={14} /></button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
               </div>
             )}
             {savingsForMonth.length > 0 && (
@@ -7632,7 +7311,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
               <div className="empty">No one-off expenses logged for this month yet.</div>
             ) : filteredMonthExpenses.length === 0 ? (
               <div className="empty">No expenses match the current filter.</div>
-            ) : isMobile ? (
+            ) : (
               // Mobile gets a clean, read-at-a-glance transaction list --
               // colored category icon, description, category + date, and a
               // right-aligned amount -- instead of four always-open input
@@ -7668,117 +7347,6 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     </button>
                   );
                 })}
-              </div>
-            ) : (
-              <div className="table-scroll">
-              <table className="responsive-table" style={{ fontSize: 11 }}>
-                <colgroup>
-                  <col style={{ width: '11%' }} /><col style={{ width: '15%' }} /><col style={{ width: '18%' }} />
-                  <col style={{ width: '10%' }} /><col style={{ width: '18%' }} /><col style={{ width: '7%' }} />
-                  <col style={{ width: '6%' }} />
-                </colgroup>
-                <thead>
-                  <tr><th>Date</th><th>Category</th><th>Description</th><th style={{ textAlign: 'center' }}>Amount</th><th>Payment</th><th style={{ textAlign: 'center' }}>By</th><th></th></tr>
-                </thead>
-                <tbody>
-                  {filteredMonthExpenses.map((e) => (
-                    <tr key={e.id}>
-                      <td data-label="Date">
-                        <input
-                          type="date"
-                          style={{ width: '100%', minWidth: 0, fontSize: 11 }}
-                          value={expenseDrafts[e.id]?.date ?? ''}
-                          onChange={(ev) => updateExpenseDraftField(e.id, 'date', ev.target.value)}
-                          onBlur={(ev) => commitExpenseField(e.id, 'date', ev.target.value)}
-                        />
-                      </td>
-                      <td data-label="Category">
-                        <select
-                          style={{ fontSize: 11, width: '100%' }}
-                          value={expenseDrafts[e.id]?.categoryId ?? ''}
-                          onChange={(ev) => commitExpenseField(e.id, 'categoryId', ev.target.value)}
-                        >
-                          {categories.map((c) => (
-                            <option key={c.id} value={c.id}>{c.name}</option>
-                          ))}
-                        </select>
-                      </td>
-                      <td data-label="Description">
-                        <input
-                          type="text"
-                          style={{ width: '100%', minWidth: 0, fontSize: 11 }}
-                          value={expenseDrafts[e.id]?.description ?? ''}
-                          onChange={(ev) => updateExpenseDraftField(e.id, 'description', ev.target.value)}
-                          onBlur={(ev) => commitExpenseField(e.id, 'description', ev.target.value)}
-                        />
-                        {/* Attachment icon removed from here -- it already
-                            shows next to the delete icon on the right (see
-                            .row-actions below), so showing it twice per row
-                            was redundant. Note icon stays, since it has no
-                            other home. */}
-                        {e.notes && (
-                          <div className="row-attach-icons">
-                            <button type="button" className="row-icon-btn" title={e.notes} onClick={() => setNotePopup(e.notes)}>
-                              <StickyNote size={11} />
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                      <td data-label="Amount">
-                        <div className="amount-field-wrap tight">
-                          <span className="currency-prefix"><CurrencyPrefix /></span>
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            style={{ fontSize: 11, '--amt-px': tightAmountPx(expenseDrafts[e.id]?.amount) + 'px' }}
-                            value={expenseDrafts[e.id]?.amount ?? ''}
-                            onChange={(ev) => updateExpenseDraftField(e.id, 'amount', ev.target.value)}
-                            onBlur={(ev) => commitExpenseField(e.id, 'amount', ev.target.value)}
-                          />
-                        </div>
-                      </td>
-                      <td data-label="Payment">
-                        <select
-                          style={{ fontSize: 11, width: '100%', minWidth: 0 }}
-                          value={expenseDrafts[e.id]?.paymentSource ?? 'Cash'}
-                          onChange={(ev) => { const src = ev.target.value; const curBank = expenseDrafts[e.id]?.paymentBank; commitExpenseField(e.id, 'paymentSource', src, src !== 'Cash' && !curBank ? { paymentBank: getDefaultBankFor(src) } : {}); }}
-                        >
-                          {PAYMENT_SOURCES.map((p) => (
-                            <option key={p} value={p}>{p}</option>
-                          ))}
-                        </select>
-                        {/* v1.87: swapped the old plain <select> (162 hardcoded <option>
-                            elements) for the same searchable input+datalist combobox already
-                            used for Bank on the Investments form and the Add-expense form
-                            above -- a native <select> with this many options is exactly the
-                            kind of control that behaves unreliably via touch/mobile pickers,
-                            which is the most likely cause of repeated "bank field stuck"
-                            reports on this specific inline-edit row (the Add-expense form's
-                            own Bank field uses this same combobox and was never reported as
-                            broken). Still hidden (not unmounted) via visibility so row height
-                            stays constant. Commits onBlur like every other inline text field
-                            in this row (Description, Amount) rather than on every keystroke. */}
-                        <SearchableCombobox value={expenseDrafts[e.id]?.paymentBank ?? ''} onChange={(v) => updateExpenseDraftField(e.id, 'paymentBank', v)} onCommit={(v) => commitExpenseField(e.id, 'paymentBank', v)} options={BANKS} placeholder="Search bank..." style={{ fontSize: 11, width: '100%', minWidth: 0, marginTop: 4, visibility: (expenseDrafts[e.id]?.paymentSource ?? 'Cash') !== 'Cash' ? 'visible' : 'hidden' }} />
-                      </td>
-                      <td data-label="By" className="muted-small" style={{ textAlign: 'center' }}>{displayNameForEmail(e.created_by_email)}</td>
-                      <td>
-                        <div className="row-actions">
-                          <button type="button" className="row-icon-btn" title="Edit" onClick={() => setEditingExpenseId(e.id)}>
-                            <Pencil size={12} />
-                          </button>
-                          {getRowAttachments('expenses', e.id).length > 0 && (
-                            <button type="button" className="row-icon-btn" title="View attachments" onClick={() => openAttachmentList('expenses', e.id, expenseDrafts[e.id]?.description || 'Expense')}>
-                              <Paperclip size={12} />
-                            </button>
-                          )}
-                          <button className="del" onClick={() => handleDeleteExpense(e.id)} title="Delete"><Trash2 size={14} /></button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
               </div>
             )}
             {monthExpenses.length > 0 && (
