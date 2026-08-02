@@ -5034,8 +5034,7 @@ function ReportHtmlView({ data }) {
           // Card / Bank Account / Cash spend as a chart, per explicit request
           // to use a chart-toggle option here instead of new dashboard tiles).
           <ResponsiveContainer width="100%" height={big ? (isMobile ? 340 : 400) : 320}>
-            <BarChart data={paymentSourceData} margin={{ top: 20, right: 20, left: 0, bottom: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" />
+            <BarChart data={paymentSourceData} margin={{ top: 55, right: 20, left: 0, bottom: 20 }}>
               <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={-20} textAnchor="end" height={50} />
               <YAxis tickFormatter={(v) => fmt(v)} width={80} tick={{ fontSize: 11 }} />
               <Tooltip formatter={(v) => fmt(v)} />
@@ -5043,7 +5042,7 @@ function ReportHtmlView({ data }) {
                 {paymentSourceData.map((_, i) => (
                   <Cell key={i} fill={COLORS[i % COLORS.length]} />
                 ))}
-                <LabelList dataKey="value" position="top" formatter={(v) => fmt(v)} style={{ fontSize: 11, fill: 'var(--text)' }} />
+                <LabelList dataKey="value" position="top" content={DirhamBarLabelVerticalColumn} />
               </Bar>
             </BarChart>
           </ResponsiveContainer>
