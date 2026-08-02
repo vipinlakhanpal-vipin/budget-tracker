@@ -5038,13 +5038,7 @@ function ReportHtmlView({ data }) {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={-20} textAnchor="end" height={50} />
               <YAxis tickFormatter={(v) => fmt(v)} width={80} tick={{ fontSize: 11 }} />
-              <Tooltip
-                cursor={{ fill: 'var(--border)', opacity: 0.35 }}
-                formatter={(v) => fmt(v)}
-                contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8 }}
-                labelStyle={{ color: 'var(--text)' }}
-                itemStyle={{ color: 'var(--text)' }}
-              />
+              <Tooltip formatter={(v) => fmt(v)} />
               <Bar dataKey="value" radius={[6, 6, 0, 0]}>
                 {paymentSourceData.map((_, i) => (
                   <Cell key={i} fill={COLORS[i % COLORS.length]} />
