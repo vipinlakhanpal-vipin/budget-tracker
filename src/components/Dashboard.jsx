@@ -757,6 +757,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     currency: CURRENT_CURRENCY,
   });
   const [investFxRates, setInvestFxRates] = useState(null);
+  const [showInvestmentMoreFields, setShowInvestmentMoreFields] = useState(false);
   const [investChartType, setInvestChartType] = useState('bar-h');
   const [editingInvestmentId, setEditingInvestmentId] = useState(null);
   function investToBase(amount, cur) {
@@ -5888,7 +5889,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   placeholder="Same as principal if unsure"
                 />
               </div>
-              {investmentForm.investmentType === 'Fixed Deposit' ? (
+              {showInvestmentMoreFields && (investmentForm.investmentType === 'Fixed Deposit' ? (
                 <div className="field" style={{ flex: '0 1 130px' }}>
                   <label>Interest Rate (% p.a.)</label>
                   <input
@@ -5908,7 +5909,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     placeholder="0.00"
                   />
                 </div>
-              )}
+              ))}
               <div className="field" style={{ flex: '0 1 120px' }}>
                 <label>Start Date</label>
                 <input
@@ -5917,7 +5918,17 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   onChange={(e) => setInvestmentForm({ ...investmentForm, startDate: e.target.value })}
                 />
               </div>
-              {investmentForm.investmentType === 'Fixed Deposit' && (
+              
+              <div className="field" style={{ flex: '0 0 auto', alignSelf: 'flex-end' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowInvestmentMoreFields((s) => !s)}
+                  style={{ background: 'none', border: 'none', color: 'var(--muted)', textDecoration: 'underline', cursor: 'pointer', fontSize: 12, padding: '10px 0', whiteSpace: 'nowrap' }}
+                >
+                  {showInvestmentMoreFields ? 'Hide rate/maturity date' : '+ Rate or maturity date'}
+                </button>
+              </div>
+              {showInvestmentMoreFields && (investmentForm.investmentType === 'Fixed Deposit' && (
                 <div className="field" style={{ flex: '0 1 120px' }}>
                   <label>Maturity Date</label>
                   <input
@@ -5926,7 +5937,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     onChange={(e) => setInvestmentForm({ ...investmentForm, maturityDate: e.target.value })}
                   />
                 </div>
-              )}
+              ))}
               {editingInvestmentId && (
                 <div className="field" style={{ flex: '0 1 140px' }}>
                   <label>Status</label>
@@ -5963,49 +5974,52 @@ I can help you track expenses, understand spending patterns, create budgets, and
               {investments.length === 0 ? (
                 <div className="empty">No investments added yet.</div>
               ) : (
-                <div className="table-scroll">
-                  <table className="responsive-table investments-records-table" style={{ fontSize: 11 }}>
-                    <thead>
-                      <tr>
-                        <th>Type</th><th>Name</th><th>Institution</th><th>Principal</th><th>Current Value</th><th>Rate / SIP</th><th>Start Date</th><th>Maturity</th><th>Status</th><th>Gain / Loss</th><th></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {investments.map((inv) => {
-                        const cur = investAccruedValue(inv);
-                        const gain = cur - Number(inv.principal_amount || 0);
-                        const estFlag = investIsEstimated(inv);
-                        return (
-                          <tr key={inv.id}>
-                            <td data-label="Type">{inv.investment_type}</td>
-                            <td data-label="Name">{inv.name}</td>
-                            <td data-label="Institution">{inv.institution || '--'}</td>
-                            <td data-label="Principal"><AmtCur value={inv.principal_amount} currency={inv.currency} /></td>
-                            <td data-label="Current Value"><AmtCur value={cur} currency={inv.currency} />{estFlag && <span className="muted-small" style={{ marginLeft: 4 }}>(est.)</span>}</td>
-                            <td data-label="Rate / SIP">
-                              {inv.investment_type === 'Fixed Deposit'
-                                ? (inv.interest_rate != null ? `${inv.interest_rate}% p.a.` : '--')
-                                : (inv.sip_amount != null ? <>{fmt(inv.sip_amount)}/mo</> : '--')}
-                            </td>
-                            <td data-label="Start Date">{inv.start_date || '--'}</td>
-                            <td data-label="Maturity">{inv.maturity_date || '--'}</td>
-                            <td data-label="Status">{investDisplayStatus(inv)}</td>
-                            <td data-label="Gain / Loss" style={{ color: gain >= 0 ? '#1a7f37' : '#d1242f', fontWeight: 600 }}>
-                              {gain >= 0 ? '+' : '-'}<AmtCur value={Math.abs(gain)} currency={inv.currency} />
-                            </td>
-                            <td data-label="">
-                              <button type="button" className="row-icon-btn" title="Edit" onClick={() => startEditInvestment(inv)}>
-                                <Pencil size={13} />
-                              </button>
-                              <button type="button" className="row-icon-btn" title="Delete" onClick={() => handleDeleteInvestment(inv.id, inv.name)}>
-                                <Trash2 size={13} />
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                <div className="mobile-txn-list">
+                  {investments.map((inv) => {
+                    const cur = investAccruedValue(inv);
+                    const gain = cur - Number(inv.principal_amount || 0);
+                    const estFlag = investIsEstimated(inv);
+                    const isFD = inv.investment_type === 'Fixed Deposit';
+                    return (
+                      <button
+                        key={inv.id}
+                        type="button"
+                        className="mobile-txn-row"
+                        onClick={() => startEditInvestment(inv)}
+                      >
+                        <span className="mobile-txn-icon" style={{ background: isFD ? '#8b5cf6' : '#0d9488' }}>
+                          {isFD ? 'FD' : 'MF'}
+                        </span>
+                        <span className="mobile-txn-mid">
+                          <span className="mobile-txn-title">{inv.name}</span>
+                          <span className="mobile-txn-sub">
+                            {inv.institution || '--'}
+                            {isFD
+                              ? (inv.interest_rate != null ? ` \u00b7 ${inv.interest_rate}% p.a.` : '')
+                              : (inv.sip_amount != null ? ` \u00b7 ${fmt(inv.sip_amount)}/mo` : '')}
+                            {inv.start_date ? ` \u00b7 Started ${inv.start_date}` : ''}
+                          </span>
+                        </span>
+                        <span style={{ textAlign: 'right', flex: '0 0 auto' }}>
+                          <span className="mobile-txn-amount"><AmtCur value={cur} currency={inv.currency} />{estFlag && <span className="muted-small" style={{ marginLeft: 4 }}>(est.)</span>}</span>
+                          <div className="muted-small" style={{ marginTop: 2 }}>{investDisplayStatus(inv)}{inv.maturity_date ? ` \u00b7 ${inv.maturity_date}` : ''}</div>
+                          <div style={{ fontSize: 12, fontWeight: 600, marginTop: 2, color: gain >= 0 ? '#1a7f37' : '#d1242f' }}>
+                            {gain >= 0 ? '+' : '-'}<AmtCur value={Math.abs(gain)} currency={inv.currency} />
+                          </div>
+                          <span
+                            role="button"
+                            tabIndex={0}
+                            title="Delete"
+                            onClick={(e) => { e.stopPropagation(); handleDeleteInvestment(inv.id, inv.name); }}
+                            onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); handleDeleteInvestment(inv.id, inv.name); } }}
+                            style={{ display: 'inline-flex', marginTop: 4, cursor: 'pointer', color: 'var(--muted)' }}
+                          >
+                            <Trash2 size={13} />
+                          </span>
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -7606,7 +7620,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             // every app release -- only when Help itself is edited), so the
             // little "Help updated as of vX.XX" marker next to the tour button
             // tells users this text is actually in sync with what they're using.
-            const HELP_LAST_UPDATED_VERSION = '2.59';
+            const HELP_LAST_UPDATED_VERSION = '2.60';
             const helpTopics = [
 { key: 'updates', title: "What's New", body: <>Latest updates (Jul 31, 2026): Added a private Investments tracker (Fixed Deposits and Mutual Funds/SIPs) with its own tab, currency + live FX conversion, auto-calculated gain/loss, and a pencil icon to edit any entry. The Report now includes a Payment-Source-wise spend breakdown on screen and in the downloadable/emailed PDF. PDF report category names no longer get cut off -- long names now auto-shrink to fit instead of truncating with "...". Every row across Income, Fixed Expenses, Regular Expenses, and Savings now has a pencil icon (matching Investments) that opens a proper edit sheet instead of relying only on inline editing. The small "Updated" confirmation toast, and the popup for reading a saved note, now always appear centered in the app instead of sometimes drifting toward the browser's own tab bar on mobile.</> },
               { key: 'home', title: 'Dashboard', body: <>Shows just the dashboard (summary cards and totals), nothing else. Below it, a bigger "Explore" section holds the same Spending by category chart (Pie/Bar/Pareto/Treemap), AI Insights, and Budget Coach, sized larger so there's more room to look through them. Clicking Income, Fixed Expenses, Regular Expenses, Savings, Report, Settings, or Help scrolls back up to the top and switches to that tab as usual.</> },
