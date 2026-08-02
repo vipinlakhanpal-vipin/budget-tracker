@@ -4988,7 +4988,6 @@ function ReportHtmlView({ data }) {
                 480px-tall/20px-wide desktop layout assumes -- otherwise bars
                 and their rotated labels start overlapping each other. */}
             <BarChart data={pieData} layout="horizontal" margin={{ top: big ? (isMobile ? 24 : 46) : 20, right: 20, left: 0, bottom: 70 }} barCategoryGap={big ? '20%' : '25%'}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis
                 type="category"
                 dataKey="name"
@@ -5043,7 +5042,6 @@ function ReportHtmlView({ data }) {
                 more categories visible per screen, per explicit request. */}
             <ResponsiveContainer width="100%" height={barNeededHeight}>
               <BarChart data={pieData} layout="vertical" margin={{ top: 5, right: big ? 60 : 55, left: 10, bottom: 5 }} barCategoryGap={big ? '35%' : '30%'}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                 <XAxis type="number" tick={{ fontSize: big ? 11 : 8.5 }} hide />
                 <YAxis
                   type="category"
@@ -5095,7 +5093,6 @@ function ReportHtmlView({ data }) {
         ) : (
           <ResponsiveContainer width="100%" height={big ? (isMobile ? 380 : 520) : 340}>
             <ComposedChart data={paretoData} margin={{ top: 20, right: 30, left: 0, bottom: 60 }}>
-              <CartesianGrid strokeDasharray="3 3" />
               <XAxis
                 dataKey="name"
                 tick={{ fontSize: big ? (isMobile ? paretoFontSize : 12) : paretoFontSize }}
@@ -7966,7 +7963,6 @@ I can help you track expenses, understand spending patterns, create budgets, and
                       return (
                         <ResponsiveContainer width="100%" height={Math.max(220, investments.length * 40)}>
                           <ComposedChart data={paretoData} margin={{ top: 8, right: 24, left: 8, bottom: 40 }}>
-                            <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="name" tick={{ fontSize: 9 }} interval={0} angle={-40} textAnchor="end" height={60} />
                             <YAxis yAxisId="left" tick={{ fontSize: 9 }} />
                             <YAxis yAxisId="right" orientation="right" domain={[0, 100]} tick={{ fontSize: 9 }} />
@@ -7982,7 +7978,6 @@ I can help you track expenses, understand spending patterns, create budgets, and
                       return (
                         <ResponsiveContainer width="100%" height={Math.max(220, investments.length * 40)}>
                           <BarChart data={chartData} margin={{ top: 8, right: 16, left: 8, bottom: 40 }}>
-                            <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="name" tick={{ fontSize: 9 }} interval={0} angle={-40} textAnchor="end" height={60} />
                             <YAxis tick={{ fontSize: 9 }} />
                             <Tooltip formatter={(v) => fmt(v)} />
@@ -8000,7 +7995,6 @@ I can help you track expenses, understand spending patterns, create budgets, and
                           layout="vertical"
                           margin={{ top: 8, right: 16, left: 8, bottom: 8 }}
                         >
-                          <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                           <XAxis type="number" tick={{ fontSize: 9 }} hide />
                           <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 9 }} />
                           <Tooltip formatter={(v) => fmt(v)} />
