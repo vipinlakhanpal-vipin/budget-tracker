@@ -399,7 +399,7 @@ const TOUR_STEPS = [
   {
     selector: '[data-tour="chart-toggle"]',
     title: 'Spending by category',
-    body: 'Switch between Pie, Bar, Pareto, and Treemap to see where your money is going.',
+    body: 'Switch between Pie, Bar, Pareto, Treemap, and By Source to see where your money is going.',
     ensureView: 'home',
   },
   {
@@ -2167,6 +2167,28 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   }, [categories, byCategory]);
 
   const pieData = Object.entries(byCategory).map(([name, value]) => ({ name, value }));
+
+  // Payment-source breakdown for the "By Source" chart-toggle option (Phase 2,
+  // per explicit request: show Credit Card / Debit Card / Bank Account spend on
+  // the Dashboard as a chart rather than new tiles). Same data scope as
+  // byCategory above (rangeExpenses + recurringForMonth) so the two toggle
+  // options always describe the exact same pool of spending, just grouped
+  // differently. 'Bank' / 'Salary' are Fixed Expenses-only payment sources
+  // (see RECURRING_PAYMENT_SOURCES) -- relabeled here for a clearer chart.
+  const byPaymentSource = useMemo(() => {
+    const m = {};
+    const label = (src) => (src === 'Bank' ? 'Bank Account' : src === 'Salary' ? 'Salary Deduction' : src);
+    rangeExpenses.forEach((e) => {
+      const name = label(e.payment_source || 'Cash');
+      m[name] = (m[name] || 0) + Number(e.amount);
+    });
+    recurringForMonth.forEach((r) => {
+      const name = label(r.payment_source || 'Cash');
+      m[name] = (m[name] || 0) + Number(r.amount);
+    });
+    return m;
+  }, [rangeExpenses, recurringForMonth]);
+  const paymentSourceData = Object.entries(byPaymentSource).map(([name, value]) => ({ name, value }));
 
   // The pie chart specifically (not Bar/Pareto/Treemap) gets capped to its
   // biggest slices with everything else folded into "Other". A pie is the
@@ -4724,6 +4746,12 @@ function ReportHtmlView({ data }) {
       >
         Treemap
       </button>
+      <button
+        className={`btn small ${chartType === 'source' ? '' : 'secondary'}`}
+        onClick={() => setChartType('source')}
+      >
+        By Source
+      </button>
     </div>
   );
 
@@ -4986,6 +5014,24 @@ function ReportHtmlView({ data }) {
             >
               <Tooltip formatter={(v) => fmt(v)} />
             </Treemap>
+          </ResponsiveContainer>
+        ) : chartType === 'source' ? (
+          // Payment-source breakdown -- Phase 2 addition (Credit Card / Debit
+          // Card / Bank Account / Cash spend as a chart, per explicit request
+          // to use a chart-toggle option here instead of new dashboard tiles).
+          <ResponsiveContainer width="100%" height={big ? (isMobile ? 340 : 400) : 320}>
+            <BarChart data={paymentSourceData} margin={{ top: 20, right: 20, left: 0, bottom: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+              <YAxis tickFormatter={(v) => fmt(v)} width={80} tick={{ fontSize: 11 }} />
+              <Tooltip formatter={(v) => fmt(v)} />
+              <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                {paymentSourceData.map((_, i) => (
+                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                ))}
+                <LabelList dataKey="value" position="top" formatter={(v) => fmt(v)} style={{ fontSize: 11 }} />
+              </Bar>
+            </BarChart>
           </ResponsiveContainer>
         ) : (
           <ResponsiveContainer width="100%" height={big ? (isMobile ? 380 : 520) : 340}>
@@ -7925,7 +7971,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
               { key: 'savings', title: 'Savings', body: <>Set how much you'd like to set aside for the month, e.g. "Emergency fund" or "Investment". Works exactly like Income: entered fresh per month with no auto-rollover, since the amount you're able to save can change month to month -- add a new row each month, or edit an existing row's Month field forward. Since money you set aside is no longer available to spend, it's treated the same as an expense: it's counted in "Spent so far" and "Combined expenses", and subtracted in "Remaining" and "Net", in addition to getting its own page in the PDF report so you can see planned savings build up over time. It has the same optional note + attachment icons as Regular Expenses.</> },
               { key: 'investments', title: 'Investments', body: <>A private tracker for Fixed Deposits and Mutual Funds/SIPs, separate from your household's Income/Expenses/Savings numbers -- it doesn't affect Spent so far, Remaining, or Net. Add the type, name, bank, currency, principal, and (for FDs) an interest rate and maturity date; current value and gain/loss are calculated automatically, and status moves to Matured/Closed on its own once the maturity date passes. Click the pencil icon on any row to edit it, or the trash icon to remove it. Charts on the right show Pie, Bar, and Pareto views of invested vs. current value.</> },
               { key: 'regmonth', title: 'Regular Expenses for [month]', body: <>Labelled with whichever month you're viewing, this is visible below whichever tab (Income, Fixed Expenses, Regular Expenses, Savings) you're on, so you can see what's been logged without switching tabs. It also auto-saves. It's hidden on Dashboard, which shows only the summary and the Explore section instead.</> },
-              { key: 'chart', title: 'Spending by category chart', body: <>Toggle between Pie, Bar, Pareto, and Treemap. The Pie groups smaller categories into "Other" to stay readable; Bar and Treemap show every category individually. The totals cards above show your combined income, combined expenses (split into Regular, Fixed, and Savings), and what's left of your budget and income after all three are accounted for.</> },
+              { key: 'chart', title: 'Spending by category chart', body: <>Toggle between Pie, Bar, Pareto, Treemap, and By Source. The Pie groups smaller categories into "Other" to stay readable; Bar and Treemap show every category individually. The totals cards above show your combined income, combined expenses (split into Regular, Fixed, and Savings), and what's left of your budget and income after all three are accounted for.</> },
               { key: 'insights', title: 'AI Insights', body: <>Tap Generate below the chart for a short AI-written summary of the month you're viewing (spending patterns, whether you're over budget, and a couple of concrete suggestions). It only runs when you tap the button -- never automatically -- and Refresh regenerates it if your numbers have changed.</> },
               { key: 'coach', title: 'Budget Coach', body: <>Unlike AI Insights (one month at a time), Coach looks across your last 6 months for patterns: a category that keeps going over budget, spending trending up or down, or a savings goal that no longer looks realistic. It only ever writes out suggestions -- it never changes your Settings for you.</> },
                         { key: 'chatbot', title: 'Aria', body: <>Aria is Hearth's built-in AI assistant -- a genuinely capable financial companion, not a scripted FAQ bot. It reasons over your household's real numbers, so you can ask it to dig into why a category ran over budget, compare spending across months, spot trends before they become a problem, or get a specific suggestion for hitting a savings goal, and it answers using your actual data rather than generic advice. It's just as happy to explain how any feature works. Find it as the purple chat button below the logo (on phones) or next to the bell (on desktop).</> },
