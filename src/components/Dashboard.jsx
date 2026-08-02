@@ -5022,7 +5022,7 @@ function ReportHtmlView({ data }) {
           <ResponsiveContainer width="100%" height={big ? (isMobile ? 340 : 400) : 320}>
             <BarChart data={paymentSourceData} margin={{ top: 20, right: 20, left: 0, bottom: 20 }}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+              <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={-20} textAnchor="end" height={50} />
               <YAxis tickFormatter={(v) => fmt(v)} width={80} tick={{ fontSize: 11 }} />
               <Tooltip formatter={(v) => fmt(v)} />
               <Bar dataKey="value" radius={[6, 6, 0, 0]}>
