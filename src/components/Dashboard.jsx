@@ -5280,10 +5280,7 @@ function ReportHtmlView({ data }) {
               <HelpCircle size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
               Help
             </button>
-            <button className={`btn-teal header-tab-btn tab-hide-mobile${activePanel === 'roadmap' ? ' header-tab-btn-active' : ''}`} data-tour="nav-roadmap" onClick={() => togglePanel('roadmap')}>
-              <Sparkles size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
-              Coming Soon
-            </button>
+            
             {/* Color theme picker -- deliberately styled as a multi-color
                 swatch (conic-gradient ring) rather than matching the plain
                 teal/white icon-button family right next to it, so the
@@ -8193,6 +8190,14 @@ I can help you track expenses, understand spending patterns, create budgets, and
                       Admin Console
                     </button>
                   )}
+                  <button
+                    className={`btn-teal ${activePanel === 'roadmap' ? '' : 'secondary'}`}
+                    data-tour="nav-roadmap"
+                    onClick={() => togglePanel('roadmap')}
+                  >
+                    <Sparkles size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
+                    Coming Soon
+                  </button>
                 </div>
 
                 {/* The "Users" sub-tab intentionally does not render its own
