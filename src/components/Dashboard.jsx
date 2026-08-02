@@ -969,8 +969,8 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     function onDocClick(e) {
       if (themeMenuRef.current && !themeMenuRef.current.contains(e.target)) setThemeMenuOpen(false);
     }
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
+    document.addEventListener('click', onDocClick);
+    return () => document.removeEventListener('click', onDocClick);
   }, [themeMenuOpen]);
   // Attachment viewer modal -- opened from every place a document can be
   // viewed (aggregated Attachments dropdown, each table's row icon, each
