@@ -3241,3 +3241,37 @@ row. */
   .manual-controls { flex-wrap: wrap; row-gap: 8px; }
   .manual-close-cta { order: 3; flex-basis: 100%; justify-content: center; }
 }
+
+
+/* v2.57: Income/Fixed Expenses/Regular Expenses/Savings now use the flat,
+   at-a-glance entry-row list (icon swatch + title + meta + amount) at ALL
+   screen sizes -- previously this was mobile-only (.mobile-txn-list/-row
+   below 640px) while desktop kept a dense always-editable spreadsheet
+   table. Editing now happens by clicking a row, which opens the exact same
+   edit sheet mobile already used -- on desktop that sheet is repositioned
+   below into a centered modal dialog instead of a bottom sheet, so no new
+   edit UI had to be built, just repositioned. Scoped to min-width so it
+   never touches the already-tuned mobile styles above. */
+@media (min-width: 641px) {
+  .mobile-txn-list { display: flex; flex-direction: column; gap: 8px; }
+  .mobile-txn-row {
+    display: flex; align-items: center; gap: 14px; width: 100%; text-align: left;
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px 18px; cursor: pointer; font-family: inherit;
+    transition: background-color .12s ease, border-color .12s ease;
+  }
+  .mobile-txn-row:hover { border-color: var(--accent); background: var(--bg); }
+  .mobile-txn-row:active { background: var(--bg); }
+  .mobile-txn-row:last-child { border-bottom: none; }
+
+  /* Reuse the mobile edit sheet as a centered dialog instead of a bottom
+     sheet -- same backdrop/content, just repositioned for a wide screen. */
+  .mobile-sheet-backdrop { bottom: 0; }
+  .mobile-add-sheet {
+    top: 50%; left: 50%; right: auto; bottom: auto;
+    transform: translate(-50%, -50%);
+    width: 520px; max-width: 90vw; max-height: 85vh;
+    border-radius: 16px;
+    animation: none;
+  }
+}
