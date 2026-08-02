@@ -5045,11 +5045,11 @@ function ReportHtmlView({ data }) {
                 labelStyle={{ color: 'var(--text)' }}
                 itemStyle={{ color: 'var(--text)' }}
               />
-              <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={26}>
+              <Bar dataKey="value" radius={[6, 6, 0, 0]}>
                 {paymentSourceData.map((_, i) => (
                   <Cell key={i} fill={COLORS[i % COLORS.length]} />
                 ))}
-                <LabelList dataKey="value" content={DirhamBarLabelVerticalColumn} />
+                <LabelList dataKey="value" position="top" formatter={(v) => fmt(v)} style={{ fontSize: 11, fill: 'var(--text)' }} />
               </Bar>
             </BarChart>
           </ResponsiveContainer>
