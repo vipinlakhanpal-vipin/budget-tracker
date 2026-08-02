@@ -84,8 +84,13 @@
    states stay readable against a dark background no matter which of the
    themes above is picked. */
 [data-mode="dark"] {
-  --bg: #0b1418; --card: #16262c; --text: #e7f3f4; --muted: #93b2b8;
-  --border: #26414a; --danger-bg: #2a1416;
+  /* v2.51 -- exact neutral palette from hearth-redesign-mockup.html
+     (Vipin: "your mock background colors of tiles and frames is different.
+     i want the same color."), not just an equivalent dark tone. --bg/--card/
+     --text/--muted/--border below are that mockup's --bg/--surface-1/
+     --text-primary/--text-secondary/--border, verbatim. */
+  --bg: #0b0e1a; --card: #12162a; --text: #f2f4fa; --muted: #9aa4c2;
+  --border: #262c4a; --danger-bg: #2a1416;
   color-scheme: dark;
   --accent-light: color-mix(in srgb, var(--accent) 24%, var(--card));
   --accent2-light: color-mix(in srgb, var(--accent2) 20%, var(--card));
@@ -1123,6 +1128,26 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
 .card-expenses .v, .card-net .v, .card-cc .v, .card-dc .v, .card-ba .v {
   color: var(--text);
 }
+
+/* v2.52 -- exact metric-value colors from hearth-redesign-mockup.html
+   (Vipin: "values color were also good in mockup pls select such colors").
+   Mockup only colors 2 of its 4 metric values non-default (Spent so far
+   amber, Remaining green) plus Investments teal -- Monthly Budget and
+   everything else stay the plain flat --text set just above. Written as
+   .ok/ over-scoped selectors (3 class selectors, same specificity as the
+   generic .card.ok/.card.over .v rules already defined near the top of
+   this file) placed after them in source order, so this wins for these
+   specific tiles while over-budget / investment-loss still fall through
+   to the generic red .card.over .v untouched. card-invest is the My
+   Investments tile's own class now (previously shared card-net with the
+   unrelated Net tile -- split in Dashboard.jsx v2.52 so Investments could
+   get its own teal without recoloring Net too); it already inherits flat
+   .card styling from the base rule, no separate background override
+   needed here. */
+.card-spent .v { color: #f5b95c; }
+.card-remaining.ok .v { color: #6fd88a; }
+.card-income.ok .v { color: #6fd88a; }
+.card-invest.ok .v { color: #4fd8c4; }
 
 /* The 6 KPI cards (Monthly Budget -> Net) were reported as taking up more
    than half a laptop's visible screen before the rest of the app (forms,
