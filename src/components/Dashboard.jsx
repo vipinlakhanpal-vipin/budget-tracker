@@ -5039,7 +5039,7 @@ function ReportHtmlView({ data }) {
               <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={-20} textAnchor="end" height={50} />
               <YAxis tickFormatter={(v) => fmt(v)} width={80} tick={{ fontSize: 11 }} />
               <Tooltip formatter={(v) => fmt(v)} />
-              <Bar dataKey="value" radius={[6, 6, 0, 0]} isAnimationActive={false}>
+              <Bar dataKey="value" radius={[6, 6, 0, 0]} isAnimationActive={false} barSize={26}>
                 {paymentSourceData.map((_, i) => (
                   <Cell key={i} fill={COLORS[i % COLORS.length]} />
                 ))}
