@@ -176,7 +176,7 @@ const COLORS = [
 ];
 const RELATIONS = ['Self', 'Spouse', 'Partner', 'Child', 'Parent', 'Sibling', 'Roommate', 'Other'];
 const CURRENCIES = ['AED', 'AFN', 'ALL', 'AMD', 'ANG', 'AOA', 'ARS', 'AUD', 'AWG', 'AZN', 'BAM', 'BBD', 'BDT', 'BGN', 'BHD', 'BIF', 'BMD', 'BND', 'BOB', 'BRL', 'BSD', 'BTN', 'BWP', 'BYN', 'BZD', 'CAD', 'CDF', 'CHF', 'CLP', 'CNY', 'COP', 'CRC', 'CUP', 'CVE', 'CZK', 'DJF', 'DKK', 'DOP', 'DZD', 'EGP', 'ERN', 'ETB', 'EUR', 'FJD', 'FKP', 'GBP', 'GEL', 'GHS', 'GIP', 'GMD', 'GNF', 'GTQ', 'GYD', 'HKD', 'HNL', 'HTG', 'HUF', 'IDR', 'ILS', 'INR', 'IQD', 'IRR', 'ISK', 'JMD', 'JOD', 'JPY', 'KES', 'KGS', 'KHR', 'KMF', 'KPW', 'KRW', 'KWD', 'KYD', 'KZT', 'LAK', 'LBP', 'LKR', 'LRD', 'LSL', 'LYD', 'MAD', 'MDL', 'MGA', 'MKD', 'MMK', 'MNT', 'MOP', 'MRU', 'MUR', 'MVR', 'MWK', 'MXN', 'MYR', 'MZN', 'NAD', 'NGN', 'NIO', 'NOK', 'NPR', 'NZD', 'OMR', 'PAB', 'PEN', 'PGK', 'PHP', 'PKR', 'PLN', 'PYG', 'QAR', 'RON', 'RSD', 'RUB', 'RWF', 'SAR', 'SBD', 'SCR', 'SDG', 'SEK', 'SGD', 'SHP', 'SLE', 'SOS', 'SRD', 'SSP', 'STN', 'SYP', 'SZL', 'THB', 'TJS', 'TMT', 'TND', 'TOP', 'TRY', 'TTD', 'TWD', 'TZS', 'UAH', 'UGX', 'USD', 'UYU', 'UZS', 'VES', 'VND', 'VUV', 'WST', 'XAF', 'XCD', 'XOF', 'XPF', 'YER', 'ZAR', 'ZMW', 'ZWL'];
-const CURRENCY_REGIONS = { AED: 'United Arab Emirates', AFN: 'Afghanistan', ALL: 'Albania', AMD: 'Armenia', ANG: 'CuraÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¿ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ½ao & Sint Maarten', AOA: 'Angola', ARS: 'Argentina', AUD: 'Australia', AWG: 'Aruba', AZN: 'Azerbaijan', BAM: 'Bosnia & Herzegovina', BBD: 'Barbados', BDT: 'Bangladesh', BGN: 'Bulgaria', BHD: 'Bahrain', BIF: 'Burundi', BMD: 'Bermuda', BND: 'Brunei', BOB: 'Bolivia', BRL: 'Brazil', BSD: 'Bahamas', BTN: 'Bhutan', BWP: 'Botswana', BYN: 'Belarus', BZD: 'Belize', CAD: 'Canada', CDF: 'DR Congo', CHF: 'Switzerland', CLP: 'Chile', CNY: 'China', COP: 'Colombia', CRC: 'Costa Rica', CUP: 'Cuba', CVE: 'Cape Verde', CZK: 'Czech Republic', DJF: 'Djibouti', DKK: 'Denmark', DOP: 'Dominican Republic', DZD: 'Algeria', EGP: 'Egypt', ERN: 'Eritrea', ETB: 'Ethiopia', EUR: 'Eurozone', FJD: 'Fiji', FKP: 'Falkland Islands', GBP: 'United Kingdom', GEL: 'Georgia', GHS: 'Ghana', GIP: 'Gibraltar', GMD: 'Gambia', GNF: 'Guinea', GTQ: 'Guatemala', GYD: 'Guyana', HKD: 'Hong Kong', HNL: 'Honduras', HTG: 'Haiti', HUF: 'Hungary', IDR: 'Indonesia', ILS: 'Israel', INR: 'India', IQD: 'Iraq', IRR: 'Iran', ISK: 'Iceland', JMD: 'Jamaica', JOD: 'Jordan', JPY: 'Japan', KES: 'Kenya', KGS: 'Kyrgyzstan', KHR: 'Cambodia', KMF: 'Comoros', KPW: 'North Korea', KRW: 'South Korea', KWD: 'Kuwait', KYD: 'Cayman Islands', KZT: 'Kazakhstan', LAK: 'Laos', LBP: 'Lebanon', LKR: 'Sri Lanka', LRD: 'Liberia', LSL: 'Lesotho', LYD: 'Libya', MAD: 'Morocco', MDL: 'Moldova', MGA: 'Madagascar', MKD: 'North Macedonia', MMK: 'Myanmar', MNT: 'Mongolia', MOP: 'Macau', MRU: 'Mauritania', MUR: 'Mauritius', MVR: 'Maldives', MWK: 'Malawi', MXN: 'Mexico', MYR: 'Malaysia', MZN: 'Mozambique', NAD: 'Namibia', NGN: 'Nigeria', NIO: 'Nicaragua', NOK: 'Norway', NPR: 'Nepal', NZD: 'New Zealand', OMR: 'Oman', PAB: 'Panama', PEN: 'Peru', PGK: 'Papua New Guinea', PHP: 'Philippines', PKR: 'Pakistan', PLN: 'Poland', PYG: 'Paraguay', QAR: 'Qatar', RON: 'Romania', RSD: 'Serbia', RUB: 'Russia', RWF: 'Rwanda', SAR: 'Saudi Arabia', SBD: 'Solomon Islands', SCR: 'Seychelles', SDG: 'Sudan', SEK: 'Sweden', SGD: 'Singapore', SHP: 'Saint Helena', SLE: 'Sierra Leone', SOS: 'Somalia', SRD: 'Suriname', SSP: 'South Sudan', STN: 'SÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¿ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ½o TomÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¿ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ½ & PrÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¿ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ½ncipe', SYP: 'Syria', SZL: 'Eswatini', THB: 'Thailand', TJS: 'Tajikistan', TMT: 'Turkmenistan', TND: 'Tunisia', TOP: 'Tonga', TRY: 'Turkey', TTD: 'Trinidad & Tobago', TWD: 'Taiwan', TZS: 'Tanzania', UAH: 'Ukraine', UGX: 'Uganda', USD: 'United States', UYU: 'Uruguay', UZS: 'Uzbekistan', VES: 'Venezuela', VND: 'Vietnam', VUV: 'Vanuatu', WST: 'Samoa', XAF: 'Central Africa (CEMAC)', XCD: 'Eastern Caribbean', XOF: 'West Africa (UEMOA)', XPF: 'French Pacific', YER: 'Yemen', ZAR: 'South Africa', ZMW: 'Zambia', ZWL: 'Zimbabwe' };
+const CURRENCY_REGIONS = { AED: 'United Arab Emirates', AFN: 'Afghanistan', ALL: 'Albania', AMD: 'Armenia', ANG: 'CuraÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¿ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ½ao & Sint Maarten', AOA: 'Angola', ARS: 'Argentina', AUD: 'Australia', AWG: 'Aruba', AZN: 'Azerbaijan', BAM: 'Bosnia & Herzegovina', BBD: 'Barbados', BDT: 'Bangladesh', BGN: 'Bulgaria', BHD: 'Bahrain', BIF: 'Burundi', BMD: 'Bermuda', BND: 'Brunei', BOB: 'Bolivia', BRL: 'Brazil', BSD: 'Bahamas', BTN: 'Bhutan', BWP: 'Botswana', BYN: 'Belarus', BZD: 'Belize', CAD: 'Canada', CDF: 'DR Congo', CHF: 'Switzerland', CLP: 'Chile', CNY: 'China', COP: 'Colombia', CRC: 'Costa Rica', CUP: 'Cuba', CVE: 'Cape Verde', CZK: 'Czech Republic', DJF: 'Djibouti', DKK: 'Denmark', DOP: 'Dominican Republic', DZD: 'Algeria', EGP: 'Egypt', ERN: 'Eritrea', ETB: 'Ethiopia', EUR: 'Eurozone', FJD: 'Fiji', FKP: 'Falkland Islands', GBP: 'United Kingdom', GEL: 'Georgia', GHS: 'Ghana', GIP: 'Gibraltar', GMD: 'Gambia', GNF: 'Guinea', GTQ: 'Guatemala', GYD: 'Guyana', HKD: 'Hong Kong', HNL: 'Honduras', HTG: 'Haiti', HUF: 'Hungary', IDR: 'Indonesia', ILS: 'Israel', INR: 'India', IQD: 'Iraq', IRR: 'Iran', ISK: 'Iceland', JMD: 'Jamaica', JOD: 'Jordan', JPY: 'Japan', KES: 'Kenya', KGS: 'Kyrgyzstan', KHR: 'Cambodia', KMF: 'Comoros', KPW: 'North Korea', KRW: 'South Korea', KWD: 'Kuwait', KYD: 'Cayman Islands', KZT: 'Kazakhstan', LAK: 'Laos', LBP: 'Lebanon', LKR: 'Sri Lanka', LRD: 'Liberia', LSL: 'Lesotho', LYD: 'Libya', MAD: 'Morocco', MDL: 'Moldova', MGA: 'Madagascar', MKD: 'North Macedonia', MMK: 'Myanmar', MNT: 'Mongolia', MOP: 'Macau', MRU: 'Mauritania', MUR: 'Mauritius', MVR: 'Maldives', MWK: 'Malawi', MXN: 'Mexico', MYR: 'Malaysia', MZN: 'Mozambique', NAD: 'Namibia', NGN: 'Nigeria', NIO: 'Nicaragua', NOK: 'Norway', NPR: 'Nepal', NZD: 'New Zealand', OMR: 'Oman', PAB: 'Panama', PEN: 'Peru', PGK: 'Papua New Guinea', PHP: 'Philippines', PKR: 'Pakistan', PLN: 'Poland', PYG: 'Paraguay', QAR: 'Qatar', RON: 'Romania', RSD: 'Serbia', RUB: 'Russia', RWF: 'Rwanda', SAR: 'Saudi Arabia', SBD: 'Solomon Islands', SCR: 'Seychelles', SDG: 'Sudan', SEK: 'Sweden', SGD: 'Singapore', SHP: 'Saint Helena', SLE: 'Sierra Leone', SOS: 'Somalia', SRD: 'Suriname', SSP: 'South Sudan', STN: 'SÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¿ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ½o TomÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¿ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ½ & PrÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¿ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ½ncipe', SYP: 'Syria', SZL: 'Eswatini', THB: 'Thailand', TJS: 'Tajikistan', TMT: 'Turkmenistan', TND: 'Tunisia', TOP: 'Tonga', TRY: 'Turkey', TTD: 'Trinidad & Tobago', TWD: 'Taiwan', TZS: 'Tanzania', UAH: 'Ukraine', UGX: 'Uganda', USD: 'United States', UYU: 'Uruguay', UZS: 'Uzbekistan', VES: 'Venezuela', VND: 'Vietnam', VUV: 'Vanuatu', WST: 'Samoa', XAF: 'Central Africa (CEMAC)', XCD: 'Eastern Caribbean', XOF: 'West Africa (UEMOA)', XPF: 'French Pacific', YER: 'Yemen', ZAR: 'South Africa', ZMW: 'Zambia', ZWL: 'Zimbabwe' };
 
 // Shown as a prefix inside every amount field so what you're typing is
 // unambiguous at a glance -- codes without one universally-recognized
@@ -616,7 +616,7 @@ function DirhamGlyph({ size = '1em' }) {
 
 // Prefix shown inside every amount field: the real Dirham glyph for AED
 // households, or the plain text symbol for any other currency (those all
-// already have a normal Unicode symbol -- $, ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¿ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ½, ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¿ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ½, ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¿ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ½ -- so there's nothing
+// already have a normal Unicode symbol -- $, ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¿ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ½, ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¿ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ½, ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¿ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ½ -- so there's nothing
 // to substitute there).
 function CurrencyPrefix() {
   if (CURRENT_CURRENCY === 'AED') return <DirhamGlyph />;
@@ -668,7 +668,7 @@ function formAmountPx(value) {
 // same "$4,500" convention the editable amount fields already use, instead
 // of the old "AED 4,500.00" (code + space) text format. A leading minus
 // sign (for negative/over-budget figures) is pulled out in front of the
-// symbol -- "-AED50" reads oddly, "-ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¿ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ½50" reads the way "-$50" would.
+// symbol -- "-AED50" reads oddly, "-ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¿ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ½50" reads the way "-$50" would.
 function Amt({ value }) {
   const v = Number(value) || 0;
   const neg = v < 0;
@@ -2221,18 +2221,33 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   // to a single type-level total for an at-a-glance summary above the fold --
   // no per-bank detail here, that's what the By Source chart is for.
   const byPaymentType = useMemo(() => {
-    const m = {};
+    const totals = {};
+    const banks = {};
     const label = (src) => (src === 'Bank' ? 'Bank Account' : src === 'Salary' ? 'Salary Deduction' : src);
-    rangeExpenses.forEach((e) => {
-      const name = label(e.payment_source || 'Cash');
-      m[name] = (m[name] || 0) + Number(e.amount);
-    });
-    recurringForMonth.forEach((r) => {
-      const name = label(r.payment_source || 'Cash');
-      m[name] = (m[name] || 0) + Number(r.amount);
-    });
-    return m;
+    // Per-request: the 3 tile descriptions show the bank(s) behind that
+    // total in short form (e.g. "Credit Card (FAB)") rather than a bare
+    // type name -- same abbreviation rule as shortSourceLabel (the part of
+    // the bank string before its first "(", e.g. "FAB" out of
+    // "FAB (First Abu Dhabi Bank) (UAE)"). If a type spans more than one
+    // bank in a given month, all of them show, joined with "/".
+    const shortBank = (b) => (b || '').split('(')[0].trim();
+    const add = (rawSrc, rawBank, amount) => {
+      const name = label(rawSrc || 'Cash');
+      totals[name] = (totals[name] || 0) + Number(amount);
+      const b = shortBank(rawBank);
+      if (b) {
+        banks[name] = banks[name] || new Set();
+        banks[name].add(b);
+      }
+    };
+    rangeExpenses.forEach((e) => add(e.payment_source, e.payment_bank, e.amount));
+    recurringForMonth.forEach((r) => add(r.payment_source, r.payment_bank, r.amount));
+    return { totals, banks };
   }, [rangeExpenses, recurringForMonth]);
+  const paymentTypeTileLabel = (type) => {
+    const bankSet = byPaymentType.banks[type];
+    return bankSet && bankSet.size > 0 ? `${type} (${Array.from(bankSet).join('/')})` : type;
+  };
 
   // The pie chart specifically (not Bar/Pareto/Treemap) gets capped to its
   // biggest slices with everything else folded into "Other". A pie is the
@@ -5250,7 +5265,7 @@ function ReportHtmlView({ data }) {
                 onClick={() => setProfileMenuOpen((o) => !o)}
               >
                 <User size={18} />
-<span className="corner-profile-label" title="This updates automatically -- if a change doesn't look right, reload the page.">{displayNameForEmail(session.user.email)} | {formatVersionBadge().replace(' ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¿ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ½ ', ' | ')}</span>
+<span className="corner-profile-label" title="This updates automatically -- if a change doesn't look right, reload the page.">{displayNameForEmail(session.user.email)} | {formatVersionBadge().replace(' ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¿ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ½ ', ' | ')}</span>
               </button>
               {profileMenuOpen && profileDropdownPos && createPortal(
                 <div className="profile-dropdown" style={{ position: 'fixed', top: profileDropdownPos.top, right: profileDropdownPos.right, zIndex: 500 }}>
@@ -5762,16 +5777,16 @@ I can help you track expenses, understand spending patterns, create budgets, and
           </div>
         )}
         <div className="card card-cc">
-          <div className="k">Credit Card</div>
-          <div className="v"><Amt value={byPaymentType['Credit Card'] || 0} /></div>
+          <div className="k">{paymentTypeTileLabel('Credit Card')}</div>
+          <div className="v"><Amt value={byPaymentType.totals['Credit Card'] || 0} /></div>
         </div>
         <div className="card card-dc">
-          <div className="k">Debit Card</div>
-          <div className="v"><Amt value={byPaymentType['Debit Card'] || 0} /></div>
+          <div className="k">{paymentTypeTileLabel('Debit Card')}</div>
+          <div className="v"><Amt value={byPaymentType.totals['Debit Card'] || 0} /></div>
         </div>
         <div className="card card-ba">
-          <div className="k">Bank Account</div>
-          <div className="v"><Amt value={byPaymentType['Bank Account'] || 0} /></div>
+          <div className="k">{paymentTypeTileLabel('Bank Account')}</div>
+          <div className="v"><Amt value={byPaymentType.totals['Bank Account'] || 0} /></div>
         </div>
       </div>
       </div>
@@ -5944,7 +5959,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             <h2 className="panel-title-themed" style={{ fontSize: 16 }}>Your Investment Records</h2>
             <div>
               <div className="muted-small" style={{ marginBottom: 14, fontSize: 13, background: 'rgba(14,165,233,0.12)', border: '1px solid rgba(14,165,233,0.35)', borderRadius: 8, padding: '10px 12px' }}>
-                <span style={{ fontWeight: 700, color: '#0ea5e9', marginRight: 4 }}>ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¿ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ½</span>
+                <span style={{ fontWeight: 700, color: '#0ea5e9', marginRight: 4 }}>ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¿ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ½</span>
                 {investments.length} {investments.length === 1 ? 'entry' : 'entries'} -- Invested <strong><Amt value={investmentTotals.principal} /></strong> -- Current <strong style={{ color: '#0ea5e9' }}><Amt value={investmentTotals.current} /></strong> -- <strong style={{ color: investmentTotals.gain >= 0 ? '#1a7f37' : '#d1242f' }}>{investmentTotals.gain >= 0 ? 'Gain' : 'Loss'} <Amt value={Math.abs(investmentTotals.gain)} /></strong>
               </div>
               {investments.length === 0 ? (
@@ -8225,7 +8240,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     onClick={() => setMobileReportOpen(false)}
                     style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: 16, fontWeight: 600, cursor: 'pointer', padding: 0 }}
                   >
-                    {'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¿ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ½'} Back to App
+                    {'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¿ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ½'} Back to App
                   </button>
                 </div>
                 <iframe
