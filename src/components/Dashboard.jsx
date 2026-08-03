@@ -2226,15 +2226,20 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   const byPaymentType = useMemo(() => {
     const totals = {};
     const banks = {};
+    const perBank = {};
+    const bankOrder = {};
+    const catByBank = {};
     const label = (src) => (src === 'Bank' ? 'Bank Account' : src === 'Salary' ? 'Salary Deduction' : src);
-    // Per-request: the 3 tile descriptions show the bank(s) behind that
-    // total in short form (e.g. "Credit Card (FAB)") rather than a bare
-    // type name -- same abbreviation rule as shortSourceLabel (the part of
-    // the bank string before its first "(", e.g. "FAB" out of
-    // "FAB (First Abu Dhabi Bank) (UAE)"). If a type spans more than one
-    // bank in a given month, all of them show, joined with "/".
+    // Per-request: the Credit Card / Debit Card / Bank Account tiles now split
+    // into one tile per bank actually used that month (instead of one combined
+    // tile whose description read e.g. "Credit Card (FAB/HSBC)") -- this is
+    // still built live from each household's own payment_bank entries, so a
+    // different household only ever sees its own bank names here. Each tile
+    // also gets a small category-breakdown caption underneath (per explicit
+    // request, so the total isn't just a bare number -- gives a sense of
+    // *what* the spend on that card/account actually was for).
     const shortBank = (b) => (b || '').split('(')[0].trim();
-    const add = (rawSrc, rawBank, amount) => {
+    const add = (rawSrc, rawBank, amount, categoryName) => {
       const name = label(rawSrc || 'Cash');
       totals[name] = (totals[name] || 0) + Number(amount);
       const b = shortBank(rawBank);
@@ -2242,14 +2247,50 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
         banks[name] = banks[name] || new Set();
         banks[name].add(b);
       }
+      perBank[name] = perBank[name] || {};
+      const key = b || '__none__';
+      if (perBank[name][key] === undefined) {
+        bankOrder[name] = bankOrder[name] || [];
+        bankOrder[name].push(key);
+      }
+      perBank[name][key] = (perBank[name][key] || 0) + Number(amount);
+      catByBank[name] = catByBank[name] || {};
+      catByBank[name][key] = catByBank[name][key] || {};
+      const cat = categoryName || 'Uncategorized';
+      catByBank[name][key][cat] = (catByBank[name][key][cat] || 0) + Number(amount);
     };
-    rangeExpenses.forEach((e) => add(e.payment_source, e.payment_bank, e.amount));
-    recurringForMonth.forEach((r) => add(r.payment_source, r.payment_bank, r.amount));
-    return { totals, banks };
-  }, [rangeExpenses, recurringForMonth]);
+    rangeExpenses.forEach((e) => add(e.payment_source, e.payment_bank, e.amount, categoryNameById[e.category_id]));
+    recurringForMonth.forEach((r) => add(r.payment_source, r.payment_bank, r.amount, categoryNameById[r.category_id]));
+    return { totals, banks, perBank, bankOrder, catByBank };
+  }, [rangeExpenses, recurringForMonth, categoryNameById]);
   const paymentTypeTileLabel = (type) => {
     const bankSet = byPaymentType.banks[type];
     return bankSet && bankSet.size > 0 ? `${type} (${Array.from(bankSet).join('/')})` : type;
+  };
+  // Top 2 categories behind a tile's total, e.g. "Groceries + Dining +3 more"
+  // -- broad strokes only (not a full breakdown, that's what the By Source
+  // chart and Report tab are for), just enough to place the number.
+  const tileCategoryLine = (type, key) => {
+    const cats = (byPaymentType.catByBank[type] || {})[key];
+    if (!cats) return '';
+    const sorted = Object.entries(cats).sort((a, b) => b[1] - a[1]);
+    if (sorted.length === 0) return '';
+    const top = sorted.slice(0, 2).map(([n]) => n);
+    const rest = sorted.length - top.length;
+    return rest > 0 ? `${top.join(' + ')} +${rest} more` : top.join(' + ');
+  };
+  // One tile per bank actually used for this payment type this month -- falls
+  // back to a single bare-type tile (value 0) when there's no data yet, same
+  // as the old always-3-tiles behavior so the row never collapses to nothing.
+  const paymentTypeTiles = (type) => {
+    const order = byPaymentType.bankOrder[type];
+    if (!order || order.length === 0) return [{ tileLabel: type, value: 0, catLine: '', key: type }];
+    return order.map((key) => ({
+      tileLabel: key === '__none__' ? type : `${type} (${key})`,
+      value: byPaymentType.perBank[type][key] || 0,
+      catLine: tileCategoryLine(type, key),
+      key: `${type}-${key}`,
+    }));
   };
 
   // The pie chart specifically (not Bar/Pareto/Treemap) gets capped to its
@@ -5776,18 +5817,27 @@ I can help you track expenses, understand spending patterns, create budgets, and
             </div>
           </div>
         )}
-        <div className="card card-cc">
-          <div className="k">{paymentTypeTileLabel('Credit Card')}</div>
-          <div className="v"><Amt value={byPaymentType.totals['Credit Card'] || 0} /></div>
-        </div>
-        <div className="card card-dc">
-          <div className="k">{paymentTypeTileLabel('Debit Card')}</div>
-          <div className="v"><Amt value={byPaymentType.totals['Debit Card'] || 0} /></div>
-        </div>
-        <div className="card card-ba">
-          <div className="k">{paymentTypeTileLabel('Bank Account')}</div>
-          <div className="v"><Amt value={byPaymentType.totals['Bank Account'] || 0} /></div>
-        </div>
+        {paymentTypeTiles('Credit Card').map((tile) => (
+          <div className="card card-cc card-payment-split" key={tile.key}>
+            <div className="k">{tile.tileLabel}</div>
+            <div className="v"><Amt value={tile.value} /></div>
+            {tile.catLine && <div className="muted-small" style={{ marginTop: 2 }}>{tile.catLine}</div>}
+          </div>
+        ))}
+        {paymentTypeTiles('Debit Card').map((tile) => (
+          <div className="card card-dc card-payment-split" key={tile.key}>
+            <div className="k">{tile.tileLabel}</div>
+            <div className="v"><Amt value={tile.value} /></div>
+            {tile.catLine && <div className="muted-small" style={{ marginTop: 2 }}>{tile.catLine}</div>}
+          </div>
+        ))}
+        {paymentTypeTiles('Bank Account').map((tile) => (
+          <div className="card card-ba card-payment-split" key={tile.key}>
+            <div className="k">{tile.tileLabel}</div>
+            <div className="v"><Amt value={tile.value} /></div>
+            {tile.catLine && <div className="muted-small" style={{ marginTop: 2 }}>{tile.catLine}</div>}
+          </div>
+        ))}
       </div>
       </div>
 )}
@@ -7621,7 +7671,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             // every app release -- only when Help itself is edited), so the
             // little "Help updated as of vX.XX" marker next to the tour button
             // tells users this text is actually in sync with what they're using.
-            const HELP_LAST_UPDATED_VERSION = '2.61';
+            const HELP_LAST_UPDATED_VERSION = '2.62';
             const helpTopics = [
 { key: 'updates', title: "What's New", body: <>Latest updates (Jul 31, 2026): Added a private Investments tracker (Fixed Deposits and Mutual Funds/SIPs) with its own tab, currency + live FX conversion, auto-calculated gain/loss, and a pencil icon to edit any entry. The Report now includes a Payment-Source-wise spend breakdown on screen and in the downloadable/emailed PDF. PDF report category names no longer get cut off -- long names now auto-shrink to fit instead of truncating with "...". Every row across Income, Fixed Expenses, Regular Expenses, and Savings now has a pencil icon (matching Investments) that opens a proper edit sheet instead of relying only on inline editing. The small "Updated" confirmation toast, and the popup for reading a saved note, now always appear centered in the app instead of sometimes drifting toward the browser's own tab bar on mobile.</> },
               { key: 'home', title: 'Dashboard', body: <>Shows just the dashboard (summary cards and totals), nothing else. Below it, a bigger "Explore" section holds the same Spending by category chart (Pie/Bar/Pareto/Treemap), AI Insights, and Budget Coach, sized larger so there's more room to look through them. Clicking Income, Fixed Expenses, Regular Expenses, Savings, Report, Settings, or Help scrolls back up to the top and switches to that tab as usual.</> },
