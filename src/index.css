@@ -3294,35 +3294,23 @@ row. */
 }
 
 
-/* Deliberately placed at the very end of the stylesheet so these always win
-   over the earlier general .card / .card .v rules regardless of selector-
-   order specificity questions. Per explicit request (v2.66): the Credit/
-   Debit/Bank Account tiles no longer share the KPI tiles' single auto-fit
-   row -- they get their own dedicated 2-column grid underneath instead,
-   sized a bit taller so the category-breakdown caption can wrap onto a
-   second line instead of being truncated with an ellipsis. */
-.payment-split-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-  margin-top: 8px;
-}
-@media (min-width: 1100px) {
-  .summary-cards .payment-split-grid { grid-column: 1 / -1; }
-}
+/* Payment-split tiles (per-bank Credit Card / Debit Card / Bank Account)
+   render inline as regular .summary-cards items, in the SAME row as the
+   other KPI tiles -- not a separate section. Reduced minmax lets more
+   tiles fit per row; the category caption wraps up to 2 lines instead of
+   truncating with an ellipsis. */
+.summary-cards { grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); }
 .card-payment-split {
-  height: 68px;
   padding: 8px 10px;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  overflow: hidden;
 }
-.card-payment-split .k { font-size: 9px; margin: 0; }
-.card-payment-split .v { font-size: 15px; margin-top: 2px; }
+.card-payment-split .k { font-size: 8.5px; margin: 0; }
+.card-payment-split .v { font-size: 14px; margin-top: 2px; }
 .card-payment-split .muted-small {
-  font-size: 10px;
-  line-height: 1.25;
+  font-size: 9px;
+  line-height: 1.2;
   margin-top: 3px;
   white-space: normal;
   overflow: hidden;
