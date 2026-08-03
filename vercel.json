@@ -12,6 +12,14 @@
         {
           "key": "Cache-Control",
           "value": "no-cache, no-store, must-revalidate"
+        },
+        {
+          "key": "CDN-Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        },
+        {
+          "key": "Vercel-CDN-Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
         }
       ]
     },
@@ -21,6 +29,14 @@
         {
           "key": "Cache-Control",
           "value": "no-cache, no-store, must-revalidate"
+        },
+        {
+          "key": "CDN-Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        },
+        {
+          "key": "Vercel-CDN-Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
         }
       ]
     },
@@ -29,6 +45,14 @@
       "headers": [
         {
           "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        },
+        {
+          "key": "CDN-Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        },
+        {
+          "key": "Vercel-CDN-Cache-Control",
           "value": "no-cache, no-store, must-revalidate"
         }
       ]
