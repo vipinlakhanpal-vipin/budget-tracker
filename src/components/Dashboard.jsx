@@ -2275,8 +2275,9 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     if (!cats) return '';
     const sorted = Object.entries(cats).sort((a, b) => b[1] - a[1]);
     if (sorted.length === 0) return '';
-    const top = sorted.slice(0, 2).map(([n]) => n);
-    const rest = sorted.length - top.length;
+    const total = sorted.reduce((s, [, amt]) => s + amt, 0);
+    const top = sorted.slice(0, 2).map(([n, amt]) => `${n} ${total > 0 ? Math.round((amt / total) * 100) : 0}%`);
+    const rest = sorted.length - Math.min(2, sorted.length);
     return rest > 0 ? `${top.join(' + ')} +${rest} more` : top.join(' + ');
   };
   // One tile per bank actually used for this payment type this month -- falls
@@ -7671,7 +7672,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             // every app release -- only when Help itself is edited), so the
             // little "Help updated as of vX.XX" marker next to the tour button
             // tells users this text is actually in sync with what they're using.
-            const HELP_LAST_UPDATED_VERSION = '2.64';
+            const HELP_LAST_UPDATED_VERSION = '2.65';
             const helpTopics = [
 { key: 'updates', title: "What's New", body: <>Latest updates (Jul 31, 2026): Added a private Investments tracker (Fixed Deposits and Mutual Funds/SIPs) with its own tab, currency + live FX conversion, auto-calculated gain/loss, and a pencil icon to edit any entry. The Report now includes a Payment-Source-wise spend breakdown on screen and in the downloadable/emailed PDF. PDF report category names no longer get cut off -- long names now auto-shrink to fit instead of truncating with "...". Every row across Income, Fixed Expenses, Regular Expenses, and Savings now has a pencil icon (matching Investments) that opens a proper edit sheet instead of relying only on inline editing. The small "Updated" confirmation toast, and the popup for reading a saved note, now always appear centered in the app instead of sometimes drifting toward the browser's own tab bar on mobile.</> },
               { key: 'home', title: 'Dashboard', body: <>Shows just the dashboard (summary cards and totals), nothing else. Below it, a bigger "Explore" section holds the same Spending by category chart (Pie/Bar/Pareto/Treemap), AI Insights, and Budget Coach, sized larger so there's more room to look through them. Clicking Income, Fixed Expenses, Regular Expenses, Savings, Report, Settings, or Help scrolls back up to the top and switches to that tab as usual.</> },
