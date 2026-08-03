@@ -1182,7 +1182,7 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
 .card-payment-split { padding: 7px 8px; }
 .card-payment-split .k { font-size: 8px; }
 .card-payment-split .v { font-size: 13px; }
-.card-payment-split .muted-small { font-size: 7px; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card-payment-split .muted-small { font-size: 7px; line-height: 1.25; white-space: normal; overflow-wrap: break-word; word-break: break-word; }
 @media (min-width: 1100px) {
   .summary-cards .card-payment-split { min-width: 0; }
 }
