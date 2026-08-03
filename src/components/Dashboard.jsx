@@ -1360,13 +1360,14 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   // itself. Desktop + owner only, per explicit request -- lets Vipin hit
   // one button instead of remembering to hard-refresh the browser tab.
   const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [latestVersion, setLatestVersion] = useState(null);
   useEffect(() => {
     let cancelled = false;
     const checkVersion = () => {
       fetch(`/version.json?t=${Date.now()}`, { cache: 'no-store' })
         .then((r) => r.json())
         .then((data) => {
-          if (!cancelled && data && data.version && data.version !== APP_VERSION) setUpdateAvailable(true);
+          if (!cancelled && data && data.version && data.version !== APP_VERSION) { setUpdateAvailable(true); setLatestVersion(data.version); }
         })
         .catch(() => {});
     };
@@ -5249,7 +5250,7 @@ function ReportHtmlView({ data }) {
           <button
             type="button"
             className={`refresh-app-btn${updateAvailable ? ' refresh-app-btn-new' : ''}`}
-            title={updateAvailable ? 'New update available -- click to refresh' : 'Refresh app'}
+            title={updateAvailable ? `v${latestVersion} available -- click to refresh` : 'Refresh app'}
             onClick={() => { window.location.href = window.location.pathname + '?_r=' + Date.now(); }}
           >
             <RefreshCw size={16} />
@@ -7620,7 +7621,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             // every app release -- only when Help itself is edited), so the
             // little "Help updated as of vX.XX" marker next to the tour button
             // tells users this text is actually in sync with what they're using.
-            const HELP_LAST_UPDATED_VERSION = '2.60';
+            const HELP_LAST_UPDATED_VERSION = '2.61';
             const helpTopics = [
 { key: 'updates', title: "What's New", body: <>Latest updates (Jul 31, 2026): Added a private Investments tracker (Fixed Deposits and Mutual Funds/SIPs) with its own tab, currency + live FX conversion, auto-calculated gain/loss, and a pencil icon to edit any entry. The Report now includes a Payment-Source-wise spend breakdown on screen and in the downloadable/emailed PDF. PDF report category names no longer get cut off -- long names now auto-shrink to fit instead of truncating with "...". Every row across Income, Fixed Expenses, Regular Expenses, and Savings now has a pencil icon (matching Investments) that opens a proper edit sheet instead of relying only on inline editing. The small "Updated" confirmation toast, and the popup for reading a saved note, now always appear centered in the app instead of sometimes drifting toward the browser's own tab bar on mobile.</> },
               { key: 'home', title: 'Dashboard', body: <>Shows just the dashboard (summary cards and totals), nothing else. Below it, a bigger "Explore" section holds the same Spending by category chart (Pie/Bar/Pareto/Treemap), AI Insights, and Budget Coach, sized larger so there's more room to look through them. Clicking Income, Fixed Expenses, Regular Expenses, Savings, Report, Settings, or Help scrolls back up to the top and switches to that tab as usual.</> },
