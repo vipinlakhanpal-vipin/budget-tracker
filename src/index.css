@@ -1171,21 +1171,6 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
 .card-dc .v { color: #db2777; }
 .card-ba .v { color: #0891b2; }
 
-/* Credit/Debit/Bank Account tiles now split one-per-bank and carry a small
-   category-breakdown caption (see Dashboard.jsx paymentTypeTiles /
-   tileCategoryLine) -- a household using 2+ banks per type used to get one
-   combined tile, now gets one tile per bank plus this caption line, so the
-   row can grow well past its original fixed 3 tiles. Shrink these
-   specifically (smaller than the base .card sizing already applied at
-   >=641px) so a multi-bank month doesn't dominate the summary row, and
-   keep the caption tiny enough to fit a single line without wrapping. */
-.card-payment-split { padding: 7px 8px; }
-.card-payment-split .k { font-size: 8px; }
-.card-payment-split .v { font-size: 13px; }
-.card-payment-split .muted-small { font-size: 7px; line-height: 1.25; white-space: normal; overflow-wrap: break-word; word-break: break-word; }
-@media (min-width: 1100px) {
-  .summary-cards .card-payment-split { min-width: 0; }
-}
 
 /* The 6 KPI cards (Monthly Budget -> Net) were reported as taking up more
    than half a laptop's visible screen before the rest of the app (forms,
@@ -3306,4 +3291,41 @@ row. */
     border-radius: 16px;
     animation: none;
   }
+}
+
+
+/* Deliberately placed at the very end of the stylesheet so these always win
+   over the earlier general .card / .card .v rules (including inside their
+   own breakpoints) regardless of selector-order specificity questions --
+   the Credit/Debit/Bank Account tiles (see Dashboard.jsx paymentTypeTiles)
+   must render at a fixed, consistent height matching the other summary
+   tiles in the same row even though they carry an extra caption line the
+   other tiles don't have. Per explicit request: single tile per bank
+   (not stacked/split further), same height as neighbors, caption capped
+   to one line with an ellipsis instead of wrapping. */
+.card-payment-split {
+  height: 50px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+}
+.card-payment-split .k { font-size: 7.5px; margin: 0; }
+.card-payment-split .v { font-size: 12px; margin-top: 1px; }
+.card-payment-split .muted-small {
+  font-size: 6.5px;
+  line-height: 1.15;
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+/* A payment-split tile no longer needs the 130px minimum every other
+   summary tile gets -- letting the whole row (KPI tiles + however many
+   bank tiles exist this month) pack into one row instead of the last
+   tile or two wrapping down to a second row on their own. */
+@media (min-width: 1100px) {
+  .summary-cards { grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); }
 }
