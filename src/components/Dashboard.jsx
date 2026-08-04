@@ -8552,7 +8552,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 </div>
 
                 <div className="muted-small" style={{ margin: '14px 0 6px' }}>Groups (tap to expand -- use the dropdown on each category to move it between groups)</div>
-                <div className="muted-small" style={{ margin: '0 0 10px', fontWeight: 600 }}>{categoryGroups.length} group{categoryGroups.length === 1 ? '' : 's'} · {categories.length} categor{categories.length === 1 ? 'y' : 'ies'}</div>
+                <div className="group-count-highlight">{categoryGroups.length} group{categoryGroups.length === 1 ? '' : 's'} · {categories.length} categor{categories.length === 1 ? 'y' : 'ies'}</div>
                 <div className="group-accordion">
                   <div className="group-card ungrouped">
                     <div
