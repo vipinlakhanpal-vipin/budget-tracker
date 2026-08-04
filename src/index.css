@@ -3318,3 +3318,48 @@ row. */
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
 }
+
+
+/* Phase 5 -- Settings: flat 2-column "settings-grid" for list-style content
+   (Category Budgets caps + this month's spend-vs-budget), matching the
+   flat entry-row card language shipped in Phase 3. Also Phase 5 -- Help:
+   flat typography for topic rows (drop the boxed/bordered accordion look
+   in favor of a plain title + hairline list). Also fixes payment-split
+   tile titles not top-aligning with the rest of the KPI row. */
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+.settings-grid .cat-budget-row {
+  margin-top: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 9px 12px;
+  justify-content: space-between;
+}
+.settings-grid .cat-budget-row .cat-budget-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--text);
+}
+
+.help-accordion-item {
+  border: none;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+}
+.help-accordion-item:last-child { border-bottom: none; }
+.help-accordion-title {
+  padding: 11px 2px;
+}
+.help-accordion-title[aria-expanded="true"] { color: var(--accent2); }
+.help-accordion-body { padding: 0 2px 14px; }
+
+.card-payment-split { justify-content: flex-start; }
