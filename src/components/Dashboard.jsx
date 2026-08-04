@@ -5303,7 +5303,7 @@ function ReportHtmlView({ data }) {
               />
               <YAxis type="number" tick={{ fontSize: 11 }} />
               <Tooltip formatter={(v) => fmt(v)} />
-              <Bar dataKey="value" barSize={big ? (isMobile ? 14 : 20) : 28} radius={[3, 3, 0, 0]} isAnimationActive={false}>
+              <Bar dataKey="value" barSize={big ? (isMobile ? 12 : 16) : 14} radius={[3, 3, 0, 0]} isAnimationActive={false}>
                 {pieData.map((_, i) => (
                   <Cell key={i} fill={COLORS[i % COLORS.length]} />
                 ))}
@@ -5354,7 +5354,7 @@ function ReportHtmlView({ data }) {
                   tickFormatter={(name) => (name.length > (big ? (isMobile ? 13 : 20) : 13) ? name.slice(0, big ? (isMobile ? 13 : 20) : 13) + '&' : name)}
                 />
                 <Tooltip formatter={(v) => fmt(v)} />
-                <Bar dataKey="value" barSize={big ? 10 : 9} radius={[0, 3, 3, 0]} isAnimationActive={false}>
+                <Bar dataKey="value" barSize={big ? (isMobile ? 12 : 16) : 14} radius={[0, 3, 3, 0]} isAnimationActive={false}>
                   {pieData.map((_, i) => (
                     <Cell key={i} fill={COLORS[i % COLORS.length]} />
                   ))}
@@ -5380,6 +5380,7 @@ function ReportHtmlView({ data }) {
           // Payment-source breakdown -- Phase 2 addition (Credit Card / Debit
           // Card / Bank Account / Cash spend as a chart, per explicit request
           // to use a chart-toggle option here instead of new dashboard tiles).
+          <div style={{ maxWidth: Math.min(760, Math.max(280, paymentSourceData.length * 130)), margin: '0 auto' }}>
           <ResponsiveContainer width="100%" height={big ? (isMobile ? 340 : 400) : 320}>
             <BarChart data={paymentSourceData} margin={{ top: 55, right: 20, left: 30, bottom: 20 }}>
               <XAxis dataKey="name" tickFormatter={shortSourceLabel} tick={{ fontSize: 11 }} interval={0} angle={-20} textAnchor="end" height={50} />
@@ -5393,6 +5394,7 @@ function ReportHtmlView({ data }) {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
+          </div>
         ) : chartType === 'budgetActual' ? (
           // Budgeted vs Actual -- grouped bar per category (categories with a
           // budget cap set in Settings > Category Budgets only). Category
@@ -5455,7 +5457,7 @@ function ReportHtmlView({ data }) {
           // charts read as one family -- Savings gets the app's other
           // established accent (#0d9488 teal).
           <ResponsiveContainer width="100%" height={big ? (isMobile ? 460 : 520) : 420}>
-            <BarChart data={filteredMonthlyTrendData} margin={{ top: 60, right: 20, left: 40, bottom: 40 }} barGap={2} barCategoryGap={big ? '18%' : '22%'}>
+            <BarChart data={filteredMonthlyTrendData} margin={{ top: 60, right: 20, left: 40, bottom: 40 }} barGap={2} barCategoryGap={big ? '8%' : '10%'}>
               <XAxis dataKey="month" tick={{ fontSize: 12, fill: 'var(--text)' }} interval={0} height={40} />
               <YAxis width={92} tick={<DirhamYAxisTick />} />
               <Tooltip
@@ -5554,7 +5556,7 @@ function ReportHtmlView({ data }) {
       ) : aiDigestError ? (
         <div className="muted-small">Couldn't generate insights right now -- try again in a moment.</div>
       ) : (
-        <div className="muted-small">
+        <div className="muted-small" style={{ marginTop: 10, color: 'color-mix(in srgb, var(--text) 55%, var(--muted) 45%)' }}>
           Get a short AI-written summary of {monthLabel(currentMonth)}'s spending, with a couple of suggestions -- tap Generate.
         </div>
       )}
@@ -5573,7 +5575,7 @@ function ReportHtmlView({ data }) {
           {coachLoading ? 'Analyzing...' : coachResult ? 'Re-analyze' : 'Analyze trends'}
         </button>
       </div>
-      <div className="muted-small" style={{ marginBottom: 10 }}>
+      <div className="muted-small" style={{ marginTop: 10, marginBottom: 10, color: 'color-mix(in srgb, var(--text) 55%, var(--muted) 45%)' }}>
         Looks across the last 6 months (not just the one you're viewing) for patterns -- categories that stay over budget, spending trending up or down, whether your savings goal still looks realistic. Suggestions only -- nothing here changes your Settings automatically.
       </div>
       {coachResult ? (
