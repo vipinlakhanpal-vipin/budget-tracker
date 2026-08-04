@@ -144,14 +144,15 @@ async function checkCategoryBudgetAlerts(admin) {
   (expenses || []).forEach((e) => {
     spendByCategory[e.category_id] = (spendByCategory[e.category_id] || 0) + Number(e.amount);
   });
-  (recurring || []).forEach((r) => {
-    // Active for at least part of the current month -- same "full monthly
-    // amount counts if active this month" rule the app's own byCategory
-    // calc uses for Fixed Expenses.
-    if (r.start_date > monthEnd) return;
-    if (r.end_date && r.end_date < monthStart) return;
-    spendByCategory[r.category_id] = (spendByCategory[r.category_id] || 0) + Number(r.amount);
-  });
+  // Fixed Expenses (recurring_expenses) are intentionally NOT added to
+  // spendByCategory here. A fixed bill posts its full amount in one lump
+  // sum the day it's due, so if it counted toward these 35/60/100%
+  // thresholds a category could jump straight past all three the same
+  // day -- that's not "gradual spending", it's just noise. These
+  // threshold alerts only make sense for categories being spent against
+  // bit by bit via regular (variable) expenses, which is all
+  // spendByCategory reflects now. recurring is still fetched above (kept, unused
+  // here) in case a future feature wants it.
 
   const logKey = (householdId, categoryId, threshold) => `${householdId}|${categoryId}|${threshold}`;
   const existingByKey = {};
