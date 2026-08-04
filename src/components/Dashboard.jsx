@@ -5524,7 +5524,7 @@ function ReportHtmlView({ data }) {
               By Category
             </button>
           </div>
-          <div style={{ maxWidth: Math.min(760, Math.max(280, (groupChartMode === 'group' ? groupData : pieData).length * 130)), margin: '0 auto' }}>
+          <div style={{ maxWidth: Math.min(1500, Math.max(280, (groupChartMode === 'group' ? groupData : pieData).length * 150)), margin: '0 auto' }}>
           <ResponsiveContainer width="100%" height={big ? (isMobile ? 340 : 400) : 320}>
             <BarChart data={groupChartMode === 'group' ? groupData : pieData} margin={{ top: 55, right: 20, left: 30, bottom: 140 }}>
               <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--text)' }} interval={0} angle={-90} textAnchor="end" />
