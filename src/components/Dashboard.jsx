@@ -2268,8 +2268,19 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const monthlyTrendData = useMemo(() => {
     const year = currentMonth.getFullYear();
+    // Future months (after the real today, not just the month currently
+    // being viewed via the </> nav) are held at zero rather than projecting
+    // Fixed Expenses forward -- per explicit request, this chart should only
+    // ever show real actuals, with each month's bars appearing once that
+    // month actually begins. Past months are left as-is: a Fixed Expense's
+    // start_date reflects when it genuinely started, so counting it for a
+    // past month you never logged a Regular Expense in is correct, not a bug.
+    const currentRealKey = monthKey(new Date());
     return MONTH_ABBR.map((label, m) => {
       const key = year + '-' + String(m + 1).padStart(2, '0');
+      if (key > currentRealKey) {
+        return { month: label, monthIndex: m, income: 0, expenses: 0, savings: 0 };
+      }
       const income = incomes
         .filter((i) => i.active && i.start_date.slice(0, 7) === key)
         .reduce((s, i) => s + Number(i.amount), 0);
@@ -5297,11 +5308,11 @@ function ReportHtmlView({ data }) {
               <XAxis dataKey="name" tickFormatter={shortSourceLabel} tick={{ fontSize: 11 }} interval={0} angle={-20} textAnchor="end" height={50} />
               <YAxis tickFormatter={(v) => fmt(v)} width={80} tick={{ fontSize: 11 }} />
               <Tooltip formatter={(v) => fmt(v)} cursor={false} labelStyle={{ color: '#1a1a1a', fontWeight: 600 }} />
-              <Bar dataKey="value" radius={[6, 6, 0, 0]} isAnimationActive={false} barSize={big ? undefined : 26}>
+              <Bar dataKey="value" radius={[6, 6, 0, 0]} isAnimationActive={false} barSize={big ? (isMobile ? 12 : 16) : 14}>
                 {paymentSourceData.map((_, i) => (
                   <Cell key={i} fill={COLORS[i % COLORS.length]} />
                 ))}
-                <LabelList dataKey="value" position="top" content={DirhamBarLabelVerticalColumn} />
+                <LabelList dataKey="value" position="top" content={DirhamBarLabelVerticalColumnLg} />
               </Bar>
             </BarChart>
           </ResponsiveContainer>
@@ -7929,7 +7940,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             // every app release -- only when Help itself is edited), so the
             // little "Help updated as of vX.XX" marker next to the tour button
             // tells users this text is actually in sync with what they're using.
-            const HELP_LAST_UPDATED_VERSION = '2.78';
+            const HELP_LAST_UPDATED_VERSION = '2.79';
             const helpTopics = [
 { key: 'updates', title: "What's New", body: <>Latest updates (Jul 31, 2026): Added a private Investments tracker (Fixed Deposits and Mutual Funds/SIPs) with its own tab, currency + live FX conversion, auto-calculated gain/loss, and a pencil icon to edit any entry. The Report now includes a Payment-Source-wise spend breakdown on screen and in the downloadable/emailed PDF. PDF report category names no longer get cut off -- long names now auto-shrink to fit instead of truncating with "...". Every row across Income, Fixed Expenses, Regular Expenses, and Savings now has a pencil icon (matching Investments) that opens a proper edit sheet instead of relying only on inline editing. The small "Updated" confirmation toast, and the popup for reading a saved note, now always appear centered in the app instead of sometimes drifting toward the browser's own tab bar on mobile.</> },
               { key: 'home', title: 'Dashboard', body: <>Shows just the dashboard (summary cards and totals), nothing else. Below it, a bigger "Explore" section holds the same Spending by category chart (Pie/Bar/Pareto/Treemap), AI Insights, and Budget Coach, sized larger so there's more room to look through them. Clicking Income, Fixed Expenses, Regular Expenses, Savings, Report, Settings, or Help scrolls back up to the top and switches to that tab as usual.</> },
