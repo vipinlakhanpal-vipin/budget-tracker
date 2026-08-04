@@ -331,7 +331,7 @@ function DirhamBarLabelVerticalSideways(props) {
 }
 function shortSourceLabel(fullName) {
   if (!fullName) return fullName;
-  const CODE = { 'Credit Card': 'CC', 'Debit Card': 'DC', 'Bank Account': 'BA', 'Salary Deduction': 'Salary' };
+  const CODE = { 'Credit Card': 'CC', 'Debit Card': 'DC', 'Bank Account': 'BA' };
   const m = fullName.match(/^([^(]+?)\s*(?:\((.+)\))?$/);
   if (!m) return fullName;
   const base = m[1].trim();
@@ -5452,8 +5452,8 @@ function ReportHtmlView({ data }) {
           // to use a chart-toggle option here instead of new dashboard tiles).
           <div style={{ maxWidth: Math.min(760, Math.max(280, paymentSourceData.length * 130)), margin: '0 auto' }}>
           <ResponsiveContainer width="100%" height={big ? (isMobile ? 340 : 400) : 320}>
-            <BarChart data={paymentSourceData} margin={{ top: 55, right: 20, left: 30, bottom: 90 }}>
-              <XAxis dataKey="name" tickFormatter={shortSourceLabel} tick={{ fontSize: 11, fill: 'var(--text)' }} interval={0} angle={-90} textAnchor="end" height={90} />
+            <BarChart data={paymentSourceData} margin={{ top: 55, right: 20, left: 30, bottom: 140 }}>
+              <XAxis dataKey="name" tickFormatter={shortSourceLabel} tick={{ fontSize: 11, fill: 'var(--text)' }} interval={0} angle={-90} textAnchor="end" height={140} />
               <YAxis tickFormatter={(v) => fmt(v)} width={80} tick={{ fontSize: 11 }} />
               <Tooltip formatter={(v) => fmt(v)} cursor={false} labelStyle={{ color: '#1a1a1a', fontWeight: 600 }} />
               <Bar dataKey="value" radius={[6, 6, 0, 0]} isAnimationActive={false} barSize={big ? (isMobile ? 12 : 16) : 14}>
