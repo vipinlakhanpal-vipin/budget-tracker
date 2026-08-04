@@ -1289,6 +1289,22 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
 }
 .filter-clear-btn:hover { text-decoration: underline; }
 
+/* Months filter dropdown for the Income vs Expenses chart -- reuses the
+   existing .filter-dropdown/.filter-btn shell (same as the Regular Expenses
+   filter above) but with a 3-column checkbox grid instead of single-column
+   select fields, since there are 12 fixed options (months) rather than a
+   free-form field. */
+.month-filter-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px 8px; margin: 2px 0 4px;
+}
+.month-filter-grid label {
+  display: flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text); cursor: pointer;
+}
+.month-filter-grid input[type='checkbox'] { margin: 0; width: 13px; height: 13px; cursor: pointer; }
+.month-filter-actions {
+  display: flex; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 8px;
+}
+
 /* Help panel accordion -- each topic is a rounded row with a bold title
    button; tapping it reveals just that topic's description below it. */
 .help-accordion { display: flex; flex-direction: column; gap: 8px; }
