@@ -355,6 +355,45 @@ function DirhamBarLabelVerticalColumn(props) {
   );
 }
 
+// Larger variant of DirhamBarLabelVerticalColumn (fontSize 9 -> 11, offsets
+// scaled to match) used only by the Budgeted vs Actual chart -- per explicit
+// request to bump the value-label text size there without touching the
+// original everywhere else it's already shipped (Bar/By Source charts).
+function DirhamBarLabelVerticalColumnLg(props) {
+  const { x, y, width, value } = props;
+  const px = x + width / 2;
+  const py = y;
+  const numStr = Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return (
+    <g transform={`rotate(-90, ${px}, ${py})`}>
+      <text x={px + 3} y={py} dy={3} fontSize={11} fontWeight={700} fill="var(--text)" fontFamily="Arial, sans-serif">D</text>
+      <line x1={px + 2} y1={py - 2.7} x2={px + 9.5} y2={py - 2.7} stroke="var(--text)" strokeWidth={1} />
+      <line x1={px + 2} y1={py + 2.7} x2={px + 9.5} y2={py + 2.7} stroke="var(--text)" strokeWidth={1} />
+      <text x={px + 13} y={py} dy={3} fontSize={11} fill="var(--text)">{numStr}</text>
+    </g>
+  );
+}
+
+// Y-axis tick for the Budgeted vs Actual chart -- reuses the same
+// CurrencyPrefix component every plain-text amount in the app already uses
+// (draws the Dirham glyph for AED, or the right symbol/code for any other
+// household currency) via a foreignObject, instead of the generic fmt()
+// "AED 1,234.00" text every other chart's axis still uses. Scoped to just
+// this chart per explicit request, rather than changing fmt() itself and
+// touching every existing chart's axis along with it.
+function DirhamYAxisTick({ x, y, payload }) {
+  const numStr = Number(payload.value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <foreignObject x={-92} y={-9} width={88} height={18}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2, fontSize: 11, color: 'var(--muted)', height: '100%' }}>
+          <CurrencyPrefix />{numStr}
+        </div>
+      </foreignObject>
+    </g>
+  );
+}
+
 // Treemap tile renderer -- each category gets a box sized by how much was
 // spent, colored from the same palette as the other charts. Unlike a pie
 // slice, a treemap box has room to print its own label directly inside it,
@@ -5189,30 +5228,47 @@ function ReportHtmlView({ data }) {
           // Same reasoning for the value labels: the plain horizontal
           // DirhamBarLabel would overlap between two adjacent narrow bars
           // (also flagged in the mockup), so both bars use the rotated
-          // DirhamBarLabelVerticalColumn label already used elsewhere in
-          // this file for exactly this narrow-bar overlap problem.
+          // DirhamBarLabelVerticalColumnLg label (the larger variant, per
+          // explicit request to bump value/description text size +2px here).
+          // Bar width also bumped +2px per the same request. Spent uses the
+          // same vibrant amber (#f5b95c) as the "Spent so far" dashboard
+          // tile's value text -- also explicitly requested, and gives Bar
+          // an explicit fill so its Legend swatch isn't the default black
+          // (Cell-only fills don't feed the Legend, only the Bar's own fill
+          // does). Y-axis and Tooltip use the Dirham-glyph CurrencyPrefix
+          // component instead of fmt()'s "AED 1,234.00" text, per explicit
+          // request -- scoped to just this chart rather than touching fmt()
+          // itself and every other chart that still uses it.
           <ResponsiveContainer width="100%" height={big ? (isMobile ? 400 : 480) : 380}>
-            <BarChart data={budgetVsActualData} margin={{ top: 60, right: 20, left: 30, bottom: 90 }} barGap={2} barCategoryGap={big ? '20%' : '25%'}>
+            <BarChart data={budgetVsActualData} margin={{ top: 60, right: 20, left: 40, bottom: 90 }} barGap={2} barCategoryGap={big ? '20%' : '25%'}>
               <XAxis
                 dataKey="name"
                 tickFormatter={shortCatLabel}
-                tick={{ fontSize: 10 }}
+                tick={{ fontSize: 12 }}
                 interval={0}
                 angle={-90}
                 textAnchor="end"
                 height={90}
               />
-              <YAxis tickFormatter={(v) => fmt(v)} width={80} tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(v) => fmt(v)} cursor={false} labelStyle={{ color: '#1a1a1a', fontWeight: 600 }} />
+              <YAxis width={92} tick={<DirhamYAxisTick />} />
+              <Tooltip
+                formatter={(v) => (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                    <CurrencyPrefix />{Number(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                )}
+                cursor={false}
+                labelStyle={{ color: '#1a1a1a', fontWeight: 600 }}
+              />
               <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Bar dataKey="budgeted" name="Budgeted" fill="#0ea5e9" radius={[3, 3, 0, 0]} isAnimationActive={false} barSize={big ? (isMobile ? 10 : 14) : 12}>
-                <LabelList dataKey="budgeted" position="top" content={DirhamBarLabelVerticalColumn} />
+              <Bar dataKey="budgeted" name="Budgeted" fill="#0ea5e9" radius={[3, 3, 0, 0]} isAnimationActive={false} barSize={big ? (isMobile ? 12 : 16) : 14}>
+                <LabelList dataKey="budgeted" position="top" content={DirhamBarLabelVerticalColumnLg} />
               </Bar>
-              <Bar dataKey="spent" name="Spent" fill="#0d9488" radius={[3, 3, 0, 0]} isAnimationActive={false} barSize={big ? (isMobile ? 10 : 14) : 12}>
+              <Bar dataKey="spent" name="Spent" fill="#f5b95c" radius={[3, 3, 0, 0]} isAnimationActive={false} barSize={big ? (isMobile ? 12 : 16) : 14}>
                 {budgetVsActualData.map((d, i) => (
-                  <Cell key={i} fill={d.spent > d.budgeted ? '#dc2626' : '#0d9488'} />
+                  <Cell key={i} fill={d.spent > d.budgeted ? '#dc2626' : '#f5b95c'} />
                 ))}
-                <LabelList dataKey="spent" position="top" content={DirhamBarLabelVerticalColumn} />
+                <LabelList dataKey="spent" position="top" content={DirhamBarLabelVerticalColumnLg} />
               </Bar>
             </BarChart>
           </ResponsiveContainer>
@@ -7754,7 +7810,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             // every app release -- only when Help itself is edited), so the
             // little "Help updated as of vX.XX" marker next to the tour button
             // tells users this text is actually in sync with what they're using.
-            const HELP_LAST_UPDATED_VERSION = '2.74';
+            const HELP_LAST_UPDATED_VERSION = '2.75';
             const helpTopics = [
 { key: 'updates', title: "What's New", body: <>Latest updates (Jul 31, 2026): Added a private Investments tracker (Fixed Deposits and Mutual Funds/SIPs) with its own tab, currency + live FX conversion, auto-calculated gain/loss, and a pencil icon to edit any entry. The Report now includes a Payment-Source-wise spend breakdown on screen and in the downloadable/emailed PDF. PDF report category names no longer get cut off -- long names now auto-shrink to fit instead of truncating with "...". Every row across Income, Fixed Expenses, Regular Expenses, and Savings now has a pencil icon (matching Investments) that opens a proper edit sheet instead of relying only on inline editing. The small "Updated" confirmation toast, and the popup for reading a saved note, now always appear centered in the app instead of sometimes drifting toward the browser's own tab bar on mobile.</> },
               { key: 'home', title: 'Dashboard', body: <>Shows just the dashboard (summary cards and totals), nothing else. Below it, a bigger "Explore" section holds the same Spending by category chart (Pie/Bar/Pareto/Treemap), AI Insights, and Budget Coach, sized larger so there's more room to look through them. Clicking Income, Fixed Expenses, Regular Expenses, Savings, Report, Settings, or Help scrolls back up to the top and switches to that tab as usual.</> },
