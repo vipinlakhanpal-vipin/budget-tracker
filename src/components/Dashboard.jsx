@@ -1587,6 +1587,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
   const [groupNameDrafts, setGroupNameDrafts] = useState({});
   const [expandedGroups, setExpandedGroups] = useState({});
+  const [newCategoryGroupId, setNewCategoryGroupId] = useState('');
   // Which month the "Budgeting" settings tab is currently editing -- defaults
   // to the dashboard's current month every time that tab is opened (see the
   // "Budgeting" button's onClick), can be changed via its own Month field to
@@ -3219,12 +3220,13 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   async function handleAddCategory() {
     const name = newCategoryName.trim();
     if (!name) return;
-    const { error } = await supabase.from('categories').insert({ name, household_id: householdId });
+    const { error } = await supabase.from('categories').insert({ name, household_id: householdId, group_id: newCategoryGroupId || null });
     if (error) {
       alert('Could not add category: ' + error.message);
       return;
     }
     setNewCategoryName('');
+    setNewCategoryGroupId('');
     loadAll();
   }
 
@@ -8449,6 +8451,12 @@ I can help you track expenses, understand spending patterns, create budgets, and
                       value={newCategoryName}
                       onChange={(e) => setNewCategoryName(e.target.value)}
                     />
+                    <select value={newCategoryGroupId} onChange={(e) => setNewCategoryGroupId(e.target.value)} style={{ maxWidth: 150 }}>
+                      <option value="">No group</option>
+                      {categoryGroups.map((g) => (
+                        <option key={g.id} value={g.id}>{g.name}</option>
+                      ))}
+                    </select>
                     <button className="btn secondary small" onClick={handleAddCategory}>Add</button>
                   </div>
                 </div>
