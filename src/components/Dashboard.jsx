@@ -7679,7 +7679,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             // every app release -- only when Help itself is edited), so the
             // little "Help updated as of vX.XX" marker next to the tour button
             // tells users this text is actually in sync with what they're using.
-            const HELP_LAST_UPDATED_VERSION = '2.68';
+            const HELP_LAST_UPDATED_VERSION = '2.70';
             const helpTopics = [
 { key: 'updates', title: "What's New", body: <>Latest updates (Jul 31, 2026): Added a private Investments tracker (Fixed Deposits and Mutual Funds/SIPs) with its own tab, currency + live FX conversion, auto-calculated gain/loss, and a pencil icon to edit any entry. The Report now includes a Payment-Source-wise spend breakdown on screen and in the downloadable/emailed PDF. PDF report category names no longer get cut off -- long names now auto-shrink to fit instead of truncating with "...". Every row across Income, Fixed Expenses, Regular Expenses, and Savings now has a pencil icon (matching Investments) that opens a proper edit sheet instead of relying only on inline editing. The small "Updated" confirmation toast, and the popup for reading a saved note, now always appear centered in the app instead of sometimes drifting toward the browser's own tab bar on mobile.</> },
               { key: 'home', title: 'Dashboard', body: <>Shows just the dashboard (summary cards and totals), nothing else. Below it, a bigger "Explore" section holds the same Spending by category chart (Pie/Bar/Pareto/Treemap), AI Insights, and Budget Coach, sized larger so there's more room to look through them. Clicking Income, Fixed Expenses, Regular Expenses, Savings, Report, Settings, or Help scrolls back up to the top and switches to that tab as usual.</> },
@@ -8027,6 +8027,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     above is all that's required. */}
                 <div style={{ marginTop: 22 }}>
                   <label className="muted-small" style={{ fontWeight: 700 }}>Budget for Per Category (optional)</label>
+                  <div className="settings-grid">
                   {categories.map((c) => (
                     <div className="cat-budget-row" key={c.id}>
                       <span className="cat-budget-name">{c.name}</span>
@@ -8047,6 +8048,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                       </div>
                     </div>
                   ))}
+                  </div>
                 </div>
                 <div className="muted-small" style={{ marginTop: 8 }}>Changes save automatically as you edit -- there's no Save button to click.</div>
 
@@ -8055,6 +8057,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     <label className="muted-small">
                       This month's spending vs. budget (shown here, and categories over budget also trigger a notification in the bell icon, top-right)
                     </label>
+                    <div className="settings-grid">
                     {categories.filter((c) => c.monthly_budget > 0).map((c) => {
                       const spent = byCategory[c.name] || 0;
                       const over = spent > c.monthly_budget;
@@ -8067,6 +8070,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                         </div>
                       );
                     })}
+                  </div>
                   </div>
                 )}
                 </>
