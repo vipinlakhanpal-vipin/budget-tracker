@@ -2254,6 +2254,56 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   // earlier here.
   const shortCatLabel = (name) => (name && name.length > 14 ? name.slice(0, 14) + '\u2026' : name);
 
+  // Income vs Expenses chart-toggle option: one group of 3 bars per month
+  // across the currently viewed year (Jan-Dec) -- Income, Expenses (Regular
+  // + Fixed, i.e. the same "total" used everywhere else on the dashboard,
+  // but excluding Savings since that now gets its own bar here), and
+  // Savings. Fixed Expenses count for a given month purely via
+  // recurringOccursInMonth's schedule check (no separate Regular Expense
+  // entry needed -- see the recurringForMonth comment above); Income and
+  // Savings need an entry dated in that specific month, same exact-match
+  // logic as incomeForMonth/savingsForMonth above, just generalized to run
+  // across all 12 months instead of only the one currently selected via the
+  // </> month nav.
+  const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const monthlyTrendData = useMemo(() => {
+    const year = currentMonth.getFullYear();
+    return MONTH_ABBR.map((label, m) => {
+      const key = year + '-' + String(m + 1).padStart(2, '0');
+      const income = incomes
+        .filter((i) => i.active && i.start_date.slice(0, 7) === key)
+        .reduce((s, i) => s + Number(i.amount), 0);
+      const oneOff = expenses
+        .filter((e) => e.expense_date.slice(0, 7) === key)
+        .reduce((s, e) => s + Number(e.amount), 0);
+      const fixed = recurringExpenses
+        .filter((r) => recurringOccursInMonth(r, key))
+        .reduce((s, r) => s + Number(r.amount), 0);
+      const savings = savingsGoals
+        .filter((s2) => s2.active && s2.start_date.slice(0, 7) === key)
+        .reduce((s, g) => s + Number(g.amount), 0);
+      return { month: label, monthIndex: m, income, expenses: oneOff + fixed, savings };
+    });
+  }, [incomes, expenses, recurringExpenses, savingsGoals, currentMonth]);
+  const [selectedMonths, setSelectedMonths] = useState([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+  const filteredMonthlyTrendData = useMemo(
+    () => monthlyTrendData.filter((d) => selectedMonths.includes(d.monthIndex)),
+    [monthlyTrendData, selectedMonths]
+  );
+  const [monthsFilterOpen, setMonthsFilterOpen] = useState(false);
+  const monthsFilterRef = useRef(null);
+  useEffect(() => {
+    if (!monthsFilterOpen) return;
+    function onDocClick(e) {
+      if (monthsFilterRef.current && !monthsFilterRef.current.contains(e.target)) setMonthsFilterOpen(false);
+    }
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [monthsFilterOpen]);
+  const toggleTrendMonth = (m) => {
+    setSelectedMonths((prev) => (prev.includes(m) ? prev.filter((x) => x !== m) : [...prev, m].sort((a, b) => a - b)));
+  };
+
   // Payment-source breakdown for the "By Source" chart-toggle option (Phase 2,
   // per explicit request: show Credit Card / Debit Card / Bank Account spend on
   // the Dashboard as a chart rather than new tiles). Same data scope as
@@ -4941,6 +4991,42 @@ function ReportHtmlView({ data }) {
       >
         Budgeted vs Actual
       </button>
+      <button
+        className={`btn small ${chartType === 'incomeExpenses' ? '' : 'secondary'}`}
+        onClick={() => setChartType('incomeExpenses')}
+      >
+        Income vs Expenses
+      </button>
+      {chartType === 'incomeExpenses' && (
+        <div className="filter-wrap" ref={monthsFilterRef} style={{ marginLeft: 'auto' }}>
+          <button
+            type="button"
+            className={`filter-btn ${selectedMonths.length < 12 ? 'active' : ''}`}
+            onClick={() => setMonthsFilterOpen((o) => !o)}
+          >
+            <Filter size={13} />
+            Months: {selectedMonths.length === 12 ? 'All 12' : selectedMonths.length}
+            {selectedMonths.length < 12 && <span className="filter-active-dot" />}
+          </button>
+          {monthsFilterOpen && (
+            <div className="filter-dropdown" style={{ width: 210 }}>
+              <div className="filter-dropdown-title">Show months</div>
+              <div className="month-filter-grid">
+                {MONTH_ABBR.map((label, m) => (
+                  <label key={m}>
+                    <input type="checkbox" checked={selectedMonths.includes(m)} onChange={() => toggleTrendMonth(m)} />
+                    {label}
+                  </label>
+                ))}
+              </div>
+              <div className="month-filter-actions">
+                <button type="button" className="filter-clear-btn" onClick={() => setSelectedMonths([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])}>Select all</button>
+                <button type="button" className="filter-clear-btn" onClick={() => setSelectedMonths([])}>Clear</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 
@@ -5269,6 +5355,39 @@ function ReportHtmlView({ data }) {
                   <Cell key={i} fill={d.spent > d.budgeted ? '#dc2626' : '#f5b95c'} />
                 ))}
                 <LabelList dataKey="spent" position="top" content={(p) => <DirhamBarLabelVerticalColumnLg {...p} color={p.payload && p.payload.spent > p.payload.budgeted ? '#dc2626' : '#f5b95c'} />} />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        ) : chartType === 'incomeExpenses' ? (
+          // Income vs Expenses -- one group of 3 bars per month across the
+          // currently viewed year, narrowed by the Months filter above.
+          // Same Dirham-glyph value-label / no-decimal / var(--text) tick
+          // conventions as Budgeted vs Actual, and reuses its exact colors
+          // for Income/Expenses (#0ea5e9 blue, #f5b95c amber) so the two
+          // charts read as one family -- Savings gets the app's other
+          // established accent (#0d9488 teal).
+          <ResponsiveContainer width="100%" height={big ? (isMobile ? 460 : 520) : 420}>
+            <BarChart data={filteredMonthlyTrendData} margin={{ top: 60, right: 20, left: 40, bottom: 40 }} barGap={2} barCategoryGap={big ? '18%' : '22%'}>
+              <XAxis dataKey="month" tick={{ fontSize: 12, fill: 'var(--text)' }} interval={0} height={40} />
+              <YAxis width={92} tick={<DirhamYAxisTick />} />
+              <Tooltip
+                formatter={(v) => (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                    <CurrencyPrefix />{Math.round(Number(v)).toLocaleString()}
+                  </span>
+                )}
+                cursor={false}
+                labelStyle={{ color: '#1a1a1a', fontWeight: 600 }}
+              />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Bar dataKey="income" name="Income" fill="#0ea5e9" radius={[3, 3, 0, 0]} isAnimationActive={false} barSize={big ? (isMobile ? 10 : 14) : 12}>
+                <LabelList dataKey="income" position="top" content={(p) => <DirhamBarLabelVerticalColumnLg {...p} color="#0ea5e9" />} />
+              </Bar>
+              <Bar dataKey="expenses" name="Expenses" fill="#f5b95c" radius={[3, 3, 0, 0]} isAnimationActive={false} barSize={big ? (isMobile ? 10 : 14) : 12}>
+                <LabelList dataKey="expenses" position="top" content={(p) => <DirhamBarLabelVerticalColumnLg {...p} color="#f5b95c" />} />
+              </Bar>
+              <Bar dataKey="savings" name="Savings" fill="#0d9488" radius={[3, 3, 0, 0]} isAnimationActive={false} barSize={big ? (isMobile ? 10 : 14) : 12}>
+                <LabelList dataKey="savings" position="top" content={(p) => <DirhamBarLabelVerticalColumnLg {...p} color="#0d9488" />} />
               </Bar>
             </BarChart>
           </ResponsiveContainer>
@@ -7810,7 +7929,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             // every app release -- only when Help itself is edited), so the
             // little "Help updated as of vX.XX" marker next to the tour button
             // tells users this text is actually in sync with what they're using.
-            const HELP_LAST_UPDATED_VERSION = '2.77';
+            const HELP_LAST_UPDATED_VERSION = '2.78';
             const helpTopics = [
 { key: 'updates', title: "What's New", body: <>Latest updates (Jul 31, 2026): Added a private Investments tracker (Fixed Deposits and Mutual Funds/SIPs) with its own tab, currency + live FX conversion, auto-calculated gain/loss, and a pencil icon to edit any entry. The Report now includes a Payment-Source-wise spend breakdown on screen and in the downloadable/emailed PDF. PDF report category names no longer get cut off -- long names now auto-shrink to fit instead of truncating with "...". Every row across Income, Fixed Expenses, Regular Expenses, and Savings now has a pencil icon (matching Investments) that opens a proper edit sheet instead of relying only on inline editing. The small "Updated" confirmation toast, and the popup for reading a saved note, now always appear centered in the app instead of sometimes drifting toward the browser's own tab bar on mobile.</> },
               { key: 'home', title: 'Dashboard', body: <>Shows just the dashboard (summary cards and totals), nothing else. Below it, a bigger "Explore" section holds the same Spending by category chart (Pie/Bar/Pareto/Treemap), AI Insights, and Budget Coach, sized larger so there's more room to look through them. Clicking Income, Fixed Expenses, Regular Expenses, Savings, Report, Settings, or Help scrolls back up to the top and switches to that tab as usual.</> },
