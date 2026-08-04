@@ -3371,8 +3371,8 @@ row. */
    so it reads as an intentional highlight, not just another plain card. */
 .cat-budget-total-highlight {
   display: flex;
-  justify-content: space-between;
-  gap: 12px;
+  justify-content: flex-start;
+  gap: 24px;
   background: var(--accent2-light);
   border: 1px solid var(--accent2);
   border-radius: 10px;
