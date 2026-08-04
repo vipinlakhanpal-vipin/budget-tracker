@@ -1370,8 +1370,32 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     toastTimerRef.current = setTimeout(() => setToastMsg(''), 2200);
   }
 
+  // Inline, in-context replacement for native notify() -- renders as a
+  // banner right inside whichever tab/panel the triggering action lives in
+  // (Income, Fixed Expenses, Regular Expenses, Savings, Investments, Report,
+  // Settings) instead of a native browser dialog pinned to the tab/address
+  // bar chrome (per explicit request -- notifications should show where the
+  // data is being entered, not float near the browser chrome). Scope is
+  // captured automatically from whichever tab is active when notify()
+  // fires, so switching tabs afterward doesn't leave a stale banner
+  // showing in the wrong place. Persists longer than the success toast
+  // above since these are mostly validation/error messages the user needs
+  // time to read, not a fire-and-forget confirmation.
+  const [formNotice, setFormNotice] = useState(null);
+  const formNoticeTimerRef = useRef(null);
+  function notify(msg) {
+    setFormNotice({ text: msg, scope: inputTab || activePanel });
+    if (formNoticeTimerRef.current) clearTimeout(formNoticeTimerRef.current);
+    formNoticeTimerRef.current = setTimeout(() => setFormNotice(null), 5000);
+  }
+  function noticeBanner(scope) {
+    return formNotice && formNotice.scope === scope ? (
+      <div className="notice-banner">{formNotice.text}</div>
+    ) : null;
+  }
+
   // Centered popup for viewing a row's saved note -- replaces the old
-  // alert(x.notes) calls on the Income/Fixed Expenses/Savings/Regular
+  // notify(x.notes) calls on the Income/Fixed Expenses/Savings/Regular
   // Expenses row note icons, which rendered as the browser's native alert
   // dialog pinned to the tab/address-bar chrome instead of an in-app
   // element. Reuses the existing attachment-viewer-overlay/modal styling
@@ -1729,7 +1753,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     if (!mine) return;
     const { error } = await supabase.from('household_members').update({ privacy_enabled: next }).eq('id', mine.id);
     if (error) {
-      alert('Could not save: ' + error.message);
+      notify('Could not save: ' + error.message);
       return;
     }
     setMembers((prev) => prev.map((m) => (m.id === mine.id ? { ...m, privacy_enabled: next } : m)));
@@ -1741,7 +1765,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     const cleaned = value.trim() || null;
     const { error } = await supabase.from('household_members').update({ [field]: cleaned }).eq('id', mine.id);
     if (error) {
-      alert('Could not save: ' + error.message);
+      notify('Could not save: ' + error.message);
       return;
     }
     setMembers((prev) => prev.map((m) => (m.id === mine.id ? { ...m, [field]: cleaned } : m)));
@@ -1795,7 +1819,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     const cleaned = value.trim() || null;
     const { error } = await supabase.from('household_members').update({ [field]: cleaned }).eq('id', id);
     if (error) {
-      alert('Could not save: ' + error.message);
+      notify('Could not save: ' + error.message);
       return;
     }
     setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, [field]: cleaned } : m)));
@@ -1816,7 +1840,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     const cleaned = value.trim() || null;
     const { error } = await supabase.from('household_invites').update({ [field]: cleaned }).eq('id', id);
     if (error) {
-      alert('Could not save: ' + error.message);
+      notify('Could not save: ' + error.message);
       return;
     }
     setPendingInvites((prev) => prev.map((inv) => (inv.id === id ? { ...inv, [field]: cleaned } : inv)));
@@ -2538,7 +2562,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
         upsert: false,
       });
       if (uploadError) {
-        alert(`Saved, but "${file.name}" could not be uploaded: ` + uploadError.message);
+        notify(`Saved, but "${file.name}" could not be uploaded: ` + uploadError.message);
         continue;
       }
       const { error: insertError } = await supabase.from('row_attachments').insert({
@@ -2550,7 +2574,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
         created_by: session.user.id,
       });
       if (insertError) {
-        alert(`Saved and uploaded, but "${file.name}" could not be linked: ` + insertError.message);
+        notify(`Saved and uploaded, but "${file.name}" could not be linked: ` + insertError.message);
       }
     }
     loadAll();
@@ -2567,7 +2591,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     setAttachmentViewer({ loading: true, path, name: name || 'Attachment', url: null });
     const { data, error } = await supabase.storage.from('attachments').createSignedUrl(path, 3600);
     if (error || !data?.signedUrl) {
-      alert('Could not open attachment: ' + (error?.message || 'unknown error'));
+      notify('Could not open attachment: ' + (error?.message || 'unknown error'));
       setAttachmentViewer(null);
       return;
     }
@@ -2588,7 +2612,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   async function shareAttachment(path, name, via) {
     const { data, error } = await supabase.storage.from('attachments').createSignedUrl(path, 86400);
     if (error || !data?.signedUrl) {
-      alert('Could not create a shareable link: ' + (error?.message || 'unknown error'));
+      notify('Could not create a shareable link: ' + (error?.message || 'unknown error'));
       return;
     }
     const link = data.signedUrl;
@@ -2618,7 +2642,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       else rejected++;
     }
     if (rejected > 0) {
-      alert(`${rejected} file${rejected === 1 ? '' : 's'} skipped -- attachments must be an image or PDF, 5MB or smaller.`);
+      notify(`${rejected} file${rejected === 1 ? '' : 's'} skipped -- attachments must be an image or PDF, 5MB or smaller.`);
     }
     if (valid.length > 0) {
       setFilesFn((cur) => [...(cur || []), ...valid]);
@@ -2633,7 +2657,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     e.preventDefault();
     const amount = parseFloat(form.amount);
     if (!form.categoryId || isNaN(amount) || amount <= 0) {
-      alert('Please choose a category and enter a valid amount.');
+      notify('Please choose a category and enter a valid amount.');
       return;
     }
     const { data: inserted, error } = await supabase.from('expenses').insert({
@@ -2650,7 +2674,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       ...(myPrivacyEnabled ? { is_private: expenseIsPrivate } : {}),
     }).select().single();
     if (error) {
-      alert('Could not save expense: ' + error.message);
+      notify('Could not save expense: ' + error.message);
       return;
     }
     if (expenseFiles.length > 0 && inserted?.id) {
@@ -2859,7 +2883,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   async function handleSaveInvestment() {
     const principal = parseFloat(investmentForm.principal);
     if (!investmentForm.name.trim() || isNaN(principal) || principal <= 0) {
-      alert('Please enter a name and a valid principal / invested amount.');
+      notify('Please enter a name and a valid principal / invested amount.');
       return;
     }
     const payload = {
@@ -2883,7 +2907,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
         household_id: householdId, created_by: session.user.id, created_by_email: session.user.email, ...payload,
       }));
     }
-    if (error) { alert('Could not save investment: ' + error.message); return; }
+    if (error) { notify('Could not save investment: ' + error.message); return; }
     const wasEditing = !!editingInvestmentId;
     cancelEditInvestment();
     await loadAll();
@@ -2893,7 +2917,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   async function handleDeleteInvestment(id, name) {
     if (!confirm(`Remove "${name}" from your investments? This can't be undone.`)) return;
     const { error } = await supabase.from('investments').delete().eq('id', id);
-    if (error) { alert('Could not delete: ' + error.message); return; }
+    if (error) { notify('Could not delete: ' + error.message); return; }
     if (editingInvestmentId === id) cancelEditInvestment();
     loadAll();
   }
@@ -3157,7 +3181,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
 
   async function handleDeleteExpense(id) {
     const { error } = await supabase.from('expenses').delete().eq('id', id);
-    if (error) alert('Could not delete: ' + error.message);
+    if (error) notify('Could not delete: ' + error.message);
     loadAll();
   }
 
@@ -3184,7 +3208,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       })
       .eq('id', id);
     if (error) {
-      alert('Could not update expense: ' + error.message);
+      notify('Could not update expense: ' + error.message);
       return;
     }
     loadAll();
@@ -3192,7 +3216,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
 
   async function handleAutofillBanks() {
     const missing = expenses.filter((x) => (x.payment_source === 'Credit Card' || x.payment_source === 'Debit Card') && !x.payment_bank);
-    if (missing.length === 0) { alert('No expenses are missing a bank right now.'); return; }
+    if (missing.length === 0) { notify('No expenses are missing a bank right now.'); return; }
     const bySource = {};
     for (const src of ['Credit Card', 'Debit Card']) {
       const bank = getDefaultBankFor(src);
@@ -3201,7 +3225,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     }
     const lines = Object.entries(bySource).map(([src, v]) => `${v.count} ${src} entr${v.count === 1 ? 'y' : 'ies'} -> ${v.bank}`);
     if (lines.length === 0) {
-      alert("Can't auto-fill yet -- none of your existing Credit Card or Debit Card expenses have a bank saved to copy from. Pick a bank on one expense first, then try again.");
+      notify("Can't auto-fill yet -- none of your existing Credit Card or Debit Card expenses have a bank saved to copy from. Pick a bank on one expense first, then try again.");
       return;
     }
     const resolvedCount = Object.values(bySource).reduce((s, v) => s + v.count, 0);
@@ -3211,7 +3235,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     if (!confirm(msg)) return;
     for (const [src, v] of Object.entries(bySource)) {
       const { error } = await supabase.from('expenses').update({ payment_bank: v.bank }).eq('household_id', householdId).eq('payment_source', src).is('payment_bank', null);
-      if (error) { alert('Could not update: ' + error.message); return; }
+      if (error) { notify('Could not update: ' + error.message); return; }
     }
     loadAll();
     showToast('Banks filled in');
@@ -3222,7 +3246,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     if (!name) return;
     const { error } = await supabase.from('categories').insert({ name, household_id: householdId, group_id: newCategoryGroupId || null });
     if (error) {
-      alert('Could not add category: ' + error.message);
+      notify('Could not add category: ' + error.message);
       return;
     }
     setNewCategoryName('');
@@ -3234,7 +3258,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     const hasExpenses = expenses.some((e) => e.category_id === id);
     if (hasExpenses && !confirm(`"${name}" has expenses logged against it. Remove anyway?`)) return;
     const { error } = await supabase.from('categories').delete().eq('id', id);
-    if (error) alert('Could not remove category: ' + error.message);
+    if (error) notify('Could not remove category: ' + error.message);
     loadAll();
   }
 
@@ -3244,7 +3268,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     if (!name || (current && name === current.name)) return;
     const { error } = await supabase.from('categories').update({ name }).eq('id', id);
     if (error) {
-      alert('Could not rename category: ' + error.message);
+      notify('Could not rename category: ' + error.message);
       return;
     }
     loadAll();
@@ -3255,7 +3279,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     if (!name) return;
     const { error } = await supabase.from('category_groups').insert({ name, household_id: householdId });
     if (error) {
-      alert('Could not add group: ' + error.message);
+      notify('Could not add group: ' + error.message);
       return;
     }
     setNewGroupName('');
@@ -3268,7 +3292,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     if (!name || (current && name === current.name)) return;
     const { error } = await supabase.from('category_groups').update({ name }).eq('id', id);
     if (error) {
-      alert('Could not rename group: ' + error.message);
+      notify('Could not rename group: ' + error.message);
       return;
     }
     loadAll();
@@ -3282,13 +3306,13 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     )
       return;
     const { error } = await supabase.from('category_groups').delete().eq('id', id);
-    if (error) alert('Could not remove group: ' + error.message);
+    if (error) notify('Could not remove group: ' + error.message);
     loadAll();
   }
 
   async function handleMoveCategoryToGroup(categoryId, groupId) {
     const { error } = await supabase.from('categories').update({ group_id: groupId || null }).eq('id', categoryId);
-    if (error) alert('Could not move category: ' + error.message);
+    if (error) notify('Could not move category: ' + error.message);
     loadAll();
   }
 
@@ -3305,7 +3329,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       .from('monthly_budgets')
       .upsert({ household_id: householdId, month: monthStr, total_budget: isNaN(total) ? 0 : total }, { onConflict: 'household_id,month' });
     if (error) {
-      alert('Could not update the budget for that month: ' + error.message);
+      notify('Could not update the budget for that month: ' + error.message);
       return;
     }
     loadAll();
@@ -3318,7 +3342,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       .update({ currency: value })
       .eq('household_id', householdId);
     if (error) {
-      alert('Could not update currency: ' + error.message);
+      notify('Could not update currency: ' + error.message);
       return;
     }
     loadAll();
@@ -3336,7 +3360,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       .update({ name: trimmed })
       .eq('id', householdId);
     if (error) {
-      alert('Could not rename household: ' + error.message);
+      notify('Could not rename household: ' + error.message);
       setHouseholdNameDraft(household.name || '');
       return;
     }
@@ -3350,7 +3374,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       .update({ monthly_budget: isNaN(val) || val <= 0 ? 0 : val })
       .eq('id', id);
     if (error) {
-      alert('Could not update category budget: ' + error.message);
+      notify('Could not update category budget: ' + error.message);
       return;
     }
     loadAll();
@@ -3371,7 +3395,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     e.preventDefault();
     const amount = parseFloat(newRecurring.amount);
     if (!newRecurring.name.trim() || !newRecurring.categoryId || isNaN(amount) || amount <= 0 || !newRecurring.startDate) {
-      alert('Please fill in name, category, amount, and start date.');
+      notify('Please fill in name, category, amount, and start date.');
       return;
     }
     const { data: inserted, error } = await supabase.from('recurring_expenses').insert({
@@ -3390,7 +3414,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       ...(myPrivacyEnabled ? { is_private: recurringIsPrivate } : {}),
     }).select().single();
     if (error) {
-      alert('Could not save fixed expense: ' + error.message);
+      notify('Could not save fixed expense: ' + error.message);
       return;
     }
     if (recurringFiles.length > 0 && inserted?.id) {
@@ -3430,14 +3454,14 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
         payment_bank: CARD_PAYMENT_SOURCES.includes(merged.paymentSource) ? (merged.paymentBank || null) : null,
       })
       .eq('id', id);
-    if (error) alert('Could not update: ' + error.message);
+    if (error) notify('Could not update: ' + error.message);
     loadAll();
   }
 
   async function handleDeleteRecurring(id, name) {
     if (!confirm(`Remove "${name}" completely (including past months)? To just stop it going forward, set an end month instead and click Save.`)) return;
     const { error } = await supabase.from('recurring_expenses').delete().eq('id', id);
-    if (error) alert('Could not remove: ' + error.message);
+    if (error) notify('Could not remove: ' + error.message);
     loadAll();
   }
 
@@ -3445,7 +3469,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     e.preventDefault();
     const amount = parseFloat(newSaving.amount);
     if (!newSaving.name.trim() || isNaN(amount) || amount <= 0 || !newSaving.month) {
-      alert('Please fill in a name, amount, and month.');
+      notify('Please fill in a name, amount, and month.');
       return;
     }
     const { data: inserted, error } = await supabase.from('savings_goals').insert({
@@ -3459,7 +3483,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       ...(myPrivacyEnabled ? { is_private: savingIsPrivate } : {}),
     }).select().single();
     if (error) {
-      alert('Could not save: ' + error.message);
+      notify('Could not save: ' + error.message);
       return;
     }
     if (savingFiles.length > 0 && inserted?.id) {
@@ -3495,7 +3519,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       })
       .eq('id', id);
     if (error) {
-      alert('Could not update: ' + error.message);
+      notify('Could not update: ' + error.message);
       return;
     }
     setSavingsGoals((prev) =>
@@ -3511,7 +3535,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     if (!confirm(`Remove the savings goal "${name}"?`)) return;
     const { error } = await supabase.from('savings_goals').delete().eq('id', id);
     if (error) {
-      alert('Could not remove: ' + error.message);
+      notify('Could not remove: ' + error.message);
       return;
     }
     setSavingsGoals((prev) => prev.filter((s) => s.id !== id));
@@ -3547,7 +3571,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       });
       if (error) {
         setInviteStatus('');
-        alert('Could not create invite: ' + error.message);
+        notify('Could not create invite: ' + error.message);
         return;
       }
     }
@@ -3580,13 +3604,13 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
 
   async function handleCancelInvite(id) {
     const { error } = await supabase.from('household_invites').delete().eq('id', id);
-    if (error) alert('Could not cancel invite: ' + error.message);
+    if (error) notify('Could not cancel invite: ' + error.message);
     loadAll();
   }
 
   async function handleUpdateMemberRelation(memberId, relation) {
     const { error } = await supabase.from('household_members').update({ relation }).eq('id', memberId);
-    if (error) alert('Could not update relation: ' + error.message);
+    if (error) notify('Could not update relation: ' + error.message);
     loadAll();
   }
 
@@ -3594,7 +3618,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     e.preventDefault();
     const amount = parseFloat(newIncome.amount);
     if (!newIncome.name.trim() || isNaN(amount) || amount <= 0 || !newIncome.month) {
-      alert('Please fill in a name, amount, and month.');
+      notify('Please fill in a name, amount, and month.');
       return;
     }
     const { data: inserted, error } = await supabase.from('incomes').insert({
@@ -3609,7 +3633,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       ...(myPrivacyEnabled ? { is_private: incomeIsPrivate } : {}),
     }).select().single();
     if (error) {
-      alert('Could not save income: ' + error.message);
+      notify('Could not save income: ' + error.message);
       return;
     }
     if (incomeFiles.length > 0 && inserted?.id) {
@@ -3642,14 +3666,14 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
         end_date: null,
       })
       .eq('id', id);
-    if (error) alert('Could not update: ' + error.message);
+    if (error) notify('Could not update: ' + error.message);
     loadAll();
   }
 
   async function handleDeleteIncome(id, name) {
     if (!confirm(`Remove "${name}"?`)) return;
     const { error } = await supabase.from('incomes').delete().eq('id', id);
-    if (error) alert('Could not remove: ' + error.message);
+    if (error) notify('Could not remove: ' + error.message);
     loadAll();
   }
 
@@ -4661,7 +4685,7 @@ function ReportHtmlView({ data }) {
 
   function handleGenerateReport() {
     if (!reportFrom || !reportTo || reportFrom > reportTo) {
-      alert('Please choose a valid From/To date range.');
+      notify('Please choose a valid From/To date range.');
       return;
     }
     const { doc, filename, rangeLabel } = buildReportPdf(reportFrom, reportTo);
@@ -4690,7 +4714,7 @@ function ReportHtmlView({ data }) {
     e.preventDefault();
     if (!reportDoc) return;
     if (!reportEmail.trim()) {
-      alert('Please enter an email address to send the report to.');
+      notify('Please enter an email address to send the report to.');
       return;
     }
     setReportStatus('sending');
@@ -6223,6 +6247,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 {'\u24D8'}
               </button>
               {toastMsg && activePanel === 'investments' && <div className="app-toast">{toastMsg}</div>}
+              {noticeBanner('investments')}
             </div>
             <div className={`muted-small report-desc${investmentsInfoOpen ? ' is-open' : ''}`} style={{ textAlign: 'left', marginTop: -6, marginBottom: 12 }}>
               Fixed Deposits and Mutual Fund / SIP investments, tracked separately from the household budget. Visible to everyone in your household.
@@ -6458,6 +6483,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
           {inputTab === 'expense' && (
           <div className="panel">
             <h2 className="panel-title-themed form-title-mobile-hide">Regular Expenses</h2>
+            {noticeBanner('expense')}
             <form onSubmit={handleAddExpense}>
             <div className="row">
               <div className="field-pair">
@@ -6629,6 +6655,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
           {inputTab === 'income' && (
           <div className="panel">
             <h2 className="panel-title-themed form-title-mobile-hide">Income</h2>
+            {noticeBanner('income')}
             <form onSubmit={handleAddIncome}>
             {/* Month field removed on purpose -- this entry's month
                 already comes from the month-nav selector above (see the
@@ -6900,6 +6927,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
           <>
           <div className="panel">
             <h2 className="panel-title-themed form-title-mobile-hide">Fixed Expenses</h2>
+            {noticeBanner('fixed')}
             <div className="muted-small" style={{ textAlign: 'center', marginTop: -6, marginBottom: 12 }}>
               Loans, EMIs, credit cards, rent
             </div>
@@ -7381,6 +7409,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
           {inputTab === 'savings' && (
           <div className="panel">
             <h2 className="panel-title-themed form-title-mobile-hide">Savings</h2>
+            {noticeBanner('savings')}
             <div className="muted-small" style={{ textAlign: 'left', marginTop: -6, marginBottom: 12 }}>
               How much you want to set aside each month
             </div>
@@ -8109,6 +8138,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             {/* "Report" itself renders as a page-level centered title (see
                 the !inputTab block near the month nav) instead of cramped
                 inside this narrow content-grid column. */}
+            {noticeBanner('report')}
             <div className="row report-daterow" style={{ marginBottom: 12 }}>
               <div className="field">
                 <label>From</label>
@@ -8252,6 +8282,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 {/* "Settings" itself renders as a page-level centered title
                     (see the !inputTab block near the month nav) instead of
                     cramped inside this narrow content-grid column. */}
+                {noticeBanner('settings')}
                 <div className="my-details-box" style={{ marginBottom: 18, padding: 12, border: '1px solid var(--border)', borderRadius: 8 }}>
                   <div className="muted-small" style={{ fontWeight: 600, marginBottom: 8 }}>Private entries</div>
                   <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
