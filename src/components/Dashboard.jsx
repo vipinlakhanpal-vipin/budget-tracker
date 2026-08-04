@@ -2199,6 +2199,21 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
 
   const pieData = Object.entries(byCategory).map(([name, value]) => ({ name, value }));
 
+  // Budgeted vs Actual chart-toggle option: one row per category that has a
+  // budget cap set in Settings > Category Budgets (categories with no cap
+  // are excluded -- there's nothing to compare them against). Same byCategory
+  // spend figures used everywhere else on the dashboard.
+  const budgetVsActualData = useMemo(() => {
+    return categories
+      .filter((c) => c.monthly_budget > 0)
+      .map((c) => ({ name: c.name, budgeted: Number(c.monthly_budget), spent: byCategory[c.name] || 0 }));
+  }, [categories, byCategory]);
+  // Category names shortened before going on the chart's X-axis -- with two
+  // bars per category there's less width per label than the single-bar
+  // charts get, so the same 14-char truncation used elsewhere kicks in
+  // earlier here.
+  const shortCatLabel = (name) => (name && name.length > 14 ? name.slice(0, 14) + '\u2026' : name);
+
   // Payment-source breakdown for the "By Source" chart-toggle option (Phase 2,
   // per explicit request: show Credit Card / Debit Card / Bank Account spend on
   // the Dashboard as a chart rather than new tiles). Same data scope as
@@ -4880,6 +4895,12 @@ function ReportHtmlView({ data }) {
       >
         By Source
       </button>
+      <button
+        className={`btn small ${chartType === 'budgetActual' ? '' : 'secondary'}`}
+        onClick={() => setChartType('budgetActual')}
+      >
+        Budgeted vs Actual
+      </button>
     </div>
   );
 
@@ -5155,6 +5176,43 @@ function ReportHtmlView({ data }) {
                   <Cell key={i} fill={COLORS[i % COLORS.length]} />
                 ))}
                 <LabelList dataKey="value" position="top" content={DirhamBarLabelVerticalColumn} />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        ) : chartType === 'budgetActual' ? (
+          // Budgeted vs Actual -- grouped bar per category (categories with a
+          // budget cap set in Settings > Category Budgets only). Category
+          // labels run straight down (angle -90, not the usual -20/-45
+          // diagonal) with names shortened first -- per explicit feedback
+          // that the angled labels from the mockup weren't fitting well with
+          // two bars per category eating into the width each label gets.
+          // Same reasoning for the value labels: the plain horizontal
+          // DirhamBarLabel would overlap between two adjacent narrow bars
+          // (also flagged in the mockup), so both bars use the rotated
+          // DirhamBarLabelVerticalColumn label already used elsewhere in
+          // this file for exactly this narrow-bar overlap problem.
+          <ResponsiveContainer width="100%" height={big ? (isMobile ? 400 : 480) : 380}>
+            <BarChart data={budgetVsActualData} margin={{ top: 60, right: 20, left: 30, bottom: 90 }} barGap={2} barCategoryGap={big ? '20%' : '25%'}>
+              <XAxis
+                dataKey="name"
+                tickFormatter={shortCatLabel}
+                tick={{ fontSize: 10 }}
+                interval={0}
+                angle={-90}
+                textAnchor="end"
+                height={90}
+              />
+              <YAxis tickFormatter={(v) => fmt(v)} width={80} tick={{ fontSize: 11 }} />
+              <Tooltip formatter={(v) => fmt(v)} cursor={false} labelStyle={{ color: '#1a1a1a', fontWeight: 600 }} />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Bar dataKey="budgeted" name="Budgeted" fill="#0ea5e9" radius={[3, 3, 0, 0]} isAnimationActive={false} barSize={big ? (isMobile ? 10 : 14) : 12}>
+                <LabelList dataKey="budgeted" position="top" content={DirhamBarLabelVerticalColumn} />
+              </Bar>
+              <Bar dataKey="spent" name="Spent" radius={[3, 3, 0, 0]} isAnimationActive={false} barSize={big ? (isMobile ? 10 : 14) : 12}>
+                {budgetVsActualData.map((d, i) => (
+                  <Cell key={i} fill={d.spent > d.budgeted ? '#dc2626' : '#0d9488'} />
+                ))}
+                <LabelList dataKey="spent" position="top" content={DirhamBarLabelVerticalColumn} />
               </Bar>
             </BarChart>
           </ResponsiveContainer>
@@ -7696,7 +7754,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             // every app release -- only when Help itself is edited), so the
             // little "Help updated as of vX.XX" marker next to the tour button
             // tells users this text is actually in sync with what they're using.
-            const HELP_LAST_UPDATED_VERSION = '2.72';
+            const HELP_LAST_UPDATED_VERSION = '2.73';
             const helpTopics = [
 { key: 'updates', title: "What's New", body: <>Latest updates (Jul 31, 2026): Added a private Investments tracker (Fixed Deposits and Mutual Funds/SIPs) with its own tab, currency + live FX conversion, auto-calculated gain/loss, and a pencil icon to edit any entry. The Report now includes a Payment-Source-wise spend breakdown on screen and in the downloadable/emailed PDF. PDF report category names no longer get cut off -- long names now auto-shrink to fit instead of truncating with "...". Every row across Income, Fixed Expenses, Regular Expenses, and Savings now has a pencil icon (matching Investments) that opens a proper edit sheet instead of relying only on inline editing. The small "Updated" confirmation toast, and the popup for reading a saved note, now always appear centered in the app instead of sometimes drifting toward the browser's own tab bar on mobile.</> },
               { key: 'home', title: 'Dashboard', body: <>Shows just the dashboard (summary cards and totals), nothing else. Below it, a bigger "Explore" section holds the same Spending by category chart (Pie/Bar/Pareto/Treemap), AI Insights, and Budget Coach, sized larger so there's more room to look through them. Clicking Income, Fixed Expenses, Regular Expenses, Savings, Report, Settings, or Help scrolls back up to the top and switches to that tab as usual.</> },
