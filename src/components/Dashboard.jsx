@@ -2208,7 +2208,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       }
       return true;
     }).sort((a, b) => (b.expense_date || '').localeCompare(a.expense_date || '') || (b.id || 0) - (a.id || 0));
-  }, [rangeExpenses, expenseFilter]);
+  }, [rangeExpenses, expenseFilter, expenseSearchQuery]);
 
   const [recurringFilter, setRecurringFilter] = useState({ category: '', payment: '', bank: '' });
   const [recurringFilterOpen, setRecurringFilterOpen] = useState(false);
@@ -2236,7 +2236,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       }
       return true;
     }).sort((a, b) => (b.start_date || '').localeCompare(a.start_date || '') || (b.id || 0) - (a.id || 0));
-  }, [recurringForMonth, recurringFilter]);
+  }, [recurringForMonth, recurringFilter, recurringSearchQuery]);
 
   const [incomeFilter, setIncomeFilter] = useState({ source: '', member: '' });
   const [incomeFilterOpen, setIncomeFilterOpen] = useState(false);
