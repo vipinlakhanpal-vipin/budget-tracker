@@ -1608,6 +1608,46 @@ input[type="number"] { text-align: right; }
   animation: notice-in .2s ease-out;
 }
 
+.confirm-banner {
+  background: var(--danger-bg);
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin: 0 0 14px;
+  animation: notice-in .2s ease-out;
+}
+.confirm-banner-msg {
+  color: var(--danger);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: pre-line;
+  margin-bottom: 10px;
+}
+.confirm-banner-actions {
+  display: flex;
+  gap: 8px;
+}
+.confirm-banner-yes {
+  background: var(--danger);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.confirm-banner-no {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .btn {
   background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 9px 16px;
   font-size: 14px; font-weight: 600; cursor: pointer;
