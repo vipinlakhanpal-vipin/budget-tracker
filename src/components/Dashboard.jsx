@@ -5316,14 +5316,14 @@ function ReportHtmlView({ data }) {
                 can't give each of, say, 8+ standing columns the room a
                 480px-tall/20px-wide desktop layout assumes -- otherwise bars
                 and their rotated labels start overlapping each other. */}
-            <BarChart data={pieData} layout="horizontal" margin={{ top: big ? (isMobile ? 24 : 46) : 20, right: 20, left: 0, bottom: 70 }} barCategoryGap={big ? '20%' : '25%'}>
+            <BarChart data={pieData} layout="horizontal" margin={{ top: big ? (isMobile ? 24 : 46) : 20, right: 20, left: 0, bottom: 130 }} barCategoryGap={big ? '20%' : '25%'}>
               <XAxis
                 type="category"
                 dataKey="name"
                 interval={0}
-                angle={-45}
+                angle={-90}
                 textAnchor="end"
-                height={80}
+                height={130}
                 tick={{ fontSize: 11 }}
                 tickFormatter={(name) => (name.length > 14 ? name.slice(0, 14) + '&' : name)}
               />
@@ -5408,8 +5408,8 @@ function ReportHtmlView({ data }) {
           // to use a chart-toggle option here instead of new dashboard tiles).
           <div style={{ maxWidth: Math.min(760, Math.max(280, paymentSourceData.length * 130)), margin: '0 auto' }}>
           <ResponsiveContainer width="100%" height={big ? (isMobile ? 340 : 400) : 320}>
-            <BarChart data={paymentSourceData} margin={{ top: 55, right: 20, left: 30, bottom: 20 }}>
-              <XAxis dataKey="name" tickFormatter={shortSourceLabel} tick={{ fontSize: 11 }} interval={0} angle={-20} textAnchor="end" height={50} />
+            <BarChart data={paymentSourceData} margin={{ top: 55, right: 20, left: 30, bottom: 90 }}>
+              <XAxis dataKey="name" tickFormatter={shortSourceLabel} tick={{ fontSize: 11 }} interval={0} angle={-90} textAnchor="end" height={90} />
               <YAxis tickFormatter={(v) => fmt(v)} width={80} tick={{ fontSize: 11 }} />
               <Tooltip formatter={(v) => fmt(v)} cursor={false} labelStyle={{ color: '#1a1a1a', fontWeight: 600 }} />
               <Bar dataKey="value" radius={[6, 6, 0, 0]} isAnimationActive={false} barSize={big ? (isMobile ? 12 : 16) : 14}>
