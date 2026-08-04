@@ -16,7 +16,7 @@ import {
   Home, Plus, FileText, Users as UsersIcon, Settings as SettingsIcon,
   Pencil, Trash2, X, ChevronLeft, ChevronRight, ChevronDown, Camera, MessageCircle, Bot, Sparkles, User,
   Palette, Check, StickyNote, Paperclip, ExternalLink, Mail, Lightbulb,
-  Wallet, CalendarClock, ShoppingCart, PiggyBank, HelpCircle, Filter, Sun, Moon, RefreshCw, Landmark, BookOpen,
+  Wallet, CalendarClock, ShoppingCart, PiggyBank, HelpCircle, Filter, Search, Sun, Moon, RefreshCw, Landmark, BookOpen,
 } from 'lucide-react';
 
 // v1.89: cross-browser searchable dropdown, replacing the old
@@ -2185,6 +2185,8 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   const [expenseFilter, setExpenseFilter] = useState({ category: '', payment: '', bank: '' });
   const [expenseFilterOpen, setExpenseFilterOpen] = useState(false);
   const expenseFilterRef = useRef(null);
+  const [expenseSearchOpen, setExpenseSearchOpen] = useState(false);
+  const [expenseSearchQuery, setExpenseSearchQuery] = useState('');
   useEffect(() => {
     if (!expenseFilterOpen) return;
     function onDocClick(e) {
@@ -2199,6 +2201,11 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       if (expenseFilter.category && e.category_id !== expenseFilter.category) return false;
       if (expenseFilter.payment && (e.payment_source || 'Cash') !== expenseFilter.payment) return false;
       if (expenseFilter.bank && (e.payment_bank || '') !== expenseFilter.bank) return false;
+      if (expenseSearchQuery.trim()) {
+        const q = expenseSearchQuery.trim().toLowerCase();
+        const label = (e.description || categoryNameById[e.category_id] || '').toLowerCase();
+        if (!label.includes(q)) return false;
+      }
       return true;
     }).sort((a, b) => (b.expense_date || '').localeCompare(a.expense_date || '') || (b.id || 0) - (a.id || 0));
   }, [rangeExpenses, expenseFilter]);
@@ -2206,6 +2213,8 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   const [recurringFilter, setRecurringFilter] = useState({ category: '', payment: '', bank: '' });
   const [recurringFilterOpen, setRecurringFilterOpen] = useState(false);
   const recurringFilterRef = useRef(null);
+  const [recurringSearchOpen, setRecurringSearchOpen] = useState(false);
+  const [recurringSearchQuery, setRecurringSearchQuery] = useState('');
   useEffect(() => {
     if (!recurringFilterOpen) return;
     function onDocClick(e) {
@@ -2220,6 +2229,11 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       if (recurringFilter.category && r.category_id !== recurringFilter.category) return false;
       if (recurringFilter.payment && (r.payment_source || 'Cash') !== recurringFilter.payment) return false;
       if (recurringFilter.bank && (r.payment_bank || '') !== recurringFilter.bank) return false;
+      if (recurringSearchQuery.trim()) {
+        const q = recurringSearchQuery.trim().toLowerCase();
+        const label = (r.name || categoryNameById[r.category_id] || '').toLowerCase();
+        if (!label.includes(q)) return false;
+      }
       return true;
     }).sort((a, b) => (b.start_date || '').localeCompare(a.start_date || '') || (b.id || 0) - (a.id || 0));
   }, [recurringForMonth, recurringFilter]);
@@ -7239,6 +7253,26 @@ I can help you track expenses, understand spending patterns, create budgets, and
             <div className="panel-heading-row">
               <h2 className="panel-title-themed" style={{ marginBottom: 0 }}>Your fixed expenses</h2>
               <div className="filter-wrap" ref={recurringFilterRef}>
+                {recurringSearchOpen ? (
+                  <input
+                    type="text"
+                    className="search-input"
+                    placeholder="Search description..."
+                    autoFocus
+                    value={recurringSearchQuery}
+                    onChange={(e) => setRecurringSearchQuery(e.target.value)}
+                    onBlur={() => { if (!recurringSearchQuery.trim()) setRecurringSearchOpen(false); }}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    className="search-toggle-btn"
+                    onClick={() => setRecurringSearchOpen(true)}
+                    title="Search by description"
+                  >
+                    <Search size={13} />
+                  </button>
+                )}
                 <button
                   type="button"
                   className={`filter-btn ${recurringFilterActive ? 'active' : ''}`}
@@ -7777,6 +7811,26 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 {expenses.some((x) => (x.payment_source === 'Credit Card' || x.payment_source === 'Debit Card') && !x.payment_bank) && (
                   <button type="button" className="filter-btn" onClick={handleAutofillBanks} title="Fill in the bank for card expenses that are missing one">
                     Fix missing banks
+                  </button>
+                )}
+                {expenseSearchOpen ? (
+                  <input
+                    type="text"
+                    className="search-input"
+                    placeholder="Search description..."
+                    autoFocus
+                    value={expenseSearchQuery}
+                    onChange={(e) => setExpenseSearchQuery(e.target.value)}
+                    onBlur={() => { if (!expenseSearchQuery.trim()) setExpenseSearchOpen(false); }}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    className="search-toggle-btn"
+                    onClick={() => setExpenseSearchOpen(true)}
+                    title="Search by description"
+                  >
+                    <Search size={13} />
                   </button>
                 )}
                 <button
