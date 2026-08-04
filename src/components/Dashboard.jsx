@@ -360,16 +360,17 @@ function DirhamBarLabelVerticalColumn(props) {
 // request to bump the value-label text size there without touching the
 // original everywhere else it's already shipped (Bar/By Source charts).
 function DirhamBarLabelVerticalColumnLg(props) {
-  const { x, y, width, value } = props;
+  const { x, y, width, value, color } = props;
   const px = x + width / 2;
   const py = y;
-  const numStr = Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const c = color || 'var(--text)';
+  const numStr = Math.round(Number(value)).toLocaleString();
   return (
     <g transform={`rotate(-90, ${px}, ${py})`}>
-      <text x={px + 3} y={py} dy={3} fontSize={11} fontWeight={700} fill="var(--text)" fontFamily="Arial, sans-serif">D</text>
-      <line x1={px + 2} y1={py - 2.7} x2={px + 9.5} y2={py - 2.7} stroke="var(--text)" strokeWidth={1} />
-      <line x1={px + 2} y1={py + 2.7} x2={px + 9.5} y2={py + 2.7} stroke="var(--text)" strokeWidth={1} />
-      <text x={px + 13} y={py} dy={3} fontSize={11} fill="var(--text)">{numStr}</text>
+      <text x={px + 3} y={py} dy={3} fontSize={11} fontWeight={700} fill={c} fontFamily="Arial, sans-serif">D</text>
+      <line x1={px + 2} y1={py - 2.7} x2={px + 9.5} y2={py - 2.7} stroke={c} strokeWidth={1} />
+      <line x1={px + 2} y1={py + 2.7} x2={px + 9.5} y2={py + 2.7} stroke={c} strokeWidth={1} />
+      <text x={px + 13} y={py} dy={3} fontSize={11} fill={c}>{numStr}</text>
     </g>
   );
 }
@@ -382,7 +383,7 @@ function DirhamBarLabelVerticalColumnLg(props) {
 // this chart per explicit request, rather than changing fmt() itself and
 // touching every existing chart's axis along with it.
 function DirhamYAxisTick({ x, y, payload }) {
-  const numStr = Number(payload.value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const numStr = Math.round(Number(payload.value)).toLocaleString();
   return (
     <g transform={`translate(${x},${y})`}>
       <foreignObject x={-92} y={-9} width={88} height={18}>
@@ -5239,22 +5240,21 @@ function ReportHtmlView({ data }) {
           // component instead of fmt()'s "AED 1,234.00" text, per explicit
           // request -- scoped to just this chart rather than touching fmt()
           // itself and every other chart that still uses it.
-          <ResponsiveContainer width="100%" height={big ? (isMobile ? 400 : 480) : 380}>
-            <BarChart data={budgetVsActualData} margin={{ top: 60, right: 20, left: 40, bottom: 90 }} barGap={2} barCategoryGap={big ? '20%' : '25%'}>
+          <ResponsiveContainer width="100%" height={big ? (isMobile ? 480 : 560) : 460}>
+            <BarChart data={budgetVsActualData} margin={{ top: 60, right: 20, left: 40, bottom: 170 }} barGap={2} barCategoryGap={big ? '20%' : '25%'}>
               <XAxis
                 dataKey="name"
-                tickFormatter={shortCatLabel}
                 tick={{ fontSize: 12 }}
                 interval={0}
                 angle={-90}
                 textAnchor="end"
-                height={90}
+                height={170}
               />
               <YAxis width={92} tick={<DirhamYAxisTick />} />
               <Tooltip
                 formatter={(v) => (
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-                    <CurrencyPrefix />{Number(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    <CurrencyPrefix />{Math.round(Number(v)).toLocaleString()}
                   </span>
                 )}
                 cursor={false}
@@ -5262,13 +5262,13 @@ function ReportHtmlView({ data }) {
               />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Bar dataKey="budgeted" name="Budgeted" fill="#0ea5e9" radius={[3, 3, 0, 0]} isAnimationActive={false} barSize={big ? (isMobile ? 12 : 16) : 14}>
-                <LabelList dataKey="budgeted" position="top" content={DirhamBarLabelVerticalColumnLg} />
+                <LabelList dataKey="budgeted" position="top" content={(p) => <DirhamBarLabelVerticalColumnLg {...p} color="#0ea5e9" />} />
               </Bar>
               <Bar dataKey="spent" name="Spent" fill="#f5b95c" radius={[3, 3, 0, 0]} isAnimationActive={false} barSize={big ? (isMobile ? 12 : 16) : 14}>
                 {budgetVsActualData.map((d, i) => (
                   <Cell key={i} fill={d.spent > d.budgeted ? '#dc2626' : '#f5b95c'} />
                 ))}
-                <LabelList dataKey="spent" position="top" content={DirhamBarLabelVerticalColumnLg} />
+                <LabelList dataKey="spent" position="top" content={(p) => <DirhamBarLabelVerticalColumnLg {...p} color={p.payload && p.payload.spent > p.payload.budgeted ? '#dc2626' : '#f5b95c'} />} />
               </Bar>
             </BarChart>
           </ResponsiveContainer>
@@ -7810,7 +7810,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             // every app release -- only when Help itself is edited), so the
             // little "Help updated as of vX.XX" marker next to the tour button
             // tells users this text is actually in sync with what they're using.
-            const HELP_LAST_UPDATED_VERSION = '2.75';
+            const HELP_LAST_UPDATED_VERSION = '2.76';
             const helpTopics = [
 { key: 'updates', title: "What's New", body: <>Latest updates (Jul 31, 2026): Added a private Investments tracker (Fixed Deposits and Mutual Funds/SIPs) with its own tab, currency + live FX conversion, auto-calculated gain/loss, and a pencil icon to edit any entry. The Report now includes a Payment-Source-wise spend breakdown on screen and in the downloadable/emailed PDF. PDF report category names no longer get cut off -- long names now auto-shrink to fit instead of truncating with "...". Every row across Income, Fixed Expenses, Regular Expenses, and Savings now has a pencil icon (matching Investments) that opens a proper edit sheet instead of relying only on inline editing. The small "Updated" confirmation toast, and the popup for reading a saved note, now always appear centered in the app instead of sometimes drifting toward the browser's own tab bar on mobile.</> },
               { key: 'home', title: 'Dashboard', body: <>Shows just the dashboard (summary cards and totals), nothing else. Below it, a bigger "Explore" section holds the same Spending by category chart (Pie/Bar/Pareto/Treemap), AI Insights, and Budget Coach, sized larger so there's more room to look through them. Clicking Income, Fixed Expenses, Regular Expenses, Savings, Report, Settings, or Help scrolls back up to the top and switches to that tab as usual.</> },
