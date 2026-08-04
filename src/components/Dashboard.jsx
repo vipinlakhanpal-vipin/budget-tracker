@@ -1394,6 +1394,30 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     ) : null;
   }
 
+  // Inline, in-context replacement for native confirm() -- same rationale as
+  // notify()/noticeBanner() above: destructive actions (deleting an income,
+  // expense, category, etc.) used to pop a native browser confirm() dialog,
+  // which per explicit request should instead render right in the card the
+  // user is working in. askConfirm() stores the pending message + the action
+  // to run if the user says yes; confirmBanner() renders that as a banner
+  // with Yes/Cancel buttons scoped to the tab/panel it was triggered from.
+  const [confirmState, setConfirmState] = useState(null);
+  function askConfirm(message, scope, onConfirm) {
+    setConfirmState({ message, scope, onConfirm });
+  }
+  function confirmBanner(scope) {
+    if (!confirmState || confirmState.scope !== scope) return null;
+    return (
+      <div className="confirm-banner">
+        <div className="confirm-banner-msg">{confirmState.message}</div>
+        <div className="confirm-banner-actions">
+          <button type="button" className="confirm-banner-yes" onClick={() => { const fn = confirmState.onConfirm; setConfirmState(null); fn(); }}>Remove</button>
+          <button type="button" className="confirm-banner-no" onClick={() => setConfirmState(null)}>Cancel</button>
+        </div>
+      </div>
+    );
+  }
+
   // Centered popup for viewing a row's saved note -- replaces the old
   // notify(x.notes) calls on the Income/Fixed Expenses/Savings/Regular
   // Expenses row note icons, which rendered as the browser's native alert
@@ -2914,8 +2938,10 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     showToast(wasEditing ? 'Investment updated' : 'Investment added');
   }
 
-  async function handleDeleteInvestment(id, name) {
-    if (!confirm(`Remove "${name}" from your investments? This can't be undone.`)) return;
+  function handleDeleteInvestment(id, name) {
+    askConfirm(`Remove "${name}" from your investments? This can't be undone.`, 'investments', () => doDeleteInvestment(id));
+  }
+  async function doDeleteInvestment(id) {
     const { error } = await supabase.from('investments').delete().eq('id', id);
     if (error) { notify('Could not delete: ' + error.message); return; }
     if (editingInvestmentId === id) cancelEditInvestment();
@@ -3084,8 +3110,10 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     }
   }
 
-  async function clearChatHistory() {
-    if (!window.confirm("Clear the whole chat history for everyone in the household? This can't be undone.")) return;
+  function clearChatHistory() {
+    askConfirm("Clear the whole chat history for everyone in the household? This can't be undone.", 'aria', doClearChatHistory);
+  }
+  async function doClearChatHistory() {
     await supabase.from('chat_messages').delete().eq('household_id', householdId);
     setChatMessages([]);
   }
@@ -3214,7 +3242,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     loadAll();
   }
 
-  async function handleAutofillBanks() {
+  function handleAutofillBanks() {
     const missing = expenses.filter((x) => (x.payment_source === 'Credit Card' || x.payment_source === 'Debit Card') && !x.payment_bank);
     if (missing.length === 0) { notify('No expenses are missing a bank right now.'); return; }
     const bySource = {};
@@ -3232,7 +3260,9 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     const unresolved = missing.length - resolvedCount;
     let msg = `Fill in the missing bank on:\n${lines.join('\n')}`;
     if (unresolved > 0) msg += `\n\n${unresolved} more entr${unresolved === 1 ? 'y' : 'ies'} will stay as-is (no bank on file yet for that payment source).`;
-    if (!confirm(msg)) return;
+    askConfirm(msg, 'expense', () => doAutofillBanks(bySource));
+  }
+  async function doAutofillBanks(bySource) {
     for (const [src, v] of Object.entries(bySource)) {
       const { error } = await supabase.from('expenses').update({ payment_bank: v.bank }).eq('household_id', householdId).eq('payment_source', src).is('payment_bank', null);
       if (error) { notify('Could not update: ' + error.message); return; }
@@ -3254,9 +3284,12 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     loadAll();
   }
 
-  async function handleRemoveCategory(id, name) {
+  function handleRemoveCategory(id, name) {
     const hasExpenses = expenses.some((e) => e.category_id === id);
-    if (hasExpenses && !confirm(`"${name}" has expenses logged against it. Remove anyway?`)) return;
+    if (hasExpenses) { askConfirm(`"${name}" has expenses logged against it. Remove anyway?`, 'settings', () => doRemoveCategory(id)); return; }
+    doRemoveCategory(id);
+  }
+  async function doRemoveCategory(id) {
     const { error } = await supabase.from('categories').delete().eq('id', id);
     if (error) notify('Could not remove category: ' + error.message);
     loadAll();
@@ -3298,13 +3331,15 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     loadAll();
   }
 
-  async function handleRemoveGroup(id, name) {
+  function handleRemoveGroup(id, name) {
     const count = categories.filter((c) => c.group_id === id).length;
-    if (
-      count > 0 &&
-      !confirm(`'${name}' has ${count} categor${count === 1 ? 'y' : 'ies'} in it. Remove the group? Its categories become ungrouped, not deleted.`)
-    )
+    if (count > 0) {
+      askConfirm(`'${name}' has ${count} categor${count === 1 ? 'y' : 'ies'} in it. Remove the group? Its categories become ungrouped, not deleted.`, 'settings', () => doRemoveGroup(id));
       return;
+    }
+    doRemoveGroup(id);
+  }
+  async function doRemoveGroup(id) {
     const { error } = await supabase.from('category_groups').delete().eq('id', id);
     if (error) notify('Could not remove group: ' + error.message);
     loadAll();
@@ -3458,8 +3493,10 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     loadAll();
   }
 
-  async function handleDeleteRecurring(id, name) {
-    if (!confirm(`Remove "${name}" completely (including past months)? To just stop it going forward, set an end month instead and click Save.`)) return;
+  function handleDeleteRecurring(id, name) {
+    askConfirm(`Remove "${name}" completely (including past months)? To just stop it going forward, set an end month instead and click Save.`, 'fixed', () => doDeleteRecurring(id));
+  }
+  async function doDeleteRecurring(id) {
     const { error } = await supabase.from('recurring_expenses').delete().eq('id', id);
     if (error) notify('Could not remove: ' + error.message);
     loadAll();
@@ -3531,8 +3568,10 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     );
   }
 
-  async function handleDeleteSaving(id, name) {
-    if (!confirm(`Remove the savings goal "${name}"?`)) return;
+  function handleDeleteSaving(id, name) {
+    askConfirm(`Remove the savings goal "${name}"?`, 'savings', () => doDeleteSaving(id));
+  }
+  async function doDeleteSaving(id) {
     const { error } = await supabase.from('savings_goals').delete().eq('id', id);
     if (error) {
       notify('Could not remove: ' + error.message);
@@ -3670,8 +3709,10 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     loadAll();
   }
 
-  async function handleDeleteIncome(id, name) {
-    if (!confirm(`Remove "${name}"?`)) return;
+  function handleDeleteIncome(id, name) {
+    askConfirm(`Remove "${name}"?`, 'income', () => doDeleteIncome(id));
+  }
+  async function doDeleteIncome(id) {
     const { error } = await supabase.from('incomes').delete().eq('id', id);
     if (error) notify('Could not remove: ' + error.message);
     loadAll();
@@ -5324,7 +5365,7 @@ function ReportHtmlView({ data }) {
                 angle={-90}
                 textAnchor="end"
                 height={130}
-                tick={{ fontSize: 11 }}
+                tick={{ fontSize: 11, fill: 'var(--text)' }}
                 tickFormatter={(name) => (name.length > 14 ? name.slice(0, 14) + '&' : name)}
               />
               <YAxis type="number" tick={{ fontSize: 11 }} />
@@ -5409,7 +5450,7 @@ function ReportHtmlView({ data }) {
           <div style={{ maxWidth: Math.min(760, Math.max(280, paymentSourceData.length * 130)), margin: '0 auto' }}>
           <ResponsiveContainer width="100%" height={big ? (isMobile ? 340 : 400) : 320}>
             <BarChart data={paymentSourceData} margin={{ top: 55, right: 20, left: 30, bottom: 90 }}>
-              <XAxis dataKey="name" tickFormatter={shortSourceLabel} tick={{ fontSize: 11 }} interval={0} angle={-90} textAnchor="end" height={90} />
+              <XAxis dataKey="name" tickFormatter={shortSourceLabel} tick={{ fontSize: 11, fill: 'var(--text)' }} interval={0} angle={-90} textAnchor="end" height={90} />
               <YAxis tickFormatter={(v) => fmt(v)} width={80} tick={{ fontSize: 11 }} />
               <Tooltip formatter={(v) => fmt(v)} cursor={false} labelStyle={{ color: '#1a1a1a', fontWeight: 600 }} />
               <Bar dataKey="value" radius={[6, 6, 0, 0]} isAnimationActive={false} barSize={big ? (isMobile ? 12 : 16) : 14}>
@@ -5955,6 +5996,7 @@ function ReportHtmlView({ data }) {
                       <button onClick={() => setChatOpen(false)} aria-label="Close chat"><X size={16} /></button>
                     </div>
                   </div>
+                  {confirmBanner('aria')}
                   <div className="chat-messages" ref={chatMessagesRef}>
                     {chatMessages.length === 0 && (
                       <div className="chat-empty">
@@ -6247,7 +6289,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 {'\u24D8'}
               </button>
               {toastMsg && activePanel === 'investments' && <div className="app-toast">{toastMsg}</div>}
-              {noticeBanner('investments')}
+              {confirmBanner('investments')}{noticeBanner('investments')}
             </div>
             <div className={`muted-small report-desc${investmentsInfoOpen ? ' is-open' : ''}`} style={{ textAlign: 'left', marginTop: -6, marginBottom: 12 }}>
               Fixed Deposits and Mutual Fund / SIP investments, tracked separately from the household budget. Visible to everyone in your household.
@@ -6483,7 +6525,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
           {inputTab === 'expense' && (
           <div className="panel">
             <h2 className="panel-title-themed form-title-mobile-hide">Regular Expenses</h2>
-            {noticeBanner('expense')}
+            {confirmBanner('expense')}{noticeBanner('expense')}
             <form onSubmit={handleAddExpense}>
             <div className="row">
               <div className="field-pair">
@@ -6655,7 +6697,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
           {inputTab === 'income' && (
           <div className="panel">
             <h2 className="panel-title-themed form-title-mobile-hide">Income</h2>
-            {noticeBanner('income')}
+            {confirmBanner('income')}{noticeBanner('income')}
             <form onSubmit={handleAddIncome}>
             {/* Month field removed on purpose -- this entry's month
                 already comes from the month-nav selector above (see the
@@ -6927,7 +6969,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
           <>
           <div className="panel">
             <h2 className="panel-title-themed form-title-mobile-hide">Fixed Expenses</h2>
-            {noticeBanner('fixed')}
+            {confirmBanner('fixed')}{noticeBanner('fixed')}
             <div className="muted-small" style={{ textAlign: 'center', marginTop: -6, marginBottom: 12 }}>
               Loans, EMIs, credit cards, rent
             </div>
@@ -7409,7 +7451,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
           {inputTab === 'savings' && (
           <div className="panel">
             <h2 className="panel-title-themed form-title-mobile-hide">Savings</h2>
-            {noticeBanner('savings')}
+            {confirmBanner('savings')}{noticeBanner('savings')}
             <div className="muted-small" style={{ textAlign: 'left', marginTop: -6, marginBottom: 12 }}>
               How much you want to set aside each month
             </div>
@@ -8282,7 +8324,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 {/* "Settings" itself renders as a page-level centered title
                     (see the !inputTab block near the month nav) instead of
                     cramped inside this narrow content-grid column. */}
-                {noticeBanner('settings')}
+                {confirmBanner('settings')}{noticeBanner('settings')}
                 <div className="my-details-box" style={{ marginBottom: 18, padding: 12, border: '1px solid var(--border)', borderRadius: 8 }}>
                   <div className="muted-small" style={{ fontWeight: 600, marginBottom: 8 }}>Private entries</div>
                   <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
