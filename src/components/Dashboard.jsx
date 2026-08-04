@@ -5138,7 +5138,7 @@ function ReportHtmlView({ data }) {
   // Shared Pie/Bar/Pareto/Treemap toggle row -- identical in both the
   // normal (narrow, next to the data-entry tabs) and Home-tab ("big
   // explore") layouts, since it's the same chartType state either way.
-  const chartTypeToggle = (
+  const chartTypeToggle = (big) => (
     <div className="input-tabs" data-tour="chart-toggle">
       <button
         className={`btn small ${chartType === 'pie' ? '' : 'secondary'}`}
@@ -5176,6 +5176,8 @@ function ReportHtmlView({ data }) {
       >
         By Group
       </button>
+      {big && (
+        <>
       <button
         className={`btn small ${chartType === 'budgetActual' ? '' : 'secondary'}`}
         onClick={() => setChartType('budgetActual')}
@@ -5217,6 +5219,8 @@ function ReportHtmlView({ data }) {
             </div>
           )}
         </div>
+      )}
+        </>
       )}
     </div>
   );
@@ -5488,7 +5492,7 @@ function ReportHtmlView({ data }) {
           <div style={{ maxWidth: Math.min(760, Math.max(280, paymentSourceData.length * 130)), margin: '0 auto' }}>
           <ResponsiveContainer width="100%" height={big ? (isMobile ? 340 : 400) : 320}>
             <BarChart data={paymentSourceData} margin={{ top: 55, right: 20, left: 30, bottom: 140 }}>
-              <XAxis dataKey="name" tickFormatter={shortSourceLabel} tick={{ fontSize: 11, fill: 'var(--text)' }} interval={0} angle={-90} textAnchor="end" height={140} />
+              <XAxis dataKey="name" tickFormatter={shortSourceLabel} tick={{ fontSize: 11, fill: 'var(--text)' }} interval={0} angle={-90} textAnchor="end" />
               <YAxis tickFormatter={(v) => fmt(v)} width={80} tick={{ fontSize: 11 }} />
               <Tooltip formatter={(v) => fmt(v)} cursor={false} labelStyle={{ color: '#1a1a1a', fontWeight: 600 }} />
               <Bar dataKey="value" radius={[6, 6, 0, 0]} isAnimationActive={false} barSize={big ? (isMobile ? 12 : 16) : 14}>
@@ -5523,7 +5527,7 @@ function ReportHtmlView({ data }) {
           <div style={{ maxWidth: Math.min(760, Math.max(280, (groupChartMode === 'group' ? groupData : pieData).length * 130)), margin: '0 auto' }}>
           <ResponsiveContainer width="100%" height={big ? (isMobile ? 340 : 400) : 320}>
             <BarChart data={groupChartMode === 'group' ? groupData : pieData} margin={{ top: 55, right: 20, left: 30, bottom: 140 }}>
-              <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--text)' }} interval={0} angle={-90} textAnchor="end" height={140} />
+              <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--text)' }} interval={0} angle={-90} textAnchor="end" />
               <YAxis tickFormatter={(v) => fmt(v)} width={80} tick={{ fontSize: 11 }} />
               <Tooltip formatter={(v) => fmt(v)} cursor={false} labelStyle={{ color: '#1a1a1a', fontWeight: 600 }} />
               <Bar dataKey="value" radius={[6, 6, 0, 0]} isAnimationActive={false} barSize={big ? (isMobile ? 12 : 16) : 14}>
@@ -8084,7 +8088,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
               the Dashboard tab. Desktop is unaffected. */}
           {inputTab && !isMobile && activePanel !== 'investments' && (
             <>
-              {chartTypeToggle}
+              {chartTypeToggle(false)}
               {renderChartCard(false)}
               {aiInsightsCard}
               {budgetCoachCard}
@@ -8812,7 +8816,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             {!inputTab && activePanel !== 'settings' && activePanel !== 'help' && activePanel !== 'roadmap' && activePanel !== 'investments' && (!isMobile || !activePanel) && (
         <div className="home-explore-frame">
           <h2 style={{ margin: '0 0 10px' }}>Explore</h2>
-          {chartTypeToggle}
+          {chartTypeToggle(true)}
           {renderChartCard(true)}
           {aiInsightsCard}
           {budgetCoachCard}
