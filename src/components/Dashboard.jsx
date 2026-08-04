@@ -849,6 +849,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   // standing up, categories spread left-to-right along the bottom) -- handy
   // on Home's wider canvas where there's room for that.
   const [barOrientation, setBarOrientation] = useState('vertical');
+  const [groupChartMode, setGroupChartMode] = useState('group');
   const [loading, setLoading] = useState(true);
   // Exactly one of these panels (Budget settings / Users / Admin console / Help)
   // can be open at a time -- they all render in the same spot below the chart,
@@ -2304,6 +2305,21 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   }, [categories, byCategory]);
 
   const pieData = Object.entries(byCategory).map(([name, value]) => ({ name, value }));
+
+  // By Group chart data -- spend aggregated per category group (categories
+  // with no group_id fall into an 'Ungrouped' bucket), per explicit request
+  // for a group-wise spend chart with a category/group toggle.
+  const groupData = useMemo(() => {
+    const m = {};
+    categories.forEach((c) => {
+      const spend = byCategory[c.name] || 0;
+      if (!spend) return;
+      const grp = categoryGroups.find((g) => g.id === c.group_id);
+      const groupName = grp ? grp.name : 'Ungrouped';
+      m[groupName] = (m[groupName] || 0) + spend;
+    });
+    return Object.entries(m).map(([name, value]) => ({ name, value }));
+  }, [categories, categoryGroups, byCategory]);
 
   // Budgeted vs Actual chart-toggle option: one row per category that has a
   // budget cap set in Settings > Category Budgets (categories with no cap
@@ -5141,6 +5157,12 @@ function ReportHtmlView({ data }) {
         By Source
       </button>
       <button
+        className={`btn small ${chartType === 'group' ? '' : 'secondary'}`}
+        onClick={() => setChartType('group')}
+      >
+        By Group
+      </button>
+      <button
         className={`btn small ${chartType === 'budgetActual' ? '' : 'secondary'}`}
         onClick={() => setChartType('budgetActual')}
       >
@@ -5463,6 +5485,42 @@ function ReportHtmlView({ data }) {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
+          </div>
+        ) : effectiveChartType === 'group' ? (
+          // By Group -- aggregate spend either by category group or by
+          // individual category, per explicit request for a group-wise
+          // spend chart with a toggle to switch between group and category
+          // view. Reuses the same By Source bar-chart layout/sizing.
+          <div>
+          <div className="input-tabs" style={{ marginBottom: 8 }}>
+            <button
+              className={`btn small ${groupChartMode === 'group' ? '' : 'secondary'}`}
+              onClick={() => setGroupChartMode('group')}
+            >
+              By Group
+            </button>
+            <button
+              className={`btn small ${groupChartMode === 'category' ? '' : 'secondary'}`}
+              onClick={() => setGroupChartMode('category')}
+            >
+              By Category
+            </button>
+          </div>
+          <div style={{ maxWidth: Math.min(760, Math.max(280, (groupChartMode === 'group' ? groupData : pieData).length * 130)), margin: '0 auto' }}>
+          <ResponsiveContainer width="100%" height={big ? (isMobile ? 340 : 400) : 320}>
+            <BarChart data={groupChartMode === 'group' ? groupData : pieData} margin={{ top: 55, right: 20, left: 30, bottom: 140 }}>
+              <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--text)' }} interval={0} angle={-90} textAnchor="end" height={140} />
+              <YAxis tickFormatter={(v) => fmt(v)} width={80} tick={{ fontSize: 11 }} />
+              <Tooltip formatter={(v) => fmt(v)} cursor={false} labelStyle={{ color: '#1a1a1a', fontWeight: 600 }} />
+              <Bar dataKey="value" radius={[6, 6, 0, 0]} isAnimationActive={false} barSize={big ? (isMobile ? 12 : 16) : 14}>
+                {(groupChartMode === 'group' ? groupData : pieData).map((_, i) => (
+                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                ))}
+                <LabelList dataKey="value" position="top" content={DirhamBarLabelVerticalColumnLg} />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+          </div>
           </div>
         ) : effectiveChartType === 'budgetActual' ? (
           // Budgeted vs Actual -- grouped bar per category (categories with a
