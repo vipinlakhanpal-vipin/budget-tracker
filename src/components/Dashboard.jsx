@@ -3287,8 +3287,8 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
 
   function handleRemoveCategory(id, name) {
     const hasExpenses = expenses.some((e) => e.category_id === id);
-    if (hasExpenses) { askConfirm(`"${name}" has expenses logged against it. Remove anyway?`, 'settings', () => doRemoveCategory(id)); return; }
-    doRemoveCategory(id);
+    const msg = hasExpenses ? `"${name}" has expenses logged against it. Remove anyway?` : `Remove category "${name}"?`;
+    askConfirm(msg, 'settings', () => doRemoveCategory(id));
   }
   async function doRemoveCategory(id) {
     const { error } = await supabase.from('categories').delete().eq('id', id);
@@ -3334,11 +3334,10 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
 
   function handleRemoveGroup(id, name) {
     const count = categories.filter((c) => c.group_id === id).length;
-    if (count > 0) {
-      askConfirm(`'${name}' has ${count} categor${count === 1 ? 'y' : 'ies'} in it. Remove the group? Its categories become ungrouped, not deleted.`, 'settings', () => doRemoveGroup(id));
-      return;
-    }
-    doRemoveGroup(id);
+    const msg = count > 0
+      ? `'${name}' has ${count} categor${count === 1 ? 'y' : 'ies'} in it. Remove the group? Its categories become ungrouped, not deleted.`
+      : `Remove group '${name}'?`;
+    askConfirm(msg, 'settings', () => doRemoveGroup(id));
   }
   async function doRemoveGroup(id) {
     const { error } = await supabase.from('category_groups').delete().eq('id', id);
