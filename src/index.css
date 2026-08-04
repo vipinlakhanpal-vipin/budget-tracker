@@ -3363,3 +3363,22 @@ row. */
 .help-accordion-body { padding: 0 2px 14px; }
 
 .card-payment-split { justify-content: flex-start; }
+
+
+/* Highlighted total-budgeted / total-spent-against-budgeted summary cell,
+   sits above the per-category spending-vs-budget grid in Settings ->
+   Category Budgets. Uses the same accent2-light/accent2 pairing as .cat-chip
+   so it reads as an intentional highlight, not just another plain card. */
+.cat-budget-total-highlight {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--accent2-light);
+  border: 1px solid var(--accent2);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin: 4px 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
