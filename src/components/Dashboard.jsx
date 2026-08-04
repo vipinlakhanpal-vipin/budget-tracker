@@ -1583,6 +1583,10 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [categoryNameDrafts, setCategoryNameDrafts] = useState({});
   const [categoryBudgetDrafts, setCategoryBudgetDrafts] = useState({});
+  const [categoryGroups, setCategoryGroups] = useState([]);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [groupNameDrafts, setGroupNameDrafts] = useState({});
+  const [expandedGroups, setExpandedGroups] = useState({});
   // Which month the "Budgeting" settings tab is currently editing -- defaults
   // to the dashboard's current month every time that tab is opened (see the
   // "Budgeting" button's onClick), can be changed via its own Month field to
@@ -1869,6 +1873,18 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
         // migration has been run -- fail quietly instead of breaking
         // the rest of the app.
       }
+    }
+    try {
+      const { data: grps, error: grpErr } = await supabase
+        .from('category_groups')
+        .select('*')
+        .eq('household_id', householdId)
+        .order('name');
+      if (!grpErr) setCategoryGroups(grps || []);
+    } catch (e) {
+      // category_groups table may not exist yet until the one-time SQL
+      // migration has been run -- fail quietly instead of breaking
+      // the rest of the app.
     }
     setCategories(cats || []);
     setExpenses(exps || []);
@@ -3229,6 +3245,48 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       alert('Could not rename category: ' + error.message);
       return;
     }
+    loadAll();
+  }
+
+  async function handleAddGroup() {
+    const name = newGroupName.trim();
+    if (!name) return;
+    const { error } = await supabase.from('category_groups').insert({ name, household_id: householdId });
+    if (error) {
+      alert('Could not add group: ' + error.message);
+      return;
+    }
+    setNewGroupName('');
+    loadAll();
+  }
+
+  async function handleRenameGroup(id) {
+    const current = categoryGroups.find((g) => g.id === id);
+    const name = (groupNameDrafts[id] ?? current?.name ?? '').trim();
+    if (!name || (current && name === current.name)) return;
+    const { error } = await supabase.from('category_groups').update({ name }).eq('id', id);
+    if (error) {
+      alert('Could not rename group: ' + error.message);
+      return;
+    }
+    loadAll();
+  }
+
+  async function handleRemoveGroup(id, name) {
+    const count = categories.filter((c) => c.group_id === id).length;
+    if (
+      count > 0 &&
+      !confirm(`'${name}' has ${count} categor${count === 1 ? 'y' : 'ies'} in it. Remove the group? Its categories become ungrouped, not deleted.`)
+    )
+      return;
+    const { error } = await supabase.from('category_groups').delete().eq('id', id);
+    if (error) alert('Could not remove group: ' + error.message);
+    loadAll();
+  }
+
+  async function handleMoveCategoryToGroup(categoryId, groupId) {
+    const { error } = await supabase.from('categories').update({ group_id: groupId || null }).eq('id', categoryId);
+    if (error) alert('Could not move category: ' + error.message);
     loadAll();
   }
 
@@ -7959,7 +8017,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             // every app release -- only when Help itself is edited), so the
             // little "Help updated as of vX.XX" marker next to the tour button
             // tells users this text is actually in sync with what they're using.
-            const HELP_LAST_UPDATED_VERSION = '2.80';
+            const HELP_LAST_UPDATED_VERSION = '2.81';
             const helpTopics = [
 { key: 'updates', title: "What's New", body: <>Latest updates (Jul 31, 2026): Added a private Investments tracker (Fixed Deposits and Mutual Funds/SIPs) with its own tab, currency + live FX conversion, auto-calculated gain/loss, and a pencil icon to edit any entry. The Report now includes a Payment-Source-wise spend breakdown on screen and in the downloadable/emailed PDF. PDF report category names no longer get cut off -- long names now auto-shrink to fit instead of truncating with "...". Every row across Income, Fixed Expenses, Regular Expenses, and Savings now has a pencil icon (matching Investments) that opens a proper edit sheet instead of relying only on inline editing. The small "Updated" confirmation toast, and the popup for reading a saved note, now always appear centered in the app instead of sometimes drifting toward the browser's own tab bar on mobile.</> },
               { key: 'home', title: 'Dashboard', body: <>Shows just the dashboard (summary cards and totals), nothing else. Below it, a bigger "Explore" section holds the same Spending by category chart (Pie/Bar/Pareto/Treemap), AI Insights, and Budget Coach, sized larger so there's more room to look through them. Clicking Income, Fixed Expenses, Regular Expenses, Savings, Report, Settings, or Help scrolls back up to the top and switches to that tab as usual.</> },
@@ -7976,7 +8034,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
               { key: 'coach', title: 'Budget Coach', body: <>Unlike AI Insights (one month at a time), Coach looks across your last 6 months for patterns: a category that keeps going over budget, spending trending up or down, or a savings goal that no longer looks realistic. It only ever writes out suggestions -- it never changes your Settings for you.</> },
                         { key: 'chatbot', title: 'Aria', body: <>Aria is Hearth's built-in AI assistant -- a genuinely capable financial companion, not a scripted FAQ bot. It reasons over your household's real numbers, so you can ask it to dig into why a category ran over budget, compare spending across months, spot trends before they become a problem, or get a specific suggestion for hitting a savings goal, and it answers using your actual data rather than generic advice. It's just as happy to explain how any feature works. Find it as the purple chat button below the logo (on phones) or next to the bell (on desktop).</> },
               { key: 'report', title: 'Report', body: <>Generate a PDF for any date range, then view it on screen, download it, or email it. Each topic gets its own page -- Income, Expenses, Fixed Expenses, Savings, Payment Sources (how much moved through each card/bank/cash), Spend Analysis (Pareto chart), and Recommendations -- except the Category Breakdown bar chart and the Summary table, which share one page by default and only split onto two once the chart itself grows long enough to need the room. Every table, and every category/payment-source label on the charts, auto-shrinks its text to fit rather than cutting names off. The last page closes with a data & privacy note.</> },
-              { key: 'settings', title: 'Settings', body: <>Has its own sub-tabs. Currency covers your household's chosen currency (renaming the app/household name itself happens right in the header now -- click the title next to the logo, owners only). Smart Budget always follows whichever month you're viewing on the dashboard (change the Month field there to set or review a different month instead) and covers your overall monthly cap for that month, plus an optional "Budget for Per Category" section below it and how this month's spending compares to those caps (you'll get a notification in the bell icon if you go over). Add Category adds, renames, or removes categories. Users (owners only) covers household members and invites -- see below. Admin Console (owners only) covers members and invites. Every field auto-saves as you edit -- there's no Save button to click.</> },
+              { key: 'settings', title: 'Settings', body: <>Has its own sub-tabs. Currency covers your household's chosen currency (renaming the app/household name itself happens right in the header now -- click the title next to the logo, owners only). Smart Budget always follows whichever month you're viewing on the dashboard (change the Month field there to set or review a different month instead) and covers your overall monthly cap for that month, plus an optional "Budget for Per Category" section below it and how this month's spending compares to those caps (you'll get a notification in the bell icon if you go over). Groups & Category lets you create Groups (e.g. Subscriptions, Etisalat) and organize your categories under them -- or add, rename, and remove ungrouped categories as before. Users (owners only) covers household members and invites -- see below. Admin Console (owners only) covers members and invites. Every field auto-saves as you edit -- there's no Save button to click.</> },
               { key: 'notifications', title: 'Notifications', body: <>The bell icon next to Help (top-right) replaces the old always-on red banners. It shows a count of unread items -- over-total-budget, over a category's budget, or a bill due soon -- and opening it lists them and marks them read.</> },
               { key: 'users', title: 'Users', body: <>See who's active in the household and who's been invited but hasn't joined yet, with full Name/Email/Phone/Location. Owners can invite new members (which also sends them a notification email), fill in or fix anyone's Name/Phone/Location, and edit their own details under "My details" -- handy for accounts created before these fields existed. Reachable from Settings' Users sub-tab. The Admin console (if you have access) is separate and never visible to other household members.</> },
               { key: 'privacy', title: 'Privacy Policy', body: <>Covers what's collected, where it's stored, and how the AI features use your data. Also linked at the very bottom of every page. <a href="/privacy.html" target="_blank" rel="noopener noreferrer">Read the full Privacy Policy</a>.</> },
@@ -8228,7 +8286,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     className={`btn-teal ${settingsSubTab === 'category' ? '' : 'secondary'}`}
                     onClick={() => setSettingsSubTab('category')}
                   >
-                    Add Category
+                    Groups & Category
                   </button>
                   {isOwner && (
                     <button
@@ -8393,23 +8451,115 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   </div>
                 </div>
 
-                <div className="muted-small" style={{ margin: '10px 0 6px' }}>Category names (click to rename)</div>
-                <div className="cat-list">
-                  {categories.map((c) => (
-                    <div className="cat-chip" key={c.id}>
-                      <input
-                        value={categoryNameDrafts[c.id] ?? c.name}
-                        onChange={(e) => setCategoryNameDrafts({ ...categoryNameDrafts, [c.id]: e.target.value })}
-                        onBlur={() => handleRenameCategory(c.id)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
-                        style={{
-                          border: 'none', background: 'transparent', color: 'inherit', fontWeight: 600,
-                          fontSize: 12, width: Math.max(50, (categoryNameDrafts[c.id]?.length || c.name.length) * 7),
-                        }}
-                      />
-                      <button onClick={() => handleRemoveCategory(c.id, c.name)} title="Remove category"><Trash2 size={12} /></button>
+                <div className="field" style={{ marginTop: 14 }}>
+                  <label>New group</label>
+                  <div className="row">
+                    <input
+                      type="text"
+                      placeholder="e.g. Subscriptions, Etisalat"
+                      style={{ flex: 1 }}
+                      value={newGroupName}
+                      onChange={(e) => setNewGroupName(e.target.value)}
+                    />
+                    <button className="btn secondary small" onClick={handleAddGroup}>+ Add group</button>
+                  </div>
+                </div>
+
+                <div className="muted-small" style={{ margin: '14px 0 6px' }}>Groups (tap to expand -- use the dropdown on each category to move it between groups)</div>
+                <div className="group-accordion">
+                  {categoryGroups.map((g) => {
+                    const groupCats = categories.filter((c) => c.group_id === g.id);
+                    const isOpen = !!expandedGroups[g.id];
+                    return (
+                      <div className="group-card" key={g.id}>
+                        <div
+                          className={`group-card-head ${isOpen ? 'open' : ''}`}
+                          onClick={() => setExpandedGroups({ ...expandedGroups, [g.id]: !isOpen })}
+                        >
+                          <div className="left">
+                            <ChevronRight size={14} className="chevron" />
+                            <input
+                              className="group-name-input"
+                              value={groupNameDrafts[g.id] ?? g.name}
+                              onChange={(e) => setGroupNameDrafts({ ...groupNameDrafts, [g.id]: e.target.value })}
+                              onBlur={() => handleRenameGroup(g.id)}
+                              onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          </div>
+                          <span className="badge">{groupCats.length}</span>
+                          <span className="icons">
+                            <Trash2 size={13} onClick={(e) => { e.stopPropagation(); handleRemoveGroup(g.id, g.name); }} />
+                          </span>
+                        </div>
+                        {isOpen && (
+                          <div className="group-card-body">
+                            {groupCats.length === 0 ? (
+                              <div className="muted-small" style={{ padding: '8px 0' }}>No categories in this group yet -- move one in below.</div>
+                            ) : (
+                              groupCats.map((c) => (
+                                <div className="group-cat-row" key={c.id}>
+                                  <input
+                                    className="name-input"
+                                    value={categoryNameDrafts[c.id] ?? c.name}
+                                    onChange={(e) => setCategoryNameDrafts({ ...categoryNameDrafts, [c.id]: e.target.value })}
+                                    onBlur={() => handleRenameCategory(c.id)}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
+                                  />
+                                  <select value={g.id} onChange={(e) => handleMoveCategoryToGroup(c.id, e.target.value || null)}>
+                                    <option value="">-- Ungrouped --</option>
+                                    {categoryGroups.map((g2) => (
+                                      <option key={g2.id} value={g2.id}>{g2.name}</option>
+                                    ))}
+                                  </select>
+                                  <button onClick={() => handleRemoveCategory(c.id, c.name)} title="Remove category"><Trash2 size={12} /></button>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  <div className="group-card ungrouped">
+                    <div
+                      className={`group-card-head ${expandedGroups.ungrouped ? 'open' : ''}`}
+                      onClick={() => setExpandedGroups({ ...expandedGroups, ungrouped: !expandedGroups.ungrouped })}
+                    >
+                      <div className="left">
+                        <ChevronRight size={14} className="chevron" />
+                        <span className="name" style={{ fontWeight: 700, fontSize: 13 }}>Ungrouped</span>
+                      </div>
+                      <span className="badge">{categories.filter((c) => !c.group_id).length}</span>
                     </div>
-                  ))}
+                    {expandedGroups.ungrouped && (
+                      <div className="group-card-body">
+                        {categories.filter((c) => !c.group_id).length === 0 ? (
+                          <div className="muted-small" style={{ padding: '8px 0' }}>Every category is in a group.</div>
+                        ) : (
+                          categories.filter((c) => !c.group_id).map((c) => (
+                            <div className="group-cat-row" key={c.id}>
+                              <input
+                                className="name-input"
+                                value={categoryNameDrafts[c.id] ?? c.name}
+                                onChange={(e) => setCategoryNameDrafts({ ...categoryNameDrafts, [c.id]: e.target.value })}
+                                onBlur={() => handleRenameCategory(c.id)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
+                              />
+                              <select value="" onChange={(e) => handleMoveCategoryToGroup(c.id, e.target.value || null)}>
+                                <option value="">-- Ungrouped --</option>
+                                {categoryGroups.map((g2) => (
+                                  <option key={g2.id} value={g2.id}>{g2.name}</option>
+                                ))}
+                              </select>
+                              <button onClick={() => handleRemoveCategory(c.id, c.name)} title="Remove category"><Trash2 size={12} /></button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 </>
                 ) : (
