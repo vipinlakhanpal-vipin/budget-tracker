@@ -2290,11 +2290,28 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   // One tile per bank actually used for this payment type this month -- falls
   // back to a single bare-type tile (value 0) when there's no data yet, same
   // as the old always-3-tiles behavior so the row never collapses to nothing.
+  // Dashboard-tile-only display shortening -- applies for every user, not
+  // just this household. "Bank Account" reads as "Bank A/c" here (full
+  // word used everywhere else in the app). Bank names get a short trailing
+  // country/region qualifier stripped (e.g. "HSBC UAE" -> "HSBC") so the
+  // tile stays compact -- the bank's full name (with qualifier) is
+  // untouched in the actual data and everywhere else it's displayed.
+  const TILE_TYPE_LABEL = { 'Bank Account': 'Bank A/c' };
+  const BANK_NAME_SUFFIX_STRIP = new Set(['UAE', 'USA', 'US', 'UK', 'GB', 'KSA', 'KWT', 'QAT', 'BHR', 'OMN', 'IND', 'IN', 'GCC', 'INTL', 'LTD', 'PLC']);
+  const shortBankName = (name) => {
+    if (!name) return name;
+    const parts = name.trim().split(/\s+/);
+    if (parts.length > 1 && BANK_NAME_SUFFIX_STRIP.has(parts[parts.length - 1].toUpperCase())) {
+      return parts.slice(0, -1).join(' ');
+    }
+    return name;
+  };
   const paymentTypeTiles = (type) => {
     const order = byPaymentType.bankOrder[type];
-    if (!order || order.length === 0) return [{ tileLabel: type, value: 0, catLine: '', key: type }];
+    const displayType = TILE_TYPE_LABEL[type] || type;
+    if (!order || order.length === 0) return [{ tileLabel: displayType, value: 0, catLine: '', key: type }];
     return order.map((key) => ({
-      tileLabel: key === '__none__' ? type : `${type} (${key})`,
+      tileLabel: key === '__none__' ? displayType : `${displayType} (${shortBankName(key)})`,
       value: byPaymentType.perBank[type][key] || 0,
       catLine: tileCategoryLine(type, key),
       key: `${type}-${key}`,
@@ -7679,7 +7696,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             // every app release -- only when Help itself is edited), so the
             // little "Help updated as of vX.XX" marker next to the tour button
             // tells users this text is actually in sync with what they're using.
-            const HELP_LAST_UPDATED_VERSION = '2.70';
+            const HELP_LAST_UPDATED_VERSION = '2.71';
             const helpTopics = [
 { key: 'updates', title: "What's New", body: <>Latest updates (Jul 31, 2026): Added a private Investments tracker (Fixed Deposits and Mutual Funds/SIPs) with its own tab, currency + live FX conversion, auto-calculated gain/loss, and a pencil icon to edit any entry. The Report now includes a Payment-Source-wise spend breakdown on screen and in the downloadable/emailed PDF. PDF report category names no longer get cut off -- long names now auto-shrink to fit instead of truncating with "...". Every row across Income, Fixed Expenses, Regular Expenses, and Savings now has a pencil icon (matching Investments) that opens a proper edit sheet instead of relying only on inline editing. The small "Updated" confirmation toast, and the popup for reading a saved note, now always appear centered in the app instead of sometimes drifting toward the browser's own tab bar on mobile.</> },
               { key: 'home', title: 'Dashboard', body: <>Shows just the dashboard (summary cards and totals), nothing else. Below it, a bigger "Explore" section holds the same Spending by category chart (Pie/Bar/Pareto/Treemap), AI Insights, and Budget Coach, sized larger so there's more room to look through them. Clicking Income, Fixed Expenses, Regular Expenses, Savings, Report, Settings, or Help scrolls back up to the top and switches to that tab as usual.</> },
