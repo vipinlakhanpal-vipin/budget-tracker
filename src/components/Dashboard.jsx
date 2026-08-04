@@ -5153,7 +5153,7 @@ function ReportHtmlView({ data }) {
       >
         Income vs Expenses
       </button>
-      {effectiveChartType === 'incomeExpenses' && (
+      {chartType === 'incomeExpenses' && (
         <div className="filter-wrap" ref={monthsFilterRef} style={{ marginLeft: 'auto' }}>
           <button
             type="button"
