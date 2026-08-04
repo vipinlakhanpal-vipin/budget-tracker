@@ -5461,7 +5461,7 @@ function ReportHtmlView({ data }) {
                   type="category"
                   dataKey="name"
                   width={big ? (isMobile ? 95 : 140) : 95}
-                  tick={{ fontSize: big ? 11 : 8.5 }}
+                  tick={{ fontSize: big ? 11 : 8.5, fill: 'white' }}
                   tickFormatter={(name) => (name.length > (big ? (isMobile ? 13 : 20) : 13) ? name.slice(0, big ? (isMobile ? 13 : 20) : 13) + '&' : name)}
                 />
                 <Tooltip formatter={(v) => fmt(v)} />
@@ -5526,7 +5526,7 @@ function ReportHtmlView({ data }) {
               By Category
             </button>
           </div>
-          <div style={{ maxWidth: Math.min(1500, Math.max(280, (groupChartMode === 'group' ? groupData : pieData).length * 150)), margin: '0 auto' }}>
+          <div style={{ maxWidth: Math.min(1500, Math.max(280, groupChartMode === 'group' ? groupData.length * 95 : pieData.length * 150)), margin: '0 auto' }}>
           <ResponsiveContainer width="100%" height={big ? (isMobile ? 340 : 400) : 320}>
             <BarChart data={groupChartMode === 'group' ? groupData : pieData} margin={{ top: 55, right: 20, left: 30, bottom: 140 }}>
               <XAxis dataKey="name" tick={{ fontSize: 13, fill: 'var(--text)' }} interval={0} angle={-90} textAnchor="end" />
