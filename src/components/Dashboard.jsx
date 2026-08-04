@@ -206,6 +206,7 @@ const PAYMENT_SOURCES = ['Cash', 'Credit Card', 'Debit Card', 'Bank'];
 // CARD_PAYMENT_SOURCES below (which really means "needs a bank picker"
 // at this point, not strictly "is a card").
 const RECURRING_PAYMENT_SOURCES = [...PAYMENT_SOURCES, 'Salary'];
+const paymentSourceLabel = (p) => (p === 'Salary' ? 'Salary Deduction' : p);
 const CARD_PAYMENT_SOURCES = ['Credit Card', 'Debit Card', 'Bank'];
 // Free-tier household size cap: the owner plus this many additional people
 // (active members + pending invites combined).
@@ -5140,22 +5141,18 @@ function ReportHtmlView({ data }) {
       >
         By Source
       </button>
-      {big && (
       <button
         className={`btn small ${chartType === 'budgetActual' ? '' : 'secondary'}`}
         onClick={() => setChartType('budgetActual')}
       >
         Budgeted vs Actual
       </button>
-      )}
-      {big && (
       <button
         className={`btn small ${chartType === 'incomeExpenses' ? '' : 'secondary'}`}
         onClick={() => setChartType('incomeExpenses')}
       >
         Income vs Expenses
       </button>
-      )}
       {effectiveChartType === 'incomeExpenses' && (
         <div className="filter-wrap" ref={monthsFilterRef} style={{ marginLeft: 'auto' }}>
           <button
@@ -7093,7 +7090,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   onChange={(e) => setNewRecurring({ ...newRecurring, paymentSource: e.target.value, paymentBank: CARD_PAYMENT_SOURCES.includes(e.target.value) ? newRecurring.paymentBank : '' })}
                 >
                   {RECURRING_PAYMENT_SOURCES.map((p) => (
-                    <option key={p} value={p}>{p}</option>
+                    <option key={p} value={p}>{paymentSourceLabel(p)}</option>
                   ))}
                 </select>
               </div>
@@ -7223,7 +7220,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                       >
                         <option value="">All payment types</option>
                         {RECURRING_PAYMENT_SOURCES.map((p) => (
-                          <option key={p} value={p}>{p}</option>
+                          <option key={p} value={p}>{paymentSourceLabel(p)}</option>
                         ))}
                       </select>
                     </div>
@@ -7422,7 +7419,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                         onChange={(e) => commitRecurringField(r.id, 'paymentSource', e.target.value)}
                       >
                         {RECURRING_PAYMENT_SOURCES.map((p) => (
-                          <option key={p} value={p}>{p}</option>
+                          <option key={p} value={p}>{paymentSourceLabel(p)}</option>
                         ))}
                       </select>
                     </div>
