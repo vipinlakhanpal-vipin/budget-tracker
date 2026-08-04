@@ -1267,14 +1267,14 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
 .filter-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
 .search-toggle-btn {
   display: inline-flex; align-items: center; justify-content: center;
-  border: 1.5px solid var(--border); border-radius: 9px; background: var(--surface, #fff);
+  border: 1.5px solid var(--border); border-radius: 9px; background: var(--card);
   color: var(--muted); cursor: pointer; padding: 7px 10px; transition: border-color .15s ease, color .15s ease;
 }
 .search-toggle-btn:hover { border-color: #a9d9d5; color: var(--text); }
 .search-toggle-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
 .search-input-wrap { display: inline-flex; align-items: center; }
 .search-input {
-  border: 1.5px solid var(--accent); border-radius: 9px; background: var(--surface, #fff);
+  border: 1.5px solid var(--accent); border-radius: 9px; background: var(--card);
   color: var(--text); font-size: 12px; font-weight: 600;
   padding: 6px 10px; width: 150px; outline: none;
 }
