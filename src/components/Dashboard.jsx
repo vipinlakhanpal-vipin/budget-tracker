@@ -5140,19 +5140,23 @@ function ReportHtmlView({ data }) {
       >
         By Source
       </button>
+      {big && (
       <button
         className={`btn small ${chartType === 'budgetActual' ? '' : 'secondary'}`}
         onClick={() => setChartType('budgetActual')}
       >
         Budgeted vs Actual
       </button>
+      )}
+      {big && (
       <button
         className={`btn small ${chartType === 'incomeExpenses' ? '' : 'secondary'}`}
         onClick={() => setChartType('incomeExpenses')}
       >
         Income vs Expenses
       </button>
-      {chartType === 'incomeExpenses' && (
+      )}
+      {effectiveChartType === 'incomeExpenses' && (
         <div className="filter-wrap" ref={monthsFilterRef} style={{ marginLeft: 'auto' }}>
           <button
             type="button"
@@ -5202,6 +5206,8 @@ function ReportHtmlView({ data }) {
     // ('horizontal') -- the small panel everywhere else always stays
     // 'vertical', matching its original look.
     const effectiveBarOrientation = big ? barOrientation : 'vertical';
+    const chartTypesRestrictedInNarrow = ['budgetActual', 'incomeExpenses'];
+    const effectiveChartType = (!big && chartTypesRestrictedInNarrow.includes(chartType)) ? 'pie' : chartType;
     return (
       <div className="panel">
         <h2 style={{ margin: '0 0 4px' }}>Spending by category</h2>
@@ -5223,7 +5229,7 @@ function ReportHtmlView({ data }) {
         )}
         {pieData.length === 0 ? (
           <div className="empty">Add a regular expense to see the breakdown.</div>
-        ) : chartType === 'pie' ? (
+        ) : effectiveChartType === 'pie' ? (
           <>
             {/* Home's big pie is now one 3-column row -- Total spent stats
                 on the left, the pie itself in the middle, Top 10 categories
@@ -5340,7 +5346,7 @@ function ReportHtmlView({ data }) {
               </div>
             )}
           </>
-        ) : chartType === 'bar' && effectiveBarOrientation === 'horizontal' ? (
+        ) : effectiveChartType === 'bar' && effectiveBarOrientation === 'horizontal' ? (
           // Standing-column layout: category names run along the bottom
           // (angled so longer names don't overlap), value goes up the
           // Y-axis -- the more familiar "bar chart" look, available on
@@ -5378,7 +5384,7 @@ function ReportHtmlView({ data }) {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
-        ) : chartType === 'bar' ? (() => {
+        ) : effectiveChartType === 'bar' ? (() => {
           // Fixed a real overlap bug here: the wrapper below used to decide
           // scroll-vs-visible purely by category COUNT (>30 big / >17
           // small), while separately capping the box at a fixed maxHeight
@@ -5431,7 +5437,7 @@ function ReportHtmlView({ data }) {
             </ResponsiveContainer>
           </div>
           );
-        })() : chartType === 'treemap' ? (
+        })() : effectiveChartType === 'treemap' ? (
           <ResponsiveContainer width="100%" height={big ? (isMobile ? 400 : 560) : 360}>
             <Treemap
               data={pieData}
@@ -5443,7 +5449,7 @@ function ReportHtmlView({ data }) {
               <Tooltip formatter={(v) => fmt(v)} />
             </Treemap>
           </ResponsiveContainer>
-        ) : chartType === 'source' ? (
+        ) : effectiveChartType === 'source' ? (
           // Payment-source breakdown -- Phase 2 addition (Credit Card / Debit
           // Card / Bank Account / Cash spend as a chart, per explicit request
           // to use a chart-toggle option here instead of new dashboard tiles).
@@ -5462,7 +5468,7 @@ function ReportHtmlView({ data }) {
             </BarChart>
           </ResponsiveContainer>
           </div>
-        ) : chartType === 'budgetActual' ? (
+        ) : effectiveChartType === 'budgetActual' ? (
           // Budgeted vs Actual -- grouped bar per category (categories with a
           // budget cap set in Settings > Category Budgets only). Category
           // labels run straight down (angle -90, not the usual -20/-45
@@ -5515,7 +5521,7 @@ function ReportHtmlView({ data }) {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
-        ) : chartType === 'incomeExpenses' ? (
+        ) : effectiveChartType === 'incomeExpenses' ? (
           // Income vs Expenses -- one group of 3 bars per month across the
           // currently viewed year, narrowed by the Months filter above.
           // Same Dirham-glyph value-label / no-decimal / var(--text) tick
@@ -8549,7 +8555,47 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 </div>
 
                 <div className="muted-small" style={{ margin: '14px 0 6px' }}>Groups (tap to expand -- use the dropdown on each category to move it between groups)</div>
+                <div className="muted-small" style={{ margin: '0 0 10px', fontWeight: 600 }}>{categoryGroups.length} group{categoryGroups.length === 1 ? '' : 's'} · {categories.length} categor{categories.length === 1 ? 'y' : 'ies'}</div>
                 <div className="group-accordion">
+                  <div className="group-card ungrouped">
+                    <div
+                      className={`group-card-head ${expandedGroups.ungrouped ? 'open' : ''}`}
+                      onClick={() => setExpandedGroups({ ...expandedGroups, ungrouped: !expandedGroups.ungrouped })}
+                    >
+                      <div className="left">
+                        <ChevronRight size={14} className="chevron" />
+                        <span className="name" style={{ fontWeight: 700, fontSize: 13 }}>Ungrouped</span>
+                      </div>
+                      <span className="badge">{categories.filter((c) => !c.group_id).length}</span>
+                    </div>
+                    {expandedGroups.ungrouped && (
+                      <div className="group-card-body">
+                        {categories.filter((c) => !c.group_id).length === 0 ? (
+                          <div className="muted-small" style={{ padding: '8px 0' }}>Every category is in a group.</div>
+                        ) : (
+                          categories.filter((c) => !c.group_id).map((c) => (
+                            <div className="group-cat-row" key={c.id}>
+                              <input
+                                className="name-input"
+                                value={categoryNameDrafts[c.id] ?? c.name}
+                                onChange={(e) => setCategoryNameDrafts({ ...categoryNameDrafts, [c.id]: e.target.value })}
+                                onBlur={() => handleRenameCategory(c.id)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
+                              />
+                              <select value="" onChange={(e) => handleMoveCategoryToGroup(c.id, e.target.value || null)}>
+                                <option value="">-- Ungrouped --</option>
+                                {categoryGroups.map((g2) => (
+                                  <option key={g2.id} value={g2.id}>{g2.name}</option>
+                                ))}
+                              </select>
+                              <button onClick={() => handleRemoveCategory(c.id, c.name)} title="Remove category"><Trash2 size={12} /></button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+
                   {categoryGroups.map((g) => {
                     const groupCats = categories.filter((c) => c.group_id === g.id);
                     const isOpen = !!expandedGroups[g.id];
@@ -8605,44 +8651,6 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     );
                   })}
 
-                  <div className="group-card ungrouped">
-                    <div
-                      className={`group-card-head ${expandedGroups.ungrouped ? 'open' : ''}`}
-                      onClick={() => setExpandedGroups({ ...expandedGroups, ungrouped: !expandedGroups.ungrouped })}
-                    >
-                      <div className="left">
-                        <ChevronRight size={14} className="chevron" />
-                        <span className="name" style={{ fontWeight: 700, fontSize: 13 }}>Ungrouped</span>
-                      </div>
-                      <span className="badge">{categories.filter((c) => !c.group_id).length}</span>
-                    </div>
-                    {expandedGroups.ungrouped && (
-                      <div className="group-card-body">
-                        {categories.filter((c) => !c.group_id).length === 0 ? (
-                          <div className="muted-small" style={{ padding: '8px 0' }}>Every category is in a group.</div>
-                        ) : (
-                          categories.filter((c) => !c.group_id).map((c) => (
-                            <div className="group-cat-row" key={c.id}>
-                              <input
-                                className="name-input"
-                                value={categoryNameDrafts[c.id] ?? c.name}
-                                onChange={(e) => setCategoryNameDrafts({ ...categoryNameDrafts, [c.id]: e.target.value })}
-                                onBlur={() => handleRenameCategory(c.id)}
-                                onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
-                              />
-                              <select value="" onChange={(e) => handleMoveCategoryToGroup(c.id, e.target.value || null)}>
-                                <option value="">-- Ungrouped --</option>
-                                {categoryGroups.map((g2) => (
-                                  <option key={g2.id} value={g2.id}>{g2.name}</option>
-                                ))}
-                              </select>
-                              <button onClick={() => handleRemoveCategory(c.id, c.name)} title="Remove category"><Trash2 size={12} /></button>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    )}
-                  </div>
                 </div>
                 </>
                 ) : (
