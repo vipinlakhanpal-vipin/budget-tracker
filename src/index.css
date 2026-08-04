@@ -3510,3 +3510,28 @@ row. */
   font-weight: 700;
   color: var(--text);
 }
+
+
+/* Recharts tooltip polish: kill the default full-height hover-cursor rect
+   (rendered in var(--text), which reads as a stray white bar in dark theme),
+   force readable dark label text against the tooltip's white background,
+   and shrink the floating tooltip box/text across every chart. */
+.recharts-tooltip-cursor {
+  display: none !important;
+}
+.recharts-default-tooltip {
+  padding: 5px 8px !important;
+  font-size: 12px !important;
+}
+.recharts-tooltip-label {
+  color: #1a1a1a !important;
+  margin-bottom: 2px !important;
+  font-size: 12px !important;
+}
+.recharts-tooltip-item-list {
+  padding: 0 !important;
+}
+.recharts-tooltip-item {
+  padding: 1px 0 !important;
+  font-size: 12px !important;
+}
