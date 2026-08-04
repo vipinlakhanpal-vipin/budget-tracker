@@ -2318,7 +2318,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       .map((c) => c.name);
   }, [categories, byCategory]);
 
-  const pieData = Object.entries(byCategory).map(([name, value]) => ({ name, value }));
+  const pieData = Object.entries(byCategory).map(([name, value]) => ({ name, value })).sort((a, b) => a.value - b.value);
 
   // By Group chart data -- spend aggregated per category group (categories
   // with no group_id fall into an 'Ungrouped' bucket), per explicit request
@@ -2332,7 +2332,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       const groupName = grp ? grp.name : 'Ungrouped';
       m[groupName] = (m[groupName] || 0) + spend;
     });
-    return Object.entries(m).map(([name, value]) => ({ name, value }));
+    return Object.entries(m).map(([name, value]) => ({ name, value })).sort((a, b) => a.value - b.value);
   }, [categories, categoryGroups, byCategory]);
 
   // Budgeted vs Actual chart-toggle option: one row per category that has a
@@ -2455,7 +2455,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     });
     return m;
   }, [rangeExpenses, recurringForMonth]);
-  const paymentSourceData = Object.entries(byPaymentSource).map(([name, value]) => ({ name, value }));
+  const paymentSourceData = Object.entries(byPaymentSource).map(([name, value]) => ({ name, value })).sort((a, b) => a.value - b.value);
 
   // Phase 2 dashboard tiles: unlike the By Source chart (broken out per bank),
   // these three roll every Credit Card / Debit Card / Bank Account entry up
