@@ -3485,3 +3485,15 @@ row. */
   font-weight: 700;
   color: var(--text);
 }
+
+.group-count-highlight {
+  display: inline-block;
+  background: var(--accent2-light);
+  border: 1px solid var(--accent2);
+  border-radius: 10px;
+  padding: 8px 14px;
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
