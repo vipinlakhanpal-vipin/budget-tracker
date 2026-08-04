@@ -292,10 +292,10 @@ function DirhamBarLabel(props) {
   const numStr = Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   return (
     <g>
-      <text x={startX} y={cy} dy={3.5} fontSize={10} fontWeight={700} fill="var(--text)" fontFamily="Arial, sans-serif">D</text>
-      <line x1={startX - 1} y1={cy - 2.5} x2={startX + 6.5} y2={cy - 2.5} stroke="var(--text)" strokeWidth={1} />
-      <line x1={startX - 1} y1={cy + 2.5} x2={startX + 6.5} y2={cy + 2.5} stroke="var(--text)" strokeWidth={1} />
-      <text x={startX + 10} y={cy} dy={3.5} fontSize={10} fill="var(--text)">{numStr}</text>
+      <text x={startX} y={cy} dy={3.5} fontSize={12} fontWeight={700} fill="white" fontFamily="Arial, sans-serif">D</text>
+      <line x1={startX - 1} y1={cy - 2.5} x2={startX + 6.5} y2={cy - 2.5} stroke="white" strokeWidth={1} />
+      <line x1={startX - 1} y1={cy + 2.5} x2={startX + 6.5} y2={cy + 2.5} stroke="white" strokeWidth={1} />
+      <text x={startX + 10} y={cy} dy={3.5} fontSize={12} fill="white">{numStr}</text>
     </g>
   );
 }
@@ -322,10 +322,10 @@ function DirhamBarLabelVerticalSideways(props) {
   const numStr = Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   return (
     <g>
-      <text x={startX} y={cy} dy={3} fontSize={8.5} fontWeight={700} fill="var(--text)" fontFamily="Arial, sans-serif">D</text>
-      <line x1={startX - 1} y1={cy - 2} x2={startX + 6} y2={cy - 2} stroke="var(--text)" strokeWidth={1} />
-      <line x1={startX - 1} y1={cy + 2} x2={startX + 6} y2={cy + 2} stroke="var(--text)" strokeWidth={1} />
-      <text x={startX + 9.5} y={cy} dy={3} fontSize={8.5} fill="var(--text)">{numStr}</text>
+      <text x={startX} y={cy} dy={3} fontSize={10.5} fontWeight={700} fill="white" fontFamily="Arial, sans-serif">D</text>
+      <line x1={startX - 1} y1={cy - 2} x2={startX + 6} y2={cy - 2} stroke="white" strokeWidth={1} />
+      <line x1={startX - 1} y1={cy + 2} x2={startX + 6} y2={cy + 2} stroke="white" strokeWidth={1} />
+      <text x={startX + 9.5} y={cy} dy={3} fontSize={10.5} fill="white">{numStr}</text>
     </g>
   );
 }
@@ -348,10 +348,10 @@ function DirhamBarLabelVerticalColumn(props) {
   const numStr = Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   return (
     <g transform={`rotate(-90, ${px}, ${py})`}>
-      <text x={px + 3} y={py} dy={3} fontSize={9} fontWeight={700} fill="var(--text)" fontFamily="Arial, sans-serif">D</text>
-      <line x1={px + 2} y1={py - 2.2} x2={px + 8.5} y2={py - 2.2} stroke="var(--text)" strokeWidth={1} />
-      <line x1={px + 2} y1={py + 2.2} x2={px + 8.5} y2={py + 2.2} stroke="var(--text)" strokeWidth={1} />
-      <text x={px + 11.5} y={py} dy={3} fontSize={9} fill="var(--text)">{numStr}</text>
+      <text x={px + 3} y={py} dy={3} fontSize={11} fontWeight={700} fill="white" fontFamily="Arial, sans-serif">D</text>
+      <line x1={px + 2} y1={py - 2.2} x2={px + 8.5} y2={py - 2.2} stroke="white" strokeWidth={1} />
+      <line x1={px + 2} y1={py + 2.2} x2={px + 8.5} y2={py + 2.2} stroke="white" strokeWidth={1} />
+      <text x={px + 11.5} y={py} dy={3} fontSize={11} fill="white">{numStr}</text>
     </g>
   );
 }
@@ -364,14 +364,14 @@ function DirhamBarLabelVerticalColumnLg(props) {
   const { x, y, width, value, color } = props;
   const px = x + width / 2;
   const py = y;
-  const c = color || 'var(--text)';
+  const c = color || 'white';
   const numStr = Math.round(Number(value)).toLocaleString();
   return (
     <g transform={`rotate(-90, ${px}, ${py})`}>
-      <text x={px + 3} y={py} dy={3} fontSize={11} fontWeight={700} fill={c} fontFamily="Arial, sans-serif">D</text>
+      <text x={px + 3} y={py} dy={3} fontSize={13} fontWeight={700} fill={c} fontFamily="Arial, sans-serif">D</text>
       <line x1={px + 2} y1={py - 2.7} x2={px + 9.5} y2={py - 2.7} stroke={c} strokeWidth={1} />
       <line x1={px + 2} y1={py + 2.7} x2={px + 9.5} y2={py + 2.7} stroke={c} strokeWidth={1} />
-      <text x={px + 13} y={py} dy={3} fontSize={11} fill={c}>{numStr}</text>
+      <text x={px + 13} y={py} dy={3} fontSize={13} fill={c}>{numStr}</text>
     </g>
   );
 }
@@ -413,10 +413,10 @@ function TreemapTile(props) {
     <g>
       <rect x={x} y={y} width={width} height={height} style={{ fill: color, stroke: '#fff', strokeWidth: 1.5 }} />
       {canLabel && (
-        <text x={x + 6} y={y + 16} fontSize={10.5} fontWeight={700} fill="#fff">{label}</text>
+        <text x={x + 6} y={y + 16} fontSize={12.5} fontWeight={700} fill="#fff">{label}</text>
       )}
       {canShowValue && (
-        <text x={x + 6} y={y + 30} fontSize={9} fill="#fff" fillOpacity={0.9}>{fmt(value)}</text>
+        <text x={x + 6} y={y + 30} fontSize={11} fill="#fff" fillOpacity={0.9}>{fmt(value)}</text>
       )}
     </g>
   );
@@ -5158,12 +5158,14 @@ function ReportHtmlView({ data }) {
       >
         Pareto
       </button>
-      <button
-        className={`btn small ${chartType === 'treemap' ? '' : 'secondary'}`}
-        onClick={() => setChartType('treemap')}
-      >
-        Treemap
-      </button>
+      {big && (
+        <button
+          className={`btn small ${chartType === 'treemap' ? '' : 'secondary'}`}
+          onClick={() => setChartType('treemap')}
+        >
+          Treemap
+        </button>
+      )}
       <button
         className={`btn small ${chartType === 'source' ? '' : 'secondary'}`}
         onClick={() => setChartType('source')}
@@ -5337,7 +5339,7 @@ function ReportHtmlView({ data }) {
                       {top5.map((c, i) => {
                         const pct = totalSpent > 0 ? Math.round((c.value / totalSpent) * 100) : 0;
                         return (
-                          <div key={c.name} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
+                          <div key={c.name} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 15 }}>
                             <span style={{ width: 9, height: 9, borderRadius: '50%', background: COLORS[i % COLORS.length], flexShrink: 0 }} />
                             <span style={{ width: 130, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>{c.name}</span>
                             <span className="muted-small" style={{ width: 32, textAlign: 'right', flexShrink: 0 }}>{pct}%</span>
@@ -5370,7 +5372,7 @@ function ReportHtmlView({ data }) {
                         ))}
                       </Pie>
                       <Tooltip formatter={(v) => fmt(v)} />
-                      <Legend wrapperStyle={{ fontSize: 10, lineHeight: '18px', paddingTop: 10 }} iconSize={8} />
+                      <Legend wrapperStyle={{ fontSize: 12, lineHeight: '18px', paddingTop: 10 }} iconSize={8} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -5407,10 +5409,10 @@ function ReportHtmlView({ data }) {
                 angle={-90}
                 textAnchor="end"
                 height={130}
-                tick={{ fontSize: 11, fill: 'var(--text)' }}
+                tick={{ fontSize: 13, fill: 'var(--text)' }}
                 tickFormatter={(name) => (name.length > 14 ? name.slice(0, 14) + '&' : name)}
               />
-              <YAxis type="number" tick={{ fontSize: 11 }} />
+              <YAxis type="number" tick={{ fontSize: 13 }} />
               <Tooltip formatter={(v) => fmt(v)} />
               <Bar dataKey="value" barSize={big ? (isMobile ? 12 : 16) : 14} radius={[3, 3, 0, 0]} isAnimationActive={false}>
                 {pieData.map((_, i) => (
@@ -5492,8 +5494,8 @@ function ReportHtmlView({ data }) {
           <div style={{ maxWidth: Math.min(760, Math.max(280, paymentSourceData.length * 130)), margin: '0 auto' }}>
           <ResponsiveContainer width="100%" height={big ? (isMobile ? 340 : 400) : 320}>
             <BarChart data={paymentSourceData} margin={{ top: 55, right: 20, left: 30, bottom: 140 }}>
-              <XAxis dataKey="name" tickFormatter={shortSourceLabel} tick={{ fontSize: 11, fill: 'var(--text)' }} interval={0} angle={-90} textAnchor="end" />
-              <YAxis tickFormatter={(v) => fmt(v)} width={80} tick={{ fontSize: 11 }} />
+              <XAxis dataKey="name" tickFormatter={shortSourceLabel} tick={{ fontSize: 13, fill: 'var(--text)' }} interval={0} angle={-90} textAnchor="end" />
+              <YAxis tickFormatter={(v) => fmt(v)} width={80} tick={{ fontSize: 13 }} />
               <Tooltip formatter={(v) => fmt(v)} cursor={false} labelStyle={{ color: '#1a1a1a', fontWeight: 600 }} />
               <Bar dataKey="value" radius={[6, 6, 0, 0]} isAnimationActive={false} barSize={big ? (isMobile ? 12 : 16) : 14}>
                 {paymentSourceData.map((_, i) => (
@@ -5527,8 +5529,8 @@ function ReportHtmlView({ data }) {
           <div style={{ maxWidth: Math.min(1500, Math.max(280, (groupChartMode === 'group' ? groupData : pieData).length * 150)), margin: '0 auto' }}>
           <ResponsiveContainer width="100%" height={big ? (isMobile ? 340 : 400) : 320}>
             <BarChart data={groupChartMode === 'group' ? groupData : pieData} margin={{ top: 55, right: 20, left: 30, bottom: 140 }}>
-              <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--text)' }} interval={0} angle={-90} textAnchor="end" />
-              <YAxis tickFormatter={(v) => fmt(v)} width={80} tick={{ fontSize: 11 }} />
+              <XAxis dataKey="name" tick={{ fontSize: 13, fill: 'var(--text)' }} interval={0} angle={-90} textAnchor="end" />
+              <YAxis tickFormatter={(v) => fmt(v)} width={80} tick={{ fontSize: 13 }} />
               <Tooltip formatter={(v) => fmt(v)} cursor={false} labelStyle={{ color: '#1a1a1a', fontWeight: 600 }} />
               <Bar dataKey="value" radius={[6, 6, 0, 0]} isAnimationActive={false} barSize={big ? (isMobile ? 12 : 16) : 14}>
                 {(groupChartMode === 'group' ? groupData : pieData).map((_, i) => (
@@ -5565,7 +5567,7 @@ function ReportHtmlView({ data }) {
             <BarChart data={budgetVsActualData} margin={{ top: 60, right: 20, left: 40, bottom: 170 }} barGap={2} barCategoryGap={big ? '20%' : '25%'}>
               <XAxis
                 dataKey="name"
-                tick={{ fontSize: 12, fill: 'var(--text)' }}
+                tick={{ fontSize: 14, fill: 'var(--text)' }}
                 interval={0}
                 angle={-90}
                 textAnchor="end"
@@ -5581,7 +5583,7 @@ function ReportHtmlView({ data }) {
                 cursor={false}
                 labelStyle={{ color: '#1a1a1a', fontWeight: 600 }}
               />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Legend wrapperStyle={{ fontSize: 13 }} />
               <Bar dataKey="budgeted" name="Budgeted" fill="#0ea5e9" radius={[3, 3, 0, 0]} isAnimationActive={false} barSize={big ? (isMobile ? 12 : 16) : 14}>
                 <LabelList dataKey="budgeted" position="top" content={(p) => <DirhamBarLabelVerticalColumnLg {...p} color="#0ea5e9" />} />
               </Bar>
@@ -5603,7 +5605,7 @@ function ReportHtmlView({ data }) {
           // established accent (#0d9488 teal).
           <ResponsiveContainer width="100%" height={big ? (isMobile ? 460 : 520) : 420}>
             <BarChart data={filteredMonthlyTrendData} margin={{ top: 60, right: 20, left: 40, bottom: 40 }} barGap={2} barCategoryGap={big ? '8%' : '10%'}>
-              <XAxis dataKey="month" tick={{ fontSize: 12, fill: 'var(--text)' }} interval={0} height={40} />
+              <XAxis dataKey="month" tick={{ fontSize: 14, fill: 'var(--text)' }} interval={0} height={40} />
               <YAxis width={92} tick={<DirhamYAxisTick />} />
               <Tooltip
                 formatter={(v) => (
@@ -5614,7 +5616,7 @@ function ReportHtmlView({ data }) {
                 cursor={false}
                 labelStyle={{ color: '#1a1a1a', fontWeight: 600 }}
               />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Legend wrapperStyle={{ fontSize: 13 }} />
               <Bar dataKey="income" name="Income" fill="#0ea5e9" radius={[3, 3, 0, 0]} isAnimationActive={false} barSize={big ? (isMobile ? 10 : 14) : 12}>
                 <LabelList dataKey="income" position="top" content={(p) => <DirhamBarLabelVerticalColumnLg {...p} color="#0ea5e9" />} />
               </Bar>
