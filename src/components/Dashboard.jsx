@@ -2266,6 +2266,25 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   // across all 12 months instead of only the one currently selected via the
   // </> month nav.
   const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  // Earliest month this household has ANY real entry in, across Income,
+  // Regular Expenses, Fixed Expenses, and Savings -- used as the left-hand
+  // cutoff for the Income vs Expenses chart below, same idea as the
+  // right-hand (future) cutoff: a household's data visibility should start
+  // from the month they actually began using the app, not before, and (per
+  // the future-month cutoff) not project ahead of real time either. This is
+  // intentionally a general rule for every household, not just this one --
+  // it's derived purely from each household's own data, so a brand-new
+  // signup with no entries yet just sees an empty chart until they add
+  // something, and a long-time user sees their real history.
+  const earliestActivityKey = useMemo(() => {
+    const dates = [];
+    incomes.forEach((i) => i.start_date && dates.push(i.start_date.slice(0, 7)));
+    expenses.forEach((e) => e.expense_date && dates.push(e.expense_date.slice(0, 7)));
+    recurringExpenses.forEach((r) => r.start_date && dates.push(r.start_date.slice(0, 7)));
+    savingsGoals.forEach((s) => s.start_date && dates.push(s.start_date.slice(0, 7)));
+    if (dates.length === 0) return null;
+    return dates.reduce((min, d) => (d < min ? d : min));
+  }, [incomes, expenses, recurringExpenses, savingsGoals]);
   const monthlyTrendData = useMemo(() => {
     const year = currentMonth.getFullYear();
     // Future months (after the real today, not just the month currently
@@ -2278,7 +2297,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     const currentRealKey = monthKey(new Date());
     return MONTH_ABBR.map((label, m) => {
       const key = year + '-' + String(m + 1).padStart(2, '0');
-      if (key > currentRealKey) {
+      if (key > currentRealKey || (earliestActivityKey && key < earliestActivityKey)) {
         return { month: label, monthIndex: m, income: 0, expenses: 0, savings: 0 };
       }
       const income = incomes
@@ -2295,7 +2314,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
         .reduce((s, g) => s + Number(g.amount), 0);
       return { month: label, monthIndex: m, income, expenses: oneOff + fixed, savings };
     });
-  }, [incomes, expenses, recurringExpenses, savingsGoals, currentMonth]);
+  }, [incomes, expenses, recurringExpenses, savingsGoals, currentMonth, earliestActivityKey]);
   const [selectedMonths, setSelectedMonths] = useState([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
   const filteredMonthlyTrendData = useMemo(
     () => monthlyTrendData.filter((d) => selectedMonths.includes(d.monthIndex)),
@@ -7940,7 +7959,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             // every app release -- only when Help itself is edited), so the
             // little "Help updated as of vX.XX" marker next to the tour button
             // tells users this text is actually in sync with what they're using.
-            const HELP_LAST_UPDATED_VERSION = '2.79';
+            const HELP_LAST_UPDATED_VERSION = '2.80';
             const helpTopics = [
 { key: 'updates', title: "What's New", body: <>Latest updates (Jul 31, 2026): Added a private Investments tracker (Fixed Deposits and Mutual Funds/SIPs) with its own tab, currency + live FX conversion, auto-calculated gain/loss, and a pencil icon to edit any entry. The Report now includes a Payment-Source-wise spend breakdown on screen and in the downloadable/emailed PDF. PDF report category names no longer get cut off -- long names now auto-shrink to fit instead of truncating with "...". Every row across Income, Fixed Expenses, Regular Expenses, and Savings now has a pencil icon (matching Investments) that opens a proper edit sheet instead of relying only on inline editing. The small "Updated" confirmation toast, and the popup for reading a saved note, now always appear centered in the app instead of sometimes drifting toward the browser's own tab bar on mobile.</> },
               { key: 'home', title: 'Dashboard', body: <>Shows just the dashboard (summary cards and totals), nothing else. Below it, a bigger "Explore" section holds the same Spending by category chart (Pie/Bar/Pareto/Treemap), AI Insights, and Budget Coach, sized larger so there's more room to look through them. Clicking Income, Fixed Expenses, Regular Expenses, Savings, Report, Settings, or Help scrolls back up to the top and switches to that tab as usual.</> },
