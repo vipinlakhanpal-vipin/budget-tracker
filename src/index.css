@@ -1615,6 +1615,13 @@ input[type="number"] { text-align: right; }
   padding: 10px 14px;
   margin: 0 0 14px;
   animation: notice-in .2s ease-out;
+  position: fixed;
+  left: 50%;
+  bottom: max(20px, calc(env(safe-area-inset-bottom) + 12px));
+  transform: translateX(-50%);
+  width: min(92vw, 420px);
+  z-index: 1000;
+  box-shadow: 0 6px 24px rgba(0,0,0,.3);
 }
 .confirm-banner-msg {
   color: var(--danger);
