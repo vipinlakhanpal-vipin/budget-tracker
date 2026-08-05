@@ -8699,18 +8699,6 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     <label className="muted-small">
                       This month's spending vs. budget (shown here, and categories over budget also trigger a notification in the bell icon, top-right)
                     </label>
-                    {(() => {
-                      const budgetedCats = categories.filter((c) => c.monthly_budget > 0);
-                      const totalBudgeted = budgetedCats.reduce((s, c) => s + Number(c.monthly_budget), 0);
-                      const totalSpentBudgeted = budgetedCats.reduce((s, c) => s + (byCategory[c.name] || 0), 0);
-                      const overTotal = totalSpentBudgeted > totalBudgeted;
-                      return (
-                        <div className="cat-budget-total-highlight">
-                          <span>Total budgeted <Amt value={totalBudgeted} /></span>
-                          <span style={{ color: overTotal ? 'var(--danger)' : 'var(--ok)' }}>Spent <Amt value={totalSpentBudgeted} /></span>
-                        </div>
-                      );
-                    })()}
                     <div className="filter-wrap" style={{ marginTop: 10, marginBottom: 4 }}>
                   {categoryBudgetSearchOpen ? (
                     <input
@@ -8732,7 +8720,19 @@ I can help you track expenses, understand spending patterns, create budgets, and
                       <Search size={13} />
                     </button>
                   )}
-                </div>
+                </div>{(() => {
+                      const budgetedCats = categories.filter((c) => c.monthly_budget > 0);
+                      const totalBudgeted = budgetedCats.reduce((s, c) => s + Number(c.monthly_budget), 0);
+                      const totalSpentBudgeted = budgetedCats.reduce((s, c) => s + (byCategory[c.name] || 0), 0);
+                      const overTotal = totalSpentBudgeted > totalBudgeted;
+                      return (
+                        <div className="cat-budget-total-highlight">
+                          <span>Total budgeted <Amt value={totalBudgeted} /></span>
+                          <span style={{ color: overTotal ? 'var(--danger)' : 'var(--ok)' }}>Spent <Amt value={totalSpentBudgeted} /></span>
+                        </div>
+                      );
+                    })()}
+                    
                 <div className="settings-grid">
                     {categories.filter((c) => c.monthly_budget > 0).filter((c) => !categoryBudgetSearchQuery.trim() || c.name.toLowerCase().includes(categoryBudgetSearchQuery.trim().toLowerCase())).map((c) => {
                       const spent = byCategory[c.name] || 0;
