@@ -6082,7 +6082,7 @@ function ReportHtmlView({ data }) {
                 onClick={() => setChatOpen((o) => !o)}
               >
                           {chatOpen ? <X size={18} /> : <Bot size={18} strokeWidth={2.2} className="aria-icon-motion" />}
-                {!chatOpen && <span className="aria-smiley-peek" aria-hidden="true">🙂</span>}
+                {!chatOpen && <span className="aria-smiley-peek" aria-hidden="true">😊</span>}
               </button>
               {!chatOpen && (
                 <>
