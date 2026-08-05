@@ -2653,6 +2653,28 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     setAttachmentViewer({ loading: false, path, name: name || 'Attachment', url: data.signedUrl });
   }
 
+  // Deletes a single already-uploaded attachment: removes the file from the
+  // "attachments" Storage bucket and its row_attachments record, then updates
+  // local state so the UI (edit forms, aggregated Attachments list) reflects
+  // the removal immediately without a full reload.
+  async function removeExistingAttachment(table, rowId, attachment) {
+    if (!attachment) return;
+    const { error: storageError } = await supabase.storage.from('attachments').remove([attachment.storage_path]);
+    if (storageError) {
+      notify('Could not remove attachment: ' + storageError.message);
+      return;
+    }
+    const { error: dbError } = await supabase.from('row_attachments').delete().eq('id', attachment.id);
+    if (dbError) {
+      notify('Could not remove attachment: ' + dbError.message);
+      return;
+    }
+    setRowAttachments((prev) => {
+      const k = rowAttachmentKey(table, rowId);
+      return { ...prev, [k]: (prev[k] || []).filter((a) => a.id !== attachment.id) };
+    });
+  }
+
   function isImageAttachment(name) {
     return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(name || '');
   }
@@ -7427,6 +7449,42 @@ I can help you track expenses, understand spending patterns, create budgets, and
                       </button>
                     </div>
                     <h2 style={{ margin: '0 0 12px' }}>Edit fixed expense</h2>
+                  <div className="field" style={{ marginBottom: 10 }}>
+                    <label>Notes</label>
+                    <textarea
+                      rows={2}
+                      value={recurringDrafts[r.id]?.notes ?? r.notes ?? ''}
+                      onChange={(ev) => updateRecurringDraftField(r.id, 'notes', ev.target.value)}
+                      onBlur={(ev) => commitRecurringField(r.id, 'notes', ev.target.value)}
+                      placeholder="Add a note..."
+                    />
+                  </div>
+                  <div className="field" style={{ marginBottom: 10 }}>
+                    <label>Attachments</label>
+                    {getRowAttachments('recurring_expenses', r.id).length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6, marginBottom: 6 }}>
+                        {getRowAttachments('recurring_expenses', r.id).map((a) => (
+                          <span key={a.id} className="muted-small attachment-chip">
+                            {a.file_name || 'file'}
+                            <button type="button" className="attachment-chip-remove" onClick={() => removeExistingAttachment('recurring_expenses', r.id, a)}>&times;</button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <input
+                      type="file"
+                      accept={ATTACHMENT_ACCEPT}
+                      multiple
+                      onChange={(ev) => {
+                        const picked = [...ev.target.files];
+                        ev.target.value = '';
+                        const valid = picked.filter(isAllowedAttachment);
+                        const rejected = picked.length - valid.length;
+                        if (rejected > 0) alert(`${rejected} file${rejected === 1 ? '' : 's'} skipped -- attachments must be an image or PDF, 5MB or smaller.`);
+                        if (valid.length) uploadAttachmentsForRow('recurring_expenses', r.id, valid);
+                      }}
+                    />
+                  </div>
                     {(r.notes || getRowAttachments('recurring_expenses', r.id).length > 0) && (
                       <div className="muted-small" style={{ marginBottom: 10 }}>
                         {r.notes && <div style={{ marginBottom: 4 }}><StickyNote size={12} style={{ marginRight: 4, verticalAlign: -2 }} />{r.notes}</div>}
@@ -7981,6 +8039,42 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     </button>
                   </div>
                   <h2 style={{ margin: '0 0 12px' }}>Edit expense</h2>
+                  <div className="field" style={{ marginBottom: 10 }}>
+                    <label>Notes</label>
+                    <textarea
+                      rows={2}
+                      value={expenseDrafts[e.id]?.notes ?? e.notes ?? ''}
+                      onChange={(ev) => updateExpenseDraftField(e.id, 'notes', ev.target.value)}
+                      onBlur={(ev) => commitExpenseField(e.id, 'notes', ev.target.value)}
+                      placeholder="Add a note..."
+                    />
+                  </div>
+                  <div className="field" style={{ marginBottom: 10 }}>
+                    <label>Attachments</label>
+                    {getRowAttachments('expenses', e.id).length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6, marginBottom: 6 }}>
+                        {getRowAttachments('expenses', e.id).map((a) => (
+                          <span key={a.id} className="muted-small attachment-chip">
+                            {a.file_name || 'file'}
+                            <button type="button" className="attachment-chip-remove" onClick={() => removeExistingAttachment('expenses', e.id, a)}>&times;</button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <input
+                      type="file"
+                      accept={ATTACHMENT_ACCEPT}
+                      multiple
+                      onChange={(ev) => {
+                        const picked = [...ev.target.files];
+                        ev.target.value = '';
+                        const valid = picked.filter(isAllowedAttachment);
+                        const rejected = picked.length - valid.length;
+                        if (rejected > 0) alert(`${rejected} file${rejected === 1 ? '' : 's'} skipped -- attachments must be an image or PDF, 5MB or smaller.`);
+                        if (valid.length) uploadAttachmentsForRow('expenses', e.id, valid);
+                      }}
+                    />
+                  </div>
                   {(e.notes || getRowAttachments('expenses', e.id).length > 0) && (
                     <div className="muted-small" style={{ marginBottom: 10 }}>
                       {e.notes && <div style={{ marginBottom: 4 }}><StickyNote size={12} style={{ marginRight: 4, verticalAlign: -2 }} />{e.notes}</div>}
