@@ -131,7 +131,7 @@ const MANUAL_TOPICS = [
 // downloadable PDF of the same content is also offered from Settings/Help
 // for users who'd rather print or read it offline.
 export default function EManual({ open, onClose }) {
-  const total = MANUAL_TOPICS.length + 2; // cover + topics + closing
+  const total = MANUAL_TOPICS.length + 3; // cover + TOC + topics + closing
   const [page, setPage] = useState(0);
   const dragStartX = useRef(null);
   const dragInfo = useRef({ dx: 0 });
@@ -354,6 +354,26 @@ export default function EManual({ open, onClose }) {
         </div>
       );
     }
+    if (i === 1) {
+      return (
+        <div className="manual-toc">
+          <h2>Contents</h2>
+          <div className="manual-toc-list">
+            {MANUAL_TOPICS.map((topic, idx) => (
+              <button
+                key={topic.key}
+                type="button"
+                className="manual-toc-item"
+                onClick={() => setPage(idx + 2)}
+              >
+                <span className="manual-toc-item-title">{topic.title}</span>
+                <span className="manual-toc-item-num">{idx + 1}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
     if (i === total - 1) {
       return (
         <div className="manual-closing">
@@ -363,10 +383,10 @@ export default function EManual({ open, onClose }) {
         </div>
       );
     }
-    const t = MANUAL_TOPICS[i - 1];
+    const t = MANUAL_TOPICS[i - 2];
     return (
       <div className="manual-topic">
-        <div className="manual-topic-num">{i} / {MANUAL_TOPICS.length}</div>
+        <div className="manual-topic-num">{i - 1} / {MANUAL_TOPICS.length}</div>
         <h2>{t.title}</h2>
         <p>{t.body}</p>
       </div>
