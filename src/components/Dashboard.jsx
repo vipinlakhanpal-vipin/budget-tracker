@@ -17,6 +17,7 @@ import {
   Pencil, Trash2, X, ChevronLeft, ChevronRight, ChevronDown, Camera, MessageCircle, Bot, Sparkles, User,
   Palette, Check, StickyNote, Paperclip, ExternalLink, Mail, Lightbulb,
   Wallet, CalendarClock, ShoppingCart, PiggyBank, HelpCircle, Filter, Search, Sun, Moon, RefreshCw, Landmark, BookOpen,
+  Maximize2,
 } from 'lucide-react';
 
 // v1.89: cross-browser searchable dropdown, replacing the old
@@ -840,6 +841,7 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     setHouseholdNameDraft(household.name || '');
   }, [household.name]);
   const [chartType, setChartType] = useState('pie');
+  const [chartFullscreen, setChartFullscreen] = useState(false);
   // Bar chart orientation -- only exposed on the Home tab's big "Explore"
   // chart (see renderChartCard(big) below); the normal small chart panel
   // next to every other tab keeps its original fixed orientation, per
@@ -8913,12 +8915,41 @@ I can help you track expenses, understand spending patterns, create budgets, and
           original behavior (Explore still follows Report there). */}
             {!inputTab && activePanel !== 'settings' && activePanel !== 'help' && activePanel !== 'roadmap' && activePanel !== 'investments' && (!isMobile || !activePanel) && (
         <div className="home-explore-frame">
-          <h2 style={{ margin: '0 0 10px' }}>Explore</h2>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '0 0 10px' }}>
+            <h2 style={{ margin: 0 }}>Explore</h2>
+            <button
+              type="button"
+              className="chart-fullscreen-toggle-btn"
+              title="View chart fullscreen"
+              onClick={() => setChartFullscreen(true)}
+            >
+              <Maximize2 size={15} />
+            </button>
+          </div>
           {chartTypeToggle(true)}
           {renderChartCard(true)}
           {aiInsightsCard}
           {budgetCoachCard}
         </div>
+      )}
+
+      {chartFullscreen && createPortal(
+        <div className="chart-fullscreen-overlay" onClick={() => setChartFullscreen(false)}>
+          <div className="chart-fullscreen-modal" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="chart-fullscreen-close"
+              title="Close"
+              onClick={() => setChartFullscreen(false)}
+            >
+              <X size={18} />
+            </button>
+            <h2 style={{ margin: '0 0 10px' }}>Explore</h2>
+            {chartTypeToggle(true)}
+            {renderChartCard(true)}
+          </div>
+        </div>,
+        document.body
       )}
 
       <div className="app-footer">
