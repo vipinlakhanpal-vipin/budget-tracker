@@ -231,7 +231,7 @@ button, input, select, textarea { font-family: inherit; }
 /* The circular platform diagram carries 8 icon labels + 4 lines of ring/
    center text, so it gets a bit more room than the old single-logo mark
    did -- otherwise the small print gets too cramped to read. */
-.splash-illustration-platform { width: 410px; max-width: 96vw; }
+.splash-illustration-platform { width: 490px; max-width: 96vw; }
 
 /* Circular platform diagram (intro/splash) -- ring title, per-tab icon
    spokes, and the center "AI POWERED" sphere. All text sizes are tuned in
@@ -259,7 +259,7 @@ button, input, select, textarea { font-family: inherit; }
    per-line width, every label now sits with a large, obvious gap before
    the ring instead of a marginal one. */
 .platform-tab-label {
-  fill: #16224a; font-family: 'Nunito', sans-serif; font-size: 9px; font-weight: 800;
+  fill: #16224a; font-family: 'Nunito', sans-serif; font-size: 10px; font-weight: 800;
 }
 /* Each tab spoke pops in with its own staggered delay (set inline per-icon
    in Splash.jsx) rather than all at once, echoing the old float-in cast. */
