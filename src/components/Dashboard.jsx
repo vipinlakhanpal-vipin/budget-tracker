@@ -6086,7 +6086,7 @@ function ReportHtmlView({ data }) {
               {!chatOpen && (
                 <>
             <span className="chat-fab-badge-title chat-fab-badge-below tab-hide-mobile">Aria</span>
-                  <span className="chat-fab-greeting tab-hide-mobile">Hey I'm Aria, Happy to help,<br />whenever you are ready</span>
+                  <span className="chat-fab-greeting tab-hide-mobile">Hey, I'm Aria. Happy to help —<br />whenever you're ready</span>
                 </>
               )}
               {chatOpen && (() => {
