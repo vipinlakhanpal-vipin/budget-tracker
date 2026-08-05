@@ -2597,16 +2597,15 @@ instead of overflowing at the unconditional 35px desktop size. */
   100% { transform: translate(0, 0) rotate(360deg); }
 }
 @keyframes aria-icon-evaporate {
-  0%, 66% { opacity: 1; }
-  70% { opacity: 0; }
-  85% { opacity: 0; }
-  91% { opacity: 1; }
+  0%, 55% { opacity: 1; }
+  60% { opacity: 0; }
+  99% { opacity: 0; }
   100% { opacity: 1; }
 }
 @keyframes aria-spark-burst {
-  0%, 64% { opacity: 0; transform: translate(-50%, -50%) scale(0.3) rotate(0deg); }
-  70% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(15deg); }
-  80% { opacity: 0; transform: translate(-50%, -50%) scale(1.25) rotate(28deg); }
+  0%, 58% { opacity: 0; transform: translate(-50%, -50%) scale(0.3) rotate(0deg); }
+  64% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(15deg); }
+  70% { opacity: 0; transform: translate(-50%, -50%) scale(1.25) rotate(28deg); }
   100% { opacity: 0; transform: translate(-50%, -50%) scale(1.25) rotate(28deg); }
 }
 .chat-fab-btn::before,
@@ -2620,7 +2619,7 @@ instead of overflowing at the unconditional 35px desktop size. */
   border-radius: 50%;
   pointer-events: none;
   opacity: 0;
-  animation: aria-spark-burst 7s ease-out infinite;
+  animation: aria-spark-burst 8s ease-out infinite;
 }
 .chat-fab-btn::before {
   box-shadow:
@@ -2646,7 +2645,7 @@ instead of overflowing at the unconditional 35px desktop size. */
     -9px -9px 0 0 #fef08a;
 }
 .aria-icon-motion {
-  animation: aria-icon-motion 9s ease-in-out infinite, aria-icon-evaporate 7s ease-in-out infinite;
+  animation: aria-icon-motion 9s ease-in-out infinite, aria-icon-evaporate 8s ease-in-out infinite;
   transform-origin: 50% 50%;
 }
 .chat-fab-monogram { font-size: 13px; font-weight: 800; letter-spacing: .2px; line-height: 1; }
@@ -2684,13 +2683,12 @@ row. */
   background-size: 300% auto;
   -webkit-background-clip: text; background-clip: text; color: transparent;
   opacity: 0;
-  animation: aria-greeting-fade 7s ease-in-out infinite, aria-greeting-shimmer 5s linear infinite;
+  animation: aria-greeting-fade 8s ease-in-out infinite, aria-greeting-shimmer 5s linear infinite;
 }
 @keyframes aria-greeting-fade {
-  0%, 58% { opacity: 1; }
-  66% { opacity: 0; }
-  90% { opacity: 0; }
-  96% { opacity: 1; }
+  0%, 55% { opacity: 1; }
+  60% { opacity: 0; }
+  99% { opacity: 0; }
   100% { opacity: 1; }
 }
 @keyframes aria-greeting-shimmer {
@@ -2707,19 +2705,19 @@ row. */
   position: absolute; top: 50%; left: 50%; z-index: 40;
   transform: translate(-50%, -50%) scale(0.4); opacity: 0;
   font-size: 29px; line-height: 1; pointer-events: none;
-  animation: aria-smiley-fade 7s ease-in-out infinite;
+  animation: aria-smiley-fade 8s ease-in-out infinite;
 }
 /* Fades in slightly ahead of the spark burst peak (spark itself ramps up
    through ~70%) so both are on screen together, then the smiley lingers
    on for the ~2s empty stretch after the spark fades. */
 @keyframes aria-smiley-fade {
-  0%, 58% { opacity: 0; transform: translate(-50%, -50%) scale(0.4) rotate(0deg); }
-  64% { opacity: 1; transform: translate(-50%, -50%) scale(1.15) rotate(-10deg); }
-  71% { transform: translate(-50%, -50%) scale(0.95) rotate(10deg); }
-  78% { transform: translate(-50%, -50%) scale(1.08) rotate(-6deg); }
-  84% { transform: translate(-50%, -50%) scale(0.98) rotate(6deg); }
-  89% { opacity: 1; transform: translate(-50%, -50%) scale(1.05) rotate(0deg); }
-  94%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.4) rotate(0deg); }
+  0%, 75% { opacity: 0; transform: translate(-50%, -50%) scale(0.4) rotate(0deg); }
+  78% { opacity: 1; transform: translate(-50%, -50%) scale(1.15) rotate(-10deg); }
+  84% { transform: translate(-50%, -50%) scale(0.95) rotate(10deg); }
+  89% { transform: translate(-50%, -50%) scale(1.08) rotate(-6deg); }
+  94% { transform: translate(-50%, -50%) scale(0.98) rotate(6deg); }
+  98% { opacity: 1; transform: translate(-50%, -50%) scale(1.05) rotate(0deg); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(0.4) rotate(0deg); }
 }
 
 
