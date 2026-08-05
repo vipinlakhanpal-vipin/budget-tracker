@@ -3596,3 +3596,33 @@ row. */
   padding: 1px 0 !important;
   font-size: 12px !important;
 }
+
+.chart-fullscreen-toggle-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border-radius: 8px;
+  background: rgba(124, 58, 237, .12); border: none; color: var(--text);
+  cursor: pointer; flex-shrink: 0;
+}
+.chart-fullscreen-toggle-btn:hover { background: rgba(124, 58, 237, .22); }
+.chart-fullscreen-overlay {
+  position: fixed; inset: 0; z-index: 70;
+  background: rgba(15, 42, 46, .65);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+}
+.chart-fullscreen-modal {
+  width: 100%; max-width: 960px; max-height: 90vh;
+  background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(15, 42, 46, .35);
+  padding: 20px 24px 24px;
+  overflow: auto;
+  position: relative;
+}
+.chart-fullscreen-close {
+  position: absolute; top: 14px; right: 14px; z-index: 2;
+  width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(124, 58, 237, .12); border: none; color: var(--text);
+  cursor: pointer;
+}
+.chart-fullscreen-close:hover { background: rgba(124, 58, 237, .22); }
