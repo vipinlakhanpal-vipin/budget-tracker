@@ -2415,7 +2415,10 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   }, [incomes, expenses, recurringExpenses, savingsGoals, currentMonth, earliestActivityKey]);
   const [selectedMonths, setSelectedMonths] = useState([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
   const filteredMonthlyTrendData = useMemo(
-    () => monthlyTrendData.filter((d) => selectedMonths.includes(d.monthIndex)),
+    () => monthlyTrendData
+      .filter((d) => selectedMonths.includes(d.monthIndex))
+      // Jan-Jun expenses are intentionally hidden from the Income vs Expenses chart per request.
+      .map((d) => (d.monthIndex <= 5 ? { ...d, expenses: 0 } : d)),
     [monthlyTrendData, selectedMonths]
   );
   const [monthsFilterOpen, setMonthsFilterOpen] = useState(false);
