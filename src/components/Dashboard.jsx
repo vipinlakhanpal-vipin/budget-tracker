@@ -2344,7 +2344,9 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   const budgetVsActualData = useMemo(() => {
     return categories
       .filter((c) => c.monthly_budget > 0)
-      .map((c) => ({ name: c.name, budgeted: Number(c.monthly_budget), spent: byCategory[c.name] || 0 }));
+      .map((c) => ({ name: c.name, budgeted: Number(c.monthly_budget), spent: byCategory[c.name] || 0 }))
+      // Worst overspend first, so problem categories are visible without scrolling past 20+ bars.
+      .sort((a, b) => (b.spent - b.budgeted) - (a.spent - a.budgeted));
   }, [categories, byCategory]);
   // Category names shortened before going on the chart's X-axis -- with two
   // bars per category there's less width per label than the single-bar
