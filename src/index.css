@@ -153,68 +153,6 @@ button, input, select, textarea { font-family: inherit; }
   animation-delay: 5.5s;
 }
 
-/* Dotted world map -- a quiet full-bleed backdrop behind the whole scene,
-   built from real lat/lon land regions (WORLD_DOTS in Splash.jsx) rather
-   than smooth abstract shapes, so it reads as an actual world map. Kept
-   low-opacity and behind the orbs/dust so it reads as texture, not a
-   competing subject. */
-.splash-worldmap {
-  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-  width: 130vmax; height: 65vmax; z-index: 0;
-}
-/* Continents stay faint/textural -- background detail, not the subject.
-   The location marker below is deliberately kept OUT of this dimmed
-   group and given its own much higher opacity so it reads as a clear,
-   intentional highlight ("this is YOUR Hearth") rather than blending into
-   the map texture at the same low strength. */
-.worldmap-continents { opacity: .3; }
-.geo-marker { filter: drop-shadow(0 0 5px rgba(239, 68, 68, .85)); }
-.geo-ping { transform-box: fill-box; transform-origin: center; animation: geo-ping-out 2.2s ease-out infinite; }
-@keyframes geo-ping-out {
-  0% { transform: scale(.6); opacity: .9; }
-  75%, 100% { transform: scale(2.6); opacity: 0; }
-}
-/* The actual "blink" -- a real on/off pulse (not just the expanding ring
-   above) so the dot unmistakably reads as live/blinking, per direct
-   feedback that the earlier gold pulsing-ring-only version didn't read as
-   a blinking marker. */
-.geo-dot-core { animation: geo-blink 1.1s ease-in-out infinite; }
-@keyframes geo-blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: .25; }
-}
-.geo-label {
-  /* This is set in the map SVG's own user-space units, not real CSS px --
-     the map is blown up ~1.85x on a typical viewport (viewBox width 784
-     stretched to 130vmax), so the old "8" here was actually rendering
-     around 15px on screen. Shortening the country name to "UAE" (see
-     COUNTRY_SHORT_NAMES in Splash.jsx) frees up room, and this value is
-     tuned down so the label renders close to a true 10px. */
-  fill: #ffffff; font-size: 5.5px; font-weight: 700; font-family: 'Nunito', sans-serif;
-  paint-order: stroke; stroke: #0d1a3d; stroke-width: 1.2px; stroke-linejoin: round;
-  opacity: .95; letter-spacing: .01em;
-}
-/* Small twinkling points scattered across the background -- turns the
-   glow into a lively "night sky" rather than an empty gradient. Pure CSS,
-   staggered delays/durations so they don't blink in lockstep. */
-.splash-dust {
-  position: absolute; width: 4px; height: 4px; border-radius: 50%;
-  background: #ffffff; opacity: 0;
-  animation: splash-dust-twinkle 3.4s ease-in-out infinite;
-}
-.splash-dust-1 { top: 18%; left: 22%; animation-delay: .2s; }
-.splash-dust-2 { top: 68%; left: 16%; width: 3px; height: 3px; animation-delay: 1.1s; }
-.splash-dust-3 { top: 24%; right: 20%; animation-delay: 1.8s; }
-.splash-dust-4 { top: 78%; right: 26%; width: 3px; height: 3px; animation-delay: .7s; }
-.splash-dust-5 { top: 46%; left: 8%; width: 3px; height: 3px; animation-delay: 2.4s; }
-@keyframes splash-dust-twinkle {
-  0%, 100% { opacity: 0; transform: scale(.6); }
-  50% { opacity: .8; transform: scale(1.3); }
-}
-/* Soft, slowly-drifting blurred light -- the thing that makes a flat
-   gradient background feel alive/premium instead of static. Three orbs at
-   different sizes/speeds/positions so the motion doesn't read as
-   mechanically repeating. */
 /* Personal greeting -- now the actual top-of-screen element (the brand
    line below this one moved down to the bottom a while back). Name +
    "Good X" text is built in Splash.jsx (getGreeting()); this just styles
@@ -276,15 +214,6 @@ button, input, select, textarea { font-family: inherit; }
   width: .8em; height: .8em; display: inline-block;
   vertical-align: -.1em; margin-right: .15em;
 }
-.splash-orb {
-  position: absolute; border-radius: 50%; filter: blur(40px); opacity: .35;
-}
-.splash-orb-1 { width: 260px; height: 260px; background: #60a5fa; top: -60px; left: -60px; animation: splash-drift-a 9s ease-in-out infinite; }
-.splash-orb-2 { width: 220px; height: 220px; background: #ffe27a; bottom: -50px; right: -40px; animation: splash-drift-b 11s ease-in-out infinite; }
-.splash-orb-3 { width: 180px; height: 180px; background: #93c5fd; top: 30%; right: 8%; animation: splash-drift-c 8s ease-in-out infinite; }
-@keyframes splash-drift-a { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(30px, 40px); } }
-@keyframes splash-drift-b { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-25px, -30px); } }
-@keyframes splash-drift-c { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(15px, -20px) scale(1.12); } }
 
 .splash-center {
   position: relative; z-index: 2;
@@ -1045,7 +974,6 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
    reuse the exact hue already used for their own label just above,
    so each tile reads as one coherent color-coded unit. */
 
-
 .page-title-row {
   position: relative;
   display: grid;
@@ -1170,7 +1098,6 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
 .card-cc .v { color: #7c3aed; }
 .card-dc .v { color: #db2777; }
 .card-ba .v { color: #0891b2; }
-
 
 /* The 6 KPI cards (Monthly Budget -> Net) were reported as taking up more
    than half a laptop's visible screen before the rest of the app (forms,
@@ -1365,7 +1292,6 @@ table.responsive-table th { text-align: left; }
     min-width: 120px !important;
   }
 }
-
 
 /* Bold, higher-contrast labels everywhere (Name, Category, Amount/month,
    Start date, End date, etc.) -- previously small and muted-gray, which made
@@ -2720,7 +2646,6 @@ row. */
   100% { opacity: 0; transform: translate(-50%, -50%) scale(0.4) rotate(0deg); }
 }
 
-
 /* Owner-only refresh-app button, sat right next to Aria in the header --
    plain outline circle normally; once /version.json (polled every 60s)
    reports a newer APP_VERSION than what is already loaded, it fills solid
@@ -2957,7 +2882,6 @@ row. */
   .tour-tooltip { padding: 14px 16px; }
 }
 
-
 /* ---- v1.29: Report tab mobile-only redesign ----
    1) Collapse the long "Generate a PDF..." description behind a small (i)
       icon button placed next to the From/To date fields, instead of always
@@ -3086,7 +3010,6 @@ row. */
   }
 }
 
-
 /* v1.35: Admin Console "Users" table action buttons (AI Insights / Reset
    Password / Delete) were wrapping their own text onto two lines and
    Delete was getting clipped off-screen -- the shared table CSS uses
@@ -3184,7 +3107,6 @@ row. */
   background-size: 64px 32px;
 }
 
-
 /* v1.87: remove the "infinity circulation" scrolling glow-line background
    layer on tab buttons per explicit user request -- the tab-heartbeat scale
    pulse on the ACTIVE tab (and the always-on icon pulses) are a separate,
@@ -3203,7 +3125,6 @@ row. */
 .header-tab-btn:not(.header-tab-btn-active) {
   animation: none !important;
 }
-
 
 /* v2.06: the row-edit sheet (.mobile-add-sheet / .mobile-sheet-backdrop)
    was built mobile-only (see the max-width:640px block above) since it
@@ -3228,7 +3149,6 @@ row. */
     animation: none;
   }
 }
-
 
 /* v2.13: EManual -- a full-screen, book-style e-manual reader with a real
    page-turn animation (CSS 3D transform, no external library), reachable
@@ -3470,7 +3390,6 @@ row. */
   .manual-close-cta { order: 3; flex-basis: 100%; justify-content: center; }
 }
 
-
 /* v2.57: Income/Fixed Expenses/Regular Expenses/Savings now use the flat,
    at-a-glance entry-row list (icon swatch + title + meta + amount) at ALL
    screen sizes -- previously this was mobile-only (.mobile-txn-list/-row
@@ -3520,7 +3439,6 @@ row. */
   }
 }
 
-
 /* Payment-split tiles (per-bank Credit Card / Debit Card / Bank Account)
    render inline as regular .summary-cards items, in the SAME row as the
    other KPI tiles -- not a separate section. Reduced minmax lets more
@@ -3545,7 +3463,6 @@ row. */
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
 }
-
 
 /* Phase 5 -- Settings: flat 2-column "settings-grid" for list-style content
    (Category Budgets caps + this month's spend-vs-budget), matching the
@@ -3591,7 +3508,6 @@ row. */
 
 .card-payment-split { justify-content: flex-start; }
 
-
 /* Highlighted total-budgeted / total-spent-against-budgeted summary cell,
    sits above the per-category spending-vs-budget grid in Settings ->
    Category Budgets. Uses the same accent2-light/accent2 pairing as .cat-chip
@@ -3621,7 +3537,6 @@ row. */
   font-weight: 700;
   color: var(--text);
 }
-
 
 /* Recharts tooltip polish: kill the default full-height hover-cursor rect
    (rendered in var(--text), which reads as a stray white bar in dark theme),
