@@ -2596,8 +2596,14 @@ instead of overflowing at the unconditional 35px desktop size. */
   97%  { transform: translate(0, 0) rotate(270deg); }
   100% { transform: translate(0, 0) rotate(360deg); }
 }
+@keyframes aria-icon-evaporate {
+  0%, 68% { opacity: 1; filter: blur(0); }
+  82% { opacity: 0.12; filter: blur(2.5px); }
+  90% { opacity: 0.12; filter: blur(2.5px); }
+  100% { opacity: 1; filter: blur(0); }
+}
 .aria-icon-motion {
-  animation: aria-icon-motion 9s ease-in-out infinite;
+  animation: aria-icon-motion 9s ease-in-out infinite, aria-icon-evaporate 7s ease-in-out infinite;
   transform-origin: 50% 50%;
 }
 .chat-fab-monogram { font-size: 13px; font-weight: 800; letter-spacing: .2px; line-height: 1; }
