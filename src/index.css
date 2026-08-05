@@ -2709,14 +2709,17 @@ row. */
   font-size: 29px; line-height: 1; pointer-events: none;
   animation: aria-smiley-fade 7s ease-in-out infinite;
 }
+/* Fades in slightly ahead of the spark burst peak (spark itself ramps up
+   through ~70%) so both are on screen together, then the smiley lingers
+   on for the ~2s empty stretch after the spark fades. */
 @keyframes aria-smiley-fade {
-  0%, 62% { opacity: 0; transform: translate(-50%, -50%) scale(0.4) rotate(0deg); }
-  67% { opacity: 1; transform: translate(-50%, -50%) scale(1.15) rotate(-10deg); }
-  73% { transform: translate(-50%, -50%) scale(0.95) rotate(10deg); }
+  0%, 58% { opacity: 0; transform: translate(-50%, -50%) scale(0.4) rotate(0deg); }
+  64% { opacity: 1; transform: translate(-50%, -50%) scale(1.15) rotate(-10deg); }
+  71% { transform: translate(-50%, -50%) scale(0.95) rotate(10deg); }
   78% { transform: translate(-50%, -50%) scale(1.08) rotate(-6deg); }
-  83% { transform: translate(-50%, -50%) scale(0.98) rotate(6deg); }
-  88% { opacity: 1; transform: translate(-50%, -50%) scale(1.05) rotate(0deg); }
-  93%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.4) rotate(0deg); }
+  84% { transform: translate(-50%, -50%) scale(0.98) rotate(6deg); }
+  89% { opacity: 1; transform: translate(-50%, -50%) scale(1.05) rotate(0deg); }
+  94%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.4) rotate(0deg); }
 }
 
 
