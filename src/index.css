@@ -3344,6 +3344,18 @@ row. */
 .manual-closing h2 { color: var(--text); margin: 0 0 12px; }
 .manual-closing p { font-size: 14px; color: var(--muted); margin: 0 0 8px; max-width: 380px; }
 .manual-closing-small { font-size: 12px; }
+.manual-toc { height: 100%; display: flex; flex-direction: column; color: #2a2420; }
+.manual-toc h2 { font-size: 19px; margin: 0 0 12px; color: #2a2420 !important; }
+.manual-toc-list { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; flex: 1; }
+.manual-toc-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 4px; background: none; border: none; border-bottom: 1px solid rgba(42, 36, 32, .12);
+  text-align: left; cursor: pointer; font: inherit; color: inherit;
+}
+.manual-toc-item:last-child { border-bottom: none; }
+.manual-toc-item:hover { background: rgba(42, 36, 32, .06); }
+.manual-toc-item-title { color: #3a332c; font-size: 14px; }
+.manual-toc-item-num { color: #8a7a5c; font-size: 12px; font-weight: 700; flex-shrink: 0; }
 .manual-controls {
   display: flex; align-items: center; justify-content: space-between;
   padding: 12px 16px 16px; flex-shrink: 0;
