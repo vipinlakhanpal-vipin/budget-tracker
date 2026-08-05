@@ -2700,6 +2700,23 @@ row. */
 @media (max-width: 900px) {
   .chat-fab-greeting { display: none; }
 }
+/* Aria smiley: fills the brief empty gap after the spark burst fades
+   (~80% of the 7s evaporate loop) and before the icon itself reappears
+   (~91%), so the circle is never fully blank. Wiggles a little while up. */
+.aria-smiley-peek {
+  position: absolute; top: 50%; left: 50%; z-index: 40;
+  transform: translate(-50%, -50%) scale(0.5); opacity: 0;
+  font-size: 15px; line-height: 1; pointer-events: none;
+  animation: aria-smiley-fade 7s ease-in-out infinite;
+}
+@keyframes aria-smiley-fade {
+  0%, 78% { opacity: 0; transform: translate(-50%, -50%) scale(0.4) rotate(0deg); }
+  81% { opacity: 1; transform: translate(-50%, -50%) scale(1.1) rotate(-8deg); }
+  85% { transform: translate(-50%, -50%) scale(1) rotate(8deg); }
+  89% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(-4deg); }
+  92%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.4) rotate(0deg); }
+}
+
 
 /* Owner-only refresh-app button, sat right next to Aria in the header --
    plain outline circle normally; once /version.json (polled every 60s)
