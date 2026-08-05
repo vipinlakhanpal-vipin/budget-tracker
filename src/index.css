@@ -3606,23 +3606,38 @@ row. */
 .chart-fullscreen-toggle-btn:hover { background: rgba(124, 58, 237, .22); }
 .chart-fullscreen-overlay {
   position: fixed; inset: 0; z-index: 70;
-  background: rgba(15, 42, 46, .65);
-  display: flex; align-items: center; justify-content: center;
-  padding: 24px;
+  background: var(--bg);
+  display: flex; flex-direction: column;
 }
 .chart-fullscreen-modal {
-  width: 100%; max-width: 960px; max-height: 90vh;
-  background: var(--card); border: 1px solid var(--border); border-radius: 16px;
-  box-shadow: 0 20px 50px rgba(15, 42, 46, .35);
-  padding: 20px 24px 24px;
-  overflow: auto;
+  width: 100%; height: 100%;
+  max-width: none; max-height: none;
+  background: var(--bg);
+  border: none; border-radius: 0;
+  box-shadow: none;
+  padding: 22px 28px 28px;
+  overflow-y: auto;
   position: relative;
+  display: flex; flex-direction: column;
+  box-sizing: border-box;
 }
+.chart-fullscreen-modal h2 { flex-shrink: 0; }
 .chart-fullscreen-close {
-  position: absolute; top: 14px; right: 14px; z-index: 2;
-  width: 32px; height: 32px; border-radius: 50%;
+  position: absolute; top: 18px; right: 22px; z-index: 2;
+  width: 36px; height: 36px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(124, 58, 237, .12); border: none; color: var(--text);
+  background: rgba(124, 58, 237, .14); border: none; color: var(--text);
   cursor: pointer;
 }
-.chart-fullscreen-close:hover { background: rgba(124, 58, 237, .22); }
+.chart-fullscreen-close:hover { background: rgba(124, 58, 237, .26); }
+.chart-fullscreen-chart-area {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin-top: 8px;
+}
+.chart-fullscreen-chart-area .recharts-responsive-container {
+  height: 100% !important;
+  min-height: 460px;
+}
