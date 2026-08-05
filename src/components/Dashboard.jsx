@@ -3286,6 +3286,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
         amount,
         payment_source: merged.paymentSource || null,
         payment_bank: merged.paymentSource === 'Cash' ? null : (merged.paymentBank || null),
+        notes: (merged.notes ?? '').trim(),
       })
       .eq('id', id);
     if (error) {
@@ -3539,6 +3540,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
         due_date: merged.dueDate || null,
         payment_source: merged.paymentSource || null,
         payment_bank: CARD_PAYMENT_SOURCES.includes(merged.paymentSource) ? (merged.paymentBank || null) : null,
+        notes: (merged.notes ?? '').trim(),
       })
       .eq('id', id);
     if (error) notify('Could not update: ' + error.message);
