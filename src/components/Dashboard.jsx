@@ -2166,6 +2166,12 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   // much is actually free to spend.
   const combinedOutflow = total + savingsTotal;
   const remaining = totalBudget - combinedOutflow;
+  const nonCreditCardExpenseTotal = useMemo(() => rangeExpenses.filter((e) => e.payment_source !== 'Credit Card').reduce((s, e) => s + Number(e.amount), 0), [rangeExpenses]);
+  const nonCreditCardRecurringTotal = useMemo(() => recurringForMonth.filter((r) => r.payment_source !== 'Credit Card').reduce((s, r) => s + Number(r.amount), 0), [recurringForMonth]);
+  // Credit card spend is a liability that hasn't left the bank account yet, so it's
+  // excluded here from the outflow subtracted from income for the Net tile.
+  // (combinedOutflow/remaining above are unaffected and still include credit card spend.)
+  const nonCreditCardOutflow = nonCreditCardExpenseTotal + nonCreditCardRecurringTotal + savingsTotal;
 
   const incomeForMonth = useMemo(() => {
     const key = monthKey(currentMonth);
@@ -2174,7 +2180,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     return incomes.filter((i) => i.active && i.start_date.slice(0, 7) === key);
   }, [incomes, currentMonth]);
   const totalIncome = useMemo(() => incomeForMonth.reduce((s, i) => s + Number(i.amount), 0), [incomeForMonth]);
-  const netCombined = totalIncome - combinedOutflow;
+  const netCombined = totalIncome - nonCreditCardOutflow;
 
   // ---- Filters for the 4 month-scoped lists below (Regular Expenses, Fixed
   // Expenses, Income, Savings). These only narrow what's rendered on screen --
@@ -3821,6 +3827,8 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     const incomeTotal = rangeIncomes.reduce((s, i) => s + Number(i.amount), 0);
     const fixedTotal = rangeRecurringOccurrences.reduce((s, r) => s + Number(r.amount), 0);
     const savingsGoalTotal = rangeSavingsOccurrences.reduce((s, g) => s + Number(g.amount), 0);
+    const nonCreditCardExpenseTotalR = rangeExpenses.filter((e) => e.payment_source !== 'Credit Card').reduce((s, e) => s + Number(e.amount), 0);
+    const nonCreditCardFixedTotalR = rangeRecurringOccurrences.filter((r) => r.payment_source !== 'Credit Card').reduce((s, r) => s + Number(r.amount), 0);
 
     // Combined Regular + Fixed spend per category, used by the bar chart.
     const categoryTotals = {};
@@ -3841,7 +3849,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     // Savings is money leaving income just like an expense, so it's folded
     // into the net figure -- mirrors how the dashboard's "Net (income -
     // expenses - savings)" card is calculated.
-    const netTotal = incomeTotal - expenseTotal - fixedTotal - savingsGoalTotal;
+    const netTotal = incomeTotal - nonCreditCardExpenseTotalR - nonCreditCardFixedTotalR - savingsGoalTotal;
     const today = fmtDate(new Date().toISOString().slice(0, 10));
 
     // Repeated on every page: a slim teal header band with the household
@@ -4518,7 +4526,9 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     const incomeTotal = rangeIncomes.reduce((s, i) => s + Number(i.amount), 0);
     const fixedTotal = rangeRecurringOccurrences.reduce((s, r) => s + Number(r.amount), 0);
     const savingsGoalTotal = rangeSavingsOccurrences.reduce((s, g) => s + Number(g.amount), 0);
-    const netTotal = incomeTotal - expenseTotal - fixedTotal - savingsGoalTotal;
+    const nonCreditCardExpenseTotalR = rangeExpenses.filter((e) => e.payment_source !== 'Credit Card').reduce((s, e) => s + Number(e.amount), 0);
+    const nonCreditCardFixedTotalR = rangeRecurringOccurrences.filter((r) => r.payment_source !== 'Credit Card').reduce((s, r) => s + Number(r.amount), 0);
+    const netTotal = incomeTotal - nonCreditCardExpenseTotalR - nonCreditCardFixedTotalR - savingsGoalTotal;
     const categoryTotals = {};
     rangeExpenses.forEach((e) => {
       const name = categoryNameById[e.category_id] || 'Uncategorized';
@@ -6300,7 +6310,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
           {totalBudget > 0 ? (
             <>
               <div className="v"><Amt value={remaining} /></div>
-              <div className="muted-small" style={{ marginTop: 4 }}>After expenses and savings</div>
+              <div className="muted-small" style={{ marginTop: 4 }}>Budget left after all expenses (incl. credit card) and savings - tracks budget pace regardless of payment method.</div>
             </>
           ) : (
             <>
@@ -6338,6 +6348,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
         </div>
         <div className={`card card-net ${netCombined < 0 ? 'over' : 'ok'}`}>
           <div className="k">Net (income - expenses - savings)</div><div className="v"><Amt value={netCombined} /></div>
+          <div className="muted-small" style={{ marginTop: 4 }}>Income left after debit card, bank, and savings outflows - excludes credit card spend, which hasn't left your account yet.</div>
         </div>
         {(
           <div className={`card card-invest ${investmentTotals.gain < 0 ? 'over' : 'ok'}`}>
