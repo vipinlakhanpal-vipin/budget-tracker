@@ -2671,6 +2671,36 @@ row. */
   text-shadow: 0 1px 3px rgba(0, 0, 0, .7), 0 0 8px rgba(0, 0, 0, .6);
 }
 .chat-fab-badge-below { top: 100%; margin-top: 4px; font-size: 11px; }
+/* Aria greeting pill: appears just after the icon reappears from its
+   spark-burst/evaporate cycle (see aria-icon-evaporate/aria-spark-burst,
+   both 7s loops), stays up for most of the cycle, then fades out just
+   before the next evaporate moment so it never overlaps the burst. */
+.chat-fab-greeting {
+  position: absolute; top: 50%; left: 100%; margin-left: 12px;
+  transform: translateY(-50%); z-index: 41;
+  font-size: 12px; font-weight: 300; letter-spacing: .3px; white-space: nowrap;
+  pointer-events: none;
+  background: linear-gradient(90deg, #93c5fd, #c4b5fd, #f9a8d4, #fde68a, #93c5fd);
+  background-size: 300% auto;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  opacity: 0;
+  animation: aria-greeting-fade 7s ease-in-out infinite, aria-greeting-shimmer 5s linear infinite;
+}
+@keyframes aria-greeting-fade {
+  0%, 58% { opacity: 1; }
+  66% { opacity: 0; }
+  90% { opacity: 0; }
+  96% { opacity: 1; }
+  100% { opacity: 1; }
+}
+@keyframes aria-greeting-shimmer {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 300% 50%; }
+}
+@media (max-width: 900px) {
+  .chat-fab-greeting { display: none; }
+}
+
 /* Owner-only refresh-app button, sat right next to Aria in the header --
    plain outline circle normally; once /version.json (polled every 60s)
    reports a newer APP_VERSION than what is already loaded, it fills solid
