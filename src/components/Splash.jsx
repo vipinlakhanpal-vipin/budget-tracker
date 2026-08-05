@@ -20,25 +20,18 @@ import { supabase } from '../supabaseClient';
 // center sphere calling out "AI POWERED". Every label/order below is real
 // -- not filler -- so this reads as an honest map of what's actually in
 // the app, not a generic marketing graphic.
-const PLATFORM_CENTER = { x: 220, y: 236 };
-// Kept well inside PLATFORM_RING_INNER (182) even for the two long labels
-// ("Fixed Expenses", "Regular Expenses") -- their fill color is the same
-// dark navy as the ring stroke, so any part of a label that strayed past
-// the ring's inner edge would silently vanish against it (this is what
-// caused the earlier "S" of Smart Budget / trailing "s" of Expenses to
-// look cut off).
-const PLATFORM_ICON_RADIUS = 112;
-// Ring pushed outward (182/210 -> 200/218) per explicit follow-up request --
-// the label spokes (PLATFORM_ICON_RADIUS, unchanged at 112) still had a
-// noticeable stretch of genuinely empty white space between them and the
-// ring's old inner edge (182), so rather than moving the labels themselves
-// (which would crowd the center sphere), this reclaims that existing slack
-// by growing the white disc itself, buying the labels ~18 more units of
-// clearance from the ring with zero change to their own position or the
-// two-line wrapping already tuned for them. Ring band is slightly thinner
-// (18 vs 28) to fit the larger inner radius in the same outer footprint.
-const PLATFORM_RING_OUTER = 218;
-const PLATFORM_RING_INNER = 200;
+const PLATFORM_CENTER = { x: 264, y: 290 };
+// 8 icon+label spokes now ring the badge (Investments added alongside the
+// original 7), so the spoke radius grew slightly (112 -> 122) and, more
+// importantly, the ring itself was pushed outward (see PLATFORM_RING_*
+// below) specifically to buy every spoke visibly more breathing room
+// before the dark navy ring -- the single biggest ask in the redesign.
+const PLATFORM_ICON_RADIUS = 122;
+// Ring grown outward (200/218 -> 232/250) so its inner edge sits well
+// past every spoke's outer reach even for the widest two-line labels,
+// leaving an unmistakable gap instead of a marginal one.
+const PLATFORM_RING_OUTER = 250;
+const PLATFORM_RING_INNER = 232;
 const PLATFORM_SPHERE_RADIUS = 82;
 
 function polarPoint(cx, cy, r, angleDeg) {
@@ -60,23 +53,28 @@ function arcPath(cx, cy, r, startDeg, endDeg) {
 // viewBox (see the <svg> element below) is extended upward to give this
 // extra room -- without that, text this far out would clip against the
 // top of the canvas.
-const PLATFORM_TITLE_ARC = arcPath(PLATFORM_CENTER.x, PLATFORM_CENTER.y, 230, 200, 340);
+const PLATFORM_TITLE_ARC = arcPath(PLATFORM_CENTER.x, PLATFORM_CENTER.y, 266, 200, 340);
 
-// Dashboard (formerly "Home") deliberately isn't one of these spokes --
-// it's not a distinct feature so much as the summary/overview the whole
-// diagram itself already stands in for, so listing it as an 8th "function"
-// alongside Income/Savings/etc. was redundant. The remaining 7 real tabs
-// are spaced evenly around the full circle (360/7 apart), starting at the
-// bottom (90deg) so the layout stays visually balanced without needing an
-// even count.
+// Dashboard (formerly "Home") isn't one of these spokes -- it's the
+// summary/overview the whole diagram already stands in for. Investments
+// (Fixed Deposits / Mutual Fund SIPs, same header tab as the rest) is the
+// 8th real feature added here per explicit request, which also lets the
+// spokes land on a clean, fully-even 8-point compass (45deg apart)
+// instead of the old asymmetric 360/7 split. The four longer single-line
+// words (Income, Savings, Report, Investments) sit on the cardinal points
+// (bottom/left/top/right) where a spoke's own width barely adds to its
+// radial reach; the four two-line/short labels (Fixed Expenses, Regular
+// Expenses, Smart Budget, Help) take the diagonals, where width matters
+// more -- so every label gets the roomiest slot for its own size.
 const PLATFORM_TABS = [
   { label: 'Income', icon: 'income', angle: 90 },
-  { label: 'Fixed Expenses', icon: 'fixed', angle: 90 + 360 / 7 },
-  { label: 'Regular Expenses', icon: 'regular', angle: 90 + (360 / 7) * 2 },
-  { label: 'Savings', icon: 'savings', angle: 90 + (360 / 7) * 3 },
-  { label: 'Report', icon: 'report', angle: 90 + (360 / 7) * 4 },
-  { label: 'Smart Budget', icon: 'settings', angle: 90 + (360 / 7) * 5 },
-  { label: 'Help', icon: 'help', angle: 90 + (360 / 7) * 6 },
+  { label: 'Fixed Expenses', icon: 'fixed', angle: 135 },
+  { label: 'Savings', icon: 'savings', angle: 180 },
+  { label: 'Regular Expenses', icon: 'regular', angle: 225 },
+  { label: 'Report', icon: 'report', angle: 270 },
+  { label: 'Smart Budget', icon: 'settings', angle: 315 },
+  { label: 'Investments', icon: 'investments', angle: 0 },
+  { label: 'Help', icon: 'help', angle: 45 },
 ];
 
 // Faint "network" decoration inside the center sphere -- an outer ring of
@@ -166,7 +164,16 @@ function PlatformIcon({ type }) {
           <text x="12" y="16.5" textAnchor="middle" fontSize="12" fontWeight="800" fill="#1b2a5e" stroke="none" fontFamily="Nunito, sans-serif">?</text>
         </g>
       );
-    default:
+        case 'investments':
+      return (
+        <g>
+          <path d="M2 9 L12 3 L22 9 Z" />
+          <path d="M2 9 H22" />
+          <path d="M4.5 9 V19 M9.5 9 V19 M14.5 9 V19 M19.5 9 V19" />
+          <path d="M2 21 H22" />
+        </g>
+      );
+default:
       return null;
   }
 }
@@ -250,7 +257,7 @@ export default function Splash({ session }) {
       <div className="splash-center">
         <div className="splash-illustration-wrap">
         <div className="splash-illustration splash-illustration-platform">
-          <svg viewBox="0 -50 440 522" xmlns="http://www.w3.org/2000/svg">
+          <svg viewBox="0 0 528 554" xmlns="http://www.w3.org/2000/svg">
             <defs>
               {/* Center sphere lit from the upper-left, deepening to navy at
                   the edges -- same "glowing globe" read as the reference
@@ -319,11 +326,11 @@ export default function Splash({ session }) {
                         </g>
                         {isTwoLine ? (
                           <text textAnchor="middle" className="platform-tab-label">
-                            <tspan x="12" y="31">{words[0]}</tspan>
-                            <tspan x="12" y="41">{words.slice(1).join(' ')}</tspan>
+                            <tspan x="12" y="32">{words[0]}</tspan>
+                            <tspan x="12" y="45">{words.slice(1).join(' ')}</tspan>
                           </text>
                         ) : (
-                          <text x="12" y="34" textAnchor="middle" className="platform-tab-label">{tab.label}</text>
+                          <text x="12" y="35" textAnchor="middle" className="platform-tab-label">{tab.label}</text>
                         )}
                       </g>
                     </g>
