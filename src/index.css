@@ -2597,10 +2597,53 @@ instead of overflowing at the unconditional 35px desktop size. */
   100% { transform: translate(0, 0) rotate(360deg); }
 }
 @keyframes aria-icon-evaporate {
-  0%, 68% { opacity: 1; filter: blur(0); }
-  82% { opacity: 0.12; filter: blur(2.5px); }
-  90% { opacity: 0.12; filter: blur(2.5px); }
-  100% { opacity: 1; filter: blur(0); }
+  0%, 66% { opacity: 1; }
+  70% { opacity: 0; }
+  85% { opacity: 0; }
+  91% { opacity: 1; }
+  100% { opacity: 1; }
+}
+@keyframes aria-spark-burst {
+  0%, 64% { opacity: 0; transform: translate(-50%, -50%) scale(0.3) rotate(0deg); }
+  70% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(15deg); }
+  80% { opacity: 0; transform: translate(-50%, -50%) scale(1.25) rotate(28deg); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.25) rotate(28deg); }
+}
+.chat-fab-btn::before,
+.chat-fab-btn::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  animation: aria-spark-burst 7s ease-out infinite;
+}
+.chat-fab-btn::before {
+  box-shadow:
+    0 -9px 0 0 #fef08a,
+    6.5px -6.5px 0 0 #fca5a5,
+    9px 0 0 0 #fde68a,
+    6.5px 6.5px 0 0 #fca5a5,
+    0 9px 0 0 #fef08a,
+    -6.5px 6.5px 0 0 #fca5a5,
+    -9px 0 0 0 #fde68a,
+    -6.5px -6.5px 0 0 #fca5a5;
+}
+.chat-fab-btn::after {
+  animation-delay: 0.1s;
+  box-shadow:
+    0 -13px 0 0 #fde68a,
+    9px -9px 0 0 #fef08a,
+    13px 0 0 0 #fca5a5,
+    9px 9px 0 0 #fef08a,
+    0 13px 0 0 #fde68a,
+    -9px 9px 0 0 #fef08a,
+    -13px 0 0 0 #fca5a5,
+    -9px -9px 0 0 #fef08a;
 }
 .aria-icon-motion {
   animation: aria-icon-motion 9s ease-in-out infinite, aria-icon-evaporate 7s ease-in-out infinite;
