@@ -2189,6 +2189,8 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   const expenseFilterRef = useRef(null);
   const [expenseSearchOpen, setExpenseSearchOpen] = useState(false);
   const [expenseSearchQuery, setExpenseSearchQuery] = useState('');
+  const [categoryBudgetSearchOpen, setCategoryBudgetSearchOpen] = useState(false);
+  const [categoryBudgetSearchQuery, setCategoryBudgetSearchQuery] = useState('');
   useEffect(() => {
     if (!expenseFilterOpen) return;
     function onDocClick(e) {
@@ -8709,8 +8711,30 @@ I can help you track expenses, understand spending patterns, create budgets, and
                         </div>
                       );
                     })()}
-                    <div className="settings-grid">
-                    {categories.filter((c) => c.monthly_budget > 0).map((c) => {
+                    <div className="filter-wrap" style={{ marginTop: 10, marginBottom: 4 }}>
+                  {categoryBudgetSearchOpen ? (
+                    <input
+                      type="text"
+                      className="search-input"
+                      placeholder="Search category..."
+                      autoFocus
+                      value={categoryBudgetSearchQuery}
+                      onChange={(e) => setCategoryBudgetSearchQuery(e.target.value)}
+                      onBlur={() => { if (!categoryBudgetSearchQuery.trim()) setCategoryBudgetSearchOpen(false); }}
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      className="search-toggle-btn"
+                      onClick={() => setCategoryBudgetSearchOpen(true)}
+                      title="Search by category"
+                    >
+                      <Search size={13} />
+                    </button>
+                  )}
+                </div>
+                <div className="settings-grid">
+                    {categories.filter((c) => c.monthly_budget > 0).filter((c) => !categoryBudgetSearchQuery.trim() || c.name.toLowerCase().includes(categoryBudgetSearchQuery.trim().toLowerCase())).map((c) => {
                       const spent = byCategory[c.name] || 0;
                       const over = spent > c.monthly_budget;
                       return (
