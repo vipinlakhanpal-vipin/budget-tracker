@@ -8946,7 +8946,9 @@ I can help you track expenses, understand spending patterns, create budgets, and
             </button>
             <h2 style={{ margin: '0 0 10px' }}>Explore</h2>
             {chartTypeToggle(true)}
-            {renderChartCard(true)}
+            <div className="chart-fullscreen-chart-area">
+              {renderChartCard(true)}
+            </div>
           </div>
         </div>,
         document.body
