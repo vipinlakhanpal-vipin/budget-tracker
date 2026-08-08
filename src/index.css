@@ -2003,6 +2003,23 @@ td.amount { font-weight: 600; text-align: right; }
     .mobile-side-rail .notif-badge { top: 2px; right: 6px; }
     .mobile-side-rail button svg { display: block; }
     .mobile-side-rail button:active { transform: scale(.94); }
+    /* v3.30: restore the colorful conic-gradient swatch look for the
+       rail's Theme button -- it was rendering as a plain muted Palette
+       icon (matching the other rail buttons' single-color style) instead
+       of the multi-color ring the desktop theme-fab-btn uses to hint
+       "pick a color" at a glance. */
+    .rail-theme-swatch {
+      display: flex; align-items: center; justify-content: center;
+      width: 20px; height: 20px; border-radius: 50%;
+      background: conic-gradient(from 0deg, #0d9488, #0369a1, #4f46e5, #7c3aed, #9f1239, #db2777, #b45309, #15803d, #475569, #0d9488);
+      color: #fff; box-shadow: 0 2px 6px rgba(15, 42, 46, .25);
+    }
+    .rail-theme-btn.active .rail-theme-swatch { box-shadow: 0 0 0 2px var(--accent-light), 0 2px 6px rgba(15, 42, 46, .25); }
+    /* v3.30: full-viewport transparent scrim behind an open mobile
+       dropdown -- gives outside-tap-to-close a large, unambiguous target. */
+    .mobile-dropdown-scrim {
+      position: fixed; inset: 0; z-index: 480; background: rgba(15, 42, 46, .01);
+    }
   /* v2.03: the toast was inheriting its centering from .page-title-row,
      but that row's own title text is display:none on mobile (see the
      July-2026-wrapping fix above), so the row collapses down to just the
@@ -2432,7 +2449,18 @@ instead of overflowing at the unconditional 35px desktop size. */
   .wrap { padding-top: env(safe-area-inset-top); }
 }
 
-@media (max-width: 640px) {
+/* v3.30: widened to match the exact matchMedia query the JS isMobile state
+   (and .mobile-side-rail above) already use -- this block used to only
+   fire under max-width:640px, so on a coarse-pointer touch device with a
+   viewport wider than that (landscape phones, some phablets/small
+   tablets), isMobile was true (rail showed, JSX unmounted the desktop
+   Profile/Theme/Alerts triggers) but .mobile-bottom-nav here still had
+   display:none from the unconditional rule above -- leaving Profile
+   completely unreachable even though its state/refs were wired correctly.
+   Matching the same query everywhere keeps JS and CSS in agreement about
+   what counts as "mobile" so every trigger that's supposed to be visible
+   actually is. */
+@media (max-width: 640px), (pointer: coarse) and (hover: none) and (max-width: 1366px) {
   /* Leaves enough room at the bottom of the page so the last card/button
      isn't hidden behind the fixed nav bar, and respects the iPhone home
      indicator safe area. */
