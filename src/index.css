@@ -1995,7 +1995,12 @@ td.amount { font-weight: 600; text-align: right; }
        it needs to open rightward instead, or it renders off-screen. */
     .mobile-side-rail .notif-bell-wrap { position: relative; width: 100%; }
     .mobile-side-rail .notif-dropdown { top: 0; left: 58px; right: auto; }
-    .mobile-side-rail button.active { color: var(--accent); }
+    /* v3.29: the badge's default -6px/-6px offset pokes past the rail's own
+       edge, which the rail's overflow-y:auto silently clips horizontally
+       too (same "one non-visible axis clips both" CSS rule noted elsewhere
+       in this file) -- pull it inward so it stays within the rail's own
+       54px width instead of overflowing off the right edge. */
+    .mobile-side-rail .notif-badge { top: 2px; right: 6px; }
     .mobile-side-rail button svg { display: block; }
     .mobile-side-rail button:active { transform: scale(.94); }
   /* v2.03: the toast was inheriting its centering from .page-title-row,
@@ -2009,7 +2014,12 @@ td.amount { font-weight: 600; text-align: right; }
      just Investments) since they all share this one .app-toast element. */
   .app-toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); }
   .top-bar .btn.secondary.small { align-self: flex-start; }
-  .action-row-teal { width: 100%; }
+  /* v3.29: every child of this row is now either off (header-tab-btn:none
+     by default, tab-visible-mobile/tab-hide-mobile:none) or moved to the
+     rail (theme, per the isMobile-guarded trigger in Dashboard.jsx) --
+     nothing in it ever renders on mobile anymore, so collapse the row
+     itself too instead of leaving its residual padding behind. */
+  .action-row-teal { width: 100%; display: none; }
   .btn-teal { flex: 1 1 auto; text-align: center; }
     /* Dashboard/Home stays out of the header on phones -- the bottom nav's
        Home button already covers that job. Income/Fixed/Regular/Savings
@@ -2370,6 +2380,36 @@ instead of overflowing at the unconditional 35px desktop size. */
     position: static; grid-column: 1 / -1;
     display: flex; justify-content: flex-end; gap: 4px;
     padding-top: 8px; margin-top: 4px; border-top: 1px solid var(--bg);
+  }
+
+  /* v3.29: Admin Console's Users table has 9 data columns + an actions
+     cell -- one-per-row (the generic mobile rule above) meant scrolling
+     through 9 separate stacked blocks just to see one person. Same 2-per-
+     row grid idea as investments-records-table above, but denser (smaller
+     type, "fine print") since there's more fields to fit: Email spans the
+     full width on its own line since it's the one field worth reading at
+     normal size, the rest pair up two-to-a-row, and the actions row spans
+     full width at the bottom. */
+  table.responsive-table.admin-users-table tbody tr {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 1px 10px;
+    padding: 12px 14px 10px;
+  }
+  table.responsive-table.admin-users-table td {
+    padding: 5px 0; border-bottom: none; font-size: 11.5px;
+  }
+  table.responsive-table.admin-users-table td[data-label]::before {
+    font-size: 8.5px; margin-bottom: 1px;
+  }
+  table.responsive-table.admin-users-table td[data-label="Email"] {
+    grid-column: 1 / -1; font-size: 13px; font-weight: 700;
+    padding-bottom: 6px; border-bottom: 1px solid var(--bg);
+  }
+  table.responsive-table.admin-users-table td:last-child {
+    grid-column: 1 / -1; margin-top: 4px; padding-top: 8px;
+    border-top: 1px solid var(--bg);
+  }
+  table.responsive-table.admin-users-table .admin-actions-cell {
+    flex-wrap: wrap;
   }
 }
 
@@ -3115,6 +3155,7 @@ row. */
 }
 @media (max-width: 720px) {
   table.responsive-table tr.admin-household-group-header {
+    display: block;
     border: none;
     background: none;
     box-shadow: none;
@@ -3531,6 +3572,11 @@ row. */
   grid-template-columns: repeat(2, 1fr);
   gap: 8px;
   margin-top: 8px;
+}
+/* v3.29: 2 columns is a desktop-only affordance -- on a narrow phone each
+   cell was too cramped to read the category name and amount together. */
+@media (max-width: 640px), (pointer: coarse) and (hover: none) and (max-width: 1366px) {
+  .settings-grid { grid-template-columns: 1fr; }
 }
 .settings-grid .cat-budget-row {
   margin-top: 0;
