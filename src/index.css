@@ -1977,7 +1977,7 @@ td.amount { font-weight: 600; text-align: right; }
        Investments/Report on mobile -- left padding above makes room for
        it (54px rail + 8px gutter) so page content never sits underneath. */
     .mobile-side-rail {
-      display: flex; flex-direction: column; gap: 10px;
+      display: flex !important; flex-direction: column; gap: 10px;
       position: fixed; left: 0; top: env(safe-area-inset-top);
       bottom: calc(78px + env(safe-area-inset-bottom));
       width: 54px; padding: 10px 0; z-index: 55; overflow-y: auto;
@@ -2029,6 +2029,16 @@ td.amount { font-weight: 600; text-align: right; }
        media query is active, silently defeating the hide. !important
        makes this win regardless of where else display gets set. */
     .tab-hide-mobile { display: none !important; }
+  /* v3.27: header compaction. The long "email | date · version · time"
+     text next to the profile icon is now reachable one tap away (it's
+     already repeated inside the profile dropdown as "Signed in as..."),
+     so hiding it here removes a chunk of text that was wrapping onto its
+     own line on narrow phones. The logo mark shrinks to match -- both
+     purely cosmetic on mobile, no functionality removed (rename/sign out/
+     edit-details all still work exactly as before via the same buttons). */
+  .corner-profile-label { display: none; }
+  .header-title-row svg { width: 34px !important; height: 34px !important; }
+  .top-bar { padding: 8px 12px 6px; gap: 6px; }
   h1 { font-size: 19px; }
 /* Mobile: shrink the editable app-title input/h1 so "Expense
 Management" (or whatever it's renamed to) fits the narrow header
@@ -2067,6 +2077,22 @@ instead of overflowing at the unconditional 35px desktop size. */
      label is the point of a glanceable summary tile; tapping into the
      relevant panel below still gives the full breakdown. */
       .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+      /* v3.27: mobile hero row (Remaining + Net) + the "See all figures"
+         toggle that shows/hides the full grids below it (see the JSX
+         around .mobile-hero-cards in Dashboard.jsx). Hero cards reuse the
+         existing .card look (same background/radius/padding), just two
+         per row instead of three, with a larger value so the numbers that
+         matter most read clearly at a glance. */
+      .mobile-hero-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 8px; }
+      .mobile-hero-cards .card { padding: 12px 10px; }
+      .mobile-hero-cards .card .k { font-size: 10.5px; }
+      .mobile-hero-cards .card .v { font-size: 19px; margin-top: 4px; }
+      .mobile-cards-toggle {
+        width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px;
+        background: none; border: 1px solid var(--border); color: var(--muted);
+        font-size: 12px; font-weight: 700; border-radius: 10px; padding: 8px;
+        margin-bottom: 10px; cursor: pointer;
+      }
   .card { padding: 10px 6px; text-align: center; border-radius: 10px; }
   .card .k { font-size: 9.5px; line-height: 1.25; } .card { min-width: 0; }
   .card .v { font-size: 15px; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
@@ -3610,7 +3636,7 @@ row. */
 }
 .chart-fullscreen-modal h2 { flex-shrink: 0; }
 .chart-fullscreen-close {
-  position: absolute; top: 18px; right: 22px; z-index: 2;
+  position: absolute; top: calc(18px + env(safe-area-inset-top)); right: 22px; z-index: 2;
   width: 36px; height: 36px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   background: rgba(124, 58, 237, .14); border: none; color: var(--text);
