@@ -1155,6 +1155,16 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     return () => mq.removeEventListener('change', handler);
   }, []);
 
+  // v3.27: on mobile, the summary-card grids (10-11 tiles) pushed the
+  // Explore chart below the fold. Remaining + Net now render once more, up
+  // top, as a 2-card "hero" row (same <Amt>/derived values as the full
+  // grids below, just displayed a second time -- no new calculation), and
+  // the original two .grid blocks (every tile, unchanged) collapse behind
+  // a "See all figures" toggle, closed by default. Desktop is unaffected --
+  // isMobile is false there, so this state is never consulted and both
+  // .grid blocks always render exactly as they did before.
+  const [showAllMobileCards, setShowAllMobileCards] = useState(false);
+
   // First-time-user spotlight tour (#301) -- shows once automatically for
   // someone who's never seen it (a localStorage flag, not a DB column: this
   // is a "have I personally clicked through this once" per-browser thing,
@@ -6356,6 +6366,43 @@ I can help you track expenses, understand spending patterns, create budgets, and
       </div>
 {(!isMobile || (!inputTab && !activePanel)) && (
 <div className="summary-cards">
+          {/* v3.27: mobile-only hero row -- Remaining + Net (the two
+              numbers actually checked day to day) shown up top, using the
+              exact same derived values/conditions as their full-size cards
+              further down (no new calculation, just displayed a second
+              time). The full grids below collapse behind the toggle right
+              after this, closed by default, so the Explore chart is
+              visible without scrolling. Desktop untouched -- isMobile is
+              false there, so none of this renders and both .grid blocks
+              always show, same as before. */}
+          {isMobile && (
+            <div className="mobile-hero-cards">
+              <div className={`card card-remaining ${totalBudget > 0 && remaining < 0 ? 'over' : totalBudget > 0 && remaining >= 0 ? 'ok' : ''}`}>
+                <div className="k">Remaining</div>
+                {totalBudget > 0 ? (
+                  <div className="v"><Amt value={remaining} /></div>
+                ) : (
+                  <div className="muted-small" style={{ marginTop: 4 }}>Set a monthly budget to track this</div>
+                )}
+              </div>
+              <div className={`card card-net ${netCombined < 0 ? 'over' : 'ok'}`}>
+                <div className="k">Net</div>
+                <div className="v"><Amt value={netCombined} /></div>
+              </div>
+            </div>
+          )}
+          {isMobile && (
+            <button
+              type="button"
+              className="mobile-cards-toggle"
+              onClick={() => setShowAllMobileCards((v) => !v)}
+            >
+              {showAllMobileCards ? 'Hide figures' : 'See all figures'}
+              <ChevronDown size={14} style={{ transform: showAllMobileCards ? 'rotate(180deg)' : 'none', transition: 'transform .15s ease' }} />
+            </button>
+          )}
+          {(!isMobile || showAllMobileCards) && (
+          <>
             <div className="grid">
                 <div className="card card-budget">
           <div className="k">Monthly Budget</div>
@@ -6449,6 +6496,8 @@ I can help you track expenses, understand spending patterns, create budgets, and
           </div>
         ))}
       </div>
+          </>
+          )}
       </div>
 )}
       </div>
