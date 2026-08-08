@@ -1978,16 +1978,23 @@ td.amount { font-weight: 600; text-align: right; }
        it (54px rail + 8px gutter) so page content never sits underneath. */
     .mobile-side-rail {
       display: flex !important; flex-direction: column; gap: 10px;
+      justify-content: center;
       position: fixed; left: 0; top: env(safe-area-inset-top);
       bottom: calc(78px + env(safe-area-inset-bottom));
       width: 54px; padding: 10px 0; z-index: 55; overflow-y: auto;
       background: var(--card); border-right: 1px solid var(--border);
     }
     .mobile-side-rail button {
+      position: relative;
       background: none; border: none; padding: 6px 2px; display: flex;
       flex-direction: column; align-items: center; gap: 3px; color: var(--muted);
-      font-size: 8.5px; font-weight: 700; cursor: pointer;
+      font-size: 8.5px; font-weight: 700; cursor: pointer; width: 100%;
     }
+    /* v3.28: reminders/bell now lives in the rail -- its dropdown used to
+       be right-anchored for a top-right corner button; from the left edge
+       it needs to open rightward instead, or it renders off-screen. */
+    .mobile-side-rail .notif-bell-wrap { position: relative; width: 100%; }
+    .mobile-side-rail .notif-dropdown { top: 0; left: 58px; right: auto; }
     .mobile-side-rail button.active { color: var(--accent); }
     .mobile-side-rail button svg { display: block; }
     .mobile-side-rail button:active { transform: scale(.94); }
@@ -2044,7 +2051,7 @@ td.amount { font-weight: 600; text-align: right; }
 Management" (or whatever it's renamed to) fits the narrow header
 instead of overflowing at the unconditional 35px desktop size. */
   .app-title-purple { font-size: 27px; }
-  .month-nav { gap: 8px; margin: 12px 0 16px; flex-wrap: wrap; }
+  .month-nav { gap: 8px; margin: 4px 0 10px; flex-wrap: wrap; }
   .month-nav .label { min-width: 0; flex: 1; font-size: 14px; }
         .month-nav > button { width: 21px; height: 21px; font-size: 12px; flex-shrink: 0; }
         /* Back in the same row as the arrows/label per explicit request --
@@ -2399,6 +2406,7 @@ instead of overflowing at the unconditional 35px desktop size. */
     box-shadow: 0 -2px 10px rgba(15, 42, 46, .06);
   }
   .mobile-bottom-nav button {
+    position: relative;
     flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
     background: none; border: none; color: var(--muted); font-size: 10.5px; font-weight: 700;
     padding: 7px 2px; margin: 0 2px; border-radius: 12px; cursor: pointer;
