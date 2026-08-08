@@ -5782,6 +5782,74 @@ function ReportHtmlView({ data }) {
 
   return (
     <div className="wrap">
+      {/* Mobile-only left icon rail -- v3.26. Moves the 6 secondary section
+          tabs (Income/Fixed/Regular/Savings/Investments/Report) off the
+          header's wrapped pill row onto a slim fixed rail down the left
+          edge, so the header collapses to one thin row and the dashboard
+          numbers + chart are visible without scrolling. Desktop is
+          untouched -- .mobile-side-rail is display:none above 640px (see
+          index.css), and the original inline header-tab-btn row still
+          renders there exactly as before (now hidden on mobile instead,
+          since this rail replaces it there). Reuses the exact same
+          onClick handlers as their desktop-row counterparts so behavior
+          (active state, which panel opens) is identical, just relocated.
+          Bottom nav (Dashboard/Add/Help/Aria/Soon/Settings) is untouched. */}
+      <nav className="mobile-side-rail" aria-label="Sections">
+        <button
+          type="button"
+          className={inputTab === 'income' ? 'active' : ''}
+          onClick={() => { setActivePanel(null); setInputTab('income'); scrollToFrameA(); }}
+          title="Income"
+        >
+          <Wallet size={18} />
+          <span>Income</span>
+        </button>
+        <button
+          type="button"
+          className={inputTab === 'fixed' ? 'active' : ''}
+          onClick={() => { setActivePanel(null); setInputTab('fixed'); scrollToFrameA(); }}
+          title="Fixed Expenses"
+        >
+          <CalendarClock size={18} />
+          <span>Fixed</span>
+        </button>
+        <button
+          type="button"
+          className={inputTab === 'expense' ? 'active' : ''}
+          onClick={() => { setActivePanel(null); setInputTab('expense'); scrollToFrameA(); }}
+          title="Regular Expenses"
+        >
+          <ShoppingCart size={18} />
+          <span>Regular</span>
+        </button>
+        <button
+          type="button"
+          className={inputTab === 'savings' ? 'active' : ''}
+          onClick={() => { setActivePanel(null); setInputTab('savings'); scrollToFrameA(); }}
+          title="Savings"
+        >
+          <PiggyBank size={18} />
+          <span>Savings</span>
+        </button>
+        <button
+          type="button"
+          className={activePanel === 'investments' ? 'active' : ''}
+          onClick={() => togglePanel('investments')}
+          title="Investments"
+        >
+          <Landmark size={18} />
+          <span>Invest</span>
+        </button>
+        <button
+          type="button"
+          className={activePanel === 'report' ? 'active' : ''}
+          onClick={() => togglePanel('report')}
+          title="Report"
+        >
+          <FileText size={18} />
+          <span>Report</span>
+        </button>
+      </nav>
       {/* "Updated" confirmation toast -- fires on manual Add (Regular
           Expenses) and on receipt auto-add; auto-dismisses itself. */}
       
