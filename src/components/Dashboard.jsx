@@ -5920,6 +5920,22 @@ function ReportHtmlView({ data }) {
             </div>
           )}
         </div>
+        {/* v3.29: theme picker moved here from the header, below Alerts --
+            reuses the exact same themeMenuRef/themeMenuOpen state as the
+            (now desktop-only) header trigger, sharing that one dropdown
+            (which now renders as a mobile bottom-sheet, positioned
+            independent of this button entirely, so it can never end up
+            hidden off-screen behind the rail). */}
+        <button
+          type="button"
+          ref={themeMenuRef}
+          className={themeMenuOpen ? 'active' : ''}
+          onClick={() => setThemeMenuOpen((o) => !o)}
+          title="Theme"
+        >
+          <Palette size={18} />
+          <span>Theme</span>
+        </button>
       </nav>
       {/* "Updated" confirmation toast -- fires on manual Add (Regular
           Expenses) and on receipt auto-add; auto-dismisses itself. */}
@@ -6000,7 +6016,7 @@ function ReportHtmlView({ data }) {
                   </div>
         </div>
               {profileMenuOpen && profileDropdownPos && createPortal(
-                <div className="profile-dropdown" style={{ position: 'fixed', ...(profileDropdownPos.top !== undefined ? { top: profileDropdownPos.top } : { bottom: profileDropdownPos.bottom }), right: profileDropdownPos.right, zIndex: 500, maxHeight: profileDropdownPos.bottom !== undefined ? 'calc(100vh - 100px)' : undefined, overflowY: profileDropdownPos.bottom !== undefined ? 'auto' : undefined }}>
+                <div className="profile-dropdown" style={isMobile ? { position: 'fixed', left: 12, right: 12, bottom: 'calc(78px + env(safe-area-inset-bottom) + 8px)', maxHeight: '60vh', overflowY: 'auto', zIndex: 500 } : { position: 'fixed', top: profileDropdownPos.top, right: profileDropdownPos.right, zIndex: 500 }}>
                   {/* Per explicit request: a clear "Signed in as {name}
                       ({email})" line, plus role and account-created date --
                       everything else (phone/location) is already editable
@@ -6148,6 +6164,12 @@ function ReportHtmlView({ data }) {
                 button itself hints at "pick a color" before it's even
                 opened, while still behaving like every other header
                 dropdown (click to open, click outside to close). */}
+            {/* v3.29: trigger is desktop-only -- mobile gets its own theme
+                button in the left rail (below Alerts), reusing this exact
+                ref/state, which is why the dropdown portal moved outside
+                this check (needs to render regardless of which trigger
+                opened it). */}
+            {!isMobile && (
             <div className="theme-fab-wrap" ref={themeMenuRef}>
               <button
                 type="button"
@@ -6157,8 +6179,10 @@ function ReportHtmlView({ data }) {
               >
                 <Palette size={16} />
               </button>
-              {themeMenuOpen && themeDropdownPos && createPortal(
-                <div className="theme-dropdown" style={{ position: 'fixed', top: themeDropdownPos.top, right: themeDropdownPos.right, zIndex: 500 }}>
+            </div>
+            )}
+              {themeMenuOpen && createPortal(
+                <div className="theme-dropdown" style={isMobile ? { position: 'fixed', left: 12, right: 12, bottom: 'calc(78px + env(safe-area-inset-bottom) + 8px)', maxHeight: '60vh', overflowY: 'auto', zIndex: 500 } : { position: 'fixed', top: themeDropdownPos?.top, right: themeDropdownPos?.right, zIndex: 500 }}>
                     <div className="theme-dropdown-title">Appearance</div>
                     <div className="theme-mode-row">
             <button
@@ -6192,7 +6216,6 @@ function ReportHtmlView({ data }) {
                 </div>,
                 document.body
               )}
-            </div>
             {/* Profile icon replaces the old standalone Sign out button --
                 clicking it shows the signed-in email plus the same
                 self-editable Name/Phone/Location fields as "My details" in
@@ -9055,13 +9078,20 @@ I can help you track expenses, understand spending patterns, create budgets, and
                         >
                           <div className="left">
                             <ChevronRight size={14} className="chevron" />
+                            {/* v3.29: stopPropagation removed -- clicking the
+                                group name now expands/collapses the group too
+                                (same as clicking the chevron or anywhere else
+                                in the row), matching how "Ungrouped" already
+                                behaves. Typing to rename still works exactly
+                                the same either way -- focus/typing happens
+                                natively regardless of whether the click event
+                                also bubbles up to the row's own toggle. */}
                             <input
                               className="group-name-input"
                               value={groupNameDrafts[g.id] ?? g.name}
                               onChange={(e) => setGroupNameDrafts({ ...groupNameDrafts, [g.id]: e.target.value })}
                               onBlur={() => handleRenameGroup(g.id)}
                               onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
-                              onClick={(e) => e.stopPropagation()}
                             />
                           </div>
                           <span className="badge">{groupCats.length}</span>
