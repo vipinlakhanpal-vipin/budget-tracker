@@ -946,7 +946,17 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     if (!profileMenuOpen) return;
     if (profileMenuRef.current) {
       const r = profileMenuRef.current.getBoundingClientRect();
-      setProfileDropdownPos({ top: r.bottom + 8, right: Math.max(8, window.innerWidth - r.right) });
+      // v3.28: the trigger can now be the bottom-nav profile button, which
+      // sits near the physical bottom of the screen -- opening downward
+      // from there would push the dropdown off-screen. Flip to opening
+      // upward (anchored by `bottom` instead of `top`) whenever the
+      // trigger's own top edge is in the lower part of the viewport.
+      const openUpward = r.top > window.innerHeight - 220;
+      setProfileDropdownPos(
+        openUpward
+          ? { bottom: window.innerHeight - r.top + 8, right: Math.max(8, window.innerWidth - r.right) }
+          : { top: r.bottom + 8, right: Math.max(8, window.innerWidth - r.right) }
+      );
     }
     function onDocClick(e) {
       if (profileMenuRef.current && !profileMenuRef.current.contains(e.target)) setProfileMenuOpen(false);
@@ -5805,6 +5815,18 @@ function ReportHtmlView({ data }) {
           (active state, which panel opens) is identical, just relocated.
           Bottom nav (Dashboard/Add/Help/Aria/Soon/Settings) is untouched. */}
       <nav className="mobile-side-rail" aria-label="Sections">
+        {/* v3.28: Dashboard moved here from the bottom nav (its old bottom-
+            nav slot now holds Refresh instead), reusing the exact same
+            goToOverview() handler and active-state check bottom nav used. */}
+        <button
+          type="button"
+          className={!activePanel && !addSheetOpen ? 'active' : ''}
+          onClick={goToOverview}
+          title="Dashboard"
+        >
+          <Home size={18} />
+          <span>Home</span>
+        </button>
         <button
           type="button"
           className={inputTab === 'income' ? 'active' : ''}
@@ -5859,6 +5881,45 @@ function ReportHtmlView({ data }) {
           <FileText size={18} />
           <span>Report</span>
         </button>
+        {/* v3.28: bell/reminders moved here from the header -- reuses the
+            exact same notifBellRef/notifOpen state and dropdown markup as
+            the (now desktop-only) header bell above, so only one is ever
+            mounted at a time. .mobile-side-rail .notif-dropdown gets its
+            own position override in index.css since it now opens from the
+            left edge instead of the top-right corner. */}
+        <div className="notif-bell-wrap rail-notif-bell" ref={notifBellRef}>
+          <button
+            type="button"
+            className={notifOpen ? 'active' : ''}
+            onClick={() => {
+              const opening = !notifOpen;
+              setNotifOpen(opening);
+              if (opening && notifications.length) markNotifsSeen(notifications.map((n) => n.id));
+            }}
+            title="Reminders"
+          >
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 22a2.4 2.4 0 0 0 2.4-2.4h-4.8A2.4 2.4 0 0 0 12 22Z" fill="currentColor" />
+              <path d="M19 16.2V11a7 7 0 1 0-14 0v5.2l-1.6 2.2c-.4.5 0 1.3.6 1.3h16c.6 0 1-.8.6-1.3L19 16.2Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+            </svg>
+            {unreadNotifCount > 0 && (
+              <span className="notif-badge">{unreadNotifCount > 9 ? '9+' : unreadNotifCount}</span>
+            )}
+            <span>Alerts</span>
+          </button>
+          {notifOpen && (
+            <div className="notif-dropdown">
+              <div className="notif-dropdown-title">Notifications</div>
+              {notifications.length === 0 ? (
+                <div className="notif-empty">You&rsquo;re all caught up.</div>
+              ) : (
+                notifications.map((n) => (
+                  <div key={n.id} className="notif-item">{n.text}</div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
       </nav>
       {/* "Updated" confirmation toast -- fires on manual Add (Regular
           Expenses) and on receipt auto-add; auto-dismisses itself. */}
@@ -5904,6 +5965,10 @@ function ReportHtmlView({ data }) {
               <h1 className="app-title-purple">{household.name || 'Hearth'}</h1>
             )}
           </div>
+          {/* v3.28: refresh moved to the bottom nav on mobile (reuses this
+              same handler/badge state -- see mobile-bottom-nav below), so
+              this header button is desktop-only now. */}
+          {!isMobile && (
           <button
             type="button"
             className={`refresh-app-btn${updateAvailable ? ' refresh-app-btn-new' : ''}`}
@@ -5913,7 +5978,13 @@ function ReportHtmlView({ data }) {
             <RefreshCw size={16} />
             {updateAvailable && <span className="refresh-app-btn-badge">!</span>}
           </button>
+          )}
           <div className="corner-badge-group">
+            {/* v3.28: trigger is desktop-only -- mobile gets its own profile
+                button in the bottom nav instead, reusing this exact ref/state,
+                which is why the dropdown portal below moved outside this check
+                (it needs to render regardless of which trigger opened it). */}
+            {!isMobile && (
 <div className="profile-menu-wrap" ref={profileMenuRef}>
               <button
                 type="button"
@@ -5924,8 +5995,12 @@ function ReportHtmlView({ data }) {
                 <User size={18} />
 <span className="corner-profile-label" title="This shows the page load time -- if content changes without you clicking refresh, check whether this time also changed. If it did, your browser silently reloaded the tab (e.g. an inactive tab being reclaimed). If it did not, that\'s unexpected and worth reporting.">{displayNameForEmail(session.user.email)} | {formatVersionBadge().replace(' ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¿ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ½ ', ' | ')} {'\u00b7'} {loadedAt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
               </button>
+            </div>
+            )}
+                  </div>
+        </div>
               {profileMenuOpen && profileDropdownPos && createPortal(
-                <div className="profile-dropdown" style={{ position: 'fixed', top: profileDropdownPos.top, right: profileDropdownPos.right, zIndex: 500 }}>
+                <div className="profile-dropdown" style={{ position: 'fixed', ...(profileDropdownPos.top !== undefined ? { top: profileDropdownPos.top } : { bottom: profileDropdownPos.bottom }), right: profileDropdownPos.right, zIndex: 500, maxHeight: profileDropdownPos.bottom !== undefined ? 'calc(100vh - 100px)' : undefined, overflowY: profileDropdownPos.bottom !== undefined ? 'auto' : undefined }}>
                   {/* Per explicit request: a clear "Signed in as {name}
                       ({email})" line, plus role and account-created date --
                       everything else (phone/location) is already editable
@@ -5972,9 +6047,6 @@ function ReportHtmlView({ data }) {
                 </div>,
                 document.body
               )}
-            </div>
-                  </div>
-        </div>
           {/* Left-aligned, single row: the 4 data-entry tabs first, then the
               teal panel-toggle buttons, then the Profile icon, then the
               bell last -- all one flowing group instead of two separate
@@ -6125,6 +6197,10 @@ function ReportHtmlView({ data }) {
                 clicking it shows the signed-in email plus the same
                 self-editable Name/Phone/Location fields as "My details" in
                 Users, with Sign out as the last action in the dropdown. */}
+            {/* v3.28: desktop-only now -- mobile gets its own bell trigger in
+                the left rail (see .mobile-side-rail below), reusing this
+                exact ref/state, so only one is ever mounted at a time. */}
+            {!isMobile && (
             <div className="notif-bell-wrap" ref={notifBellRef}>
               <button
                 type="button"
@@ -6158,6 +6234,7 @@ function ReportHtmlView({ data }) {
                 </div>
               )}
             </div>
+            )}
             {/* AI feature #4: chat assistant, now anchored as a fixed icon
                 button right next to the bell (same relative/absolute
                 dropdown pattern as notif-bell-wrap and profile-menu-wrap
@@ -9210,9 +9287,18 @@ I can help you track expenses, understand spending patterns, create budgets, and
           entry points for the same action on screen at once was confusing.
           The bottom-nav Add button below is now the single entry point. */}
       <nav className="mobile-bottom-nav">
-        <button data-tour="nav-home" className={!activePanel && !addSheetOpen ? 'active' : ''} onClick={goToOverview}>
-          <Home size={20} strokeWidth={2.2} />
-          <span>Dashboard</span>
+        {/* v3.28: Dashboard moved to the top of the left rail -- Refresh
+            takes its old first slot here instead, reusing the exact same
+            handler/badge state as the (now desktop-only) header button. */}
+        <button
+          type="button"
+          className={updateAvailable ? 'active' : ''}
+          title={updateAvailable ? `v${latestVersion} available -- tap to refresh` : 'Refresh app'}
+          onClick={() => { window.location.href = window.location.pathname + '?_r=' + Date.now(); }}
+        >
+          <RefreshCw size={20} strokeWidth={2.2} />
+          {updateAvailable && <span className="notif-badge" style={{ top: -2, right: 4 }}>!</span>}
+          <span>Refresh</span>
         </button>
         <button data-tour="nav-add" onClick={() => goToAdd(inputTab || 'expense')}>
           <Plus size={20} strokeWidth={2.2} />
@@ -9240,6 +9326,15 @@ I can help you track expenses, understand spending patterns, create budgets, and
         <button data-tour="nav-settings" className={activePanel === 'settings' ? 'active' : ''} onClick={() => togglePanel('settings')}>
           <SettingsIcon size={20} strokeWidth={2.2} />
           <span>Settings</span>
+        </button>
+        <button
+          type="button"
+          ref={profileMenuRef}
+          className={profileMenuOpen ? 'active' : ''}
+          onClick={() => setProfileMenuOpen((o) => !o)}
+        >
+          <User size={20} strokeWidth={2.2} />
+          <span>Profile</span>
         </button>
       </nav>
 
