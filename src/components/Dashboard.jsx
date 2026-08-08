@@ -902,10 +902,19 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     }
   });
   const notifBellRef = useRef(null);
+  const notifDropdownRef = useRef(null);
+  const [notifDropdownPos, setNotifDropdownPos] = useState(null);
   useEffect(() => {
     if (!notifOpen) return;
+    if (notifBellRef.current) {
+      const r = notifBellRef.current.getBoundingClientRect();
+      setNotifDropdownPos({ top: r.bottom + 8, right: Math.max(8, window.innerWidth - r.right) });
+    }
     function onDocClick(e) {
-      if (notifBellRef.current && !notifBellRef.current.contains(e.target)) setNotifOpen(false);
+      if (
+        notifBellRef.current && !notifBellRef.current.contains(e.target) &&
+        !(notifDropdownRef.current && notifDropdownRef.current.contains(e.target))
+      ) setNotifOpen(false);
     }
     document.addEventListener('mousedown', onDocClick);
     return () => document.removeEventListener('mousedown', onDocClick);
@@ -942,6 +951,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   // instead of the viewport. Rendering it through a portal straight into
   // document.body sidesteps both the clipping and the transform-containment
   // issue for good.
+  const profileDropdownRef = useRef(null);
   useEffect(() => {
     if (!profileMenuOpen) return;
     if (profileMenuRef.current) {
@@ -959,7 +969,10 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       );
     }
     function onDocClick(e) {
-      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target)) setProfileMenuOpen(false);
+      if (
+        profileMenuRef.current && !profileMenuRef.current.contains(e.target) &&
+        !(profileDropdownRef.current && profileDropdownRef.current.contains(e.target))
+      ) setProfileMenuOpen(false);
     }
     document.addEventListener('click', onDocClick);
     return () => document.removeEventListener('click', onDocClick);
@@ -1027,6 +1040,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       }
     }, [mode]);
 
+  const themeDropdownRef = useRef(null);
   useEffect(() => {
     if (!themeMenuOpen) return;
     if (themeMenuRef.current) {
@@ -1034,7 +1048,10 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       setThemeDropdownPos({ top: r.bottom + 8, right: Math.max(8, window.innerWidth - r.right) });
     }
     function onDocClick(e) {
-      if (themeMenuRef.current && !themeMenuRef.current.contains(e.target)) setThemeMenuOpen(false);
+      if (
+        themeMenuRef.current && !themeMenuRef.current.contains(e.target) &&
+        !(themeDropdownRef.current && themeDropdownRef.current.contains(e.target))
+      ) setThemeMenuOpen(false);
     }
     document.addEventListener('click', onDocClick);
     return () => document.removeEventListener('click', onDocClick);
@@ -2217,6 +2234,18 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   const [expenseSearchQuery, setExpenseSearchQuery] = useState('');
   const [categoryBudgetSearchOpen, setCategoryBudgetSearchOpen] = useState(false);
   const [categoryBudgetSearchQuery, setCategoryBudgetSearchQuery] = useState('');
+  // v3.30: separate search for the "Budget for Per Category" input grid
+  // (setting each category's cap) -- distinct from categoryBudgetSearchQuery
+  // above, which filters the "this month's spending vs budget" list further
+  // down the same panel.
+  const [catBudgetInputSearchOpen, setCatBudgetInputSearchOpen] = useState(false);
+  const [catBudgetInputSearchQuery, setCatBudgetInputSearchQuery] = useState('');
+  // v3.30: search across Groups & Category -- filters both the Ungrouped
+  // list and every group's category list by name; a group also stays
+  // visible (and auto-expands) if its own name matches even when none of
+  // its categories do.
+  const [groupCatSearchOpen, setGroupCatSearchOpen] = useState(false);
+  const [groupCatSearchQuery, setGroupCatSearchQuery] = useState('');
   useEffect(() => {
     if (!expenseFilterOpen) return;
     function onDocClick(e) {
@@ -5825,7 +5854,7 @@ function ReportHtmlView({ data }) {
           title="Dashboard"
         >
           <Home size={18} />
-          <span>Home</span>
+          <span>Dash</span>
         </button>
         <button
           type="button"
@@ -5907,36 +5936,33 @@ function ReportHtmlView({ data }) {
             )}
             <span>Alerts</span>
           </button>
-          {notifOpen && (
-            <div className="notif-dropdown">
-              <div className="notif-dropdown-title">Notifications</div>
-              {notifications.length === 0 ? (
-                <div className="notif-empty">You&rsquo;re all caught up.</div>
-              ) : (
-                notifications.map((n) => (
-                  <div key={n.id} className="notif-item">{n.text}</div>
-                ))
-              )}
-            </div>
-          )}
         </div>
         {/* v3.29: theme picker moved here from the header, below Alerts --
             reuses the exact same themeMenuRef/themeMenuOpen state as the
             (now desktop-only) header trigger, sharing that one dropdown
             (which now renders as a mobile bottom-sheet, positioned
             independent of this button entirely, so it can never end up
-            hidden off-screen behind the rail). */}
+            hidden off-screen behind the rail).
+            v3.30: swatch icon restyled with the same conic-gradient ring
+            as the desktop theme-fab-btn, so it reads as "pick a color"
+            at a glance instead of a plain muted icon. */}
         <button
           type="button"
           ref={themeMenuRef}
-          className={themeMenuOpen ? 'active' : ''}
+          className={`rail-theme-btn ${themeMenuOpen ? 'active' : ''}`}
           onClick={() => setThemeMenuOpen((o) => !o)}
           title="Theme"
         >
-          <Palette size={18} />
+          <span className="rail-theme-swatch"><Palette size={13} /></span>
           <span>Theme</span>
         </button>
       </nav>
+      {(notifOpen || themeMenuOpen || profileMenuOpen) && isMobile && (
+        <div
+          className="mobile-dropdown-scrim"
+          onClick={() => { setNotifOpen(false); setThemeMenuOpen(false); setProfileMenuOpen(false); }}
+        />
+      )}
       {/* "Updated" confirmation toast -- fires on manual Add (Regular
           Expenses) and on receipt auto-add; auto-dismisses itself. */}
       
@@ -6015,8 +6041,8 @@ function ReportHtmlView({ data }) {
             )}
                   </div>
         </div>
-              {profileMenuOpen && profileDropdownPos && createPortal(
-                <div className="profile-dropdown" style={isMobile ? { position: 'fixed', left: 12, right: 12, bottom: 'calc(78px + env(safe-area-inset-bottom) + 8px)', maxHeight: '60vh', overflowY: 'auto', zIndex: 500 } : { position: 'fixed', top: profileDropdownPos.top, right: profileDropdownPos.right, zIndex: 500 }}>
+              {profileMenuOpen && createPortal(
+                <div className="profile-dropdown" ref={profileDropdownRef} style={isMobile ? { position: 'fixed', left: 12, right: 12, bottom: 'calc(78px + env(safe-area-inset-bottom) + 8px)', maxHeight: '60vh', overflowY: 'auto', zIndex: 500 } : { position: 'fixed', top: profileDropdownPos?.top ?? 60, right: profileDropdownPos?.right ?? 12, zIndex: 500 }}>
                   {/* Per explicit request: a clear "Signed in as {name}
                       ({email})" line, plus role and account-created date --
                       everything else (phone/location) is already editable
@@ -6182,7 +6208,7 @@ function ReportHtmlView({ data }) {
             </div>
             )}
               {themeMenuOpen && createPortal(
-                <div className="theme-dropdown" style={isMobile ? { position: 'fixed', left: 12, right: 12, bottom: 'calc(78px + env(safe-area-inset-bottom) + 8px)', maxHeight: '60vh', overflowY: 'auto', zIndex: 500 } : { position: 'fixed', top: themeDropdownPos?.top, right: themeDropdownPos?.right, zIndex: 500 }}>
+                <div className="theme-dropdown" ref={themeDropdownRef} style={isMobile ? { position: 'fixed', left: 12, right: 12, bottom: 'calc(78px + env(safe-area-inset-bottom) + 8px)', maxHeight: '60vh', overflowY: 'auto', zIndex: 500 } : { position: 'fixed', top: themeDropdownPos?.top ?? 60, right: themeDropdownPos?.right ?? 12, zIndex: 500 }}>
                     <div className="theme-dropdown-title">Appearance</div>
                     <div className="theme-mode-row">
             <button
@@ -6244,19 +6270,26 @@ function ReportHtmlView({ data }) {
                   <span className="notif-badge">{unreadNotifCount > 9 ? '9+' : unreadNotifCount}</span>
                 )}
               </button>
-              {notifOpen && (
-                <div className="notif-dropdown">
-                  <div className="notif-dropdown-title">Notifications</div>
-                  {notifications.length === 0 ? (
-                    <div className="notif-empty">You&rsquo;re all caught up.</div>
-                  ) : (
-                    notifications.map((n) => (
-                      <div key={n.id} className="notif-item">{n.text}</div>
-                    ))
-                  )}
-                </div>
-              )}
             </div>
+            )}
+            {notifOpen && createPortal(
+              <div
+                className="notif-dropdown"
+                ref={notifDropdownRef}
+                style={isMobile
+                  ? { position: 'fixed', left: 12, right: 12, bottom: 'calc(78px + env(safe-area-inset-bottom) + 8px)', maxHeight: '60vh', overflowY: 'auto', zIndex: 500 }
+                  : { position: 'fixed', top: notifDropdownPos?.top ?? 60, right: notifDropdownPos?.right ?? 12, zIndex: 500 }}
+              >
+                <div className="notif-dropdown-title">Notifications</div>
+                {notifications.length === 0 ? (
+                  <div className="notif-empty">You&rsquo;re all caught up.</div>
+                ) : (
+                  notifications.map((n) => (
+                    <div key={n.id} className="notif-item">{n.text}</div>
+                  ))
+                )}
+              </div>,
+              document.body
             )}
             {/* AI feature #4: chat assistant, now anchored as a fixed icon
                 button right next to the bell (same relative/absolute
@@ -8896,9 +8929,33 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     compares to them. Optional -- the overall monthly budget
                     above is all that's required. */}
                 <div style={{ marginTop: 22 }}>
-                  <label className="muted-small" style={{ fontWeight: 700 }}>Budget for Per Category (optional)</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <label className="muted-small" style={{ fontWeight: 700 }}>Budget for Per Category (optional)</label>
+                    <div className="filter-wrap">
+                      {catBudgetInputSearchOpen ? (
+                        <input
+                          type="text"
+                          className="search-input"
+                          placeholder="Search category..."
+                          autoFocus
+                          value={catBudgetInputSearchQuery}
+                          onChange={(e) => setCatBudgetInputSearchQuery(e.target.value)}
+                          onBlur={() => { if (!catBudgetInputSearchQuery.trim()) setCatBudgetInputSearchOpen(false); }}
+                        />
+                      ) : (
+                        <button
+                          type="button"
+                          className="search-toggle-btn"
+                          onClick={() => setCatBudgetInputSearchOpen(true)}
+                          title="Search by category"
+                        >
+                          <Search size={13} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
                   <div className="settings-grid">
-                  {categories.map((c) => (
+                  {categories.filter((c) => !catBudgetInputSearchQuery.trim() || c.name.toLowerCase().includes(catBudgetInputSearchQuery.trim().toLowerCase())).map((c) => (
                     <div className="cat-budget-row" key={c.id}>
                       <span className="cat-budget-name">{c.name}</span>
                       <div className="amount-field-wrap tight">
@@ -9026,25 +9083,56 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 </div>
 
                 <div className="muted-small" style={{ margin: '14px 0 6px' }}>Groups (tap to expand -- use the dropdown on each category to move it between groups)</div>
-                <div className="group-count-highlight">{categoryGroups.length} group{categoryGroups.length === 1 ? '' : 's'} · {categories.length} categor{categories.length === 1 ? 'y' : 'ies'}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <div className="group-count-highlight">{categoryGroups.length} group{categoryGroups.length === 1 ? '' : 's'} · {categories.length} categor{categories.length === 1 ? 'y' : 'ies'}</div>
+                  <div className="filter-wrap">
+                    {groupCatSearchOpen ? (
+                      <input
+                        type="text"
+                        className="search-input"
+                        placeholder="Search group or category..."
+                        autoFocus
+                        value={groupCatSearchQuery}
+                        onChange={(e) => setGroupCatSearchQuery(e.target.value)}
+                        onBlur={() => { if (!groupCatSearchQuery.trim()) setGroupCatSearchOpen(false); }}
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        className="search-toggle-btn"
+                        onClick={() => setGroupCatSearchOpen(true)}
+                        title="Search groups & categories"
+                      >
+                        <Search size={13} />
+                      </button>
+                    )}
+                  </div>
+                </div>
                 <div className="group-accordion">
+                  {(() => {
+                    const gcQ = groupCatSearchQuery.trim().toLowerCase();
+                    const ungroupedAll = categories.filter((c) => !c.group_id);
+                    const ungroupedMatches = ungroupedAll.filter((c) => !gcQ || c.name.toLowerCase().includes(gcQ));
+                    if (gcQ && ungroupedMatches.length === 0) return null;
+                    const ungroupedOpen = gcQ ? true : !!expandedGroups.ungrouped;
+                    return (
                   <div className="group-card ungrouped">
                     <div
-                      className={`group-card-head ${expandedGroups.ungrouped ? 'open' : ''}`}
+                      className={`group-card-head ${ungroupedOpen ? 'open' : ''}`}
                       onClick={() => setExpandedGroups({ ...expandedGroups, ungrouped: !expandedGroups.ungrouped })}
                     >
                       <div className="left">
                         <ChevronRight size={14} className="chevron" />
                         <span className="name" style={{ fontWeight: 700, fontSize: 13 }}>Ungrouped</span>
                       </div>
-                      <span className="badge">{categories.filter((c) => !c.group_id).length}</span>
+                      <span className="badge">{ungroupedAll.length}</span>
                     </div>
-                    {expandedGroups.ungrouped && (
+                    {ungroupedOpen && (
                       <div className="group-card-body">
-                        {categories.filter((c) => !c.group_id).length === 0 ? (
+                        {ungroupedMatches.length === 0 ? (
                           <div className="muted-small" style={{ padding: '8px 0' }}>Every category is in a group.</div>
                         ) : (
-                          categories.filter((c) => !c.group_id).map((c) => (
+                          ungroupedMatches.map((c) => (
                             <div className="group-cat-row" key={c.id}>
                               <input
                                 className="name-input"
@@ -9066,10 +9154,17 @@ I can help you track expenses, understand spending patterns, create budgets, and
                       </div>
                     )}
                   </div>
+                    ); })()}
 
                   {categoryGroups.map((g) => {
-                    const groupCats = categories.filter((c) => c.group_id === g.id);
-                    const isOpen = !!expandedGroups[g.id];
+                    const gcQ = groupCatSearchQuery.trim().toLowerCase();
+                    const allGroupCats = categories.filter((c) => c.group_id === g.id);
+                    const nameMatches = !gcQ || g.name.toLowerCase().includes(gcQ);
+                    const groupCats = gcQ && !nameMatches
+                      ? allGroupCats.filter((c) => c.name.toLowerCase().includes(gcQ))
+                      : allGroupCats;
+                    if (gcQ && !nameMatches && groupCats.length === 0) return null;
+                    const isOpen = gcQ ? true : !!expandedGroups[g.id];
                     return (
                       <div className="group-card" key={g.id}>
                         <div
@@ -9094,7 +9189,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                               onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
                             />
                           </div>
-                          <span className="badge">{groupCats.length}</span>
+                          <span className="badge">{allGroupCats.length}</span>
                           <span className="icons">
                             <Trash2 size={13} onClick={(e) => { e.stopPropagation(); handleRemoveGroup(g.id, g.name); }} />
                           </span>
@@ -9102,7 +9197,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                         {isOpen && (
                           <div className="group-card-body">
                             {groupCats.length === 0 ? (
-                              <div className="muted-small" style={{ padding: '8px 0' }}>No categories in this group yet -- move one in below.</div>
+                              <div className="muted-small" style={{ padding: '8px 0' }}>{gcQ ? 'No categories in this group match your search.' : 'No categories in this group yet -- move one in below.'}</div>
                             ) : (
                               groupCats.map((c) => (
                                 <div className="group-cat-row" key={c.id}>
