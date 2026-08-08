@@ -1971,7 +1971,26 @@ td.amount { font-weight: 600; text-align: right; }
 .cat-budget-row .amount-field-wrap { flex: 0 0 auto; }
 
 @media (max-width: 640px), (pointer: coarse) and (hover: none) and (max-width: 1366px) {
-    .wrap { padding: 14px 8px 14px 12px; }
+    .wrap { padding: 14px 8px 14px 62px; }
+    /* v3.26: slim fixed icon rail (see .mobile-side-rail below) replaces
+       the old wrapped pill row for Income/Fixed/Regular/Savings/
+       Investments/Report on mobile -- left padding above makes room for
+       it (54px rail + 8px gutter) so page content never sits underneath. */
+    .mobile-side-rail {
+      display: flex; flex-direction: column; gap: 10px;
+      position: fixed; left: 0; top: env(safe-area-inset-top);
+      bottom: calc(78px + env(safe-area-inset-bottom));
+      width: 54px; padding: 10px 0; z-index: 55; overflow-y: auto;
+      background: var(--card); border-right: 1px solid var(--border);
+    }
+    .mobile-side-rail button {
+      background: none; border: none; padding: 6px 2px; display: flex;
+      flex-direction: column; align-items: center; gap: 3px; color: var(--muted);
+      font-size: 8.5px; font-weight: 700; cursor: pointer;
+    }
+    .mobile-side-rail button.active { color: var(--accent); }
+    .mobile-side-rail button svg { display: block; }
+    .mobile-side-rail button:active { transform: scale(.94); }
   /* v2.03: the toast was inheriting its centering from .page-title-row,
      but that row's own title text is display:none on mobile (see the
      July-2026-wrapping fix above), so the row collapses down to just the
@@ -1997,7 +2016,10 @@ td.amount { font-weight: 600; text-align: right; }
             if the header row wraps to two lines on a narrow phone -- margin-left:
             auto pushes it to the far right of whichever line it ends up on. */
           .corner-badge-group { margin-left: auto; }
-    .tab-visible-mobile { display: inline-block; }
+    /* v3.26: the 6 tabs below now render via .mobile-side-rail instead
+       (see the rail's own JSX in Dashboard.jsx) -- keep them hidden here
+       on mobile rather than duplicating them inline in the header. */
+    .tab-visible-mobile { display: none; }
     /* !important -- some elements this hides on mobile (chat-fab-btn,
        refresh-app-btn) declare their own unconditional display value
        (e.g. display: inline-flex) later in this same file for their
@@ -2326,7 +2348,7 @@ instead of overflowing at the unconditional 35px desktop size. */
    shrunk desktop page rather than a real app. Desktop's existing top action
    row and input tabs are untouched and still work exactly as before; this
    bar is purely additive and calls the same underlying handlers. */
-.mobile-bottom-nav, .mobile-fab { display: none; }
+.mobile-bottom-nav, .mobile-fab, .mobile-side-rail { display: none; }
 
 /* When launched as an installed PWA (Add to Home Screen) or later as a
    Capacitor-wrapped native app, there's no browser chrome to push content
