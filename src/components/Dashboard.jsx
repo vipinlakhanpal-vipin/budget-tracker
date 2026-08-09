@@ -878,7 +878,14 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     // never end up stacked underneath an already-open Add sheet.
     setAddSheetOpen(false);
     closeAllMobileEditSheets();
-    setActivePanel(name);
+    // v3.42: actually TOGGLE -- tapping Settings/Soon/Report/Investments/
+    // Help while it's already the open panel now closes it back to the
+    // Dashboard (activePanel === null, same state Dash/Income/etc. use),
+    // instead of re-setting the same value (a no-op that left mobile users
+    // stuck on Settings/Soon with no way to back out short of tapping a
+    // different tab -- confirmed live: "settings once clicked the popup
+    // stays... same problem with soon button").
+    setActivePanel((prev) => (prev === name ? null : name));
     // Also clear inputTab -- Report/Settings/Help are meant to pair with
     // Home, not linger stacked on top of whichever Income/Fixed Expenses/
     // Regular Expenses/Savings tab was previously selected.
@@ -1561,6 +1568,14 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   // existing (already-working) inline rendering untouched.
   const chatWindowRef = useRef(null);
   const [chatPos, setChatPos] = useState(null);
+  // v3.42: lets the input's onFocus handler below force an immediate
+  // recalculation instead of only relying on window.visualViewport's own
+  // resize/scroll events -- those have proven unreliable specifically in
+  // iOS's standalone/home-screen PWA mode (confirmed live: the input row
+  // still ends up hidden behind the keyboard even with the events wired
+  // up). A ref (not state) so the effect below can populate it without
+  // re-running itself.
+  const updateChatPosRef = useRef(() => {});
   useEffect(() => {
     if (!chatOpen) { setChatPos(null); return; }
     function updateChatPos() {
@@ -1589,6 +1604,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
         setChatPos({ mobile: false, top: r.bottom + 8, right: Math.max(8, window.innerWidth - r.right) });
       }
     }
+    updateChatPosRef.current = updateChatPos;
     updateChatPos();
     // Mobile DOES need to keep tracking window.visualViewport live (via
     // these listeners) -- without it, the sheet stays glued to its
@@ -1647,6 +1663,18 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   useEffect(() => {
     if (!chatOpen) return;
     function onDocClick(e) {
+      // v3.42: the "Clear chat history" confirm banner (.confirm-banner,
+      // Remove/Cancel) is portaled straight to document.body -- same as
+      // chat-window itself -- so its DOM node is a SIBLING of chatWindowRef,
+      // not a descendant, and .contains() below returns false for taps on
+      // it. That made this listener treat a tap on "Remove" as an outside
+      // click and close the whole chat on mousedown, before the button's
+      // own onClick could run on the following click -- confirmed live as
+      // "clicking remove... nothing happens and popup remains". Skipping
+      // the close entirely while that confirm is pending fixes it, and is
+      // the right behavior anyway: a destructive confirm shouldn't get
+      // silently dismissed by an incidental outside tap.
+      if (confirmState && confirmState.scope === 'aria') return;
       const inMenu = chatMenuRef.current && chatMenuRef.current.contains(e.target);
       const inWindow = chatWindowRef.current && chatWindowRef.current.contains(e.target);
       if (!inMenu && !inWindow) setChatOpen(false);
@@ -1664,7 +1692,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       clearTimeout(timer);
       document.removeEventListener('mousedown', onDocClick);
     };
-  }, [chatOpen]);
+  }, [chatOpen, confirmState]);
   useEffect(() => {
     if (chatMessagesRef.current) {
       chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight;
@@ -6413,6 +6441,18 @@ I can help you track expenses, understand spending patterns, create budgets, and
                         setTimeout(lock, 50);
                         setTimeout(lock, 150);
                         setTimeout(lock, 350);
+                        // v3.42: force the chat sheet to re-clear the
+                        // keyboard right when it's expected to open,
+                        // instead of waiting on visualViewport's own
+                        // resize event (unreliable in standalone PWA mode
+                        // -- confirmed live as the input staying hidden
+                        // behind the keyboard until manually scrolled).
+                        const reposition = () => updateChatPosRef.current();
+                        requestAnimationFrame(reposition);
+                        setTimeout(reposition, 50);
+                        setTimeout(reposition, 150);
+                        setTimeout(reposition, 350);
+                        setTimeout(reposition, 600);
                       }}
                       placeholder="Ask a question..."
                       disabled={chatLoading}
