@@ -916,8 +916,8 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
         !(notifDropdownRef.current && notifDropdownRef.current.contains(e.target))
       ) setNotifOpen(false);
     }
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
+    const t = setTimeout(() => document.addEventListener('mousedown', onDocClick), 60);
+    return () => { clearTimeout(t); document.removeEventListener('mousedown', onDocClick); };
   }, [notifOpen]);
 
   // Profile icon (replaces the old standalone "Sign out" button) -- same
@@ -974,8 +974,8 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
         !(profileDropdownRef.current && profileDropdownRef.current.contains(e.target))
       ) setProfileMenuOpen(false);
     }
-    document.addEventListener('click', onDocClick);
-    return () => document.removeEventListener('click', onDocClick);
+    const t = setTimeout(() => document.addEventListener('click', onDocClick), 60);
+    return () => { clearTimeout(t); document.removeEventListener('click', onDocClick); };
   }, [profileMenuOpen]);
   // Color theme picker -- swaps the app's --accent/--accent2 pairs (see the
   // [data-theme="..."] rules in index.css) via a data-theme attribute on
@@ -1053,8 +1053,8 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
         !(themeDropdownRef.current && themeDropdownRef.current.contains(e.target))
       ) setThemeMenuOpen(false);
     }
-    document.addEventListener('click', onDocClick);
-    return () => document.removeEventListener('click', onDocClick);
+    const t = setTimeout(() => document.addEventListener('click', onDocClick), 60);
+    return () => { clearTimeout(t); document.removeEventListener('click', onDocClick); };
   }, [themeMenuOpen]);
   // Attachment viewer modal -- opened from every place a document can be
   // viewed (aggregated Attachments dropdown, each table's row icon, each
