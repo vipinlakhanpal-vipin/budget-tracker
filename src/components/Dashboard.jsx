@@ -2512,7 +2512,15 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       return { month: label, monthIndex: m, income, expenses: oneOff + fixed, savings };
     });
   }, [incomes, expenses, recurringExpenses, savingsGoals, currentMonth, earliestActivityKey]);
-  const [selectedMonths, setSelectedMonths] = useState([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+  // v3.45: mobile starts on the last 6 months instead of all 12 --
+  // the Income vs Expenses chart squeezes a Jan-Dec label under every
+  // group of bars, and 12 of them on a ~380px screen just overlap into
+  // unreadable text. Users can still open the Months filter and pick
+  // All 12 (now scrollable/readable at that width via the chart's own
+  // horizontal room), this only changes the starting point on mobile.
+  const [selectedMonths, setSelectedMonths] = useState(
+    isMobile ? [6, 7, 8, 9, 10, 11] : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+  );
   const filteredMonthlyTrendData = useMemo(
     () => monthlyTrendData
       .filter((d) => selectedMonths.includes(d.monthIndex))
@@ -5375,25 +5383,34 @@ function ReportHtmlView({ data }) {
     // sideways-bar layout ('vertical') and a standing-column layout
     // ('horizontal') -- the small panel everywhere else always stays
     // 'vertical', matching its original look.
-    const effectiveBarOrientation = big ? barOrientation : 'vertical';
+    // v3.45: mobile always gets the row-list layout now, regardless of
+    // any previously-toggled barOrientation -- the standing-column option
+    // (rotated, overlapping labels once there are more than a handful of
+    // categories) simply doesn't work on a ~380px-wide screen. The toggle
+    // itself is hidden on mobile below so there's no way to land on it by
+    // accident there; desktop keeps both options, just relabeled -- "List"
+    // / "Columns" reads more clearly than "Vertical" / "Horizontal", which
+    // people reasonably read backwards (expecting "Horizontal" to mean
+    // horizontal bars, when it actually meant standing columns).
+    const effectiveBarOrientation = (big && !isMobile) ? barOrientation : 'vertical';
     const chartTypesRestrictedInNarrow = ['budgetActual', 'incomeExpenses'];
     const effectiveChartType = (!big && chartTypesRestrictedInNarrow.includes(chartType)) ? 'pie' : chartType;
     return (
       <div className="panel">
         <h2 style={{ margin: '0 0 4px' }}>Spending by category</h2>
-        {big && chartType === 'bar' && (
+        {big && !isMobile && chartType === 'bar' && (
           <div className="input-tabs" style={{ marginBottom: 8 }}>
             <button
               className={`btn small ${effectiveBarOrientation === 'vertical' ? '' : 'secondary'}`}
               onClick={() => setBarOrientation('vertical')}
             >
-              Vertical
+              List
             </button>
             <button
               className={`btn small ${effectiveBarOrientation === 'horizontal' ? '' : 'secondary'}`}
               onClick={() => setBarOrientation('horizontal')}
             >
-              Horizontal
+              Columns
             </button>
           </div>
         )}
@@ -5623,13 +5640,35 @@ function ReportHtmlView({ data }) {
           // Payment-source breakdown -- Phase 2 addition (Credit Card / Debit
           // Card / Bank Account / Cash spend as a chart, per explicit request
           // to use a chart-toggle option here instead of new dashboard tiles).
+          // v3.45: mobile gets the same row-list layout as the Bar chart's
+          // List mode instead of rotated standing columns -- payment
+          // sources are usually few enough that this barely needed
+          // scrolling to begin with, but the rotated labels still read
+          // poorly on a narrow screen, so it's worth the consistency.
+          isMobile ? (
+            <div style={{ maxHeight: 400, overflowY: paymentSourceData.length * 34 > 400 ? 'auto' : 'visible', marginBottom: 4 }}>
+              <ResponsiveContainer width="100%" height={Math.max(200, paymentSourceData.length * 34)}>
+                <BarChart data={paymentSourceData} layout="vertical" margin={{ top: 5, right: 55, left: 10, bottom: 5 }} barCategoryGap="30%">
+                  <XAxis type="number" tick={{ fontSize: 8.5 }} hide />
+                  <YAxis type="category" dataKey="name" width={95} tick={{ fontSize: 11, fill: 'white' }} tickFormatter={shortSourceLabel} />
+                  <Tooltip formatter={(v) => fmt(v)} />
+                  <Bar dataKey="value" barSize={12} radius={[0, 3, 3, 0]} isAnimationActive={false}>
+                    {paymentSourceData.map((_, i) => (
+                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                    ))}
+                    <LabelList dataKey="value" content={DirhamBarLabelVerticalSideways} />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
           <div style={{ maxWidth: Math.min(760, Math.max(280, paymentSourceData.length * 130)), margin: '0 auto' }}>
-          <ResponsiveContainer width="100%" height={big ? (isMobile ? 340 : 400) : 320}>
+          <ResponsiveContainer width="100%" height={big ? 400 : 320}>
             <BarChart data={paymentSourceData} margin={{ top: 55, right: 20, left: 30, bottom: 140 }}>
               <XAxis dataKey="name" tickFormatter={shortSourceLabel} tick={{ fontSize: 13, fill: 'var(--text)' }} interval={0} angle={-90} textAnchor="end" />
               <YAxis tickFormatter={(v) => fmt(v)} width={80} tick={{ fontSize: 13 }} />
               <Tooltip formatter={(v) => fmt(v)} cursor={false} labelStyle={{ color: '#1a1a1a', fontWeight: 600 }} />
-              <Bar dataKey="value" radius={[6, 6, 0, 0]} isAnimationActive={false} barSize={big ? (isMobile ? 12 : 16) : 14}>
+              <Bar dataKey="value" radius={[6, 6, 0, 0]} isAnimationActive={false} barSize={big ? 16 : 14}>
                 {paymentSourceData.map((_, i) => (
                   <Cell key={i} fill={COLORS[i % COLORS.length]} />
                 ))}
@@ -5638,6 +5677,7 @@ function ReportHtmlView({ data }) {
             </BarChart>
           </ResponsiveContainer>
           </div>
+          )
         ) : effectiveChartType === 'group' ? (
           // By Group -- aggregate spend either by category group or by
           // individual category, per explicit request for a group-wise
@@ -5658,13 +5698,42 @@ function ReportHtmlView({ data }) {
               By Category
             </button>
           </div>
+          {/* v3.45: same row-list treatment as By Source on mobile --
+              rotated standing-column labels get unreadable once there are
+              more than a few groups/categories on a narrow screen. */}
+          {isMobile ? (() => {
+            const groupBarData = groupChartMode === 'group' ? groupData : pieData;
+            return (
+            <div style={{ maxHeight: 400, overflowY: groupBarData.length * 34 > 400 ? 'auto' : 'visible', marginBottom: 4 }}>
+              <ResponsiveContainer width="100%" height={Math.max(200, groupBarData.length * 34)}>
+                <BarChart data={groupBarData} layout="vertical" margin={{ top: 5, right: 55, left: 10, bottom: 5 }} barCategoryGap="30%">
+                  <XAxis type="number" tick={{ fontSize: 8.5 }} hide />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    width={95}
+                    tick={{ fontSize: 11, fill: 'white' }}
+                    tickFormatter={(name) => (name.length > 13 ? name.slice(0, 13) + '&' : name)}
+                  />
+                  <Tooltip formatter={(v) => fmt(v)} />
+                  <Bar dataKey="value" barSize={12} radius={[0, 3, 3, 0]} isAnimationActive={false}>
+                    {groupBarData.map((_, i) => (
+                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                    ))}
+                    <LabelList dataKey="value" content={DirhamBarLabelVerticalSideways} />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            );
+          })() : (
           <div style={{ maxWidth: Math.min(1500, Math.max(280, groupChartMode === 'group' ? groupData.length * 95 : pieData.length * 150)), margin: '0 auto' }}>
-          <ResponsiveContainer width="100%" height={big ? (isMobile ? 340 : 400) : 320}>
+          <ResponsiveContainer width="100%" height={big ? 400 : 320}>
             <BarChart data={groupChartMode === 'group' ? groupData : pieData} margin={{ top: 55, right: 20, left: 30, bottom: 140 }}>
               <XAxis dataKey="name" tick={{ fontSize: 13, fill: 'var(--text)' }} interval={0} angle={-90} textAnchor="end" />
               <YAxis tickFormatter={(v) => fmt(v)} width={80} tick={{ fontSize: 13 }} />
               <Tooltip formatter={(v) => fmt(v)} cursor={false} labelStyle={{ color: '#1a1a1a', fontWeight: 600 }} />
-              <Bar dataKey="value" radius={[6, 6, 0, 0]} isAnimationActive={false} barSize={big ? (isMobile ? 12 : 16) : 14}>
+              <Bar dataKey="value" radius={[6, 6, 0, 0]} isAnimationActive={false} barSize={big ? 16 : 14}>
                 {(groupChartMode === 'group' ? groupData : pieData).map((_, i) => (
                   <Cell key={i} fill={COLORS[i % COLORS.length]} />
                 ))}
@@ -5673,6 +5742,7 @@ function ReportHtmlView({ data }) {
             </BarChart>
           </ResponsiveContainer>
           </div>
+          )}
           </div>
         ) : effectiveChartType === 'budgetActual' ? (
           // Budgeted vs Actual -- grouped bar per category (categories with a
@@ -5695,7 +5765,47 @@ function ReportHtmlView({ data }) {
           // component instead of fmt()'s "AED 1,234.00" text, per explicit
           // request -- scoped to just this chart rather than touching fmt()
           // itself and every other chart that still uses it.
-          <ResponsiveContainer width="100%" height={big ? (isMobile ? 480 : 560) : 460}>
+          isMobile ? (
+            // v3.45: row-list layout, one category per row with its two
+            // bars (Budgeted/Actual) side by side -- the standing-column
+            // version below (angle -90 labels, two bars per category) gets
+            // unreadable on a narrow screen once there's more than a
+            // handful of budgeted categories, which is the common case.
+            <div style={{ maxHeight: 520, overflowY: budgetVsActualData.length * 44 > 520 ? 'auto' : 'visible', marginBottom: 4 }}>
+              <ResponsiveContainer width="100%" height={Math.max(240, budgetVsActualData.length * 44)}>
+                <BarChart data={budgetVsActualData} layout="vertical" margin={{ top: 5, right: 60, left: 10, bottom: 5 }} barGap={2} barCategoryGap="30%">
+                  <XAxis type="number" tick={{ fontSize: 8.5 }} hide />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    width={95}
+                    tick={{ fontSize: 11, fill: 'white' }}
+                    tickFormatter={(name) => (name.length > 13 ? name.slice(0, 13) + '&' : name)}
+                  />
+                  <Tooltip
+                    formatter={(v) => (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                        <CurrencyPrefix />{Math.round(Number(v)).toLocaleString()}
+                      </span>
+                    )}
+                    cursor={false}
+                    labelStyle={{ color: '#1a1a1a', fontWeight: 600 }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <Bar dataKey="budgeted" name="Budgeted" fill="#0ea5e9" radius={[0, 3, 3, 0]} isAnimationActive={false} barSize={10}>
+                    <LabelList dataKey="budgeted" content={DirhamBarLabelVerticalSideways} />
+                  </Bar>
+                  <Bar dataKey="spent" name="Actual" fill="#f5b95c" radius={[0, 3, 3, 0]} isAnimationActive={false} barSize={10}>
+                    {budgetVsActualData.map((d, i) => (
+                      <Cell key={i} fill={d.spent > d.budgeted ? '#dc2626' : '#f5b95c'} />
+                    ))}
+                    <LabelList dataKey="spent" content={DirhamBarLabelVerticalSideways} />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+          <ResponsiveContainer width="100%" height={big ? 560 : 460}>
             <BarChart data={budgetVsActualData} margin={{ top: 60, right: 20, left: 40, bottom: 170 }} barGap={2} barCategoryGap={big ? '20%' : '25%'}>
               <XAxis
                 dataKey="name"
@@ -5716,10 +5826,10 @@ function ReportHtmlView({ data }) {
                 labelStyle={{ color: '#1a1a1a', fontWeight: 600 }}
               />
               <Legend wrapperStyle={{ fontSize: 13 }} />
-              <Bar dataKey="budgeted" name="Budgeted" fill="#0ea5e9" radius={[3, 3, 0, 0]} isAnimationActive={false} barSize={big ? (isMobile ? 12 : 16) : 14}>
+              <Bar dataKey="budgeted" name="Budgeted" fill="#0ea5e9" radius={[3, 3, 0, 0]} isAnimationActive={false} barSize={16}>
                 <LabelList dataKey="budgeted" position="top" content={(p) => <DirhamBarLabelVerticalColumnLg {...p} color="#0ea5e9" />} />
               </Bar>
-              <Bar dataKey="spent" name="Actual" fill="#f5b95c" radius={[3, 3, 0, 0]} isAnimationActive={false} barSize={big ? (isMobile ? 12 : 16) : 14}>
+              <Bar dataKey="spent" name="Actual" fill="#f5b95c" radius={[3, 3, 0, 0]} isAnimationActive={false} barSize={16}>
                 {budgetVsActualData.map((d, i) => (
                   <Cell key={i} fill={d.spent > d.budgeted ? '#dc2626' : '#f5b95c'} />
                 ))}
@@ -5727,6 +5837,7 @@ function ReportHtmlView({ data }) {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
+          )
         ) : effectiveChartType === 'incomeExpenses' ? (
           // Income vs Expenses -- one group of 3 bars per month across the
           // currently viewed year, narrowed by the Months filter above.
