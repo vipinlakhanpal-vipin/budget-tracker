@@ -5719,7 +5719,7 @@ function ReportHtmlView({ data }) {
               <Bar dataKey="budgeted" name="Budgeted" fill="#0ea5e9" radius={[3, 3, 0, 0]} isAnimationActive={false} barSize={big ? (isMobile ? 12 : 16) : 14}>
                 <LabelList dataKey="budgeted" position="top" content={(p) => <DirhamBarLabelVerticalColumnLg {...p} color="#0ea5e9" />} />
               </Bar>
-              <Bar dataKey="spent" name="Spent" fill="#f5b95c" radius={[3, 3, 0, 0]} isAnimationActive={false} barSize={big ? (isMobile ? 12 : 16) : 14}>
+              <Bar dataKey="spent" name="Actual" fill="#f5b95c" radius={[3, 3, 0, 0]} isAnimationActive={false} barSize={big ? (isMobile ? 12 : 16) : 14}>
                 {budgetVsActualData.map((d, i) => (
                   <Cell key={i} fill={d.spent > d.budgeted ? '#dc2626' : '#f5b95c'} />
                 ))}
