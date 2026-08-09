@@ -1924,6 +1924,18 @@ td.amount { font-weight: 600; text-align: right; }
   padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 600;
 }
 .cat-chip button { background: none; border: none; color: var(--accent2); cursor: pointer; display: inline-flex; align-items: center; }
+
+/* Support form topic chips -- multi-select without a native <select multiple>,
+   which is poor UX on mobile (see Dashboard.jsx Support form). */
+.support-topic-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.support-topic-chip {
+  border: 1px solid var(--border); background: var(--card); color: var(--text);
+  padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s;
+}
+.support-topic-chip.active {
+  background: var(--accent2); border-color: var(--accent2); color: #fff;
+}
 .empty { color: var(--muted); font-size: 13px; padding: 20px 0; text-align: center; }
 
 /* Groups & Category accordion -- each group is a collapsible card, categories
