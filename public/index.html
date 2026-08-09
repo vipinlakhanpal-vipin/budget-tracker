@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- viewport-fit=cover lets the app draw behind the iPhone notch/home
+         indicator area, which the bottom nav's safe-area-inset padding then
+         insets around -- without it, iOS just letterboxes the page instead
+         of the full-bleed "real app" look.
+         interactive-widget=resizes-content (Safari 17.4+/Chrome 108+) tells
+         the browser to actually shrink the layout viewport when the
+         on-screen keyboard opens, instead of only shrinking the *visual*
+         viewport while leaving position:fixed elements sized/positioned
+         against the old, keyboard-covered height. The Aria chat sheet's
+         JS-computed bottom offset (see chatPos in Dashboard.jsx) already
+         tracks window.visualViewport as a fallback, but that tracking has
+         proven unreliable specifically in iOS's standalone/home-screen PWA
+         mode -- this native resize is the more robust fix and makes the
+         JS math converge on ~0 extra offset when it does fire, so the two
+         don't fight each other. Ignored harmlessly on older browsers. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
+    <meta name="description" content="Track shared household income, expenses, fixed bills, and savings, with charts and PDF reports." />
+
+    <!-- Theme color for the browser UI / status bar, and PWA installability
+         (manifest + icons) -- these are what let a phone user "Add to Home
+         Screen" and get a real app icon, splash-style launch, and no browser
+         chrome, and they're also the assets Capacitor will reuse later when
+         this gets wrapped for the App Store / Play Store. -->
+    <meta name="theme-color" content="#33509f" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/icon-16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Hearth" />
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    <title>Hearth -- Household Budget Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- 900 added -- the "Expense Management" title was set to font-weight:900
+         but that weight was never actually being fetched (only up to 800 was
+         requested here), so the browser was silently substituting a fallback
+         font/weight instead of true Nunito Black. Without this the title's
+         bold setting has no real effect. -->
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800;900&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
