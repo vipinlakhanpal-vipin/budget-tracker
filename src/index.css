@@ -2022,10 +2022,21 @@ td.amount { font-weight: 600; text-align: right; }
       color: #fff; box-shadow: 0 2px 6px rgba(15, 42, 46, .25);
     }
     .rail-theme-btn.active .rail-theme-swatch { box-shadow: 0 0 0 2px var(--accent-light), 0 2px 6px rgba(15, 42, 46, .25); }
-    /* v3.30: full-viewport transparent scrim behind an open mobile
-       dropdown -- gives outside-tap-to-close a large, unambiguous target. */
+    /* v3.30: full-viewport scrim behind an open mobile dropdown -- gives
+       outside-tap-to-close a large, unambiguous target.
+       v3.37: TWO real bugs found via a live device screenshot + state
+       readout. (1) z-index:480 put this ABOVE the rail (z-index 55) and
+       bottom nav (z-index 40) -- meaning once any dropdown opened, this
+       invisible layer covered the OTHER nav buttons too, so the very
+       next tap (testing another button, or re-tapping the same one)
+       silently landed on the scrim instead and closed everything before
+       it could ever be seen. Dropped below both (z-index 30) so the nav
+       stays directly tappable while a dropdown is open. (2) background
+       was rgba(...,.01) -- essentially invisible, so even a successful
+       open gave no visual confirmation anything had happened. Raised to
+       a normal, clearly-visible modal backdrop. */
     .mobile-dropdown-scrim {
-      position: fixed; inset: 0; z-index: 480; background: rgba(15, 42, 46, .01);
+      position: fixed; inset: 0; z-index: 30; background: rgba(8, 14, 28, .55);
     }
   /* v2.03: the toast was inheriting its centering from .page-title-row,
      but that row's own title text is display:none on mobile (see the
