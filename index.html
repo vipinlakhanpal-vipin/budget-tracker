@@ -5,8 +5,19 @@
     <!-- viewport-fit=cover lets the app draw behind the iPhone notch/home
          indicator area, which the bottom nav's safe-area-inset padding then
          insets around -- without it, iOS just letterboxes the page instead
-         of the full-bleed "real app" look. -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+         of the full-bleed "real app" look.
+         interactive-widget=resizes-content (Safari 17.4+/Chrome 108+) tells
+         the browser to actually shrink the layout viewport when the
+         on-screen keyboard opens, instead of only shrinking the *visual*
+         viewport while leaving position:fixed elements sized/positioned
+         against the old, keyboard-covered height. The Aria chat sheet's
+         JS-computed bottom offset (see chatPos in Dashboard.jsx) already
+         tracks window.visualViewport as a fallback, but that tracking has
+         proven unreliable specifically in iOS's standalone/home-screen PWA
+         mode -- this native resize is the more robust fix and makes the
+         JS math converge on ~0 extra offset when it does fire, so the two
+         don't fight each other. Ignored harmlessly on older browsers. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="description" content="Track shared household income, expenses, fixed bills, and savings, with charts and PDF reports." />
 
     <!-- Theme color for the browser UI / status bar, and PWA installability
