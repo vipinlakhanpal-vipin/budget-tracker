@@ -17,7 +17,7 @@ import {
   Pencil, Trash2, X, ChevronLeft, ChevronRight, ChevronDown, Camera, MessageCircle, Bot, Sparkles, User,
   Palette, Check, StickyNote, Paperclip, ExternalLink, Mail, Lightbulb,
   Wallet, CalendarClock, ShoppingCart, PiggyBank, HelpCircle, Filter, Search, Sun, Moon, RefreshCw, Landmark, BookOpen,
-  Maximize2,
+  Maximize2, LifeBuoy,
 } from 'lucide-react';
 
 // v1.89: cross-browser searchable dropdown, replacing the old
@@ -1115,13 +1115,21 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   function openAttachmentList(table, rowId, label) {
     setAttachmentListModal({ table, rowId, label: label || 'Attachments' });
   }
-  // Footer "Suggestion" form -- lets any signed-in user send product
-  // feedback straight to the app owner's inbox (see api/send-suggestion.js)
-  // without needing a whole feedback-tracking table. Pre-filled from the
-  // same name/location the user already saved under "My details" so most
-  // people can just add their message and submit.
+  // Footer "Support" form -- lets any signed-in user send a support
+  // request straight to the app owner's inbox (see api/send-suggestion.js,
+  // kept under its original filename to stay under Vercel Hobby's
+  // 12-serverless-function cap) without needing a whole ticketing system.
+  // Pre-filled from the same name/location the user already saved under
+  // "My details" so most people can just pick a topic and describe the
+  // issue. Internal identifiers still say "suggestion" (renamed only in
+  // the UI to "Support") to avoid a risky wide rename.
+  const SUPPORT_TOPICS = [
+    'Account & Login', 'Expenses & Bills', 'Income & Savings', 'Reports & PDF',
+    'Aria (AI Assistant)', 'Notifications & Alerts', 'Household & Members',
+    "Something's not working", 'Feature request', 'Other',
+  ];
   const [suggestionModalOpen, setSuggestionModalOpen] = useState(false);
-  const [suggestionForm, setSuggestionForm] = useState({ name: '', email: '', location: '', message: '' });
+  const [suggestionForm, setSuggestionForm] = useState({ name: '', email: '', location: '', message: '', topics: [] });
   const [suggestionStatus, setSuggestionStatus] = useState(''); // '', 'sending', 'sent', 'error'
   function openSuggestionModal() {
     setSuggestionForm({
@@ -1129,9 +1137,16 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       email: session?.user?.email || '',
       location: myDetailsDraft.location || '',
       message: '',
+      topics: [],
     });
     setSuggestionStatus('');
     setSuggestionModalOpen(true);
+  }
+  function toggleSupportTopic(topic) {
+    setSuggestionForm((f) => ({
+      ...f,
+      topics: f.topics.includes(topic) ? f.topics.filter((t) => t !== topic) : [...f.topics, topic],
+    }));
   }
   async function handleSubmitSuggestion(e) {
     e.preventDefault();
@@ -3580,6 +3595,32 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     loadAll();
   }
 
+  // Self-service account deletion (Settings > App > Delete My Account),
+  // required for App Store / Play Store review (Apple 5.1.1(v) and the
+  // equivalent Google Play requirement). See api/invite-member.js's
+  // deleteOwnAccount for exactly what is deleted vs. just unlinked. This
+  // is irreversible, so it gets its own type-to-confirm modal instead of
+  // the shared askConfirm()/confirmBanner() pattern used for row deletes.
+  const [deleteAccountModalOpen, setDeleteAccountModalOpen] = useState(false);
+  const [deleteAccountConfirmText, setDeleteAccountConfirmText] = useState('');
+  const [deleteAccountStatus, setDeleteAccountStatus] = useState(''); // '', 'deleting', 'error'
+  async function handleDeleteAccount() {
+    setDeleteAccountStatus('deleting');
+    try {
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const res = await fetch('/api/invite-member', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authSession?.access_token}` },
+        body: JSON.stringify({ action: 'deleteAccount' }),
+      });
+      if (!res.ok) throw new Error('failed');
+      await supabase.auth.signOut();
+      window.location.reload();
+    } catch {
+      setDeleteAccountStatus('error');
+    }
+  }
+
   async function handleSignOut() {
     await supabase.auth.signOut();
     // v1.91: force a hard reload after sign-out. The app's top-level
@@ -5034,7 +5075,7 @@ function ReportHtmlView({ data }) {
               </p>
             </div>
             <div className="muted-small" style={{ marginTop: 4 }}>
-              Have a feature you'd like to see next? Use the Suggestion link at the bottom of the app to let us know.
+              Have a feature you'd like to see next, or something not working right? Use the Support link at the bottom of the app to let us know.
             </div>
           </div>
           );
@@ -9448,6 +9489,28 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   </div>
                 </div>
                 <div className="muted-small">Changes save automatically as you edit -- there's no Save button to click.</div>
+
+                {/* Account section -- Terms/Privacy links plus self-service
+                    deletion, both required for app store review. Lives here
+                    per explicit request rather than as its own Settings
+                    sub-tab. */}
+                <div className="row" style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+                  <div className="field" style={{ width: '100%' }}>
+                    <label>Account</label>
+                    <div className="muted-small" style={{ marginBottom: 10 }}>
+                      Read the <a href="/terms.html" target="_blank" rel="noopener noreferrer">Terms of Service</a> and{' '}
+                      <a href="/privacy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.
+                    </div>
+                    <button
+                      type="button"
+                      className="btn small secondary"
+                      style={{ borderColor: 'var(--danger, #dc2626)', color: 'var(--danger, #dc2626)' }}
+                      onClick={() => { setDeleteAccountConfirmText(''); setDeleteAccountStatus(''); setDeleteAccountModalOpen(true); }}
+                    >
+                      Delete My Account
+                    </button>
+                  </div>
+                </div>
                 </>
                 )}
               </div>
@@ -9515,25 +9578,29 @@ I can help you track expenses, understand spending patterns, create budgets, and
         Your data is confidential and private to this household. It is never shared with anyone outside it.{' '}
         <a href="/privacy.html" target="_blank" rel="noopener noreferrer" className="app-footer-link">Privacy Policy</a>
         {' '}&middot;{' '}
+        <a href="/terms.html" target="_blank" rel="noopener noreferrer" className="app-footer-link">Terms of Service</a>
+        {' '}&middot;{' '}
         <button type="button" className="app-footer-link app-footer-link-btn" onClick={openSuggestionModal}>
-          <Lightbulb size={12} style={{ marginRight: 3, verticalAlign: -2 }} />
-          Suggestion
+          <LifeBuoy size={12} style={{ marginRight: 3, verticalAlign: -2 }} />
+          Support
         </button>
       </div>
 
-      {/* Suggestion form -- any signed-in user can send product feedback
-          straight to the app owner's inbox from the footer link above.
-          Pre-filled from "My details" (name/location) and the signed-in
-          email; only the message itself needs to be typed. On success the
-          form is replaced with a short thank-you note instead of just
-          closing, so the person knows it actually went somewhere. */}
+      {/* Support form -- any signed-in user can send a support request or
+          product suggestion straight to the app owner's inbox from the
+          footer link above. Pre-filled from "My details" (name/location)
+          and the signed-in email; topics are optional multi-select chips
+          that give the message some structure without a full ticketing
+          system. On success the form is replaced with a short thank-you
+          note instead of just closing, so the person knows it actually
+          went somewhere. */}
       {suggestionModalOpen && (
         <div className="attachment-viewer-overlay" onClick={() => setSuggestionModalOpen(false)}>
           <div className="attachment-viewer-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
             <div className="attachment-viewer-head">
               <span className="attachment-viewer-title">
-                <Lightbulb size={15} style={{ marginRight: 6, verticalAlign: -3 }} />
-                Suggestion
+                <LifeBuoy size={15} style={{ marginRight: 6, verticalAlign: -3 }} />
+                Support
               </span>
               <button type="button" className="mobile-sheet-close" onClick={() => setSuggestionModalOpen(false)} aria-label="Close">
                 <X size={18} />
@@ -9541,8 +9608,8 @@ I can help you track expenses, understand spending patterns, create budgets, and
             </div>
             {suggestionStatus === 'sent' ? (
               <div style={{ padding: '28px 20px', textAlign: 'center' }}>
-                <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>Thank you for your suggestion.</div>
-                <div className="muted-small">We will review the suggestion and implement it if this helps the users across the globe.</div>
+                <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>Thank you for reaching out.</div>
+                <div className="muted-small">We will get back to you at the earliest to resolve your issue.</div>
                 <button type="button" className="btn small secondary" style={{ marginTop: 18 }} onClick={() => setSuggestionModalOpen(false)}>
                   Close
                 </button>
@@ -9575,14 +9642,29 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   />
                 </div>
                 <div className="field">
-                  <label>Your suggestion</label>
+                  <label>What's this about? (optional, pick any that apply)</label>
+                  <div className="support-topic-list">
+                    {SUPPORT_TOPICS.map((topic) => (
+                      <button
+                        type="button"
+                        key={topic}
+                        className={`support-topic-chip${suggestionForm.topics.includes(topic) ? ' active' : ''}`}
+                        onClick={() => toggleSupportTopic(topic)}
+                      >
+                        {topic}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="field">
+                  <label>Describe your support issue</label>
                   <textarea
                     required
                     rows={4}
                     style={{ width: '100%', resize: 'vertical', fontFamily: 'inherit' }}
                     value={suggestionForm.message}
                     onChange={(e) => setSuggestionForm((f) => ({ ...f, message: e.target.value }))}
-                    placeholder="What would make Hearth more useful for you?"
+                    placeholder="What's going wrong, or what would make Hearth more useful for you?"
                   />
                 </div>
                 {suggestionStatus === 'error' && (
@@ -9595,6 +9677,64 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 </button>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Delete My Account confirmation -- triggered from Settings > App.
+          Type-to-confirm ("DELETE") instead of the shared confirm-banner
+          pattern, since this is irreversible and affects login access
+          itself. See handleDeleteAccount above and api/invite-member.js's
+          deleteOwnAccount for exactly what happens. */}
+      {deleteAccountModalOpen && (
+        <div
+          className="attachment-viewer-overlay"
+          onClick={() => { if (deleteAccountStatus !== 'deleting') setDeleteAccountModalOpen(false); }}
+        >
+          <div className="attachment-viewer-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
+            <div className="attachment-viewer-head">
+              <span className="attachment-viewer-title" style={{ color: 'var(--danger, #dc2626)' }}>
+                Delete My Account
+              </span>
+              <button
+                type="button"
+                className="mobile-sheet-close"
+                onClick={() => setDeleteAccountModalOpen(false)}
+                aria-label="Close"
+                disabled={deleteAccountStatus === 'deleting'}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ fontSize: 13.5, lineHeight: 1.5 }}>
+                This permanently deletes your login. Your name is removed from any expenses, income, fixed bills, savings goals, budgets, and chat messages you created, but that data stays visible to the rest of your household -- it is not deleted with you. Any investments you personally added will be deleted along with your account. This can't be undone.
+              </div>
+              <div className="field">
+                <label>Type DELETE to confirm</label>
+                <input
+                  type="text"
+                  value={deleteAccountConfirmText}
+                  onChange={(e) => setDeleteAccountConfirmText(e.target.value)}
+                  placeholder="DELETE"
+                  disabled={deleteAccountStatus === 'deleting'}
+                />
+              </div>
+              {deleteAccountStatus === 'error' && (
+                <div className="muted-small" style={{ color: 'var(--danger, #dc2626)' }}>
+                  Couldn't delete your account just now -- please try again in a moment.
+                </div>
+              )}
+              <button
+                type="button"
+                className="btn small"
+                style={{ background: 'var(--danger, #dc2626)', borderColor: 'var(--danger, #dc2626)' }}
+                disabled={deleteAccountConfirmText.trim().toUpperCase() !== 'DELETE' || deleteAccountStatus === 'deleting'}
+                onClick={handleDeleteAccount}
+              >
+                {deleteAccountStatus === 'deleting' ? 'Deleting...' : 'Permanently Delete My Account'}
+              </button>
+            </div>
           </div>
         </div>
       )}
