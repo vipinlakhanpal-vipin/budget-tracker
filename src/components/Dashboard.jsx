@@ -6565,6 +6565,19 @@ I can help you track expenses, understand spending patterns, create budgets, and
               build is actually running (especially useful this round, to
               verify a fresh deploy landed vs a stale cached one). */}
           <span className="mini-version-badge" title="App version">v{APP_VERSION}</span>
+          {/* v3.35: TEMPORARY diagnostic -- a live readout of the actual
+              React state values (not a DOM trick like the button flash),
+              so we can tell for certain whether tapping Theme/Alerts/
+              Profile changes the app's real internal state or not. If
+              this text changes when tapped, the state pipeline works and
+              the dropdown itself is the problem; if it never changes,
+              the click isn't reaching React's state at all despite the
+              button's own flash firing. Remove once diagnosed. */}
+          {isMobile && (
+            <span className="mini-version-badge" style={{ background: '#fff3cd', color: '#7a5c00', borderColor: '#e0c46c' }}>
+              T:{themeMenuOpen ? '1' : '0'} A:{notifOpen ? '1' : '0'} P:{profileMenuOpen ? '1' : '0'}
+            </span>
+          )}
           {rangeOpen && (
             <div className="filter-dropdown" style={{ width: 240 }}>
               <div className="filter-dropdown-title">Date range within {monthLabel(currentMonth)}</div>
