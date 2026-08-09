@@ -9501,10 +9501,22 @@ I can help you track expenses, understand spending patterns, create budgets, and
                       Read the <a href="/terms.html" target="_blank" rel="noopener noreferrer">Terms of Service</a> and{' '}
                       <a href="/privacy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.
                     </div>
+                    {/* alignSelf: flex-start stops this from stretching to
+                        the full row width -- .field is a flex column with
+                        the default align-items: stretch, which was making
+                        this read as one big red bar instead of a small,
+                        clearly-labeled action. Tinted background instead of
+                        a solid outline so it reads as "highlighted" rather
+                        than alarming. */}
                     <button
                       type="button"
                       className="btn small secondary"
-                      style={{ borderColor: 'var(--danger, #dc2626)', color: 'var(--danger, #dc2626)' }}
+                      style={{
+                        alignSelf: 'flex-start',
+                        borderColor: 'var(--danger, #dc2626)',
+                        color: 'var(--danger, #dc2626)',
+                        background: 'color-mix(in srgb, var(--danger, #dc2626) 12%, transparent)',
+                      }}
                       onClick={() => { setDeleteAccountConfirmText(''); setDeleteAccountStatus(''); setDeleteAccountModalOpen(true); }}
                     >
                       Delete My Account
