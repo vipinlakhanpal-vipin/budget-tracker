@@ -5932,8 +5932,7 @@ function ReportHtmlView({ data }) {
           <button
             type="button"
             className={notifOpen ? 'active' : ''}
-            onClick={(e) => {
-              e.currentTarget.style.outline = '4px solid #ff2d55'; e.currentTarget.style.background = '#ffe5ea'; setTimeout(() => { if (e.currentTarget) { e.currentTarget.style.outline = ''; e.currentTarget.style.background = ''; } }, 700);
+            onClick={() => {
               const opening = !notifOpen;
               setNotifOpen(opening);
               if (opening && notifications.length) markNotifsSeen(notifications.map((n) => n.id));
@@ -5963,7 +5962,7 @@ function ReportHtmlView({ data }) {
           type="button"
           ref={themeMenuRef}
           className={`rail-theme-btn ${themeMenuOpen ? 'active' : ''}`}
-          onClick={(e) => { e.currentTarget.style.outline = '4px solid #ff2d55'; e.currentTarget.style.background = '#ffe5ea'; setTimeout(() => { if (e.currentTarget) { e.currentTarget.style.outline = ''; e.currentTarget.style.background = ''; } }, 700); setThemeMenuOpen((o) => !o); }}
+          onClick={() => setThemeMenuOpen((o) => !o)}
           title="Theme"
         >
           <span className="rail-theme-swatch"><Palette size={13} /></span>
@@ -6484,19 +6483,6 @@ I can help you track expenses, understand spending patterns, create budgets, and
               build is actually running (especially useful this round, to
               verify a fresh deploy landed vs a stale cached one). */}
           <span className="mini-version-badge" title="App version">v{APP_VERSION}</span>
-          {/* v3.35: TEMPORARY diagnostic -- a live readout of the actual
-              React state values (not a DOM trick like the button flash),
-              so we can tell for certain whether tapping Theme/Alerts/
-              Profile changes the app's real internal state or not. If
-              this text changes when tapped, the state pipeline works and
-              the dropdown itself is the problem; if it never changes,
-              the click isn't reaching React's state at all despite the
-              button's own flash firing. Remove once diagnosed. */}
-          {isMobile && (
-            <span className="mini-version-badge" style={{ background: '#fff3cd', color: '#7a5c00', borderColor: '#e0c46c' }}>
-              T:{themeMenuOpen ? '1' : '0'} A:{notifOpen ? '1' : '0'} P:{profileMenuOpen ? '1' : '0'}
-            </span>
-          )}
           {rangeOpen && (
             <div className="filter-dropdown" style={{ width: 240 }}>
               <div className="filter-dropdown-title">Date range within {monthLabel(currentMonth)}</div>
@@ -9501,7 +9487,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
           type="button"
           ref={profileMenuRef}
           className={profileMenuOpen ? 'active' : ''}
-          onClick={(e) => { e.currentTarget.style.outline = '4px solid #ff2d55'; e.currentTarget.style.background = '#ffe5ea'; setTimeout(() => { if (e.currentTarget) { e.currentTarget.style.outline = ''; e.currentTarget.style.background = ''; } }, 700); setProfileMenuOpen((o) => !o); }}
+          onClick={() => setProfileMenuOpen((o) => !o)}
         >
           <User size={20} strokeWidth={2.2} />
           <span>Profile</span>
