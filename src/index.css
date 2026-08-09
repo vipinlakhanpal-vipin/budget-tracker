@@ -1184,6 +1184,13 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
 }
 .panel-heading-row h2 { margin: 0; }
 .filter-wrap { position: relative; flex-shrink: 0; }
+/* v3.34: small version tag next to "Full month", so the running build can
+   be confirmed at a glance without opening the profile dropdown. */
+.mini-version-badge {
+  font-size: 10.5px; font-weight: 700; color: var(--muted);
+  background: var(--bg); border: 1px solid var(--border); border-radius: 999px;
+  padding: 3px 8px; margin-left: 6px; white-space: nowrap;
+}
 .filter-btn {
   display: inline-flex; align-items: center; gap: 6px;
   border: 1.5px solid var(--border); border-radius: 9px; background: #fff;
