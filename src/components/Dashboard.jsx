@@ -5932,7 +5932,8 @@ function ReportHtmlView({ data }) {
           <button
             type="button"
             className={notifOpen ? 'active' : ''}
-            onClick={() => {
+            onClick={(e) => {
+              e.currentTarget.style.outline = '4px solid #ff2d55'; e.currentTarget.style.background = '#ffe5ea'; setTimeout(() => { if (e.currentTarget) { e.currentTarget.style.outline = ''; e.currentTarget.style.background = ''; } }, 700);
               const opening = !notifOpen;
               setNotifOpen(opening);
               if (opening && notifications.length) markNotifsSeen(notifications.map((n) => n.id));
@@ -5962,7 +5963,7 @@ function ReportHtmlView({ data }) {
           type="button"
           ref={themeMenuRef}
           className={`rail-theme-btn ${themeMenuOpen ? 'active' : ''}`}
-          onClick={() => setThemeMenuOpen((o) => !o)}
+          onClick={(e) => { e.currentTarget.style.outline = '4px solid #ff2d55'; e.currentTarget.style.background = '#ffe5ea'; setTimeout(() => { if (e.currentTarget) { e.currentTarget.style.outline = ''; e.currentTarget.style.background = ''; } }, 700); setThemeMenuOpen((o) => !o); }}
           title="Theme"
         >
           <span className="rail-theme-swatch"><Palette size={13} /></span>
@@ -6558,6 +6559,12 @@ I can help you track expenses, understand spending patterns, create budgets, and
             {rangeIsFullMonth ? 'Full month' : `${fmtDate(rangeStart)} - ${fmtDate(rangeEnd)}`}
             {!rangeIsFullMonth && <span className="filter-active-dot" />}
           </button>
+          {/* v3.34: version number surfaced right here per explicit request --
+              the only other place it showed was buried inside the profile
+              dropdown/pill, which made it hard to quickly confirm which
+              build is actually running (especially useful this round, to
+              verify a fresh deploy landed vs a stale cached one). */}
+          <span className="mini-version-badge" title="App version">v{APP_VERSION}</span>
           {rangeOpen && (
             <div className="filter-dropdown" style={{ width: 240 }}>
               <div className="filter-dropdown-title">Date range within {monthLabel(currentMonth)}</div>
@@ -9562,7 +9569,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
           type="button"
           ref={profileMenuRef}
           className={profileMenuOpen ? 'active' : ''}
-          onClick={() => setProfileMenuOpen((o) => !o)}
+          onClick={(e) => { e.currentTarget.style.outline = '4px solid #ff2d55'; e.currentTarget.style.background = '#ffe5ea'; setTimeout(() => { if (e.currentTarget) { e.currentTarget.style.outline = ''; e.currentTarget.style.background = ''; } }, 700); setProfileMenuOpen((o) => !o); }}
         >
           <User size={20} strokeWidth={2.2} />
           <span>Profile</span>
