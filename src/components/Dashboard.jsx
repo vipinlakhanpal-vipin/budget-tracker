@@ -6357,7 +6357,21 @@ function ReportHtmlView({ data }) {
                       <button onClick={() => setChatOpen(false)} aria-label="Close chat"><X size={16} /></button>
                     </div>
                   </div>
-                  {confirmBanner('aria')}
+                  {/* v3.41: portaled to document.body -- the aria
+                      confirm banner used to render as a plain child of
+                      .chat-window, but on mobile .chat-window carries an
+                      inline transform (translateX(-50%), for centering)
+                      which -- per the same CSS containing-block rule
+                      noted elsewhere in this file -- makes .chat-window
+                      itself the containing block for any position:fixed
+                      descendant. That broke .confirm-banner's own
+                      left:50%/transform:translateX(-50%) centering (it
+                      centered against the narrow chat window instead of
+                      the viewport) AND let .chat-window's overflow:hidden
+                      clip its left/right edges -- exactly the cut-off
+                      "Remove"/"Cancel" banner reported live. Portaling
+                      escapes both problems at once. */}
+                  {createPortal(confirmBanner('aria'), document.body)}
                   <div className="chat-messages" ref={chatMessagesRef}>
                     {chatMessages.length === 0 && (
                       <div className="chat-empty">
