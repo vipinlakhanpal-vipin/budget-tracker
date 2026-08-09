@@ -5975,6 +5975,102 @@ function ReportHtmlView({ data }) {
           onClick={() => { setNotifOpen(false); setThemeMenuOpen(false); setProfileMenuOpen(false); }}
         />
       )}
+      {/* v3.33: mobile versions of the Alerts/Theme/Profile dropdowns are
+          rendered right here -- deliberately NOT via createPortal(...,
+          document.body) like the desktop versions above. Appending a brand
+          new node as a direct child of <body> is a much bigger DOM
+          mutation than anything else these buttons do, and on iOS
+          WKWebView (specifically the installed-as-home-screen-app,
+          standalone mode) that kind of body-level mutation happening
+          mid-touch-gesture can make the OS silently drop the tap instead
+          of completing it as a click -- which looked exactly like "the
+          button does nothing." Rendering inline here instead keeps the
+          mutation inside the already-existing app subtree. It's still
+          safe to use position:fixed for these because this block sits
+          outside .sticky-dashboard-frame (which carries will-change:
+          transform, and would otherwise become the fixed-positioning
+          containing block instead of the real viewport -- see the v2.25/
+          v2.26 notes above the profile dropdown's desktop portal). */}
+      {isMobile && notifOpen && (
+        <div className="notif-dropdown" ref={notifDropdownRef} style={{ position: 'fixed', left: 12, right: 12, bottom: 'calc(78px + env(safe-area-inset-bottom) + 8px)', maxHeight: '60vh', overflowY: 'auto', zIndex: 500 }}>
+          <div className="notif-dropdown-title">Notifications</div>
+          {notifications.length === 0 ? (
+            <div className="notif-empty">You&rsquo;re all caught up.</div>
+          ) : (
+            notifications.map((n) => (
+              <div key={n.id} className="notif-item">{n.text}</div>
+            ))
+          )}
+        </div>
+      )}
+      {isMobile && themeMenuOpen && (
+        <div className="theme-dropdown" ref={themeDropdownRef} style={{ position: 'fixed', left: 12, right: 12, bottom: 'calc(78px + env(safe-area-inset-bottom) + 8px)', maxHeight: '60vh', overflowY: 'auto', zIndex: 500 }}>
+          <div className="theme-dropdown-title">Appearance</div>
+          <div className="theme-mode-row">
+            <button type="button" className={`theme-mode-btn ${mode === 'light' ? 'active' : ''}`} onClick={() => setMode('light')}>
+              <Sun size={14} /> Light
+            </button>
+            <button type="button" className={`theme-mode-btn ${mode === 'dark' ? 'active' : ''}`} onClick={() => setMode('dark')}>
+              <Moon size={14} /> Dark
+            </button>
+          </div>
+          <div className="theme-dropdown-title">Color theme</div>
+          {THEMES.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              className={`theme-swatch-row ${theme === t.id ? 'active' : ''}`}
+              onClick={() => { setTheme(t.id); setThemeMenuOpen(false); }}
+            >
+              <span className="theme-swatch-dot" style={{ background: t.color }} />
+              {t.label}
+              {theme === t.id && <Check size={14} style={{ marginLeft: 'auto' }} />}
+            </button>
+          ))}
+        </div>
+      )}
+      {isMobile && profileMenuOpen && (
+        <div className="profile-dropdown" ref={profileDropdownRef} style={{ position: 'fixed', left: 12, right: 12, bottom: 'calc(78px + env(safe-area-inset-bottom) + 8px)', maxHeight: '60vh', overflowY: 'auto', zIndex: 500 }}>
+          <div className="profile-dropdown-email">
+            Signed in as {myDetailsDraft.name || 'you'} ({session.user.email})
+          </div>
+          <div className="muted-small" style={{ marginTop: -6, marginBottom: 10 }}>
+            {isOwner ? 'Owner' : 'User'}
+            {session.user.created_at && (
+              <> &middot; Member since {new Date(session.user.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</>
+            )}
+          </div>
+          <div className="field" style={{ marginBottom: 10 }}>
+            <label>Full name</label>
+            <input
+              type="text"
+              value={myDetailsDraft.name}
+              onChange={(e) => setMyDetailsDraft((d) => ({ ...d, name: e.target.value }))}
+              onBlur={(e) => commitMyDetailsField('name', e.target.value)}
+            />
+          </div>
+          <div className="field" style={{ marginBottom: 10 }}>
+            <label>Phone (optional)</label>
+            <input
+              type="text"
+              value={myDetailsDraft.phone}
+              onChange={(e) => setMyDetailsDraft((d) => ({ ...d, phone: e.target.value }))}
+              onBlur={(e) => commitMyDetailsField('phone', e.target.value)}
+            />
+          </div>
+          <div className="field" style={{ marginBottom: 12 }}>
+            <label>Location</label>
+            <input
+              type="text"
+              value={myDetailsDraft.location}
+              onChange={(e) => setMyDetailsDraft((d) => ({ ...d, location: e.target.value }))}
+              onBlur={(e) => commitMyDetailsField('location', e.target.value)}
+            />
+          </div>
+          <div className="muted-small" style={{ marginBottom: 12 }}>Changes save automatically.</div>
+          <button className="btn-teal profile-signout-btn" onClick={handleSignOut}>Sign out</button>
+        </div>
+      )}
       {/* "Updated" confirmation toast -- fires on manual Add (Regular
           Expenses) and on receipt auto-add; auto-dismisses itself. */}
       
@@ -6053,8 +6149,8 @@ function ReportHtmlView({ data }) {
             )}
                   </div>
         </div>
-              {profileMenuOpen && createPortal(
-                <div className="profile-dropdown" ref={profileDropdownRef} style={isMobile ? { position: 'fixed', left: 12, right: 12, bottom: 'calc(78px + env(safe-area-inset-bottom) + 8px)', maxHeight: '60vh', overflowY: 'auto', zIndex: 500 } : { position: 'fixed', top: profileDropdownPos?.top ?? 60, right: profileDropdownPos?.right ?? 12, zIndex: 500 }}>
+              {!isMobile && profileMenuOpen && createPortal(
+                <div className="profile-dropdown" ref={profileDropdownRef} style={{ position: 'fixed', top: profileDropdownPos?.top ?? 60, right: profileDropdownPos?.right ?? 12, zIndex: 500 }}>
                   {/* Per explicit request: a clear "Signed in as {name}
                       ({email})" line, plus role and account-created date --
                       everything else (phone/location) is already editable
@@ -6219,8 +6315,8 @@ function ReportHtmlView({ data }) {
               </button>
             </div>
             )}
-              {themeMenuOpen && createPortal(
-                <div className="theme-dropdown" ref={themeDropdownRef} style={isMobile ? { position: 'fixed', left: 12, right: 12, bottom: 'calc(78px + env(safe-area-inset-bottom) + 8px)', maxHeight: '60vh', overflowY: 'auto', zIndex: 500 } : { position: 'fixed', top: themeDropdownPos?.top ?? 60, right: themeDropdownPos?.right ?? 12, zIndex: 500 }}>
+              {!isMobile && themeMenuOpen && createPortal(
+                <div className="theme-dropdown" ref={themeDropdownRef} style={{ position: 'fixed', top: themeDropdownPos?.top ?? 60, right: themeDropdownPos?.right ?? 12, zIndex: 500 }}>
                     <div className="theme-dropdown-title">Appearance</div>
                     <div className="theme-mode-row">
             <button
@@ -6284,13 +6380,11 @@ function ReportHtmlView({ data }) {
               </button>
             </div>
             )}
-            {notifOpen && createPortal(
+            {!isMobile && notifOpen && createPortal(
               <div
                 className="notif-dropdown"
                 ref={notifDropdownRef}
-                style={isMobile
-                  ? { position: 'fixed', left: 12, right: 12, bottom: 'calc(78px + env(safe-area-inset-bottom) + 8px)', maxHeight: '60vh', overflowY: 'auto', zIndex: 500 }
-                  : { position: 'fixed', top: notifDropdownPos?.top ?? 60, right: notifDropdownPos?.right ?? 12, zIndex: 500 }}
+                style={{ position: 'fixed', top: notifDropdownPos?.top ?? 60, right: notifDropdownPos?.right ?? 12, zIndex: 500 }}
               >
                 <div className="notif-dropdown-title">Notifications</div>
                 {notifications.length === 0 ? (
