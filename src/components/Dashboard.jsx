@@ -6068,7 +6068,7 @@ function ReportHtmlView({ data }) {
                   </div>
         </div>
               {profileMenuOpen && createPortal(
-                <div className="profile-dropdown" ref={profileDropdownRef} style={isMobile ? { position: 'fixed', left: 12, right: 12, bottom: 'calc(78px + env(safe-area-inset-bottom) + 8px)', maxHeight: '60vh', overflowY: 'auto', zIndex: 500 } : { position: 'fixed', top: profileDropdownPos?.top ?? 60, right: profileDropdownPos?.right ?? 12, zIndex: 500 }}>
+                <div className="profile-dropdown" ref={profileDropdownRef} style={isMobile ? { position: 'fixed', top: 'auto', left: 12, right: 12, bottom: 'calc(78px + env(safe-area-inset-bottom) + 8px)', maxHeight: '60vh', overflowY: 'auto', zIndex: 500 } : { position: 'fixed', top: profileDropdownPos?.top ?? 60, right: profileDropdownPos?.right ?? 12, zIndex: 500 }}>
                   {/* Per explicit request: a clear "Signed in as {name}
                       ({email})" line, plus role and account-created date --
                       everything else (phone/location) is already editable
@@ -6234,7 +6234,7 @@ function ReportHtmlView({ data }) {
             </div>
             )}
               {themeMenuOpen && createPortal(
-                <div className="theme-dropdown" ref={themeDropdownRef} style={isMobile ? { position: 'fixed', left: 12, right: 12, bottom: 'calc(78px + env(safe-area-inset-bottom) + 8px)', maxHeight: '60vh', overflowY: 'auto', zIndex: 500 } : { position: 'fixed', top: themeDropdownPos?.top ?? 60, right: themeDropdownPos?.right ?? 12, zIndex: 500 }}>
+                <div className="theme-dropdown" ref={themeDropdownRef} style={isMobile ? { position: 'fixed', top: 'auto', left: 12, right: 12, bottom: 'calc(78px + env(safe-area-inset-bottom) + 8px)', maxHeight: '60vh', overflowY: 'auto', zIndex: 500 } : { position: 'fixed', top: themeDropdownPos?.top ?? 60, right: themeDropdownPos?.right ?? 12, zIndex: 500 }}>
                     <div className="theme-dropdown-title">Appearance</div>
                     <div className="theme-mode-row">
             <button
@@ -6303,7 +6303,7 @@ function ReportHtmlView({ data }) {
                 className="notif-dropdown"
                 ref={notifDropdownRef}
                 style={isMobile
-                  ? { position: 'fixed', left: 12, right: 12, bottom: 'calc(78px + env(safe-area-inset-bottom) + 8px)', maxHeight: '60vh', overflowY: 'auto', zIndex: 500 }
+                  ? { position: 'fixed', top: 'auto', left: 12, right: 12, bottom: 'calc(78px + env(safe-area-inset-bottom) + 8px)', maxHeight: '60vh', overflowY: 'auto', zIndex: 500 }
                   : { position: 'fixed', top: notifDropdownPos?.top ?? 60, right: notifDropdownPos?.right ?? 12, zIndex: 500 }}
               >
                 <div className="notif-dropdown-title">Notifications</div>
