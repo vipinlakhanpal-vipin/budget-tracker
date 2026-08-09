@@ -3728,7 +3728,16 @@ row. */
   background: var(--bg);
   border: none; border-radius: 0;
   box-shadow: none;
-  padding: 22px 28px 28px;
+  /* v3.43: top padding now clears env(safe-area-inset-top) too -- it used
+     to be a flat 22px while .chart-fullscreen-close (below) already
+     accounted for the safe area, so on notch/Dynamic-Island phones the
+     close button sat well below where "Explore" and the toggle row
+     actually started rendering, ending up visually stacked on top of the
+     second row of chart-type pills instead of clear above everything.
+     Bumping the base past the close button's own 18px+36px-tall circle
+     (54px) keeps a clean gap under it once the safe-area offset is added
+     on top, and fixes "Explore" itself colliding with the status bar. */
+  padding: calc(64px + env(safe-area-inset-top)) 28px 28px;
   overflow-y: auto;
   position: relative;
   display: flex; flex-direction: column;
