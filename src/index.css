@@ -1069,6 +1069,32 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
   color: var(--text);
 }
 
+/* v3.47 -- Vipin: differentiate the 10 KPI/tile cards with a subtle color
+   per tile (mockup approved) instead of the identical flat --card surface
+   from v2.50 above, which read as one dull undifferentiated block,
+   especially in dark mode ("navy blue tiled... dullish"). Reuses each
+   tile's own existing accent hue (already used for its .k label and, for
+   Credit/Debit/Bank, its .v value) rather than inventing new colors.
+   color-mix() against var(--card) means this needs no separate light/dark
+   rules -- it comes out as a pale tint in light mode and a dark tint in
+   dark mode automatically. Label/value text colors are untouched, so the
+   v2.50/v2.52/v2.54 rules above (including the .ok/.over budget-state
+   colors) still apply exactly as before; this only overrides background/
+   border-color, added after them in source order so it wins at equal
+   specificity. card-invest (My Investments) had no distinct hue before --
+   given its own gold tone here rather than left flat, so all 10 tiles
+   read as one coherent but differentiated family. */
+.card-budget { background: color-mix(in srgb, #6366f1 12%, var(--card)); border-color: color-mix(in srgb, #6366f1 38%, var(--card)); }
+.card-spent { background: color-mix(in srgb, #ea580c 12%, var(--card)); border-color: color-mix(in srgb, #ea580c 38%, var(--card)); }
+.card-remaining { background: color-mix(in srgb, #0d9488 12%, var(--card)); border-color: color-mix(in srgb, #0d9488 38%, var(--card)); }
+.card-income { background: color-mix(in srgb, #059669 12%, var(--card)); border-color: color-mix(in srgb, #059669 38%, var(--card)); }
+.card-expenses { background: color-mix(in srgb, #e11d48 12%, var(--card)); border-color: color-mix(in srgb, #e11d48 38%, var(--card)); }
+.card-net { background: color-mix(in srgb, #0284c7 12%, var(--card)); border-color: color-mix(in srgb, #0284c7 38%, var(--card)); }
+.card-cc { background: color-mix(in srgb, #7c3aed 12%, var(--card)); border-color: color-mix(in srgb, #7c3aed 38%, var(--card)); }
+.card-dc { background: color-mix(in srgb, #db2777 12%, var(--card)); border-color: color-mix(in srgb, #db2777 38%, var(--card)); }
+.card-ba { background: color-mix(in srgb, #0891b2 12%, var(--card)); border-color: color-mix(in srgb, #0891b2 38%, var(--card)); }
+.card-invest { background: color-mix(in srgb, #b45309 12%, var(--card)); border-color: color-mix(in srgb, #b45309 38%, var(--card)); }
+
 /* v2.52 -- exact metric-value colors from hearth-redesign-mockup.html
    (Vipin: "values color were also good in mockup pls select such colors").
    Mockup only colors 2 of its 4 metric values non-default (Spent so far
