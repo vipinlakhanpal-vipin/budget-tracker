@@ -892,6 +892,21 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   // localStorage (keyed by notification id, e.g. "over-cat-Credit Card EMI")
   // so a notification only shows as unread once, even across reloads/logins,
   // until its underlying condition actually changes (a new id shows up again).
+  // v3.32: moved up from where this used to live further down in the
+  // component -- the notif/profile/theme outside-click effects just below
+  // now read isMobile in their dependency arrays, and referencing a
+  // `const` before its original declaration point throws (TDZ), so this
+  // has to be declared before all three of those effects, not after.
+  const [isMobile, setIsMobile] = useState(
+        () => typeof window !== 'undefined' && window.matchMedia('(max-width: 640px), ((pointer: coarse) and (hover: none) and (max-width: 1366px))').matches
+  );
+  useEffect(() => {
+        const mq = window.matchMedia('(max-width: 640px), ((pointer: coarse) and (hover: none) and (max-width: 1366px))');
+    const handler = (e) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
   const [notifOpen, setNotifOpen] = useState(false);
   const notifSeenKey = `hearth-seen-notifs-${household.id}`;
   const [seenNotifIds, setSeenNotifIds] = useState(() => {
@@ -906,10 +921,15 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   const [notifDropdownPos, setNotifDropdownPos] = useState(null);
   useEffect(() => {
     if (!notifOpen) return;
-    if (notifBellRef.current) {
+    // v3.32: mobile ignores notifDropdownPos entirely (fixed bottom-sheet
+    // style) and closes via the full-screen scrim instead of an outside-
+    // click listener -- skip both on mobile so opening the dropdown from
+    // a touch tap does the absolute minimum synchronous work.
+    if (!isMobile && notifBellRef.current) {
       const r = notifBellRef.current.getBoundingClientRect();
       setNotifDropdownPos({ top: r.bottom + 8, right: Math.max(8, window.innerWidth - r.right) });
     }
+    if (isMobile) return;
     function onDocClick(e) {
       if (
         notifBellRef.current && !notifBellRef.current.contains(e.target) &&
@@ -918,7 +938,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     }
     const t = setTimeout(() => document.addEventListener('mousedown', onDocClick), 60);
     return () => { clearTimeout(t); document.removeEventListener('mousedown', onDocClick); };
-  }, [notifOpen]);
+  }, [notifOpen, isMobile]);
 
   // Profile icon (replaces the old standalone "Sign out" button) -- same
   // open/close-on-outside-click pattern as the notification bell above.
@@ -954,7 +974,11 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   const profileDropdownRef = useRef(null);
   useEffect(() => {
     if (!profileMenuOpen) return;
-    if (profileMenuRef.current) {
+    // v3.32: same as the notif effect above -- mobile uses a fixed
+    // bottom-sheet (ignores profileDropdownPos) and closes via the
+    // full-screen scrim, so skip the layout read + outside-click
+    // listener there entirely.
+    if (!isMobile && profileMenuRef.current) {
       const r = profileMenuRef.current.getBoundingClientRect();
       // v3.28: the trigger can now be the bottom-nav profile button, which
       // sits near the physical bottom of the screen -- opening downward
@@ -968,6 +992,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
           : { top: r.bottom + 8, right: Math.max(8, window.innerWidth - r.right) }
       );
     }
+    if (isMobile) return;
     function onDocClick(e) {
       if (
         profileMenuRef.current && !profileMenuRef.current.contains(e.target) &&
@@ -976,7 +1001,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     }
     const t = setTimeout(() => document.addEventListener('click', onDocClick), 60);
     return () => { clearTimeout(t); document.removeEventListener('click', onDocClick); };
-  }, [profileMenuOpen]);
+  }, [profileMenuOpen, isMobile]);
   // Color theme picker -- swaps the app's --accent/--accent2 pairs (see the
   // [data-theme="..."] rules in index.css) via a data-theme attribute on
   // <html>, remembered per-browser in localStorage. Purely cosmetic/local:
@@ -1043,10 +1068,13 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   const themeDropdownRef = useRef(null);
   useEffect(() => {
     if (!themeMenuOpen) return;
-    if (themeMenuRef.current) {
+    // v3.32: same as above -- skip the layout read + outside-click
+    // listener on mobile (fixed bottom-sheet + scrim handle it instead).
+    if (!isMobile && themeMenuRef.current) {
       const r = themeMenuRef.current.getBoundingClientRect();
       setThemeDropdownPos({ top: r.bottom + 8, right: Math.max(8, window.innerWidth - r.right) });
     }
+    if (isMobile) return;
     function onDocClick(e) {
       if (
         themeMenuRef.current && !themeMenuRef.current.contains(e.target) &&
@@ -1055,7 +1083,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     }
     const t = setTimeout(() => document.addEventListener('click', onDocClick), 60);
     return () => { clearTimeout(t); document.removeEventListener('click', onDocClick); };
-  }, [themeMenuOpen]);
+  }, [themeMenuOpen, isMobile]);
   // Attachment viewer modal -- opened from every place a document can be
   // viewed (aggregated Attachments dropdown, each table's row icon, each
   // mobile edit sheet). Holds the signed URL + name of whichever attachment
@@ -1165,22 +1193,6 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   // itself gets the available width/height instead of competing with a
   // long category list next to (desktop) or above/below (mobile) it.
   const [showTop10, setShowTop10] = useState(false);
-
-  // Drives the mobile-only "Expenses this month" redesign below: on a
-  // narrow screen, that list renders as tappable read-only rows (icon,
-  // description, date, amount) instead of the always-editable input table
-  // desktop uses -- tapping a row opens an edit sheet instead. Tracked in
-  // JS (not just CSS) because which JSX gets rendered actually differs
-  // between the two, not just how it's styled.
-  const [isMobile, setIsMobile] = useState(
-        () => typeof window !== 'undefined' && window.matchMedia('(max-width: 640px), ((pointer: coarse) and (hover: none) and (max-width: 1366px))').matches
-  );
-  useEffect(() => {
-        const mq = window.matchMedia('(max-width: 640px), ((pointer: coarse) and (hover: none) and (max-width: 1366px))');
-    const handler = (e) => setIsMobile(e.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, []);
 
   // v3.27: on mobile, the summary-card grids (10-11 tiles) pushed the
   // Explore chart below the fold. Remaining + Net now render once more, up
