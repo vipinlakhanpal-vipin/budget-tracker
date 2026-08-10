@@ -6921,7 +6921,21 @@ I can help you track expenses, understand spending patterns, create budgets, and
         <div
           ref={inputTabsSectionRef}
           className={addSheetOpen ? 'mobile-add-sheet' : undefined}
-          style={(deskRailActive && activeDeskFrame !== 'charts') ? { gridColumn: '2 / -1' } : undefined}
+          style={
+            (deskRailActive && activeDeskFrame === 'charts')
+              // Charts frame: this column has nothing in it (Add/View
+              // panels are gated to their own frames), but an EMPTY grid
+              // item still occupies its cell for placement purposes --
+              // the chart column's explicit gridColumn: '2 / -1' below was
+              // colliding with this "occupied but invisible" cell and
+              // getting pushed down to a new row, which is exactly the
+              // gap Vipin flagged ("graph can b lifted up and start from
+              // where the add button is"). display: none removes it from
+              // grid layout entirely so there's no collision to push
+              // around, and the chart lands in row 1 right next to the rail.
+              ? { display: 'none' }
+              : (deskRailActive ? { gridColumn: '2 / -1' } : undefined)
+          }
         >
           {addSheetOpen && (
             <div className="mobile-sheet-handle">
