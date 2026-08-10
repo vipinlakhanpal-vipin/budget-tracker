@@ -1,4 +1,4 @@
-# Hearth -- Household Budget Tracker: Project Status & Handoff Notes
+# Hearth -- Expense Management System: Project Status & Handoff Notes
 
 Last updated: 2026-07-27, app version v1.12.
 
