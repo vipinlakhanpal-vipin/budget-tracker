@@ -3354,6 +3354,16 @@ row. */
 .admin-users-table {
   table-layout: auto;
 }
+/* v3.66: Group Accounts table redesign -- tighter padding/font across the
+   whole table (not just the header row) so a table with several accounts'
+   worth of members reads as compact and clean rather than sparse. */
+.admin-users-table td,
+.admin-users-table th {
+  padding: 5px 8px;
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
 .admin-actions-cell {
   display: flex;
   gap: 5px;
@@ -3384,8 +3394,8 @@ row. */
 .admin-household-group-header td {
   background: color-mix(in srgb, var(--accent) 10%, var(--card));
   font-weight: 700;
-  font-size: 12.5px;
-  padding: 8px 10px !important;
+  font-size: 11.5px;
+  padding: 5px 8px !important;
   border-radius: 6px;
 }
 @media (max-width: 720px) {
