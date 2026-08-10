@@ -3726,14 +3726,38 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   }
 
   async function handleSignOut() {
-    await supabase.auth.signOut();
-    // v1.91: force a hard reload after sign-out. The app's top-level
-    // session listener wasn't reliably flipping the UI back to the login
-    // screen after signOut() resolved -- session cleared server-side, but
-    // the Dashboard kept rendering with stale local state. A full reload
-    // re-runs the initial session check from scratch, which we know
-    // correctly shows the login screen when there's no active session.
-    window.location.reload();
+    // v3.63: wrap in try/catch/finally, and sign out with { scope: 'local' }
+    // instead of the default 'global' scope. If the session is already
+    // stale/invalid (e.g. an expired refresh token -- the same condition
+    // that shows "Invalid Session" in Admin Console), the default signOut()
+    // tries to revoke the session on the server first and throws when that
+    // network call fails, which silently aborted this whole function before
+    // it ever reached the reload below -- so Sign Out looked like it did
+    // nothing. { scope: 'local' } just clears the token Supabase stored in
+    // this browser, no server round-trip required, so it can't get stuck
+    // the same way. The reload is now unconditional (finally) so the user
+    // always lands back on a clean login screen either way.
+    try {
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch {
+      // ignore -- local storage gets cleared below regardless
+    } finally {
+      // Extra safety net: directly clear any lingering Supabase auth keys
+      // in localStorage in case signOut() itself couldn't run at all (e.g.
+      // it threw synchronously before clearing storage).
+      try {
+        Object.keys(window.localStorage || {}).forEach((k) => {
+          if (k.startsWith('sb-') && k.includes('-auth-token')) window.localStorage.removeItem(k);
+        });
+      } catch {}
+      // v1.91: force a hard reload after sign-out. The app's top-level
+      // session listener wasn't reliably flipping the UI back to the login
+      // screen after signOut() resolved -- session cleared server-side, but
+      // the Dashboard kept rendering with stale local state. A full reload
+      // re-runs the initial session check from scratch, which we know
+      // correctly shows the login screen when there's no active session.
+      window.location.reload();
+    }
   }
 
   async function handleAddRecurring(e) {
@@ -9056,9 +9080,9 @@ I can help you track expenses, understand spending patterns, create budgets, and
             // every app release -- only when Help itself is edited), so the
             // little "Help updated as of vX.XX" marker next to the tour button
             // tells users this text is actually in sync with what they're using.
-            const HELP_LAST_UPDATED_VERSION = '3.62';
+            const HELP_LAST_UPDATED_VERSION = '3.63';
             const helpTopics = [
-{ key: 'updates', title: "What's New", body: <>Latest updates (Aug 10, 2026): Hearth now has Free and Paid group account plans -- Free includes Income, Regular Expenses, and Reports; Paid adds Fixed Expenses, Savings, Investments, and Aria. If a locked section is tapped, a short "Premium feature" prompt explains the split and links to Support. You can now delete your own account from Settings &rsaquo; App &rsaquo; Account, and there's now a Terms of Service alongside the Privacy Policy in the footer and in Settings. The footer's "Suggestion" link is now "Support" -- pick a topic tag or two and describe what's going on, and it goes straight to the app owner. The 10 dashboard summary tiles (Monthly Budget through My Investments) each get their own subtle color now instead of one flat surface. On desktop, Income, Fixed Expenses, Regular Expenses, Savings, and Investments have a thin left rail (Add/View/Charts) so you see one thing at a time instead of everything stacked at once, and picking Charts now shows it at full width instead of a narrow side column. Mobile has the same Add/View/Charts switcher as a row of pills at the top of each section, instead of everything stacked on one page -- and after you Add an entry it jumps straight to View so you see it land. Entries within the same date now sort with the most recently added one on top. The top tab bar (Dashboard through Help) is one rounded pill capsule instead of separate solid buttons, with only the active tab filled in. The Admin Console's Households tab is now called Group Accounts (matching "Group Account" wording used throughout the app for the shared budget group you belong to, distinct from your individual login/Account) and now shows each group's member emails so you can tell them apart at a glance. The "Ask about upgrading" prompt now opens Support with an "App Upgrade" topic pre-selected, so it's clear at a glance what the message is about.</> },
+{ key: 'updates', title: "What's New", body: <>Latest updates (Aug 10, 2026): Hearth now has Free and Paid group account plans -- Free includes Income, Regular Expenses, and Reports; Paid adds Fixed Expenses, Savings, Investments, and Aria. If a locked section is tapped, a short "Premium feature" prompt explains the split and links to Support. You can now delete your own account from Settings &rsaquo; App &rsaquo; Account, and there's now a Terms of Service alongside the Privacy Policy in the footer and in Settings. The footer's "Suggestion" link is now "Support" -- pick a topic tag or two and describe what's going on, and it goes straight to the app owner. The 10 dashboard summary tiles (Monthly Budget through My Investments) each get their own subtle color now instead of one flat surface. On desktop, Income, Fixed Expenses, Regular Expenses, Savings, and Investments have a thin left rail (Add/View/Charts) so you see one thing at a time instead of everything stacked at once, and picking Charts now shows it at full width instead of a narrow side column. Mobile has the same Add/View/Charts switcher as a row of pills at the top of each section, instead of everything stacked on one page -- and after you Add an entry it jumps straight to View so you see it land. Entries within the same date now sort with the most recently added one on top. The top tab bar (Dashboard through Help) is one rounded pill capsule instead of separate solid buttons, with only the active tab filled in. The Admin Console's Households tab is now called Group Accounts (matching "Group Account" wording used throughout the app for the shared budget group you belong to, distinct from your individual login/Account) and now shows each group's member emails so you can tell them apart at a glance. The "Ask about upgrading" prompt now opens Support with an "App Upgrade" topic pre-selected, so it's clear at a glance what the message is about. Fixed a bug where Sign Out could silently do nothing if your session had already expired.</> },
               { key: 'home', title: 'Dashboard', body: <>Shows just the dashboard (summary cards and totals), nothing else. Below it, a bigger "Explore" section holds the same Spending by category chart (Pie/Bar/Pareto/Treemap), AI Insights, and Budget Coach, sized larger so there's more room to look through them. Clicking Income, Fixed Expenses, Regular Expenses, Savings, Report, Settings, or Help scrolls back up to the top and switches to that tab as usual.</> },
               { key: 'regular', title: 'Regular Expenses', body: <>Log one-off spending (groceries, dining, shopping). Pick the date, category, a short description, and the amount, then Add. It appears under "Expenses this month" and is always editable there -- just type into a field and it saves. The note icon (<StickyNote size={11} style={{ verticalAlign: -2 }} />) next to Amount opens a spot for a longer free-text description, and the paperclip (<Paperclip size={11} style={{ verticalAlign: -2 }} />) lets you attach one photo or PDF (5MB max) -- a receipt, warranty, or anything else worth keeping with that expense. Both are optional. Once saved, a small icon appears next to the entry if it has a note or attachment -- click it to read the note or open the file.</> },
               { key: 'scan', title: 'Scan a receipt', body: <>Below the Regular Expenses form, upload a photo of a receipt (or a screenshot/sheet listing several expenses) and Claude will read it for you. You'll see an editable review list first -- fix anything that looks wrong, untick what you don't want, then add only what you confirm. Nothing is saved automatically.</> },
