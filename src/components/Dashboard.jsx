@@ -6360,6 +6360,7 @@ function ReportHtmlView({ data }) {
                 other button in this row keeps working exactly as before;
                 clicking any of them simply replaces inputTab/activePanel
                 again, the same way it always did. */}
+            <div className="header-tab-pill-group">
             <button
               type="button"
               data-tour="nav-home"
@@ -6431,7 +6432,8 @@ function ReportHtmlView({ data }) {
               <HelpCircle size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
               Help
             </button>
-            
+            </div>
+
             {/* Color theme picker -- deliberately styled as a multi-color
                 swatch (conic-gradient ring) rather than matching the plain
                 teal/white icon-button family right next to it, so the
