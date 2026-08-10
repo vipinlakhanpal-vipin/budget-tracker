@@ -2148,7 +2148,22 @@ td.amount { font-weight: 600; text-align: right; }
       display: flex !important; flex-direction: column; gap: 10px;
       justify-content: center;
       position: fixed; left: 0; top: env(safe-area-inset-top);
-      bottom: calc(78px + env(safe-area-inset-bottom));
+      /* v3.56: was `bottom: calc(78px + ...)`, anchoring BOTH edges to the
+         viewport -- Vipin: "left panel from dash to theme jumps up and
+         down when tabs are clicked". Every tab click calls
+         scrollToFrameA() (scrolls to top), which is exactly when a mobile
+         browser's address bar animates back in; a plain vh-based bottom
+         edge jumps between the "chrome hidden" and "chrome visible"
+         viewport heights the instant that happens, which is what was
+         seen as the jump. An explicit height using dvh (dynamic viewport
+         height -- built for this exact problem, continuously tracks the
+         real visible viewport instead of snapping between two fixed
+         values) replaces the vh fallback wherever supported; the plain vh
+         line stays first as the fallback for older browsers that don't
+         understand dvh, since an unsupported value is simply ignored and
+         the later, supported declaration wins the cascade. */
+      height: calc(100vh - 78px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+      height: calc(100dvh - 78px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
       width: 54px; padding: 10px 0; z-index: 55; overflow-y: auto;
       background: var(--card); border-right: 1px solid var(--border);
     }
