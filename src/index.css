@@ -1040,6 +1040,52 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
 @media (max-width: 640px) {
   .desk-frame-rail { display: none; }
 }
+
+/* Top tab bar redesign (v3.51) -- Vipin picked "floating segmented pill"
+   over two other mockups: the whole Dashboard/Income/Fixed/Regular/
+   Savings/Investments/Report/Settings/Help group now sits inside one
+   rounded capsule track instead of each tab being its own separate solid-
+   colored pill (which read as busy/all-competing-for-attention). Only the
+   ACTIVE tab is filled solid in --accent now; the rest are flat text that
+   lights up on hover. Scoped to .header-tab-pill-group so it only affects
+   this specific desktop tab row -- Settings' plain .btn-teal.secondary
+   toggle and any other .btn-teal/.header-tab-btn usage elsewhere (e.g.
+   mobile's own separate rail nav) are untouched. Higher specificity than
+   the existing .header-tab-btn / .header-tab-btn-active rules above (2
+   classes vs 1) so these win without needing !important or removing the
+   older rules, same pattern used throughout this file. */
+.header-tab-pill-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px;
+}
+.header-tab-pill-group .header-tab-btn {
+  background: transparent;
+  color: var(--muted);
+  box-shadow: none;
+}
+.header-tab-pill-group .header-tab-btn:hover {
+  background: var(--accent-light);
+  color: var(--accent);
+  box-shadow: none;
+  opacity: 1;
+}
+.header-tab-pill-group .header-tab-btn-active {
+  background-color: var(--accent);
+  color: #fff;
+  box-shadow: none;
+}
+.header-tab-pill-group .header-tab-btn-active:hover {
+  background-color: var(--accent);
+  color: #fff;
+}
+@media (max-width: 900px) {
+  .header-tab-pill-group { flex-wrap: wrap; border-radius: 16px; }
+}
 .card .k { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
 .card .v { font-size: 24px; font-weight: 700; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .card.over .v { color: var(--danger); }
