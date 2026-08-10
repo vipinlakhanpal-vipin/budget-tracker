@@ -17,7 +17,7 @@ import {
   Pencil, Trash2, X, ChevronLeft, ChevronRight, ChevronDown, Camera, MessageCircle, Bot, Sparkles, User,
   Palette, Check, StickyNote, Paperclip, ExternalLink, Mail, Lightbulb,
   Wallet, CalendarClock, ShoppingCart, PiggyBank, HelpCircle, Filter, Search, Sun, Moon, RefreshCw, Landmark, BookOpen,
-  Maximize2, LifeBuoy, List, BarChart3,
+  Maximize2, LifeBuoy, List, BarChart3, Lock,
 } from 'lucide-react';
 
 // v1.89: cross-browser searchable dropdown, replacing the old
@@ -781,6 +781,26 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
   // Vipin's own login sees it; everyone else in the household continues to
   // see just the existing "Coming Soon" placeholder, untouched.
   const isMe = (session.user.email || '').trim().toLowerCase() === 'vipinlakhanpal@gmail.com';
+
+  // Free/paid plan tier (v3.60) -- admin-granted only for now, no payment
+  // processor wired up yet (see supabase/migration_plan_tier.sql and the
+  // Admin Console's Households tab, which is the only place a household's
+  // plan actually changes). Free: Income, Regular Expenses, Reports, Aria.
+  // Paid: adds Fixed Expenses, Savings, and Investments -- Investments
+  // stays additionally gated behind isMe above regardless of plan, since
+  // that's a separate, pre-existing "not released to everyone yet" gate,
+  // not something this plan split changes on its own.
+  const isPaidPlan = household.plan === 'paid';
+  const PLAN_LOCKED_SECTIONS = ['fixed', 'savings', 'investments', 'aria'];
+  const [upgradeModalSection, setUpgradeModalSection] = useState(null);
+  function tryOpenSection(section, openFn) {
+    if (!isPaidPlan && PLAN_LOCKED_SECTIONS.includes(section)) {
+      setUpgradeModalSection(section);
+      return;
+    }
+    openFn();
+  }
+  const PLAN_SECTION_LABEL = { fixed: 'Fixed Expenses', savings: 'Savings', investments: 'Investments', aria: 'Aria' };
 
   const [currentMonth, setCurrentMonth] = useState(() => {
     const d = new Date();
@@ -6161,11 +6181,12 @@ function ReportHtmlView({ data }) {
         <button
           type="button"
           className={inputTab === 'fixed' ? 'active' : ''}
-          onClick={() => { setActivePanel(null); setInputTab('fixed'); setDeskFrameFor('fixed', 'add'); scrollToFrameA(); }}
+          onClick={() => tryOpenSection('fixed', () => { setActivePanel(null); setInputTab('fixed'); setDeskFrameFor('fixed', 'add'); scrollToFrameA(); })}
           title="Fixed Expenses"
         >
           <CalendarClock size={18} />
           <span>Fixed</span>
+          {!isPaidPlan && <Lock size={9} className="rail-plan-lock" />}
         </button>
         <button
           type="button"
@@ -6179,20 +6200,22 @@ function ReportHtmlView({ data }) {
         <button
           type="button"
           className={inputTab === 'savings' ? 'active' : ''}
-          onClick={() => { setActivePanel(null); setInputTab('savings'); setDeskFrameFor('savings', 'add'); scrollToFrameA(); }}
+          onClick={() => tryOpenSection('savings', () => { setActivePanel(null); setInputTab('savings'); setDeskFrameFor('savings', 'add'); scrollToFrameA(); })}
           title="Savings"
         >
           <PiggyBank size={18} />
           <span>Savings</span>
+          {!isPaidPlan && <Lock size={9} className="rail-plan-lock" />}
         </button>
         <button
           type="button"
           className={activePanel === 'investments' ? 'active' : ''}
-          onClick={() => togglePanel('investments')}
+          onClick={() => tryOpenSection('investments', () => togglePanel('investments'))}
           title="Investments"
         >
           <Landmark size={18} />
           <span>Invest</span>
+          {!isPaidPlan && <Lock size={9} className="rail-plan-lock" />}
         </button>
         <button
           type="button"
@@ -6442,7 +6465,7 @@ function ReportHtmlView({ data }) {
             <button
               type="button"
               className={`btn-teal header-tab-btn tab-visible-mobile ${inputTab === 'fixed' ? 'header-tab-btn-active' : ''}`}
-              onClick={() => { setActivePanel(null); setInputTab('fixed'); setDeskFrameFor('fixed', 'add'); scrollToFrameA(); }}
+              onClick={() => tryOpenSection('fixed', () => { setActivePanel(null); setInputTab('fixed'); setDeskFrameFor('fixed', 'add'); scrollToFrameA(); })}
               >
               <CalendarClock size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
               Fixed Expenses
@@ -6459,7 +6482,7 @@ function ReportHtmlView({ data }) {
             <button
               type="button"
               className={`btn-teal header-tab-btn tab-visible-mobile ${inputTab === 'savings' ? 'header-tab-btn-active' : ''}`}
-              onClick={() => { setActivePanel(null); setInputTab('savings'); setDeskFrameFor('savings', 'add'); scrollToFrameA(); }}
+              onClick={() => tryOpenSection('savings', () => { setActivePanel(null); setInputTab('savings'); setDeskFrameFor('savings', 'add'); scrollToFrameA(); })}
               >
               <PiggyBank size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
               Savings
@@ -6473,7 +6496,7 @@ function ReportHtmlView({ data }) {
                 page right after that effect had already positioned things
                 correctly, which is why opening Report/Settings/Help looked
                 like it stopped doing anything. */}
-                        <button className={`btn-teal header-tab-btn tab-visible-mobile${activePanel === 'investments' ? ' header-tab-btn-active' : ''}`} onClick={() => togglePanel('investments')}>
+                        <button className={`btn-teal header-tab-btn tab-visible-mobile${activePanel === 'investments' ? ' header-tab-btn-active' : ''}`} onClick={() => tryOpenSection('investments', () => togglePanel('investments'))}>
               <Landmark size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
               Investments
             </button>
@@ -6612,7 +6635,7 @@ function ReportHtmlView({ data }) {
                 type="button"
                                                             className="chat-fab-btn tab-hide-mobile"
                         title={chatOpen ? 'Close chat' : 'Aria - Your AI Assistant'}
-                onClick={() => setChatOpen((o) => !o)}
+                onClick={() => tryOpenSection('aria', () => setChatOpen((o) => !o))}
               >
                           {chatOpen ? <X size={18} /> : <Bot size={18} strokeWidth={2.2} className="aria-icon-motion" />}
                 {!chatOpen && <span className="aria-smiley-peek" aria-hidden="true">😊</span>}
@@ -7246,7 +7269,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             </button>
             <button
               className={`btn small ${inputTab === 'fixed' ? '' : 'secondary'}`}
-              onClick={() => { setInputTab('fixed'); setDeskFrameFor('fixed', 'add'); }}
+              onClick={() => tryOpenSection('fixed', () => { setInputTab('fixed'); setDeskFrameFor('fixed', 'add'); })}
             >
               Fixed Expenses
             </button>
@@ -7258,7 +7281,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             </button>
             <button
               className={`btn small ${inputTab === 'savings' ? '' : 'secondary'}`}
-              onClick={() => { setInputTab('savings'); setDeskFrameFor('savings', 'add'); }}
+              onClick={() => tryOpenSection('savings', () => { setInputTab('savings'); setDeskFrameFor('savings', 'add'); })}
             >
               Savings
             </button>
@@ -9033,9 +9056,9 @@ I can help you track expenses, understand spending patterns, create budgets, and
             // every app release -- only when Help itself is edited), so the
             // little "Help updated as of vX.XX" marker next to the tour button
             // tells users this text is actually in sync with what they're using.
-            const HELP_LAST_UPDATED_VERSION = '3.54';
+            const HELP_LAST_UPDATED_VERSION = '3.60';
             const helpTopics = [
-{ key: 'updates', title: "What's New", body: <>Latest updates (Aug 10, 2026): You can now delete your own account from Settings &rsaquo; App &rsaquo; Account, and there's now a Terms of Service alongside the Privacy Policy in the footer and in Settings. The footer's "Suggestion" link is now "Support" -- pick a topic tag or two and describe what's going on, and it goes straight to the app owner. The 10 dashboard summary tiles (Monthly Budget through My Investments) each get their own subtle color now instead of one flat surface. On desktop, Income, Fixed Expenses, Regular Expenses, Savings, and Investments have a thin left rail (Add/View/Charts) so you see one thing at a time instead of everything stacked at once, and picking Charts now shows it at full width instead of a narrow side column. Mobile now has the same Add/View/Charts switcher as a row of pills at the top of each section, instead of everything stacked on one page -- and after you Add an entry it jumps straight to View so you see it land. Entries within the same date now sort with the most recently added one on top. The top tab bar (Dashboard through Help) is now one rounded pill capsule instead of separate solid buttons, with only the active tab filled in.</> },
+{ key: 'updates', title: "What's New", body: <>Latest updates (Aug 10, 2026): Hearth now has Free and Paid household plans -- Free includes Income, Regular Expenses, and Reports; Paid adds Fixed Expenses, Savings, Investments, and Aria. If a locked section is tapped, a short "Premium feature" prompt explains the split and links to Support. You can now delete your own account from Settings &rsaquo; App &rsaquo; Account, and there's now a Terms of Service alongside the Privacy Policy in the footer and in Settings. The footer's "Suggestion" link is now "Support" -- pick a topic tag or two and describe what's going on, and it goes straight to the app owner. The 10 dashboard summary tiles (Monthly Budget through My Investments) each get their own subtle color now instead of one flat surface. On desktop, Income, Fixed Expenses, Regular Expenses, Savings, and Investments have a thin left rail (Add/View/Charts) so you see one thing at a time instead of everything stacked at once, and picking Charts now shows it at full width instead of a narrow side column. Mobile has the same Add/View/Charts switcher as a row of pills at the top of each section, instead of everything stacked on one page -- and after you Add an entry it jumps straight to View so you see it land. Entries within the same date now sort with the most recently added one on top. The top tab bar (Dashboard through Help) is one rounded pill capsule instead of separate solid buttons, with only the active tab filled in.</> },
               { key: 'home', title: 'Dashboard', body: <>Shows just the dashboard (summary cards and totals), nothing else. Below it, a bigger "Explore" section holds the same Spending by category chart (Pie/Bar/Pareto/Treemap), AI Insights, and Budget Coach, sized larger so there's more room to look through them. Clicking Income, Fixed Expenses, Regular Expenses, Savings, Report, Settings, or Help scrolls back up to the top and switches to that tab as usual.</> },
               { key: 'regular', title: 'Regular Expenses', body: <>Log one-off spending (groceries, dining, shopping). Pick the date, category, a short description, and the amount, then Add. It appears under "Expenses this month" and is always editable there -- just type into a field and it saves. The note icon (<StickyNote size={11} style={{ verticalAlign: -2 }} />) next to Amount opens a spot for a longer free-text description, and the paperclip (<Paperclip size={11} style={{ verticalAlign: -2 }} />) lets you attach one photo or PDF (5MB max) -- a receipt, warranty, or anything else worth keeping with that expense. Both are optional. Once saved, a small icon appears next to the entry if it has a note or attachment -- click it to read the note or open the file.</> },
               { key: 'scan', title: 'Scan a receipt', body: <>Below the Regular Expenses form, upload a photo of a receipt (or a screenshot/sheet listing several expenses) and Claude will read it for you. You'll see an editable review list first -- fix anything that looks wrong, untick what you don't want, then add only what you confirm. Nothing is saved automatically.</> },
@@ -9822,6 +9845,44 @@ I can help you track expenses, understand spending patterns, create budgets, and
           system. On success the form is replaced with a short thank-you
           note instead of just closing, so the person knows it actually
           went somewhere. */}
+      {/* Upgrade prompt (v3.60) -- shown whenever a free-plan household
+          taps Fixed Expenses, Savings, or Investments. Mirrors the Support
+          modal's own attachment-viewer-overlay/modal styling so it reads
+          as a normal, native part of the app rather than a bolted-on
+          paywall. There's no in-app purchase flow yet (plan changes are
+          admin-granted only, see the Admin Console's Households tab), so
+          this just points people at Support to ask about upgrading. */}
+      {upgradeModalSection && (
+        <div className="attachment-viewer-overlay" onClick={() => setUpgradeModalSection(null)}>
+          <div className="attachment-viewer-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 380 }}>
+            <div className="attachment-viewer-head">
+              <span className="attachment-viewer-title">
+                <Landmark size={15} style={{ marginRight: 6, verticalAlign: -3 }} />
+                Premium feature
+              </span>
+              <button type="button" className="mobile-sheet-close" onClick={() => setUpgradeModalSection(null)} aria-label="Close">
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ padding: '20px' }}>
+              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>
+                {PLAN_SECTION_LABEL[upgradeModalSection]} is part of Premium
+              </div>
+              <div className="muted-small" style={{ marginBottom: 18, lineHeight: 1.6 }}>
+                Your household is currently on the Free plan (Income, Regular Expenses, and Reports). Upgrading unlocks Fixed Expenses, Savings, Investments, and Aria.
+              </div>
+              <button
+                type="button"
+                className="btn"
+                style={{ width: '100%' }}
+                onClick={() => { setUpgradeModalSection(null); setSuggestionModalOpen(true); }}
+              >
+                Ask about upgrading
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {suggestionModalOpen && (
         <div className="attachment-viewer-overlay" onClick={() => setSuggestionModalOpen(false)}>
           <div className="attachment-viewer-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
@@ -10002,7 +10063,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
     same chatOpen state either way, so the chat window itself is
     unchanged, just the thumb-reachable entry point moved down per
     explicit request. Desktop keeps the original top-bar icon. */}
-<button data-tour="nav-aria" className={chatOpen ? 'active' : ''} onClick={() => setChatOpen((o) => !o)}>
+<button data-tour="nav-aria" className={chatOpen ? 'active' : ''} onClick={() => tryOpenSection('aria', () => setChatOpen((o) => !o))}>
   <Bot size={20} strokeWidth={2.2} className={chatOpen ? '' : 'aria-icon-motion'} />
   <span>Aria</span>
 </button>

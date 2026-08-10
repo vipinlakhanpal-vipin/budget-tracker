@@ -30,7 +30,7 @@ const SUCCESSFUL_STATUSES = new Set(['active']);
 // version ships user-visible or structural changes.
 const PROJECT_DOC_META = {
   updated: 'August 10, 2026',
-  version: 'v3.54',
+  version: 'v3.60',
   filename: 'Hearth-Project-Documentation.pdf',
 };
 
@@ -116,6 +116,32 @@ export default function AdminConsole({ onClose, embedded = false }) {
       setError(e.message || 'Could not load households');
     } finally {
       setLoading(false);
+    }
+  }
+
+  // Free/paid plan tier (v3.60) -- manual/admin-granted only, no payment
+  // processor wired up yet (see supabase/migration_plan_tier.sql). This is
+  // currently the ONLY way a household's plan changes.
+  const [planUpdatingId, setPlanUpdatingId] = useState('');
+  async function setHouseholdPlan(householdId, plan) {
+    setPlanUpdatingId(householdId);
+    try {
+      const headers = await authHeader();
+      const res = await fetch('/api/admin/households', {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'setPlan', householdId, plan }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (res.ok && json.household) {
+        setHouseholds((prev) => prev.map((h) => (h.id === householdId ? { ...h, plan: json.household.plan } : h)));
+      } else {
+        setError(json.error || 'Could not update plan');
+      }
+    } catch (e) {
+      setError(e.message || 'Could not update plan');
+    } finally {
+      setPlanUpdatingId('');
     }
   }
 
@@ -290,6 +316,9 @@ export default function AdminConsole({ onClose, embedded = false }) {
           <button className={`btn small ${view === 'project' ? '' : 'secondary'}`} onClick={() => setView('project')} type="button">
             Project
           </button>
+          <button className={`btn small ${view === 'households' ? '' : 'secondary'}`} onClick={() => setView('households')} type="button">
+            Households
+          </button>
         </div>
 
         {view === 'invite' && (
@@ -368,6 +397,46 @@ export default function AdminConsole({ onClose, embedded = false }) {
         {view === 'project' && (
           <div>
             <ProjectTab />
+          </div>
+        )}
+
+        {view === 'households' && (
+          <div>
+            <div className="muted-small" style={{ marginBottom: 14, fontSize: 12.5, lineHeight: 1.6 }}>
+              Free plan: Income, Regular Expenses, and Reports only. Paid unlocks Fixed Expenses, Savings, Investments, and Aria. No payment processor is wired up yet -- this toggle is the only way a household's plan changes right now (see supabase/migration_plan_tier.sql).
+            </div>
+            {loading && <div className="muted-small">Loading households...</div>}
+            {!loading && households.length === 0 && <div className="empty">No households yet.</div>}
+            {!loading && households.map((h) => (
+              <div
+                key={h.id}
+                className="panel"
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 14px', marginBottom: 8 }}
+              >
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: 13.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.name}</div>
+                  <div className="muted-small" style={{ fontSize: 11 }}>{h.plan === 'paid' ? 'Paid' : 'Free'}</div>
+                </div>
+                <div className="input-tabs" style={{ margin: 0, flexShrink: 0 }}>
+                  <button
+                    type="button"
+                    className={`btn small ${h.plan !== 'paid' ? '' : 'secondary'}`}
+                    disabled={planUpdatingId === h.id}
+                    onClick={() => setHouseholdPlan(h.id, 'free')}
+                  >
+                    Free
+                  </button>
+                  <button
+                    type="button"
+                    className={`btn small ${h.plan === 'paid' ? '' : 'secondary'}`}
+                    disabled={planUpdatingId === h.id}
+                    onClick={() => setHouseholdPlan(h.id, 'paid')}
+                  >
+                    Paid
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
