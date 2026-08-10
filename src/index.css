@@ -1053,6 +1053,13 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
   display: flex;
   gap: 6px;
   margin: 0 0 14px;
+  /* Sticky (see the inline top: stickyFrameSpacerHeight in Dashboard.jsx)
+     needs its own opaque background, same trick as .sticky-dashboard-frame,
+     so list rows scrolling underneath don't paint through once this is
+     pinned in place, and a little breathing room so the pills don't sit
+     flush against the frame above or the content right below. */
+  background: var(--bg);
+  padding: 8px 0;
 }
 .mobile-frame-pills button {
   flex: 1 1 0;
