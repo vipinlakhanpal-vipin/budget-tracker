@@ -1002,31 +1002,34 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
 .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; }
 
 /* Desktop-only left rail (Add/View/Charts) for the 5 data-entry tabs --
-   Vipin: "create a thin panel on left... this way screen may not look
-   cluttered". Rendered as the first child inside each panel and floated
-   left so the panel's own content (h2, form, list, or chart) flows to its
-   right; below the rail's own ~180px height, content reverts to full
-   width, same as any classic floated-sidebar layout. JS already gates
-   this to !isMobile everywhere it's rendered (see renderDeskRail in
-   Dashboard.jsx) -- the media query below is just a CSS backstop for the
-   edge case of a narrow desktop window. */
+   Vipin: "create independent left panel thin one where add, view and
+   charts tabs will be displayed... middle panel where data is entered,
+   viewed will be expanded until end of right. charts will be fully
+   visible when chart tab is clicked." A real first grid column of
+   .content-grid now (see the inline gridTemplateColumns override in
+   Dashboard.jsx, applied only while deskRailActive is true), not floated
+   inside a panel -- that floated version was overlapping panel content,
+   which this replaces. Sticky so the rail stays in view while a long
+   form or list scrolls past it. JS already gates this to !isMobile
+   everywhere it's rendered (see renderDeskRail in Dashboard.jsx) -- the
+   media query below is just a CSS backstop for a narrow desktop window. */
 .desk-frame-rail {
-  float: left;
-  width: 58px;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin: 0 16px 12px 0;
+  position: sticky;
+  top: 16px;
+  align-self: start;
 }
 .desk-frame-rail button {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 3px;
-  background: none;
+  background: var(--card);
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 8px 2px;
+  padding: 10px 2px;
   cursor: pointer;
   color: var(--muted);
   font-size: 10px;
