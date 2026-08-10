@@ -6121,7 +6121,21 @@ function ReportHtmlView({ data }) {
           since this rail replaces it there). Reuses the exact same
           onClick handlers as their desktop-row counterparts so behavior
           (active state, which panel opens) is identical, just relocated.
-          Bottom nav (Dashboard/Add/Help/Aria/Soon/Settings) is untouched. */}
+          Bottom nav (Dashboard/Add/Help/Aria/Soon/Settings) is untouched.
+          v3.57: portaled straight to document.body -- Vipin: "whole panel
+          goes up and down based on tabs I select". Root cause: .wrap has
+          overflow-x:clip, which (documented elsewhere in this file, same
+          bug that made the notif/theme/profile dropdowns portal to body
+          too) silently clips the PAINTING of any position:fixed
+          descendant to .wrap's own box, even though fixed positioning
+          itself escapes .wrap's layout. .wrap's own rendered height
+          varies a lot between tabs (Dash is short, a data-entry form is
+          tall), so the rail's visible bottom edge was getting clipped at
+          a different point depending on which tab was active -- read as
+          the whole rail jumping. Portaling to document.body removes
+          .wrap from the ancestor chain entirely, same fix as the
+          dropdowns. */}
+      {createPortal(
       <nav className="mobile-side-rail" aria-label="Sections">
         {/* v3.28: Dashboard moved here from the bottom nav (its old bottom-
             nav slot now holds Refresh instead), reusing the exact same
@@ -6235,7 +6249,9 @@ function ReportHtmlView({ data }) {
           <span className="rail-theme-swatch"><Palette size={13} /></span>
           <span>Theme</span>
         </button>
-      </nav>
+      </nav>,
+      document.body
+      )}
       {(notifOpen || themeMenuOpen || profileMenuOpen) && isMobile && createPortal(
         <div
           className="mobile-dropdown-scrim"
