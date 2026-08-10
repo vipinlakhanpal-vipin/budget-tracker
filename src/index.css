@@ -1000,6 +1000,43 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
 
 .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr); gap: 14px; margin-bottom: 20px; }
 .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; }
+
+/* Desktop-only left rail (Add/View/Charts) for the 5 data-entry tabs --
+   Vipin: "create a thin panel on left... this way screen may not look
+   cluttered". Rendered as the first child inside each panel and floated
+   left so the panel's own content (h2, form, list, or chart) flows to its
+   right; below the rail's own ~180px height, content reverts to full
+   width, same as any classic floated-sidebar layout. JS already gates
+   this to !isMobile everywhere it's rendered (see renderDeskRail in
+   Dashboard.jsx) -- the media query below is just a CSS backstop for the
+   edge case of a narrow desktop window. */
+.desk-frame-rail {
+  float: left;
+  width: 58px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 16px 12px 0;
+}
+.desk-frame-rail button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 2px;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+}
+.desk-frame-rail button:hover { background: var(--accent-light); color: var(--accent); }
+.desk-frame-rail button.active { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+@media (max-width: 640px) {
+  .desk-frame-rail { display: none; }
+}
 .card .k { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
 .card .v { font-size: 24px; font-weight: 700; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .card.over .v { color: var(--danger); }
