@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { PROJECT_DOC_PDF_BASE64 } from '../projectDocData';
 
@@ -7,7 +7,7 @@ const RELATIONS = ['Self', 'Spouse', 'Partner', 'Child', 'Parent', 'Sibling', 'R
 const STATUS_LABEL = {
   active: 'Active',
   unverified: 'Signed up -- email not verified',
-  orphaned: 'Signed up -- not in a household',
+  orphaned: 'Signed up -- not in a group account',
   invited: 'Invited -- not signed up yet',
   unknown: 'Unknown',
 };
@@ -91,6 +91,21 @@ export default function AdminConsole({ onClose, embedded = false }) {
   const [insightLoadingEmail, setInsightLoadingEmail] = useState('');
   const [resettingEmail, setResettingEmail] = useState('');
 
+  // v3.61: so admins can tell which Group Account is theirs (and which is
+  // anyone else's) before toggling its plan -- Group Accounts previously
+  // only showed a name, no member emails.
+  const membersByHousehold = useMemo(() => {
+    const map = {};
+    allUsers.forEach((u) => {
+      (u.households || []).forEach((h) => {
+        if (!h.householdId) return;
+        if (!map[h.householdId]) map[h.householdId] = [];
+        if (u.email && !map[h.householdId].includes(u.email)) map[h.householdId].push(u.email);
+      });
+    });
+    return map;
+  }, [allUsers]);
+
   useEffect(() => {
     loadHouseholds();
     loadAllUsers();
@@ -167,7 +182,7 @@ export default function AdminConsole({ onClose, embedded = false }) {
   async function handleDeleteUser(u) {
     const label = u.email;
     const confirmMsg = u.userId
-      ? `Permanently delete ${label}? This removes their login and household membership from Supabase. This cannot be undone.`
+      ? `Permanently delete ${label}? This removes their login and group account membership from Supabase. This cannot be undone.`
       : `Cancel the pending invite for ${label}?`;
     if (!window.confirm(confirmMsg)) return;
 
@@ -305,7 +320,7 @@ export default function AdminConsole({ onClose, embedded = false }) {
       <div className={cardClass} style={embedded ? { textAlign: 'left' } : { maxWidth: 480, textAlign: 'left' }}>
         <h1 style={{ textAlign: embedded ? 'left' : 'center', fontSize: embedded ? 18 : undefined }}>Admin console</h1>
         <p className="sub" style={{ textAlign: embedded ? 'left' : 'center' }}>
-          Create a login and send the household invite in one step, or see everyone who's signed up (or tried to) across every household.
+          Create a login and send the group account invite in one step, or see everyone who's signed up (or tried to) across every group account.
         </p>
 
         <div className="input-tabs" style={{ margin: '12px 0 16px' }}>
@@ -317,7 +332,7 @@ export default function AdminConsole({ onClose, embedded = false }) {
             Project
           </button>
           <button className={`btn small ${view === 'households' ? '' : 'secondary'}`} onClick={() => setView('households')} type="button">
-            Households
+            Group Accounts
           </button>
         </div>
 
@@ -325,9 +340,9 @@ export default function AdminConsole({ onClose, embedded = false }) {
           <>
             <form onSubmit={handleSubmit} style={{ marginTop: 16 }}>
               <div className="field" style={{ marginBottom: 10 }}>
-                <label>Household</label>
+                <label>Group Account</label>
                 <select value={householdId} onChange={(e) => setHouseholdId(e.target.value)} disabled={loading}>
-                  <option value="">+ Create a new household</option>
+                  <option value="">+ Create a new group account</option>
                   {households.map((h) => (
                     <option key={h.id} value={h.id}>{h.name}</option>
                   ))}
@@ -336,7 +351,7 @@ export default function AdminConsole({ onClose, embedded = false }) {
 
               {!householdId && (
                 <div className="field" style={{ marginBottom: 10 }}>
-                  <label>New household name</label>
+                  <label>New group account name</label>
                   <input
                     type="text"
                     value={newHouseholdName}
@@ -403,10 +418,10 @@ export default function AdminConsole({ onClose, embedded = false }) {
         {view === 'households' && (
           <div>
             <div className="muted-small" style={{ marginBottom: 14, fontSize: 12.5, lineHeight: 1.6 }}>
-              Free plan: Income, Regular Expenses, and Reports only. Paid unlocks Fixed Expenses, Savings, Investments, and Aria. No payment processor is wired up yet -- this toggle is the only way a household's plan changes right now (see supabase/migration_plan_tier.sql).
+              Free plan: Income, Regular Expenses, and Reports only. Paid unlocks Fixed Expenses, Savings, Investments, and Aria. No payment processor is wired up yet -- this toggle is the only way a group account's plan changes right now (see supabase/migration_plan_tier.sql).
             </div>
-            {loading && <div className="muted-small">Loading households...</div>}
-            {!loading && households.length === 0 && <div className="empty">No households yet.</div>}
+            {loading && <div className="muted-small">Loading group accounts...</div>}
+            {!loading && households.length === 0 && <div className="empty">No group accounts yet.</div>}
             {!loading && households.map((h) => (
               <div
                 key={h.id}
@@ -415,6 +430,11 @@ export default function AdminConsole({ onClose, embedded = false }) {
               >
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: 13.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.name}</div>
+                  <div className="muted-small" style={{ fontSize: 11.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {(membersByHousehold[h.id] || []).length
+                      ? membersByHousehold[h.id].join(', ')
+                      : 'No members yet'}
+                  </div>
                   <div className="muted-small" style={{ fontSize: 11 }}>{h.plan === 'paid' ? 'Paid' : 'Free'}</div>
                 </div>
                 <div className="input-tabs" style={{ margin: 0, flexShrink: 0 }}>
@@ -456,7 +476,7 @@ function UserGroup({ title, users, onDelete, deletingEmail, onInsights, insightL
       <div className="table-scroll">
         <table className="responsive-table admin-users-table">
           <thead>
-            <tr><th>Email</th><th>Status</th><th>Household(s)</th><th>Joined</th><th>Last Login</th><th>Device</th><th>Location</th><th>Last seen</th><th>Usage</th><th></th></tr>
+            <tr><th>Email</th><th>Status</th><th>Group Account(s)</th><th>Joined</th><th>Last Login</th><th>Device</th><th>Location</th><th>Last seen</th><th>Usage</th><th></th></tr>
           </thead>
           <tbody>
             {users.flatMap((u, idx) => {
@@ -464,9 +484,9 @@ function UserGroup({ title, users, onDelete, deletingEmail, onInsights, insightL
               // the same household at a glance -- callers pre-sort `users`
               // by household name (see successfulUsersSorted below), so a
               // group header only needs to appear when the name changes.
-              const householdName = u.households[0]?.householdName || 'No household';
+              const householdName = u.households[0]?.householdName || 'No group account';
               const prevHouseholdName = idx > 0
-                ? (users[idx - 1].households[0]?.householdName || 'No household')
+                ? (users[idx - 1].households[0]?.householdName || 'No group account')
                 : null;
               const rows = [];
               if (householdName !== prevHouseholdName) {
@@ -482,7 +502,7 @@ function UserGroup({ title, users, onDelete, deletingEmail, onInsights, insightL
                 <tr key={u.email}>
                   <td data-label="Email">{u.email}</td>
                   <td data-label="Status">{STATUS_LABEL[u.status] || u.status}</td>
-                  <td data-label="Household(s)" className="muted-small">
+                  <td data-label="Group Account(s)" className="muted-small">
                     {u.households.length
                       ? u.households.map((h) => h.householdName).join(', ')
                       : (u.invites[0]?.householdName || '--')}

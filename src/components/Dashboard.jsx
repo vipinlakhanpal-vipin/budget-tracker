@@ -1154,7 +1154,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   // the UI to "Support") to avoid a risky wide rename.
   const SUPPORT_TOPICS = [
     'Account & Login', 'Expenses & Bills', 'Income & Savings', 'Reports & PDF',
-    'Aria (AI Assistant)', 'Notifications & Alerts', 'Household & Members',
+    'Aria (AI Assistant)', 'Notifications & Alerts', 'Group Account & Members',
     "Something's not working", 'Feature request', 'Other',
   ];
   const [suggestionModalOpen, setSuggestionModalOpen] = useState(false);
@@ -3395,7 +3395,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   }
 
   function clearChatHistory() {
-    askConfirm("Clear the whole chat history for everyone in the household? This can't be undone.", 'aria', doClearChatHistory);
+    askConfirm("Clear the whole chat history for everyone in the group account? This can't be undone.", 'aria', doClearChatHistory);
   }
   async function doClearChatHistory() {
     await supabase.from('chat_messages').delete().eq('household_id', householdId);
@@ -3679,7 +3679,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       .update({ name: trimmed })
       .eq('id', householdId);
     if (error) {
-      notify('Could not rename household: ' + error.message);
+      notify('Could not rename group account: ' + error.message);
       setHouseholdNameDraft(household.name || '');
       return;
     }
@@ -4720,7 +4720,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     // shown as its own boxed callout at the close of the report (in addition
     // to the shorter confidentiality line already on every page's footer).
     const disclaimerText =
-      "Data & Privacy: The figures in this report are drawn directly from the data your household has entered into Hearth. This data is private to your household -- it is not visible to, or shared with, anyone outside your household's account, and it is not sold or provided to third parties. Once downloaded or emailed, this report becomes a standalone file outside the app, so please share it only with people you intend to see your household's financial information.";
+      "Data & Privacy: The figures in this report are drawn directly from the data your group account has entered into Hearth. This data is private to your group account -- it is not visible to, or shared with, anyone outside your group account, and it is not sold or provided to third parties. Once downloaded or emailed, this report becomes a standalone file outside the app, so please share it only with people you intend to see your group account's financial information.";
     const disclaimerLines = doc.splitTextToSize(disclaimerText, pageWidth - 2 * M - 12);
     const disclaimerHeight = disclaimerLines.length * 4.2 + 14;
     if (y + disclaimerHeight > 262) { doc.addPage(); y = drawHeader('Recommendations'); }
@@ -4741,7 +4741,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       doc.line(M, 285, pageWidth - M, 285);
       doc.setFontSize(7.5);
       doc.setTextColor(140);
-      doc.text('Confidential -- for household members only. Not to be shared outside the household.', M, 290);
+      doc.text('Confidential -- for group account members only. Not to be shared outside the group account.', M, 290);
       doc.text(`Page ${p} of ${pageCount}`, pageWidth - M, 290, { align: 'right' });
     }
 
@@ -5036,7 +5036,7 @@ function ReportHtmlView({ data }) {
           ))}
         </ul>
         <div className="report-tip-box" style={{ marginTop: 8, padding: 12, borderRadius: 8, fontSize: 12 }}>
-          <strong>Data & Privacy:</strong> The figures in this report are drawn directly from the data your household has entered into Hearth. This data is private to your household -- it is not visible to, or shared with, anyone outside your household's account, and it is not sold or provided to third parties. Once downloaded or emailed, this report becomes a standalone file outside the app, so please share it only with people you intend to see your household's financial information.
+          <strong>Data & Privacy:</strong> The figures in this report are drawn directly from the data your group account has entered into Hearth. This data is private to your group account -- it is not visible to, or shared with, anyone outside your group account, and it is not sold or provided to third parties. Once downloaded or emailed, this report becomes a standalone file outside the app, so please share it only with people you intend to see your group account's financial information.
         </div>
       </div>
     );
@@ -5372,7 +5372,7 @@ function ReportHtmlView({ data }) {
                           background: 'var(--accent-light)', border: '1px solid var(--border)', color: 'var(--text)',
                         }}
                       >
-                        <strong>Free plan limit reached</strong> -- this household already has the owner plus {MAX_ADDITIONAL_USERS} more people (active + pending). Remove a pending invite or an existing member to invite someone else, or upgrade for more seats.
+                        <strong>Free plan limit reached</strong> -- this group account already has the owner plus {MAX_ADDITIONAL_USERS} more people (active + pending). Remove a pending invite or an existing member to invite someone else, or upgrade for more seats.
                       </div>
                     ) : (
                     <>
@@ -5393,7 +5393,7 @@ function ReportHtmlView({ data }) {
                       <button className="btn secondary small" type="submit">Invite</button>
                     </form>
                     <div className="muted-small" style={{ marginTop: 6 }}>
-                      They'll land in this household automatically the moment they sign up (or sign in) with this exact email address -- an invite notification email is also sent to let them know, once you've set up email sending (see Settings/Vercel setup). Free plan: owner + {MAX_ADDITIONAL_USERS} more people.
+                      They'll land in this group account automatically the moment they sign up (or sign in) with this exact email address -- an invite notification email is also sent to let them know, once you've set up email sending (see Settings/Vercel setup). Free plan: owner + {MAX_ADDITIONAL_USERS} more people.
                     </div>
                     </>
                     )}
@@ -7054,7 +7054,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
               {confirmBanner('investments')}{noticeBanner('investments')}
             </div>
             <div className={`muted-small report-desc${investmentsInfoOpen ? ' is-open' : ''}`} style={{ textAlign: 'left', marginTop: -6, marginBottom: 12 }}>
-              Fixed Deposits and Mutual Fund / SIP investments, tracked separately from the household budget. Visible to everyone in your household.
+              Fixed Deposits and Mutual Fund / SIP investments, tracked separately from the group account budget. Visible to everyone in your group account.
               If you withdraw money from an FD or SIP and spend it, record that spend as a normal entry under Regular Expenses -- this tab only tracks what's invested, not day-to-day spending.
             </div>
             <div className="row investments-field-row" style={{ flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
@@ -9056,9 +9056,9 @@ I can help you track expenses, understand spending patterns, create budgets, and
             // every app release -- only when Help itself is edited), so the
             // little "Help updated as of vX.XX" marker next to the tour button
             // tells users this text is actually in sync with what they're using.
-            const HELP_LAST_UPDATED_VERSION = '3.60';
+            const HELP_LAST_UPDATED_VERSION = '3.61';
             const helpTopics = [
-{ key: 'updates', title: "What's New", body: <>Latest updates (Aug 10, 2026): Hearth now has Free and Paid household plans -- Free includes Income, Regular Expenses, and Reports; Paid adds Fixed Expenses, Savings, Investments, and Aria. If a locked section is tapped, a short "Premium feature" prompt explains the split and links to Support. You can now delete your own account from Settings &rsaquo; App &rsaquo; Account, and there's now a Terms of Service alongside the Privacy Policy in the footer and in Settings. The footer's "Suggestion" link is now "Support" -- pick a topic tag or two and describe what's going on, and it goes straight to the app owner. The 10 dashboard summary tiles (Monthly Budget through My Investments) each get their own subtle color now instead of one flat surface. On desktop, Income, Fixed Expenses, Regular Expenses, Savings, and Investments have a thin left rail (Add/View/Charts) so you see one thing at a time instead of everything stacked at once, and picking Charts now shows it at full width instead of a narrow side column. Mobile has the same Add/View/Charts switcher as a row of pills at the top of each section, instead of everything stacked on one page -- and after you Add an entry it jumps straight to View so you see it land. Entries within the same date now sort with the most recently added one on top. The top tab bar (Dashboard through Help) is one rounded pill capsule instead of separate solid buttons, with only the active tab filled in.</> },
+{ key: 'updates', title: "What's New", body: <>Latest updates (Aug 10, 2026): Hearth now has Free and Paid group account plans -- Free includes Income, Regular Expenses, and Reports; Paid adds Fixed Expenses, Savings, Investments, and Aria. If a locked section is tapped, a short "Premium feature" prompt explains the split and links to Support. You can now delete your own account from Settings &rsaquo; App &rsaquo; Account, and there's now a Terms of Service alongside the Privacy Policy in the footer and in Settings. The footer's "Suggestion" link is now "Support" -- pick a topic tag or two and describe what's going on, and it goes straight to the app owner. The 10 dashboard summary tiles (Monthly Budget through My Investments) each get their own subtle color now instead of one flat surface. On desktop, Income, Fixed Expenses, Regular Expenses, Savings, and Investments have a thin left rail (Add/View/Charts) so you see one thing at a time instead of everything stacked at once, and picking Charts now shows it at full width instead of a narrow side column. Mobile has the same Add/View/Charts switcher as a row of pills at the top of each section, instead of everything stacked on one page -- and after you Add an entry it jumps straight to View so you see it land. Entries within the same date now sort with the most recently added one on top. The top tab bar (Dashboard through Help) is one rounded pill capsule instead of separate solid buttons, with only the active tab filled in. The Admin Console's Households tab is now called Group Accounts (matching "Group Account" wording used throughout the app for the shared budget group you belong to, distinct from your individual login/Account) and now shows each group's member emails so you can tell them apart at a glance.</> },
               { key: 'home', title: 'Dashboard', body: <>Shows just the dashboard (summary cards and totals), nothing else. Below it, a bigger "Explore" section holds the same Spending by category chart (Pie/Bar/Pareto/Treemap), AI Insights, and Budget Coach, sized larger so there's more room to look through them. Clicking Income, Fixed Expenses, Regular Expenses, Savings, Report, Settings, or Help scrolls back up to the top and switches to that tab as usual.</> },
               { key: 'regular', title: 'Regular Expenses', body: <>Log one-off spending (groceries, dining, shopping). Pick the date, category, a short description, and the amount, then Add. It appears under "Expenses this month" and is always editable there -- just type into a field and it saves. The note icon (<StickyNote size={11} style={{ verticalAlign: -2 }} />) next to Amount opens a spot for a longer free-text description, and the paperclip (<Paperclip size={11} style={{ verticalAlign: -2 }} />) lets you attach one photo or PDF (5MB max) -- a receipt, warranty, or anything else worth keeping with that expense. Both are optional. Once saved, a small icon appears next to the entry if it has a note or attachment -- click it to read the note or open the file.</> },
               { key: 'scan', title: 'Scan a receipt', body: <>Below the Regular Expenses form, upload a photo of a receipt (or a screenshot/sheet listing several expenses) and Claude will read it for you. You'll see an editable review list first -- fix anything that looks wrong, untick what you don't want, then add only what you confirm. Nothing is saved automatically.</> },
@@ -9066,16 +9066,16 @@ I can help you track expenses, understand spending patterns, create budgets, and
               { key: 'fixed', title: 'Fixed Expenses', body: <>For recurring bills, loans, EMIs, and rent. Set a Start date, an optional End date, and how often it repeats (Monthly, Alternate month, Quarterly, Half-yearly, Once a year). Every field auto-saves as you edit -- there's no Save button to click. Set a Due date to get an in-app reminder starting 3 days before it's due, and an email reminder if it's set up. It has the same optional note + attachment icons as Regular Expenses -- handy for keeping a loan agreement or lease document attached to the bill itself.</> },
               { key: 'notes', title: 'Notes & Attachments', body: <>The note (<StickyNote size={11} style={{ verticalAlign: -2 }} />) and paperclip (<Paperclip size={11} style={{ verticalAlign: -2 }} />) icons sit right before the Add button on Income, Fixed Expenses, Regular Expenses, and Savings. Once a row has a saved document, its paperclip icon shows up in two places for convenience -- under the Description/Name cell, and again next to that row's delete icon -- either one opens the same viewer, where you can see the document on screen, open it in a compatible app on your device, or share it by email or WhatsApp.</> },
               { key: 'savings', title: 'Savings', body: <>Set how much you'd like to set aside for the month, e.g. "Emergency fund" or "Investment". Works exactly like Income: entered fresh per month with no auto-rollover, since the amount you're able to save can change month to month -- add a new row each month, or edit an existing row's Month field forward. Since money you set aside is no longer available to spend, it's treated the same as an expense: it's counted in "Spent so far" and "Combined expenses", and subtracted in "Remaining" and "Net", in addition to getting its own page in the PDF report so you can see planned savings build up over time. It has the same optional note + attachment icons as Regular Expenses.</> },
-              { key: 'investments', title: 'Investments', body: <>A private tracker for Fixed Deposits and Mutual Funds/SIPs, separate from your household's Income/Expenses/Savings numbers -- it doesn't affect Spent so far, Remaining, or Net. Add the type, name, bank, currency, principal, and (for FDs) an interest rate and maturity date; current value and gain/loss are calculated automatically, and status moves to Matured/Closed on its own once the maturity date passes. Click the pencil icon on any row to edit it, or the trash icon to remove it. Charts on the right show Pie, Bar, and Pareto views of invested vs. current value.</> },
+              { key: 'investments', title: 'Investments', body: <>A private tracker for Fixed Deposits and Mutual Funds/SIPs, separate from your group account's Income/Expenses/Savings numbers -- it doesn't affect Spent so far, Remaining, or Net. Add the type, name, bank, currency, principal, and (for FDs) an interest rate and maturity date; current value and gain/loss are calculated automatically, and status moves to Matured/Closed on its own once the maturity date passes. Click the pencil icon on any row to edit it, or the trash icon to remove it. Charts on the right show Pie, Bar, and Pareto views of invested vs. current value.</> },
               { key: 'regmonth', title: 'Regular Expenses for [month]', body: <>Labelled with whichever month you're viewing, this is visible below whichever tab (Income, Fixed Expenses, Regular Expenses, Savings) you're on, so you can see what's been logged without switching tabs. On Fixed Expenses and Regular Expenses, use the search icon to find an entry by its description, or Filter to narrow the list by category or payment source. It also auto-saves. It's hidden on Dashboard, which shows only the summary and the Explore section instead.</> },
               { key: 'chart', title: 'Spending by category chart', body: <>Toggle between Pie, Bar, Pareto, Treemap, By Source, By Group, Budgeted vs Actual, and Income vs Expenses. The Pie groups smaller categories into "Other" to stay readable; Bar, Treemap, By Source, and By Group show every category (or payment source, or group) individually, sorted smallest to largest for an easy read. Bar has its own Vertical/Horizontal toggle, and By Group can switch between grouped and per-category view. Budgeted vs Actual compares your category caps against what you actually spent; Income vs Expenses charts both side by side across recent months. The totals cards above show your combined income, combined expenses (split into Regular, Fixed, and Savings), and what's left of your budget and income after all three are accounted for.</> },
               { key: 'insights', title: 'AI Insights', body: <>Tap Generate below the chart for a short AI-written summary of the month you're viewing (spending patterns, whether you're over budget, and a couple of concrete suggestions). It only runs when you tap the button -- never automatically -- and Refresh regenerates it if your numbers have changed.</> },
               { key: 'coach', title: 'Budget Coach', body: <>Unlike AI Insights (one month at a time), Coach looks across your last 6 months for patterns: a category that keeps going over budget, spending trending up or down, or a savings goal that no longer looks realistic. It only ever writes out suggestions -- it never changes your Settings for you.</> },
-                        { key: 'chatbot', title: 'Aria', body: <>Aria is Hearth's built-in AI assistant -- a genuinely capable financial companion, not a scripted FAQ bot. It reasons over your household's real numbers, so you can ask it to dig into why a category ran over budget, compare spending across months, spot trends before they become a problem, or get a specific suggestion for hitting a savings goal, and it answers using your actual data rather than generic advice. It's just as happy to explain how any feature works. Find it as the purple chat button below the logo (on phones) or next to the bell (on desktop).</> },
+                        { key: 'chatbot', title: 'Aria', body: <>Aria is Hearth's built-in AI assistant -- a genuinely capable financial companion, not a scripted FAQ bot. It reasons over your group account's real numbers, so you can ask it to dig into why a category ran over budget, compare spending across months, spot trends before they become a problem, or get a specific suggestion for hitting a savings goal, and it answers using your actual data rather than generic advice. It's just as happy to explain how any feature works. Find it as the purple chat button below the logo (on phones) or next to the bell (on desktop).</> },
               { key: 'report', title: 'Report', body: <>Generate a PDF for any date range, then view it on screen, download it, or email it. Each topic gets its own page -- Income, Expenses, Fixed Expenses, Savings, Payment Sources (how much moved through each card/bank/cash), Spend Analysis (Pareto chart), and Recommendations -- except the Category Breakdown bar chart and the Summary table, which share one page by default and only split onto two once the chart itself grows long enough to need the room. Every table, and every category/payment-source label on the charts, auto-shrinks its text to fit rather than cutting names off. The last page closes with a data & privacy note.</> },
-              { key: 'settings', title: 'Settings', body: <>Has its own sub-tabs. Currency covers your household's chosen currency (renaming the app/household name itself happens right in the header now -- click the title next to the logo, owners only), plus an Account section with links to the Terms of Service and Privacy Policy and a Delete My Account button if you ever want to leave for good. Smart Budget always follows whichever month you're viewing on the dashboard (change the Month field there to set or review a different month instead) and covers your overall monthly cap for that month, plus an optional "Budget for Per Category" section below it and how this month's spending compares to those caps (you'll get a notification in the bell icon if you go over). Groups & Category lets you create Groups (e.g. Subscriptions, Etisalat) and organize your categories under them -- or add, rename, and remove ungrouped categories as before. Users (owners only) covers household members and invites -- see below. Admin Console (owners only) covers members and invites. Every field auto-saves as you edit -- there's no Save button to click.</> },
+              { key: 'settings', title: 'Settings', body: <>Has its own sub-tabs. Currency covers your group account's chosen currency (renaming the app/group account name itself happens right in the header now -- click the title next to the logo, owners only), plus an Account section with links to the Terms of Service and Privacy Policy and a Delete My Account button if you ever want to leave for good. Smart Budget always follows whichever month you're viewing on the dashboard (change the Month field there to set or review a different month instead) and covers your overall monthly cap for that month, plus an optional "Budget for Per Category" section below it and how this month's spending compares to those caps (you'll get a notification in the bell icon if you go over). Groups & Category lets you create Groups (e.g. Subscriptions, Etisalat) and organize your categories under them -- or add, rename, and remove ungrouped categories as before. Users (owners only) covers group account members and invites -- see below. Admin Console (owners only) covers members and invites. Every field auto-saves as you edit -- there's no Save button to click.</> },
               { key: 'notifications', title: 'Notifications', body: <>The bell icon next to Help (top-right) replaces the old always-on red banners. It shows a count of unread items -- over-total-budget, over a category's budget, or a bill due soon -- and opening it lists them and marks them read.</> },
-              { key: 'users', title: 'Users', body: <>See who's active in the household and who's been invited but hasn't joined yet, with full Name/Email/Phone/Location. Owners can invite new members (which also sends them a notification email), fill in or fix anyone's Name/Phone/Location, and edit their own details under "My details" -- handy for accounts created before these fields existed. Reachable from Settings' Users sub-tab. The Admin console (if you have access) is separate and never visible to other household members.</> },
+              { key: 'users', title: 'Users', body: <>See who's active in the group account and who's been invited but hasn't joined yet, with full Name/Email/Phone/Location. Owners can invite new members (which also sends them a notification email), fill in or fix anyone's Name/Phone/Location, and edit their own details under "My details" -- handy for accounts created before these fields existed. Reachable from Settings' Users sub-tab. The Admin console (if you have access) is separate and never visible to other group account members.</> },
               { key: 'privacy', title: 'Privacy Policy', body: <>Covers what's collected, where it's stored, and how the AI features use your data. Also linked at the very bottom of every page. <a href="/privacy.html" target="_blank" rel="noopener noreferrer">Read the full Privacy Policy</a>.</> },
             ];
             return (
@@ -9130,7 +9130,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 })}
               </div>
               <div className="muted-small" style={{ lineHeight: 1.6, marginTop: 16 }}>
-                <p>All figures use your household's chosen currency, set in Settings. Your data is confidential and private to your household -- it's never shared with anyone outside it.</p>
+                <p>All figures use your group account's chosen currency, set in Settings. Your data is confidential and private to your group account -- it's never shared with anyone outside it.</p>
                 <p>The small <strong>{formatVersionBadge()}</strong> badge in the top-right corner shows which build you're on. Updates are manual, on purpose: when a new build is deployed, the refresh button (top of the app) lights up with a small badge and its tooltip tells you which version is available -- click it whenever you're ready and it reloads the page. The label next to your name also shows the exact time this page was loaded, so you can always tell whether you're looking at a fresh load or not.</p>
               </div>
             </div>
@@ -9300,7 +9300,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     Let me mark my own entries as private
                   </label>
                   <div className="muted-small" style={{ marginTop: 4 }}>
-                    Off by default. Once on, a "Private" option appears when you add an income, expense, fixed expense, or savings entry -- those entries are visible only to you, not the rest of the household (they're still excluded from what others see, including shared totals).
+                    Off by default. Once on, a "Private" option appears when you add an income, expense, fixed expense, or savings entry -- those entries are visible only to you, not the rest of the group account (they're still excluded from what others see, including shared totals).
                   </div>
                 </div>
 
@@ -9826,7 +9826,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
       )}
 
       <div className="app-footer">
-        Your data is confidential and private to this household. It is never shared with anyone outside it.{' '}
+        Your data is confidential and private to this group account. It is never shared with anyone outside it.{' '}
         <a href="/privacy.html" target="_blank" rel="noopener noreferrer" className="app-footer-link">Privacy Policy</a>
         {' '}&middot;{' '}
         <a href="/terms.html" target="_blank" rel="noopener noreferrer" className="app-footer-link">Terms of Service</a>
@@ -9869,7 +9869,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 {PLAN_SECTION_LABEL[upgradeModalSection]} is part of Premium
               </div>
               <div className="muted-small" style={{ marginBottom: 18, lineHeight: 1.6 }}>
-                Your household is currently on the Free plan (Income, Regular Expenses, and Reports). Upgrading unlocks Fixed Expenses, Savings, Investments, and Aria.
+                Your group account is currently on the Free plan (Income, Regular Expenses, and Reports). Upgrading unlocks Fixed Expenses, Savings, Investments, and Aria.
               </div>
               <button
                 type="button"
@@ -9997,7 +9997,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             </div>
             <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ fontSize: 13.5, lineHeight: 1.5 }}>
-                This permanently deletes your login. Your name is removed from any expenses, income, fixed bills, savings goals, budgets, and chat messages you created, but that data stays visible to the rest of your household -- it is not deleted with you. Any investments you personally added will be deleted along with your account. This can't be undone.
+                This permanently deletes your login. Your name is removed from any expenses, income, fixed bills, savings goals, budgets, and chat messages you created, but that data stays visible to the rest of your group account -- it is not deleted with you. Any investments you personally added will be deleted along with your account. This can't be undone.
               </div>
               <div className="field">
                 <label>Type DELETE to confirm</label>
