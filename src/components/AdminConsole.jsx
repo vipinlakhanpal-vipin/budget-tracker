@@ -100,7 +100,15 @@ export default function AdminConsole({ onClose, embedded = false }) {
       (u.households || []).forEach((h) => {
         if (!h.householdId) return;
         if (!map[h.householdId]) map[h.householdId] = [];
-        if (u.email && !map[h.householdId].includes(u.email)) map[h.householdId].push(u.email);
+        if (u.email && !map[h.householdId].some((m) => m.email === u.email)) {
+          map[h.householdId].push({
+            email: u.email,
+            name: h.name || null,
+            location: h.location || u.lastSeenLocation || null,
+            joined: u.createdAt || null,
+            lastLogin: u.lastSignInAt || null,
+          });
+        }
       });
     });
     return map;
@@ -422,41 +430,70 @@ export default function AdminConsole({ onClose, embedded = false }) {
             </div>
             {loading && <div className="muted-small">Loading group accounts...</div>}
             {!loading && households.length === 0 && <div className="empty">No group accounts yet.</div>}
-            {!loading && households.map((h) => (
+            {!loading && households.map((h) => {
+              const members = membersByHousehold[h.id] || [];
+              return (
               <div
                 key={h.id}
                 className="panel"
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 14px', marginBottom: 8 }}
+                style={{ padding: '12px 14px', marginBottom: 8 }}
               >
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: 13.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.name}</div>
-                  <div className="muted-small" style={{ fontSize: 11.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {(membersByHousehold[h.id] || []).length
-                      ? membersByHousehold[h.id].join(', ')
-                      : 'No members yet'}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 13.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.name}</div>
+                    <div className="muted-small" style={{ fontSize: 11 }}>{h.plan === 'paid' ? 'Paid' : 'Free'}</div>
                   </div>
-                  <div className="muted-small" style={{ fontSize: 11 }}>{h.plan === 'paid' ? 'Paid' : 'Free'}</div>
+                  <div className="input-tabs" style={{ margin: 0, flexShrink: 0 }}>
+                    <button
+                      type="button"
+                      className={`btn small ${h.plan !== 'paid' ? '' : 'secondary'}`}
+                      disabled={planUpdatingId === h.id}
+                      onClick={() => setHouseholdPlan(h.id, 'free')}
+                    >
+                      Free
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn small ${h.plan === 'paid' ? '' : 'secondary'}`}
+                      disabled={planUpdatingId === h.id}
+                      onClick={() => setHouseholdPlan(h.id, 'paid')}
+                    >
+                      Paid
+                    </button>
+                  </div>
                 </div>
-                <div className="input-tabs" style={{ margin: 0, flexShrink: 0 }}>
-                  <button
-                    type="button"
-                    className={`btn small ${h.plan !== 'paid' ? '' : 'secondary'}`}
-                    disabled={planUpdatingId === h.id}
-                    onClick={() => setHouseholdPlan(h.id, 'free')}
-                  >
-                    Free
-                  </button>
-                  <button
-                    type="button"
-                    className={`btn small ${h.plan === 'paid' ? '' : 'secondary'}`}
-                    disabled={planUpdatingId === h.id}
-                    onClick={() => setHouseholdPlan(h.id, 'paid')}
-                  >
-                    Paid
-                  </button>
+                {/* v3.64: per-member detail rows (name/email/location/joined/
+                    last login) instead of a bare comma-joined email string --
+                    so an admin can tell members apart at a glance without
+                    cross-referencing the Users tab. */}
+                <div style={{ marginTop: 10 }}>
+                  {members.length === 0 && (
+                    <div className="muted-small" style={{ fontSize: 11.5 }}>No members yet</div>
+                  )}
+                  {members.length > 0 && (
+                    <div className="table-scroll">
+                      <table className="responsive-table admin-users-table" style={{ fontSize: 12 }}>
+                        <thead>
+                          <tr><th>Name</th><th>Email</th><th>Location</th><th>Joined</th><th>Last Login</th></tr>
+                        </thead>
+                        <tbody>
+                          {members.map((m) => (
+                            <tr key={m.email}>
+                              <td data-label="Name">{m.name || '--'}</td>
+                              <td data-label="Email">{m.email}</td>
+                              <td data-label="Location">{m.location || '--'}</td>
+                              <td data-label="Joined">{m.joined ? new Date(m.joined).toLocaleDateString() : '--'}</td>
+                              <td data-label="Last Login">{m.lastLogin ? new Date(m.lastLogin).toLocaleDateString() : '--'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
