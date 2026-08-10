@@ -444,12 +444,20 @@ export default function AdminConsole({ onClose, embedded = false }) {
                 grouped-table pattern already used in the Users tab above. */}
             {!loading && households.length > 0 && (
               <div className="table-scroll">
-                <table className="responsive-table admin-users-table" style={{ fontSize: 12 }}>
+                {/* v3.66: Plan is now its own trailing column (like every
+                    other column here) instead of a flex row floated inside
+                    a merged cell -- the Free/Paid toggle now lines up in
+                    exactly the same place on every group-header row, at
+                    the true right edge of the table, instead of appearing
+                    to float under whichever column happened to be last.
+                    Also trimmed the group-header row's own padding/font so
+                    it reads as a slim divider, not another full-height row. */}
+                <table className="responsive-table admin-users-table" style={{ fontSize: 11.5 }}>
                   <thead>
                     <tr>
                       <th>Name</th><th>Email</th><th>Phone</th><th>Role</th>
                       <th>Location</th><th>Device</th><th>Last Seen</th>
-                      <th>Joined</th><th>Last Login</th>
+                      <th>Joined</th><th>Last Login</th><th>Plan</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -458,32 +466,32 @@ export default function AdminConsole({ onClose, embedded = false }) {
                       return (
                         <Fragment key={h.id}>
                           <tr className="admin-household-group-header">
-                            <td colSpan={9}>
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                                <span>{h.name} &middot; {h.plan === 'paid' ? 'Paid' : 'Free'}</span>
-                                <div className="input-tabs" style={{ margin: 0, flexShrink: 0 }}>
-                                  <button
-                                    type="button"
-                                    className={`btn small ${h.plan !== 'paid' ? '' : 'secondary'}`}
-                                    disabled={planUpdatingId === h.id}
-                                    onClick={() => setHouseholdPlan(h.id, 'free')}
-                                  >
-                                    Free
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className={`btn small ${h.plan === 'paid' ? '' : 'secondary'}`}
-                                    disabled={planUpdatingId === h.id}
-                                    onClick={() => setHouseholdPlan(h.id, 'paid')}
-                                  >
-                                    Paid
-                                  </button>
-                                </div>
+                            <td colSpan={9} style={{ padding: '5px 8px', fontSize: 11.5 }}>
+                              {h.name}
+                            </td>
+                            <td style={{ padding: '4px 8px' }}>
+                              <div className="input-tabs" style={{ margin: 0 }}>
+                                <button
+                                  type="button"
+                                  className={`btn small ${h.plan !== 'paid' ? '' : 'secondary'}`}
+                                  disabled={planUpdatingId === h.id}
+                                  onClick={() => setHouseholdPlan(h.id, 'free')}
+                                >
+                                  Free
+                                </button>
+                                <button
+                                  type="button"
+                                  className={`btn small ${h.plan === 'paid' ? '' : 'secondary'}`}
+                                  disabled={planUpdatingId === h.id}
+                                  onClick={() => setHouseholdPlan(h.id, 'paid')}
+                                >
+                                  Paid
+                                </button>
                               </div>
                             </td>
                           </tr>
                           {members.length === 0 && (
-                            <tr><td colSpan={9} className="muted-small">No members yet</td></tr>
+                            <tr><td colSpan={10} className="muted-small">No members yet</td></tr>
                           )}
                           {members.map((m) => (
                             <tr key={m.email}>
@@ -496,6 +504,7 @@ export default function AdminConsole({ onClose, embedded = false }) {
                               <td data-label="Last Seen">{m.lastSeen || '--'}</td>
                               <td data-label="Joined">{m.joined ? new Date(m.joined).toLocaleDateString() : '--'}</td>
                               <td data-label="Last Login">{m.lastLogin ? new Date(m.lastLogin).toLocaleDateString() : '--'}</td>
+                              <td data-label="Plan" className="muted-small">{h.plan === 'paid' ? 'Paid' : 'Free'}</td>
                             </tr>
                           ))}
                         </Fragment>
