@@ -2177,6 +2177,15 @@ td.amount { font-weight: 600; text-align: right; }
       flex-direction: column; align-items: center; gap: 3px; color: var(--muted);
       font-size: 8.5px; font-weight: 700; cursor: pointer; width: 100%;
     }
+    /* v3.60: small lock badge on Fixed/Savings/Investments when the
+       household is on the Free plan -- tapping still works (opens the
+       upgrade prompt), this is just a visual hint so it doesn't look like
+       a dead/broken button. */
+    .rail-plan-lock {
+      position: absolute; top: 2px; right: 8px;
+      color: var(--muted); background: var(--card);
+      border-radius: 50%; padding: 1px;
+    }
     /* v3.28: reminders/bell now lives in the rail -- its dropdown used to
        be right-anchored for a top-right corner button; from the left edge
        it needs to open rightward instead, or it renders off-screen. */

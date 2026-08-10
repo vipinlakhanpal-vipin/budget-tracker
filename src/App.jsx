@@ -187,12 +187,16 @@ export default function App() {
 
     const { data: memberships } = await supabase
       .from('household_members')
-      .select('household_id, role, households(name)')
+      .select('household_id, role, households(name, plan)')
       .eq('user_id', session.user.id);
 
     if (memberships && memberships.length > 0) {
       const m = memberships[0];
-      setHousehold({ id: m.household_id, role: m.role, name: m.households?.name });
+      // plan: 'free' | 'paid', admin-granted (see supabase/migration_plan_tier.sql).
+      // Defaults to 'free' defensively even though the DB column itself
+      // already defaults to 'free', in case this ever runs against a
+      // household row from before the migration.
+      setHousehold({ id: m.household_id, role: m.role, name: m.households?.name, plan: m.households?.plan || 'free' });
     } else {
       setHousehold(null);
     }
