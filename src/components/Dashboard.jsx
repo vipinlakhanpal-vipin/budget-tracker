@@ -1506,6 +1506,28 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       </div>
     );
   }
+  // Mobile counterpart of renderDeskRail -- same Add/View/Charts frame
+  // switcher, laid out as a horizontal pill row instead of a side rail
+  // (a side rail doesn't work on a narrow screen). Mobile used to just
+  // stack the Add form and View list on one page always; this lets one
+  // thing show at a time here too, same decluttering win desktop got,
+  // and lets mobile reach the Charts frame for Income/Fixed/Savings for
+  // the first time (previously desktop-only).
+  function renderMobilePills(section) {
+    return (
+      <div className="mobile-frame-pills">
+        <button type="button" className={deskFrame[section] === 'add' ? 'active' : ''} onClick={() => setDeskFrameFor(section, 'add')}>
+          <Plus size={15} /> Add
+        </button>
+        <button type="button" className={deskFrame[section] === 'view' ? 'active' : ''} onClick={() => setDeskFrameFor(section, 'view')}>
+          <List size={15} /> View
+        </button>
+        <button type="button" className={deskFrame[section] === 'charts' ? 'active' : ''} onClick={() => setDeskFrameFor(section, 'charts')}>
+          <BarChart3 size={15} /> Charts
+        </button>
+      </div>
+    );
+  }
   // Which of the 5 data-entry sections (if any) is currently active, and
   // its selected frame -- drives content-grid becoming a real 3-column
   // layout (rail | content | chart) on desktop, with whichever of
@@ -2364,7 +2386,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
         if (!label.includes(q)) return false;
       }
       return true;
-    }).sort((a, b) => (b.expense_date || '').localeCompare(a.expense_date || '') || (b.id || 0) - (a.id || 0));
+    }).sort((a, b) => (b.expense_date || '').localeCompare(a.expense_date || '') || (b.created_at || '').localeCompare(a.created_at || ''));
   }, [rangeExpenses, expenseFilter, expenseSearchQuery]);
 
   const [recurringFilter, setRecurringFilter] = useState({ category: '', payment: '', bank: '' });
@@ -2392,7 +2414,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
         if (!label.includes(q)) return false;
       }
       return true;
-    }).sort((a, b) => (b.start_date || '').localeCompare(a.start_date || '') || (b.id || 0) - (a.id || 0));
+    }).sort((a, b) => (b.start_date || '').localeCompare(a.start_date || '') || (b.created_at || '').localeCompare(a.created_at || ''));
   }, [recurringForMonth, recurringFilter, recurringSearchQuery]);
 
   const [incomeFilter, setIncomeFilter] = useState({ source: '', member: '' });
@@ -2424,7 +2446,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       if (incomeFilter.source && (i.name || '').trim() !== incomeFilter.source) return false;
       if (incomeFilter.member && i.member_email !== incomeFilter.member) return false;
       return true;
-    }).sort((a, b) => (b.start_date || '').localeCompare(a.start_date || '') || (b.id || 0) - (a.id || 0));
+    }).sort((a, b) => (b.start_date || '').localeCompare(a.start_date || '') || (b.created_at || '').localeCompare(a.created_at || ''));
   }, [incomeForMonth, incomeFilter]);
 
   const [savingsFilter, setSavingsFilter] = useState({ name: '' });
@@ -2449,7 +2471,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     return savingsForMonth.filter((s) => {
       if (savingsFilter.name && (s.name || '').trim() !== savingsFilter.name) return false;
       return true;
-    }).sort((a, b) => (b.start_date || '').localeCompare(a.start_date || '') || (b.id || 0) - (a.id || 0));
+    }).sort((a, b) => (b.start_date || '').localeCompare(a.start_date || '') || (b.created_at || '').localeCompare(a.created_at || ''));
   }, [savingsForMonth, savingsFilter]);
 
   // Bills/rent due soon -- an in-app pop-up style banner starting N days
@@ -2935,6 +2957,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     if (expenseFilesInputRef.current) expenseFilesInputRef.current.value = '';
     loadAll();
     showToast('Updated');
+    setDeskFrameFor('expense', 'view');
   }
 
   // AI feature #1: ask Claude to pick the best category for what the user
@@ -3159,6 +3182,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     cancelEditInvestment();
     await loadAll();
     showToast(wasEditing ? 'Investment updated' : 'Investment added');
+    setDeskFrameFor('investments', 'view');
   }
 
   function handleDeleteInvestment(id, name) {
@@ -3709,6 +3733,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     setRecurringFiles([]);
     if (recurringFilesInputRef.current) recurringFilesInputRef.current.value = '';
     loadAll();
+    setDeskFrameFor('fixed', 'view');
   }
 
   // Every field in the Fixed monthly expenses table auto-saves -- there's no
@@ -3781,6 +3806,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     setSavingFiles([]);
     if (savingFilesInputRef.current) savingFilesInputRef.current.value = '';
     loadAll();
+    setDeskFrameFor('savings', 'view');
   }
 
   // Savings rows auto-save like Income -- text/number fields commit on blur,
@@ -3933,6 +3959,7 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     setIncomeFiles([]);
     if (incomeFilesInputRef.current) incomeFilesInputRef.current.value = '';
     loadAll();
+    setDeskFrameFor('income', 'view');
   }
 
   // Income rows auto-save like Fixed Expenses -- text/number fields commit on
@@ -6953,7 +6980,8 @@ I can help you track expenses, understand spending patterns, create budgets, and
           )}
           {activePanel === 'investments' ? (
  <>
- {(isMobile || deskFrame.investments === 'add') && (
+ {isMobile && renderMobilePills('investments')}
+ {(deskFrame.investments === 'add') && (
  <div className="panel" ref={panelRef} style={{ maxWidth: '100%', marginBottom: 24 }}>
             <div className="panel-title-row-inline" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <h2 className="panel-title-themed" style={{ marginBottom: 0 }}>My Investments</h2>
@@ -7111,7 +7139,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
           </div>
           )}
 
-          {(isMobile || deskFrame.investments === 'view') && (
+          {(deskFrame.investments === 'view') && (
           <div className="panel" style={{ maxWidth: '100%', marginBottom: 24 }}>
             <h2 className="panel-title-themed" style={{ fontSize: 16 }}>Your Investment Records</h2>
             <div>
@@ -7203,7 +7231,8 @@ I can help you track expenses, understand spending patterns, create budgets, and
             </button>
           </div>
 
-          {inputTab === 'expense' && (isMobile || deskFrame.expense === 'add') && (
+          {inputTab === 'expense' && isMobile && renderMobilePills('expense')}
+          {inputTab === 'expense' && (deskFrame.expense === 'add') && (
           <div className="panel">
             <h2 className="panel-title-themed form-title-mobile-hide">Regular Expenses</h2>
             {confirmBanner('expense')}{noticeBanner('expense')}
@@ -7379,7 +7408,8 @@ I can help you track expenses, understand spending patterns, create budgets, and
           <div className="panel">
             <h2 className="panel-title-themed form-title-mobile-hide">Income</h2>
             {confirmBanner('income')}{noticeBanner('income')}
-            {(isMobile || deskFrame.income === 'add') && (<>
+            {isMobile && renderMobilePills('income')}
+            {(deskFrame.income === 'add') && (<>
             <form onSubmit={handleAddIncome}>
             {/* Month field removed on purpose -- this entry's month
                 already comes from the month-nav selector above (see the
@@ -7481,7 +7511,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             <PendingAttachmentChips files={incomeFiles} onRemove={(i) => removeAttachmentAt(setIncomeFiles, i)} />
             </form>
             </>)}
-            {(isMobile || deskFrame.income === 'view') && (<>
+            {(deskFrame.income === 'view') && (<>
             <div className="panel-heading-row" style={{ justifyContent: 'flex-end', marginTop: 8, marginBottom: 0 }}>
               <div className="filter-wrap" ref={incomeFilterRef}>
                 <button
@@ -7652,7 +7682,8 @@ I can help you track expenses, understand spending patterns, create budgets, and
 
           {inputTab === 'fixed' && (
           <>
-          {(isMobile || deskFrame.fixed === 'add') && (
+          {isMobile && renderMobilePills('fixed')}
+          {(deskFrame.fixed === 'add') && (
           <div className="panel">
             <h2 className="panel-title-themed form-title-mobile-hide">Fixed Expenses</h2>
             {confirmBanner('fixed')}{noticeBanner('fixed')}
@@ -7862,7 +7893,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
               month" already sits in its own panel below the Add-expense form
               -- makes it visually clear where you type a NEW fixed expense
               versus where you review/edit the ones you've already added. */}
-          {(isMobile || deskFrame.fixed === 'view') && (
+          {(deskFrame.fixed === 'view') && (
           <div className="panel">
             <div className="panel-heading-row">
               <h2 className="panel-title-themed" style={{ marginBottom: 0 }}>Your fixed expenses</h2>
@@ -8197,7 +8228,8 @@ I can help you track expenses, understand spending patterns, create budgets, and
           <div className="panel">
             <h2 className="panel-title-themed form-title-mobile-hide">Savings</h2>
             {confirmBanner('savings')}{noticeBanner('savings')}
-            {(isMobile || deskFrame.savings === 'add') && (<>
+            {isMobile && renderMobilePills('savings')}
+            {(deskFrame.savings === 'add') && (<>
             <div className="muted-small" style={{ textAlign: 'left', marginTop: -6, marginBottom: 12 }}>
               How much you want to set aside each month
             </div>
@@ -8291,7 +8323,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             <PendingAttachmentChips files={savingFiles} onRemove={(i) => removeAttachmentAt(setSavingFiles, i)} />
             </form>
             </>)}
-            {(isMobile || deskFrame.savings === 'view') && (<>
+            {(deskFrame.savings === 'view') && (<>
             <div className="panel-heading-row" style={{ justifyContent: 'flex-end', marginTop: 8, marginBottom: 0 }}>
               <div className="filter-wrap" ref={savingsFilterRef}>
                 <button
@@ -8453,7 +8485,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             should show only its own list instead of this one staying
             visible underneath every other tab, which read as cluttered
             and confusing once the tabs looked mutually exclusive. */}
-          {inputTab === 'expense' && (isMobile || deskFrame.expense === 'view') && (
+          {inputTab === 'expense' && (deskFrame.expense === 'view') && (
                     <div className="panel">
             {/* Renamed from the generic "Expenses this month" -- the month
                 shown here always follows currentMonth (the same </> month-
@@ -8783,7 +8815,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
               active tab's Charts frame is selected, per explicit request
               for full-width, clearly visible charts instead of a narrow
               side column. */}
-          {inputTab === 'income' && !isMobile && deskFrame.income === 'charts' && (
+          {inputTab === 'income' && deskFrame.income === 'charts' && (
             <div className="panel">
               <h2 className="panel-title-themed" style={{ fontSize: 16 }}>Income by source -- {monthLabel(currentMonth)}</h2>
               {incomeForMonth.length === 0 ? (
@@ -8801,7 +8833,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             </div>
           )}
 
-          {inputTab === 'fixed' && !isMobile && deskFrame.fixed === 'charts' && (
+          {inputTab === 'fixed' && deskFrame.fixed === 'charts' && (
             <div className="panel">
               <h2 className="panel-title-themed" style={{ fontSize: 16 }}>Fixed expenses by category -- {monthLabel(currentMonth)}</h2>
               {(() => {
@@ -8826,7 +8858,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             </div>
           )}
 
-          {inputTab === 'savings' && !isMobile && deskFrame.savings === 'charts' && (
+          {inputTab === 'savings' && deskFrame.savings === 'charts' && (
             <div className="panel">
               <h2 className="panel-title-themed" style={{ fontSize: 16 }}>Savings by goal -- {monthLabel(currentMonth)}</h2>
               {savingsForMonth.length === 0 ? (
@@ -8844,7 +8876,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             </div>
           )}
 
-          {inputTab === 'expense' && !isMobile && deskFrame.expense === 'charts' && (
+          {inputTab === 'expense' && deskFrame.expense === 'charts' && (
             <>
               {chartTypeToggle(false)}
               {renderChartCard(false)}
@@ -8853,7 +8885,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             </>
           )}
 
-          {activePanel === 'investments' && !isMobile && deskFrame.investments === 'charts' && (
+          {activePanel === 'investments' && deskFrame.investments === 'charts' && (
             <div className="card" style={{ marginBottom: 24 }}>
               <h3 style={{ marginTop: 0 }}>Investment Overview</h3>
               {investments.length === 0 ? (
@@ -8968,9 +9000,9 @@ I can help you track expenses, understand spending patterns, create budgets, and
             // every app release -- only when Help itself is edited), so the
             // little "Help updated as of vX.XX" marker next to the tour button
             // tells users this text is actually in sync with what they're using.
-            const HELP_LAST_UPDATED_VERSION = '3.51';
+            const HELP_LAST_UPDATED_VERSION = '3.54';
             const helpTopics = [
-{ key: 'updates', title: "What's New", body: <>Latest updates (Aug 10, 2026): You can now delete your own account from Settings &rsaquo; App &rsaquo; Account, and there's now a Terms of Service alongside the Privacy Policy in the footer and in Settings. The footer's "Suggestion" link is now "Support" -- pick a topic tag or two and describe what's going on, and it goes straight to the app owner. The 10 dashboard summary tiles (Monthly Budget through My Investments) each get their own subtle color now instead of one flat surface. On desktop, Income, Fixed Expenses, Regular Expenses, Savings, and Investments have a thin left rail (Add/View/Charts) so you see one thing at a time instead of everything stacked at once, and picking Charts now shows it at full width instead of a narrow side column. The top tab bar (Dashboard through Help) is now one rounded pill capsule instead of separate solid buttons, with only the active tab filled in.</> },
+{ key: 'updates', title: "What's New", body: <>Latest updates (Aug 10, 2026): You can now delete your own account from Settings &rsaquo; App &rsaquo; Account, and there's now a Terms of Service alongside the Privacy Policy in the footer and in Settings. The footer's "Suggestion" link is now "Support" -- pick a topic tag or two and describe what's going on, and it goes straight to the app owner. The 10 dashboard summary tiles (Monthly Budget through My Investments) each get their own subtle color now instead of one flat surface. On desktop, Income, Fixed Expenses, Regular Expenses, Savings, and Investments have a thin left rail (Add/View/Charts) so you see one thing at a time instead of everything stacked at once, and picking Charts now shows it at full width instead of a narrow side column. Mobile now has the same Add/View/Charts switcher as a row of pills at the top of each section, instead of everything stacked on one page -- and after you Add an entry it jumps straight to View so you see it land. Entries within the same date now sort with the most recently added one on top. The top tab bar (Dashboard through Help) is now one rounded pill capsule instead of separate solid buttons, with only the active tab filled in.</> },
               { key: 'home', title: 'Dashboard', body: <>Shows just the dashboard (summary cards and totals), nothing else. Below it, a bigger "Explore" section holds the same Spending by category chart (Pie/Bar/Pareto/Treemap), AI Insights, and Budget Coach, sized larger so there's more room to look through them. Clicking Income, Fixed Expenses, Regular Expenses, Savings, Report, Settings, or Help scrolls back up to the top and switches to that tab as usual.</> },
               { key: 'regular', title: 'Regular Expenses', body: <>Log one-off spending (groceries, dining, shopping). Pick the date, category, a short description, and the amount, then Add. It appears under "Expenses this month" and is always editable there -- just type into a field and it saves. The note icon (<StickyNote size={11} style={{ verticalAlign: -2 }} />) next to Amount opens a spot for a longer free-text description, and the paperclip (<Paperclip size={11} style={{ verticalAlign: -2 }} />) lets you attach one photo or PDF (5MB max) -- a receipt, warranty, or anything else worth keeping with that expense. Both are optional. Once saved, a small icon appears next to the entry if it has a note or attachment -- click it to read the note or open the file.</> },
               { key: 'scan', title: 'Scan a receipt', body: <>Below the Regular Expenses form, upload a photo of a receipt (or a screenshot/sheet listing several expenses) and Claude will read it for you. You'll see an editable review list first -- fix anything that looks wrong, untick what you don't want, then add only what you confirm. Nothing is saved automatically.</> },
