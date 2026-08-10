@@ -17,7 +17,7 @@ import {
   Pencil, Trash2, X, ChevronLeft, ChevronRight, ChevronDown, Camera, MessageCircle, Bot, Sparkles, User,
   Palette, Check, StickyNote, Paperclip, ExternalLink, Mail, Lightbulb,
   Wallet, CalendarClock, ShoppingCart, PiggyBank, HelpCircle, Filter, Search, Sun, Moon, RefreshCw, Landmark, BookOpen,
-  Maximize2, LifeBuoy,
+  Maximize2, LifeBuoy, List, BarChart3,
 } from 'lucide-react';
 
 // v1.89: cross-browser searchable dropdown, replacing the old
@@ -1476,6 +1476,37 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   // user is working in. askConfirm() stores the pending message + the action
   // to run if the user says yes; confirmBanner() renders that as a banner
   // with Yes/Cancel buttons scoped to the tab/panel it was triggered from.
+  // Desktop-only left rail (Add / View / Charts) for the 5 data-entry
+  // tabs -- Vipin: "create a thin panel on left... this way screen may not
+  // look cluttered", one thing shown at a time instead of the Add form and
+  // the full list always stacked together. Mobile is untouched by design
+  // (isMobile is checked everywhere this is read), and 'add' is the
+  // default frame per explicit request ("view that directly will open is
+  // Add a entry frame"). Keyed by inputTab value plus 'investments' (which
+  // uses activePanel instead of inputTab for its own tab state).
+  const [deskFrame, setDeskFrame] = useState({ income: 'add', fixed: 'add', expense: 'add', savings: 'add', investments: 'add' });
+  function setDeskFrameFor(section, frame) {
+    setDeskFrame((f) => ({ ...f, [section]: frame }));
+  }
+  function renderDeskRail(section) {
+    return (
+      <div className="desk-frame-rail">
+        <button type="button" className={deskFrame[section] === 'add' ? 'active' : ''} onClick={() => setDeskFrameFor(section, 'add')} title="Add">
+          <Plus size={18} />
+          <span>Add</span>
+        </button>
+        <button type="button" className={deskFrame[section] === 'view' ? 'active' : ''} onClick={() => setDeskFrameFor(section, 'view')} title="View">
+          <List size={18} />
+          <span>View</span>
+        </button>
+        <button type="button" className={deskFrame[section] === 'charts' ? 'active' : ''} onClick={() => setDeskFrameFor(section, 'charts')} title="Charts">
+          <BarChart3 size={18} />
+          <span>Charts</span>
+        </button>
+      </div>
+    );
+  }
+
   const [confirmState, setConfirmState] = useState(null);
   function askConfirm(message, scope, onConfirm) {
     setConfirmState({ message, scope, onConfirm });
@@ -6889,6 +6920,14 @@ I can help you track expenses, understand spending patterns, create budgets, and
           )}
           {activePanel === 'investments' ? (
  <>
+ {!isMobile && renderDeskRail('investments')}
+ {!isMobile && deskFrame.investments === 'charts' && (
+ <div className="panel">
+   <h2 className="panel-title-themed" style={{ fontSize: 16 }}>Investments chart</h2>
+   <div className="muted-small">See the Pie/Bar/Pareto chart in the panel on the right.</div>
+ </div>
+ )}
+ {(isMobile || deskFrame.investments === 'add') && (
  <div className="panel" ref={panelRef} style={{ maxWidth: '100%', marginBottom: 24 }}>
             <div className="panel-title-row-inline" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <h2 className="panel-title-themed" style={{ marginBottom: 0 }}>My Investments</h2>
@@ -7044,7 +7083,9 @@ I can help you track expenses, understand spending patterns, create budgets, and
               </div>
             </div>
           </div>
+          )}
 
+          {(isMobile || deskFrame.investments === 'view') && (
           <div className="panel" style={{ maxWidth: '100%', marginBottom: 24 }}>
             <h2 className="panel-title-themed" style={{ fontSize: 16 }}>Your Investment Records</h2>
             <div>
@@ -7105,6 +7146,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
               )}
             </div>
           </div>
+          )}
 </>
 ) : (
 <>
@@ -7135,8 +7177,9 @@ I can help you track expenses, understand spending patterns, create budgets, and
             </button>
           </div>
 
-          {inputTab === 'expense' && (
+          {inputTab === 'expense' && (isMobile || deskFrame.expense === 'add') && (
           <div className="panel">
+            {!isMobile && renderDeskRail('expense')}
             <h2 className="panel-title-themed form-title-mobile-hide">Regular Expenses</h2>
             {confirmBanner('expense')}{noticeBanner('expense')}
             <form onSubmit={handleAddExpense}>
@@ -7309,8 +7352,10 @@ I can help you track expenses, understand spending patterns, create budgets, and
 
           {inputTab === 'income' && (
           <div className="panel">
+            {!isMobile && renderDeskRail('income')}
             <h2 className="panel-title-themed form-title-mobile-hide">Income</h2>
             {confirmBanner('income')}{noticeBanner('income')}
+            {(isMobile || deskFrame.income === 'add') && (<>
             <form onSubmit={handleAddIncome}>
             {/* Month field removed on purpose -- this entry's month
                 already comes from the month-nav selector above (see the
@@ -7411,6 +7456,8 @@ I can help you track expenses, understand spending patterns, create budgets, and
             )}
             <PendingAttachmentChips files={incomeFiles} onRemove={(i) => removeAttachmentAt(setIncomeFiles, i)} />
             </form>
+            </>)}
+            {(isMobile || deskFrame.income === 'view') && (<>
             <div className="panel-heading-row" style={{ justifyContent: 'flex-end', marginTop: 8, marginBottom: 0 }}>
               <div className="filter-wrap" ref={incomeFilterRef}>
                 <button
@@ -7505,6 +7552,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 Changes save automatically. <Amt value={totalIncome} /> in combined income counted toward {monthLabel(currentMonth)}.
               </div>
             )}
+            </>)}
 
             {/* Mobile edit sheet for a tapped income row -- same fields/handlers as desktop's inline row. */}
             {editingIncomeId && (() => {
@@ -7578,9 +7626,30 @@ I can help you track expenses, understand spending patterns, create budgets, and
           </div>
           )}
 
+          {inputTab === 'income' && !isMobile && deskFrame.income === 'charts' && (
+          <div className="panel">
+            {renderDeskRail('income')}
+            <h2 className="panel-title-themed" style={{ fontSize: 16 }}>Income by source -- {monthLabel(currentMonth)}</h2>
+            {incomeForMonth.length === 0 ? (
+              <div className="empty">No income added for {monthLabel(currentMonth)} yet.</div>
+            ) : (
+              <ResponsiveContainer width="100%" height={Math.max(180, incomeForMonth.length * 42)}>
+                <BarChart data={incomeForMonth.map((i) => ({ name: i.name, Amount: Number(i.amount) || 0 }))} layout="vertical" margin={{ top: 4, right: 28, bottom: 4, left: 4 }}>
+                  <XAxis type="number" hide />
+                  <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 12 }} />
+                  <Tooltip formatter={(v) => fmt(v)} />
+                  <Bar dataKey="Amount" fill="#059669" radius={[0, 6, 6, 0]} barSize={18} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+          )}
+
           {inputTab === 'fixed' && (
           <>
+          {(isMobile || deskFrame.fixed === 'add') && (
           <div className="panel">
+            {!isMobile && renderDeskRail('fixed')}
             <h2 className="panel-title-themed form-title-mobile-hide">Fixed Expenses</h2>
             {confirmBanner('fixed')}{noticeBanner('fixed')}
             <div className="muted-small" style={{ textAlign: 'center', marginTop: -6, marginBottom: 12 }}>
@@ -7783,12 +7852,15 @@ I can help you track expenses, understand spending patterns, create budgets, and
             <PendingAttachmentChips files={recurringFiles} onRemove={(i) => removeAttachmentAt(setRecurringFiles, i)} />
             </form>
           </div>
+          )}
           {/* Data entry (above) and the list of what's already been entered
               (below) are now two separate frames, same as how "Expenses this
               month" already sits in its own panel below the Add-expense form
               -- makes it visually clear where you type a NEW fixed expense
               versus where you review/edit the ones you've already added. */}
+          {(isMobile || deskFrame.fixed === 'view') && (
           <div className="panel">
+            {!isMobile && renderDeskRail('fixed')}
             <div className="panel-heading-row">
               <h2 className="panel-title-themed" style={{ marginBottom: 0 }}>Your fixed expenses</h2>
               <div className="filter-wrap" ref={recurringFilterRef}>
@@ -8114,13 +8186,42 @@ I can help you track expenses, understand spending patterns, create budgets, and
               );
             })()}
           </div>
+          )}
           </>
+          )}
+
+          {inputTab === 'fixed' && !isMobile && deskFrame.fixed === 'charts' && (
+          <div className="panel">
+            {renderDeskRail('fixed')}
+            <h2 className="panel-title-themed" style={{ fontSize: 16 }}>Fixed expenses by category -- {monthLabel(currentMonth)}</h2>
+            {(() => {
+              const byCat = {};
+              recurringForMonth.forEach((r) => {
+                const catName = categoryNameById[r.category_id] || 'Uncategorized';
+                byCat[catName] = (byCat[catName] || 0) + Number(r.amount || 0);
+              });
+              const data = Object.entries(byCat).map(([name, Amount]) => ({ name, Amount })).sort((a, b) => b.Amount - a.Amount);
+              if (data.length === 0) return <div className="empty">No fixed expenses for {monthLabel(currentMonth)} yet.</div>;
+              return (
+                <ResponsiveContainer width="100%" height={Math.max(180, data.length * 42)}>
+                  <BarChart data={data} layout="vertical" margin={{ top: 4, right: 28, bottom: 4, left: 4 }}>
+                    <XAxis type="number" hide />
+                    <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 12 }} />
+                    <Tooltip formatter={(v) => fmt(v)} />
+                    <Bar dataKey="Amount" fill="#ea580c" radius={[0, 6, 6, 0]} barSize={18} />
+                  </BarChart>
+                </ResponsiveContainer>
+              );
+            })()}
+          </div>
           )}
 
           {inputTab === 'savings' && (
           <div className="panel">
+            {!isMobile && renderDeskRail('savings')}
             <h2 className="panel-title-themed form-title-mobile-hide">Savings</h2>
             {confirmBanner('savings')}{noticeBanner('savings')}
+            {(isMobile || deskFrame.savings === 'add') && (<>
             <div className="muted-small" style={{ textAlign: 'left', marginTop: -6, marginBottom: 12 }}>
               How much you want to set aside each month
             </div>
@@ -8213,6 +8314,8 @@ I can help you track expenses, understand spending patterns, create budgets, and
             )}
             <PendingAttachmentChips files={savingFiles} onRemove={(i) => removeAttachmentAt(setSavingFiles, i)} />
             </form>
+            </>)}
+            {(isMobile || deskFrame.savings === 'view') && (<>
             <div className="panel-heading-row" style={{ justifyContent: 'flex-end', marginTop: 8, marginBottom: 0 }}>
               <div className="filter-wrap" ref={savingsFilterRef}>
                 <button
@@ -8295,6 +8398,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 <Amt value={savingsTotal} /> in planned savings for {monthLabel(currentMonth)}.
               </div>
             )}
+            </>)}
 
             {/* Mobile edit sheet for a tapped savings row -- same fields/handlers as desktop's inline row. */}
             {editingSavingId && (() => {
@@ -8368,13 +8472,41 @@ I can help you track expenses, understand spending patterns, create budgets, and
           </div>
           )}
 
+          {inputTab === 'savings' && !isMobile && deskFrame.savings === 'charts' && (
+          <div className="panel">
+            {renderDeskRail('savings')}
+            <h2 className="panel-title-themed" style={{ fontSize: 16 }}>Savings by goal -- {monthLabel(currentMonth)}</h2>
+            {savingsForMonth.length === 0 ? (
+              <div className="empty">No savings added for {monthLabel(currentMonth)} yet.</div>
+            ) : (
+              <ResponsiveContainer width="100%" height={Math.max(180, savingsForMonth.length * 42)}>
+                <BarChart data={savingsForMonth.map((s) => ({ name: s.name, Amount: Number(s.amount) || 0 }))} layout="vertical" margin={{ top: 4, right: 28, bottom: 4, left: 4 }}>
+                  <XAxis type="number" hide />
+                  <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 12 }} />
+                  <Tooltip formatter={(v) => fmt(v)} />
+                  <Bar dataKey="Amount" fill="#0d9488" radius={[0, 6, 6, 0]} barSize={18} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+          )}
+
           {/* Now shown only while the Regular Expenses tab itself is active --
             per explicit request, each tab (Income/Fixed/Regular/Savings)
             should show only its own list instead of this one staying
             visible underneath every other tab, which read as cluttered
             and confusing once the tabs looked mutually exclusive. */}
-          {inputTab === 'expense' && (
+          {inputTab === 'expense' && !isMobile && deskFrame.expense === 'charts' && (
+          <div className="panel">
+            {renderDeskRail('expense')}
+            <h2 className="panel-title-themed" style={{ fontSize: 16 }}>Regular expenses chart</h2>
+            <div className="muted-small">See the category breakdown in the panel on the right.</div>
+          </div>
+          )}
+
+          {inputTab === 'expense' && (isMobile || deskFrame.expense === 'view') && (
                     <div className="panel">
+            {!isMobile && renderDeskRail('expense')}
             {/* Renamed from the generic "Expenses this month" -- the month
                 shown here always follows currentMonth (the same </> month-
                 nav state driving the whole dashboard), so it stays correct
@@ -8693,7 +8825,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
               for entering data -- the chart/AI/Coach cards are only useful
               once there's data to look at, and are still one tap away via
               the Dashboard tab. Desktop is unaffected. */}
-          {inputTab && !isMobile && activePanel !== 'investments' && (
+          {inputTab === 'expense' && !isMobile && deskFrame.expense === 'charts' && (
             <>
               {chartTypeToggle(false)}
               {renderChartCard(false)}
@@ -8702,7 +8834,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             </>
           )}
 
-          {activePanel === 'investments' && (
+          {activePanel === 'investments' && !isMobile && deskFrame.investments === 'charts' && (
             <div className="card" style={{ marginBottom: 24 }}>
               <h3 style={{ marginTop: 0 }}>Investment Overview</h3>
               {investments.length === 0 ? (
