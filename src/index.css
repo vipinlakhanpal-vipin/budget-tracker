@@ -2147,28 +2147,28 @@ td.amount { font-weight: 600; text-align: right; }
     .mobile-side-rail {
       display: flex !important; flex-direction: column; gap: 10px;
       position: fixed; left: 0;
-      /* v3.58: v3.56/v3.57 tried a dvh-based top+height and then a portal
-         to document.body -- both were real bugs worth fixing, but neither
-         was THE bug. Vipin pinned it exactly: "when u click income the
-         add, view and chart has to appear and whole left tab panel shifts
-         upwards" -- i.e. this was still being positioned relative to
-         PAGE/document height (via top+height spanning "the viewport minus
-         a footer", computed fresh against whatever the page's height
-         happened to be at that moment), not the icon group's own fixed
-         46px-per-button content. Income/Fixed/etc. render a much taller
-         page than Dash, and that page-height swing was still leaking into
-         where this rail sat. Fixed for real this time by centering purely
-         via top:50%/translateY(-50%) -- position:fixed's containing block
-         is the viewport itself, and this centers against the VIEWPORT's
-         own height only, with zero inputs from document height, current
-         tab, or number of buttons (always a fixed 8). The only thing that
-         can still move it is the viewport itself physically resizing
-         (address bar show/hide), which is real device chrome moving, not
-         a bug. max-height + overflow-y is a safety net only, for a
-         viewport too short to fit all 8 icons at once. */
-      top: 50%; transform: translateY(-50%);
-      max-height: calc(100dvh - 78px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
-      width: 54px; padding: 10px 0; z-index: 55; overflow-y: auto;
+      /* v3.59: v3.56-58 each tried a different viewport-height-unit-based
+         approach (vh, then dvh, then dvh-driven 50% centering) and Vipin's
+         own screen recording proved the rail was STILL jumping -- measured
+         pixel-exact, it toggled between two fixed Y positions depending on
+         which data-entry tab was open (Income's short 3-field form vs
+         Regular Expenses' much longer form with the AI category/receipt-
+         scan fields). That rules out page/document height as the cause
+         (already fixed in v3.57/58) and points at `dvh` itself: iOS's
+         `interactive-widget=resizes-content` (index.html) shrinks the
+         LAYOUT viewport -- which dvh is computed from -- while a text
+         field is focused, and on iOS this has a well-known bug where the
+         viewport doesn't always cleanly restore afterwards, leaving dvh
+         reporting a smaller value even once the keyboard is gone. Any
+         formula built on dvh inherits that unreliability.
+         Real fix: stop depending on viewport height entirely. Anchor from
+         the top only, a fixed distance below the safe area -- a pure
+         constant, immune to keyboard state, page height, or which tab is
+         open. The rail's own bottom edge is then just wherever its fixed
+         8-button content naturally ends, not computed against anything
+         dynamic at all. */
+      top: calc(env(safe-area-inset-top) + 84px);
+      width: 54px; padding: 10px 0; z-index: 55; overflow-y: visible;
       background: var(--card); border-right: 1px solid var(--border);
     }
     .mobile-side-rail button {
