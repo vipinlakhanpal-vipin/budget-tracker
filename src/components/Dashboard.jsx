@@ -1506,6 +1506,18 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
       </div>
     );
   }
+  // Which of the 5 data-entry sections (if any) is currently active, and
+  // its selected frame -- drives content-grid becoming a real 3-column
+  // layout (rail | content | chart) on desktop, with whichever of
+  // content/chart holds the active frame's output spanning BOTH of the
+  // non-rail columns so it always uses the full remaining width, per
+  // explicit request ("middle panel where data is entered, viewed will be
+  // expanded until end of right... charts will be fully visible when
+  // chart tab is clicked"). Investments uses activePanel instead of
+  // inputTab for its own tab state, everything else uses inputTab.
+  const activeDeskSection = activePanel === 'investments' ? 'investments' : (inputTab || null);
+  const activeDeskFrame = activeDeskSection ? deskFrame[activeDeskSection] : null;
+  const deskRailActive = !isMobile && !!activeDeskSection;
 
   const [confirmState, setConfirmState] = useState(null);
   function askConfirm(message, scope, onConfirm) {
@@ -6904,8 +6916,13 @@ I can help you track expenses, understand spending patterns, create budgets, and
       </div>
       <div className="sticky-dashboard-frame-spacer" style={{ height: 0 }} />
 
-      <div className="content-grid">
-        <div ref={inputTabsSectionRef} className={addSheetOpen ? 'mobile-add-sheet' : undefined}>
+      <div className="content-grid" style={deskRailActive ? { gridTemplateColumns: '64px minmax(0, 2.4fr) minmax(300px, 1fr)' } : undefined}>
+        {deskRailActive && renderDeskRail(activeDeskSection)}
+        <div
+          ref={inputTabsSectionRef}
+          className={addSheetOpen ? 'mobile-add-sheet' : undefined}
+          style={(deskRailActive && activeDeskFrame !== 'charts') ? { gridColumn: '2 / -1' } : undefined}
+        >
           {addSheetOpen && (
             <div className="mobile-sheet-handle">
               <span className="mobile-sheet-drag" />
@@ -6920,13 +6937,6 @@ I can help you track expenses, understand spending patterns, create budgets, and
           )}
           {activePanel === 'investments' ? (
  <>
- {!isMobile && renderDeskRail('investments')}
- {!isMobile && deskFrame.investments === 'charts' && (
- <div className="panel">
-   <h2 className="panel-title-themed" style={{ fontSize: 16 }}>Investments chart</h2>
-   <div className="muted-small">See the Pie/Bar/Pareto chart in the panel on the right.</div>
- </div>
- )}
  {(isMobile || deskFrame.investments === 'add') && (
  <div className="panel" ref={panelRef} style={{ maxWidth: '100%', marginBottom: 24 }}>
             <div className="panel-title-row-inline" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -7179,7 +7189,6 @@ I can help you track expenses, understand spending patterns, create budgets, and
 
           {inputTab === 'expense' && (isMobile || deskFrame.expense === 'add') && (
           <div className="panel">
-            {!isMobile && renderDeskRail('expense')}
             <h2 className="panel-title-themed form-title-mobile-hide">Regular Expenses</h2>
             {confirmBanner('expense')}{noticeBanner('expense')}
             <form onSubmit={handleAddExpense}>
@@ -7352,7 +7361,6 @@ I can help you track expenses, understand spending patterns, create budgets, and
 
           {inputTab === 'income' && (
           <div className="panel">
-            {!isMobile && renderDeskRail('income')}
             <h2 className="panel-title-themed form-title-mobile-hide">Income</h2>
             {confirmBanner('income')}{noticeBanner('income')}
             {(isMobile || deskFrame.income === 'add') && (<>
@@ -7626,30 +7634,10 @@ I can help you track expenses, understand spending patterns, create budgets, and
           </div>
           )}
 
-          {inputTab === 'income' && !isMobile && deskFrame.income === 'charts' && (
-          <div className="panel">
-            {renderDeskRail('income')}
-            <h2 className="panel-title-themed" style={{ fontSize: 16 }}>Income by source -- {monthLabel(currentMonth)}</h2>
-            {incomeForMonth.length === 0 ? (
-              <div className="empty">No income added for {monthLabel(currentMonth)} yet.</div>
-            ) : (
-              <ResponsiveContainer width="100%" height={Math.max(180, incomeForMonth.length * 42)}>
-                <BarChart data={incomeForMonth.map((i) => ({ name: i.name, Amount: Number(i.amount) || 0 }))} layout="vertical" margin={{ top: 4, right: 28, bottom: 4, left: 4 }}>
-                  <XAxis type="number" hide />
-                  <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 12 }} />
-                  <Tooltip formatter={(v) => fmt(v)} />
-                  <Bar dataKey="Amount" fill="#059669" radius={[0, 6, 6, 0]} barSize={18} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-          )}
-
           {inputTab === 'fixed' && (
           <>
           {(isMobile || deskFrame.fixed === 'add') && (
           <div className="panel">
-            {!isMobile && renderDeskRail('fixed')}
             <h2 className="panel-title-themed form-title-mobile-hide">Fixed Expenses</h2>
             {confirmBanner('fixed')}{noticeBanner('fixed')}
             <div className="muted-small" style={{ textAlign: 'center', marginTop: -6, marginBottom: 12 }}>
@@ -7860,7 +7848,6 @@ I can help you track expenses, understand spending patterns, create budgets, and
               versus where you review/edit the ones you've already added. */}
           {(isMobile || deskFrame.fixed === 'view') && (
           <div className="panel">
-            {!isMobile && renderDeskRail('fixed')}
             <div className="panel-heading-row">
               <h2 className="panel-title-themed" style={{ marginBottom: 0 }}>Your fixed expenses</h2>
               <div className="filter-wrap" ref={recurringFilterRef}>
@@ -8190,35 +8177,8 @@ I can help you track expenses, understand spending patterns, create budgets, and
           </>
           )}
 
-          {inputTab === 'fixed' && !isMobile && deskFrame.fixed === 'charts' && (
-          <div className="panel">
-            {renderDeskRail('fixed')}
-            <h2 className="panel-title-themed" style={{ fontSize: 16 }}>Fixed expenses by category -- {monthLabel(currentMonth)}</h2>
-            {(() => {
-              const byCat = {};
-              recurringForMonth.forEach((r) => {
-                const catName = categoryNameById[r.category_id] || 'Uncategorized';
-                byCat[catName] = (byCat[catName] || 0) + Number(r.amount || 0);
-              });
-              const data = Object.entries(byCat).map(([name, Amount]) => ({ name, Amount })).sort((a, b) => b.Amount - a.Amount);
-              if (data.length === 0) return <div className="empty">No fixed expenses for {monthLabel(currentMonth)} yet.</div>;
-              return (
-                <ResponsiveContainer width="100%" height={Math.max(180, data.length * 42)}>
-                  <BarChart data={data} layout="vertical" margin={{ top: 4, right: 28, bottom: 4, left: 4 }}>
-                    <XAxis type="number" hide />
-                    <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 12 }} />
-                    <Tooltip formatter={(v) => fmt(v)} />
-                    <Bar dataKey="Amount" fill="#ea580c" radius={[0, 6, 6, 0]} barSize={18} />
-                  </BarChart>
-                </ResponsiveContainer>
-              );
-            })()}
-          </div>
-          )}
-
           {inputTab === 'savings' && (
           <div className="panel">
-            {!isMobile && renderDeskRail('savings')}
             <h2 className="panel-title-themed form-title-mobile-hide">Savings</h2>
             {confirmBanner('savings')}{noticeBanner('savings')}
             {(isMobile || deskFrame.savings === 'add') && (<>
@@ -8472,41 +8432,13 @@ I can help you track expenses, understand spending patterns, create budgets, and
           </div>
           )}
 
-          {inputTab === 'savings' && !isMobile && deskFrame.savings === 'charts' && (
-          <div className="panel">
-            {renderDeskRail('savings')}
-            <h2 className="panel-title-themed" style={{ fontSize: 16 }}>Savings by goal -- {monthLabel(currentMonth)}</h2>
-            {savingsForMonth.length === 0 ? (
-              <div className="empty">No savings added for {monthLabel(currentMonth)} yet.</div>
-            ) : (
-              <ResponsiveContainer width="100%" height={Math.max(180, savingsForMonth.length * 42)}>
-                <BarChart data={savingsForMonth.map((s) => ({ name: s.name, Amount: Number(s.amount) || 0 }))} layout="vertical" margin={{ top: 4, right: 28, bottom: 4, left: 4 }}>
-                  <XAxis type="number" hide />
-                  <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 12 }} />
-                  <Tooltip formatter={(v) => fmt(v)} />
-                  <Bar dataKey="Amount" fill="#0d9488" radius={[0, 6, 6, 0]} barSize={18} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-          )}
-
           {/* Now shown only while the Regular Expenses tab itself is active --
             per explicit request, each tab (Income/Fixed/Regular/Savings)
             should show only its own list instead of this one staying
             visible underneath every other tab, which read as cluttered
             and confusing once the tabs looked mutually exclusive. */}
-          {inputTab === 'expense' && !isMobile && deskFrame.expense === 'charts' && (
-          <div className="panel">
-            {renderDeskRail('expense')}
-            <h2 className="panel-title-themed" style={{ fontSize: 16 }}>Regular expenses chart</h2>
-            <div className="muted-small">See the category breakdown in the panel on the right.</div>
-          </div>
-          )}
-
           {inputTab === 'expense' && (isMobile || deskFrame.expense === 'view') && (
                     <div className="panel">
-            {!isMobile && renderDeskRail('expense')}
             {/* Renamed from the generic "Expenses this month" -- the month
                 shown here always follows currentMonth (the same </> month-
                 nav state driving the whole dashboard), so it stays correct
@@ -8812,19 +8744,90 @@ I can help you track expenses, understand spending patterns, create budgets, and
 </>
 )}
         </div>
-                <div style={(activePanel === 'report' || activePanel === 'help' || activePanel === 'settings' || activePanel === 'roadmap') ? { gridColumn: '1 / -1' } : undefined}>
-          {/* This narrow chart/AI column only shows for the normal
-              data-entry tabs now (inputTab truthy) -- Home has its own
-              full-width, bigger version of the same three cards further
-              down the page (see the !inputTab section right after this
-              content-grid closes), so the two don't show at once. Report/
-              Settings/Help panels below still render regardless of
-              inputTab, since those can be open at the same time as Home.
-              Mobile-only: this column is dropped entirely on the data-entry
-              tabs so the form to its left gets the full screen width/height
-              for entering data -- the chart/AI/Coach cards are only useful
-              once there's data to look at, and are still one tap away via
-              the Dashboard tab. Desktop is unaffected. */}
+                <div
+          style={
+            (activePanel === 'report' || activePanel === 'help' || activePanel === 'settings' || activePanel === 'roadmap')
+              ? { gridColumn: '1 / -1' }
+              : (deskRailActive && activeDeskFrame === 'charts') ? { gridColumn: '2 / -1' } : undefined
+          }
+        >
+          {/* This chart/AI column only shows for the normal data-entry
+              tabs now (inputTab truthy) -- Home has its own full-width,
+              bigger version of the same three cards further down the page
+              (see the !inputTab section right after this content-grid
+              closes), so the two don't show at once. Report/Settings/Help
+              panels below still render regardless of inputTab, since those
+              can be open at the same time as Home. Mobile-only: this
+              column is dropped entirely on the data-entry tabs so the form
+              to its left gets the full screen width/height for entering
+              data -- the chart/AI/Coach cards are only useful once there's
+              data to look at, and are still one tap away via the Dashboard
+              tab. Desktop is unaffected. On desktop, this column now also
+              spans the full remaining width (past the rail) whenever the
+              active tab's Charts frame is selected, per explicit request
+              for full-width, clearly visible charts instead of a narrow
+              side column. */}
+          {inputTab === 'income' && !isMobile && deskFrame.income === 'charts' && (
+            <div className="panel">
+              <h2 className="panel-title-themed" style={{ fontSize: 16 }}>Income by source -- {monthLabel(currentMonth)}</h2>
+              {incomeForMonth.length === 0 ? (
+                <div className="empty">No income added for {monthLabel(currentMonth)} yet.</div>
+              ) : (
+                <ResponsiveContainer width="100%" height={Math.max(260, incomeForMonth.length * 48)}>
+                  <BarChart data={incomeForMonth.map((i) => ({ name: i.name, Amount: Number(i.amount) || 0 }))} layout="vertical" margin={{ top: 4, right: 40, bottom: 4, left: 4 }}>
+                    <XAxis type="number" hide />
+                    <YAxis type="category" dataKey="name" width={160} tick={{ fontSize: 13 }} />
+                    <Tooltip formatter={(v) => fmt(v)} />
+                    <Bar dataKey="Amount" fill="#059669" radius={[0, 6, 6, 0]} barSize={24} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          )}
+
+          {inputTab === 'fixed' && !isMobile && deskFrame.fixed === 'charts' && (
+            <div className="panel">
+              <h2 className="panel-title-themed" style={{ fontSize: 16 }}>Fixed expenses by category -- {monthLabel(currentMonth)}</h2>
+              {(() => {
+                const byCat = {};
+                recurringForMonth.forEach((r) => {
+                  const catName = categoryNameById[r.category_id] || 'Uncategorized';
+                  byCat[catName] = (byCat[catName] || 0) + Number(r.amount || 0);
+                });
+                const data = Object.entries(byCat).map(([name, Amount]) => ({ name, Amount })).sort((a, b) => b.Amount - a.Amount);
+                if (data.length === 0) return <div className="empty">No fixed expenses for {monthLabel(currentMonth)} yet.</div>;
+                return (
+                  <ResponsiveContainer width="100%" height={Math.max(260, data.length * 48)}>
+                    <BarChart data={data} layout="vertical" margin={{ top: 4, right: 40, bottom: 4, left: 4 }}>
+                      <XAxis type="number" hide />
+                      <YAxis type="category" dataKey="name" width={160} tick={{ fontSize: 13 }} />
+                      <Tooltip formatter={(v) => fmt(v)} />
+                      <Bar dataKey="Amount" fill="#ea580c" radius={[0, 6, 6, 0]} barSize={24} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                );
+              })()}
+            </div>
+          )}
+
+          {inputTab === 'savings' && !isMobile && deskFrame.savings === 'charts' && (
+            <div className="panel">
+              <h2 className="panel-title-themed" style={{ fontSize: 16 }}>Savings by goal -- {monthLabel(currentMonth)}</h2>
+              {savingsForMonth.length === 0 ? (
+                <div className="empty">No savings added for {monthLabel(currentMonth)} yet.</div>
+              ) : (
+                <ResponsiveContainer width="100%" height={Math.max(260, savingsForMonth.length * 48)}>
+                  <BarChart data={savingsForMonth.map((s) => ({ name: s.name, Amount: Number(s.amount) || 0 }))} layout="vertical" margin={{ top: 4, right: 40, bottom: 4, left: 4 }}>
+                    <XAxis type="number" hide />
+                    <YAxis type="category" dataKey="name" width={160} tick={{ fontSize: 13 }} />
+                    <Tooltip formatter={(v) => fmt(v)} />
+                    <Bar dataKey="Amount" fill="#0d9488" radius={[0, 6, 6, 0]} barSize={24} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          )}
+
           {inputTab === 'expense' && !isMobile && deskFrame.expense === 'charts' && (
             <>
               {chartTypeToggle(false)}
