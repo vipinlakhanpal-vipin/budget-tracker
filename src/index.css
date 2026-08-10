@@ -2146,24 +2146,28 @@ td.amount { font-weight: 600; text-align: right; }
        it (54px rail + 8px gutter) so page content never sits underneath. */
     .mobile-side-rail {
       display: flex !important; flex-direction: column; gap: 10px;
-      justify-content: center;
-      position: fixed; left: 0; top: env(safe-area-inset-top);
-      /* v3.56: was `bottom: calc(78px + ...)`, anchoring BOTH edges to the
-         viewport -- Vipin: "left panel from dash to theme jumps up and
-         down when tabs are clicked". Every tab click calls
-         scrollToFrameA() (scrolls to top), which is exactly when a mobile
-         browser's address bar animates back in; a plain vh-based bottom
-         edge jumps between the "chrome hidden" and "chrome visible"
-         viewport heights the instant that happens, which is what was
-         seen as the jump. An explicit height using dvh (dynamic viewport
-         height -- built for this exact problem, continuously tracks the
-         real visible viewport instead of snapping between two fixed
-         values) replaces the vh fallback wherever supported; the plain vh
-         line stays first as the fallback for older browsers that don't
-         understand dvh, since an unsupported value is simply ignored and
-         the later, supported declaration wins the cascade. */
-      height: calc(100vh - 78px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
-      height: calc(100dvh - 78px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+      position: fixed; left: 0;
+      /* v3.58: v3.56/v3.57 tried a dvh-based top+height and then a portal
+         to document.body -- both were real bugs worth fixing, but neither
+         was THE bug. Vipin pinned it exactly: "when u click income the
+         add, view and chart has to appear and whole left tab panel shifts
+         upwards" -- i.e. this was still being positioned relative to
+         PAGE/document height (via top+height spanning "the viewport minus
+         a footer", computed fresh against whatever the page's height
+         happened to be at that moment), not the icon group's own fixed
+         46px-per-button content. Income/Fixed/etc. render a much taller
+         page than Dash, and that page-height swing was still leaking into
+         where this rail sat. Fixed for real this time by centering purely
+         via top:50%/translateY(-50%) -- position:fixed's containing block
+         is the viewport itself, and this centers against the VIEWPORT's
+         own height only, with zero inputs from document height, current
+         tab, or number of buttons (always a fixed 8). The only thing that
+         can still move it is the viewport itself physically resizing
+         (address bar show/hide), which is real device chrome moving, not
+         a bug. max-height + overflow-y is a safety net only, for a
+         viewport too short to fit all 8 icons at once. */
+      top: 50%; transform: translateY(-50%);
+      max-height: calc(100dvh - 78px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
       width: 54px; padding: 10px 0; z-index: 55; overflow-y: auto;
       background: var(--card); border-right: 1px solid var(--border);
     }
