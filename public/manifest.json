@@ -1,7 +1,7 @@
 {
-  "name": "Hearth -- Household Budget Tracker",
+  "name": "Hearth -- Expense Management System",
   "short_name": "Hearth",
-  "description": "Track shared household income, expenses, fixed bills, and savings, with charts and PDF reports.",
+  "description": "Hearth is an Expense Management System for households -- track income, expenses, fixed bills, and savings, with charts and PDF reports.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
