@@ -1041,6 +1041,36 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
   .desk-frame-rail { display: none; }
 }
 
+/* Mobile counterpart of .desk-frame-rail (v3.54) -- same Add/View/Charts
+   frame switcher, laid out as a horizontal segmented-pill row instead of
+   a side rail, since a rail doesn't work on a narrow screen. Mobile used
+   to show the Add form and View list stacked on one page always; this
+   lets one frame show at a time here too (see renderMobilePills in
+   Dashboard.jsx), and is also how mobile now reaches the Charts frame
+   for Income/Fixed/Savings for the first time. Desktop never renders
+   this (JS-gated to isMobile), so no media query is needed to hide it. */
+.mobile-frame-pills {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 14px;
+}
+.mobile-frame-pills button {
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 4px;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.mobile-frame-pills button.active { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+
 /* Top tab bar redesign (v3.51) -- Vipin picked "floating segmented pill"
    over two other mockups: the whole Dashboard/Income/Fixed/Regular/
    Savings/Investments/Report/Settings/Help group now sits inside one
