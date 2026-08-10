@@ -885,7 +885,16 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
     // stuck on Settings/Soon with no way to back out short of tapping a
     // different tab -- confirmed live: "settings once clicked the popup
     // stays... same problem with soon button").
-    setActivePanel((prev) => (prev === name ? null : name));
+    setActivePanel((prev) => {
+      const opening = prev !== name;
+      // Vipin: "whenever user clicks income or expense or any tab by
+      // default user should come to Add tab" -- applies to Investments
+      // too, which uses activePanel/togglePanel instead of setInputTab.
+      // Only reset on the "opening" transition, not the "closing back to
+      // Dashboard" tap of the same button.
+      if (opening && name === 'investments') setDeskFrameFor('investments', 'add');
+      return opening ? name : null;
+    });
     // Also clear inputTab -- Report/Settings/Help are meant to pair with
     // Home, not linger stacked on top of whichever Income/Fixed Expenses/
     // Regular Expenses/Savings tab was previously selected.
@@ -1514,8 +1523,16 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   // and lets mobile reach the Charts frame for Income/Fixed/Savings for
   // the first time (previously desktop-only).
   function renderMobilePills(section) {
+    // Frozen under the sticky dashboard frame (logo/tabs/month nav/summary
+    // cards) rather than scrolling away with the list -- Vipin: "freeze
+    // add, view and charts tabs on mobile along with month and full month
+    // cells". stickyFrameSpacerHeight is the frame's own real rendered
+    // height (already tracked via ResizeObserver for the scroll-landing
+    // logic above), so this sticks flush right below it instead of a
+    // guessed pixel value that would drift whenever the frame's height
+    // changes (tour banner, alerts, theme, etc.).
     return (
-      <div className="mobile-frame-pills">
+      <div className="mobile-frame-pills" style={{ position: 'sticky', top: stickyFrameSpacerHeight, zIndex: 55 }}>
         <button type="button" className={deskFrame[section] === 'add' ? 'active' : ''} onClick={() => setDeskFrameFor(section, 'add')}>
           <Plus size={15} /> Add
         </button>
@@ -6121,7 +6138,7 @@ function ReportHtmlView({ data }) {
         <button
           type="button"
           className={inputTab === 'income' ? 'active' : ''}
-          onClick={() => { setActivePanel(null); setInputTab('income'); scrollToFrameA(); }}
+          onClick={() => { setActivePanel(null); setInputTab('income'); setDeskFrameFor('income', 'add'); scrollToFrameA(); }}
           title="Income"
         >
           <Wallet size={18} />
@@ -6130,7 +6147,7 @@ function ReportHtmlView({ data }) {
         <button
           type="button"
           className={inputTab === 'fixed' ? 'active' : ''}
-          onClick={() => { setActivePanel(null); setInputTab('fixed'); scrollToFrameA(); }}
+          onClick={() => { setActivePanel(null); setInputTab('fixed'); setDeskFrameFor('fixed', 'add'); scrollToFrameA(); }}
           title="Fixed Expenses"
         >
           <CalendarClock size={18} />
@@ -6139,7 +6156,7 @@ function ReportHtmlView({ data }) {
         <button
           type="button"
           className={inputTab === 'expense' ? 'active' : ''}
-          onClick={() => { setActivePanel(null); setInputTab('expense'); scrollToFrameA(); }}
+          onClick={() => { setActivePanel(null); setInputTab('expense'); setDeskFrameFor('expense', 'add'); scrollToFrameA(); }}
           title="Regular Expenses"
         >
           <ShoppingCart size={18} />
@@ -6148,7 +6165,7 @@ function ReportHtmlView({ data }) {
         <button
           type="button"
           className={inputTab === 'savings' ? 'active' : ''}
-          onClick={() => { setActivePanel(null); setInputTab('savings'); scrollToFrameA(); }}
+          onClick={() => { setActivePanel(null); setInputTab('savings'); setDeskFrameFor('savings', 'add'); scrollToFrameA(); }}
           title="Savings"
         >
           <PiggyBank size={18} />
@@ -6401,7 +6418,7 @@ function ReportHtmlView({ data }) {
             <button
               type="button"
               className={`btn-teal header-tab-btn tab-visible-mobile ${inputTab === 'income' ? 'header-tab-btn-active' : ''}`}
-              onClick={() => { setActivePanel(null); setInputTab('income'); scrollToFrameA(); }}
+              onClick={() => { setActivePanel(null); setInputTab('income'); setDeskFrameFor('income', 'add'); scrollToFrameA(); }}
               >
               <Wallet size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
               Income
@@ -6409,7 +6426,7 @@ function ReportHtmlView({ data }) {
             <button
               type="button"
               className={`btn-teal header-tab-btn tab-visible-mobile ${inputTab === 'fixed' ? 'header-tab-btn-active' : ''}`}
-              onClick={() => { setActivePanel(null); setInputTab('fixed'); scrollToFrameA(); }}
+              onClick={() => { setActivePanel(null); setInputTab('fixed'); setDeskFrameFor('fixed', 'add'); scrollToFrameA(); }}
               >
               <CalendarClock size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
               Fixed Expenses
@@ -6418,7 +6435,7 @@ function ReportHtmlView({ data }) {
               type="button"
               data-tour="nav-add"
               className={`btn-teal header-tab-btn tab-visible-mobile ${inputTab === 'expense' ? 'header-tab-btn-active' : ''}`}
-              onClick={() => { setActivePanel(null); setInputTab('expense'); scrollToFrameA(); }}
+              onClick={() => { setActivePanel(null); setInputTab('expense'); setDeskFrameFor('expense', 'add'); scrollToFrameA(); }}
               >
               <ShoppingCart size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
               Regular Expenses
@@ -6426,7 +6443,7 @@ function ReportHtmlView({ data }) {
             <button
               type="button"
               className={`btn-teal header-tab-btn tab-visible-mobile ${inputTab === 'savings' ? 'header-tab-btn-active' : ''}`}
-              onClick={() => { setActivePanel(null); setInputTab('savings'); scrollToFrameA(); }}
+              onClick={() => { setActivePanel(null); setInputTab('savings'); setDeskFrameFor('savings', 'add'); scrollToFrameA(); }}
               >
               <PiggyBank size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
               Savings
@@ -7207,25 +7224,25 @@ I can help you track expenses, understand spending patterns, create budgets, and
 <div className="input-tabs data-entry-tabs">
             <button
               className={`btn small ${inputTab === 'income' ? '' : 'secondary'}`}
-              onClick={() => setInputTab('income')}
+              onClick={() => { setInputTab('income'); setDeskFrameFor('income', 'add'); }}
             >
               Income
             </button>
             <button
               className={`btn small ${inputTab === 'fixed' ? '' : 'secondary'}`}
-              onClick={() => setInputTab('fixed')}
+              onClick={() => { setInputTab('fixed'); setDeskFrameFor('fixed', 'add'); }}
             >
               Fixed Expenses
             </button>
             <button
               className={`btn small ${inputTab === 'expense' ? '' : 'secondary'}`}
-              onClick={() => setInputTab('expense')}
+              onClick={() => { setInputTab('expense'); setDeskFrameFor('expense', 'add'); }}
             >
               Regular Expenses
             </button>
             <button
               className={`btn small ${inputTab === 'savings' ? '' : 'secondary'}`}
-              onClick={() => setInputTab('savings')}
+              onClick={() => { setInputTab('savings'); setDeskFrameFor('savings', 'add'); }}
             >
               Savings
             </button>
