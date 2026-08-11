@@ -1610,7 +1610,7 @@ useEffect(() => {
   function confirmBanner(scope) {
     if (!confirmState || confirmState.scope !== scope) return null;
     return (
-      <div className="confirm-banner">
+              <div className={`confirm-banner${scope === 'aria' ? ' confirm-banner-inline' : ''}`}>
         <div className="confirm-banner-msg">{confirmState.message}</div>
         <div className="confirm-banner-actions">
           <button type="button" className="confirm-banner-yes" onClick={() => { const fn = confirmState.onConfirm; setConfirmState(null); fn(); }}>Remove</button>
@@ -6717,21 +6717,7 @@ function ReportHtmlView({ data }) {
                       <button onClick={() => setChatOpen(false)} aria-label="Close chat"><X size={16} /></button>
                     </div>
                   </div>
-                  {/* v3.41: portaled to document.body -- the aria
-                      confirm banner used to render as a plain child of
-                      .chat-window, but on mobile .chat-window carries an
-                      inline transform (translateX(-50%), for centering)
-                      which -- per the same CSS containing-block rule
-                      noted elsewhere in this file -- makes .chat-window
-                      itself the containing block for any position:fixed
-                      descendant. That broke .confirm-banner's own
-                      left:50%/transform:translateX(-50%) centering (it
-                      centered against the narrow chat window instead of
-                      the viewport) AND let .chat-window's overflow:hidden
-                      clip its left/right edges -- exactly the cut-off
-                      "Remove"/"Cancel" banner reported live. Portaling
-                      escapes both problems at once. */}
-                  {createPortal(confirmBanner('aria'), document.body)}
+                    {/* v3.69: clear-chat confirm now renders inline right below the chat input (see confirmBanner('aria') call after the input form), instead of as a document.body-portaled floating banner -- easier for users to notice and act on. */}
                   <div className="chat-messages" ref={chatMessagesRef}>
                     {chatMessages.length === 0 && (
                       <div className="chat-empty">
@@ -6791,6 +6777,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     />
                     <button type="submit" className="btn small" disabled={chatLoading || !chatInput.trim()}>Send</button>
                   </form>
+                    {confirmBanner('aria')}
                 </div>
                 );
                 return chatPos ? createPortal(chatWindowEl, document.body) : chatWindowEl;
