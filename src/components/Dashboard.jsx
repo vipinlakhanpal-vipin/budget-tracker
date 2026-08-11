@@ -1008,45 +1008,49 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   // document.body sidesteps both the clipping and the transform-containment
   // issue for good.
   const profileDropdownRef = useRef(null);
-  useEffect(() => {
-    if (!profileMenuOpen) return;
-    // v3.32: same as the notif effect above -- mobile uses a fixed
-    // bottom-sheet (ignores profileDropdownPos) and closes via the
-    // full-screen scrim, so skip the layout read + outside-click
-    // listener there entirely.
-    if (!isMobile && profileMenuRef.current) {
-      const r = profileMenuRef.current.getBoundingClientRect();
-      // v3.28: the trigger can now be the bottom-nav profile button, which
-      // sits near the physical bottom of the screen -- opening downward
-      // from there would push the dropdown off-screen. Flip to opening
-      // upward (anchored by `bottom` instead of `top`) whenever the
-      // trigger's own top edge is in the lower part of the viewport.
-      const openUpward = r.top > window.innerHeight - 220;
-      setProfileDropdownPos(
-        openUpward
-          ? { bottom: window.innerHeight - r.top + 8, right: Math.max(8, window.innerWidth - r.right) }
-          : { top: r.bottom + 8, right: Math.max(8, window.innerWidth - r.right) }
-      );
-    }
-    if (isMobile) return;
-    // v3.65: was listening on 'click' with only a 60ms attach delay -- on
-    // some browsers/timing, the same physical click that opened the menu
-    // could still be in flight when the listener attached, so it read as
-    // an "outside click" and closed the menu back down within the same
-    // interaction (looked exactly like "the button does nothing"). Using
-    // 'mousedown' (fires and finishes before 'click', same event type the
-    // notif dropdown above already uses successfully) plus a longer 150ms
-    // delay makes it impossible for the opening click to also be read as
-    // the closing one.
-    function onDocClick(e) {
-      if (
-        profileMenuRef.current && !profileMenuRef.current.contains(e.target) &&
-        !(profileDropdownRef.current && profileDropdownRef.current.contains(e.target))
-      ) setProfileMenuOpen(false);
-    }
-    const t = setTimeout(() => document.addEventListener('mousedown', onDocClick), 150);
-    return () => { clearTimeout(t); document.removeEventListener('mousedown', onDocClick); };
-  }, [profileMenuOpen, isMobile]);
+useEffect(() => {
+        if (!profileMenuOpen) return;
+        let raf = null;
+        // v3.68: the position calc below used to run synchronously in this
+        // effect and could still race with layout/paint still settling right
+        // after the button appears (e.g. the sticky header/splash finishing
+        // their own transitions) -- that intermittently measured an all-zero
+        // rect and sent the dropdown to right:innerWidth, i.e. fully
+        // off-screen to the left. It was rendering the whole time, just never
+        // visible or reachable -- which is exactly what "Sign out does
+        // nothing" looked like. Deferring the read to the next animation
+        // frame guarantees layout has actually finished before we measure it.
+        if (!isMobile && profileMenuRef.current) {
+                  raf = requestAnimationFrame(() => {
+                              if (!profileMenuRef.current) return;
+                              const r = profileMenuRef.current.getBoundingClientRect();
+                              const openUpward = r.top > window.innerHeight - 220;
+                              setProfileDropdownPos(
+                                            openUpward
+                                              ? { bottom: window.innerHeight - r.top + 8, right: Math.max(8, window.innerWidth - r.right) }
+                                              : { top: r.bottom + 8, right: Math.max(8, window.innerWidth - r.right) }
+                                          );
+                  });
+        }
+        if (isMobile) return () => { if (raf) cancelAnimationFrame(raf); };
+        // v3.65: was listening on 'click' with only a 60ms attach delay -- on
+        // some browsers/timing, the same physical click that opened the menu
+        // could still be in flight when the listener attached, so it read as
+        // an "outside click" and closed the menu back down within the same
+        // interaction (looked exactly like "the button does nothing"). Using
+        // 'mousedown' (fires and finishes before 'click', same event type as
+        // the notif dropdown above already uses successfully) plus a longer 150ms
+        // delay makes it impossible for the opening click to also be read as
+        // the closing one.
+        function onDocClick(e) {
+                  if (
+                              profileMenuRef.current && !profileMenuRef.current.contains(e.target) &&
+                              !(profileDropdownRef.current && profileDropdownRef.current.contains(e.target))
+                            ) setProfileMenuOpen(false);
+        }
+        const t = setTimeout(() => document.addEventListener('mousedown', onDocClick), 150);
+        return () => { if (raf) cancelAnimationFrame(raf); clearTimeout(t); document.removeEventListener('mousedown', onDocClick); };
+}, [profileMenuOpen, isMobile]);
   // Color theme picker -- swaps the app's --accent/--accent2 pairs (see the
   // [data-theme="..."] rules in index.css) via a data-theme attribute on
   // <html>, remembered per-browser in localStorage. Purely cosmetic/local:
