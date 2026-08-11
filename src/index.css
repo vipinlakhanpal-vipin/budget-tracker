@@ -1718,6 +1718,7 @@ input[type="number"] { text-align: right; }
   z-index: 1000;
   box-shadow: 0 6px 24px rgba(0,0,0,.3);
 }
+/* v3.69: modifier for the clear-chat confirm banner -- rendered inline right below the chat input instead of as a floating document.body-portaled banner, so it overrides the fixed positioning above to just sit in normal document flow. */ .confirm-banner-inline { position: static; left: auto; bottom: auto; transform: none; width: auto; margin: 10px 14px 12px; box-shadow: none; }
 .confirm-banner-msg {
   color: var(--danger);
   font-size: 13px;
