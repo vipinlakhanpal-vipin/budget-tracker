@@ -1,9 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { PROJECT_DOC_PDF_BASE64 } from '../projectDocData';
-
 const RELATIONS = ['Self', 'Spouse', 'Partner', 'Child', 'Parent', 'Sibling', 'Roommate', 'Other'];
-
 const STATUS_LABEL = {
   active: 'Active',
   unverified: 'Signed up -- email not verified',
@@ -11,10 +9,7 @@ const STATUS_LABEL = {
   invited: 'Invited -- not signed up yet',
   unknown: 'Unknown',
 };
-
 const SUCCESSFUL_STATUSES = new Set(['active']);
-
-
 // ---------------------------------------------------------------------
 // Project tab -- admin-only master reference for the whole app: every
 // account, file, folder, link, and workflow needed for a 100% picture of
@@ -33,7 +28,6 @@ const PROJECT_DOC_META = {
   version: 'v3.60',
   filename: 'Hearth-Project-Documentation.pdf',
 };
-
 function downloadProjectDocPdf() {
   const byteChars = atob(PROJECT_DOC_PDF_BASE64);
   const bytes = new Uint8Array(byteChars.length);
@@ -48,7 +42,6 @@ function downloadProjectDocPdf() {
   a.remove();
   URL.revokeObjectURL(url);
 }
-
 function ProjectTab() {
   return (
     <div style={{ maxWidth: 480 }}>
@@ -72,7 +65,6 @@ function ProjectTab() {
     </div>
   );
 }
-
 export default function AdminConsole({ onClose, embedded = false }) {
   const [households, setHouseholds] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -82,7 +74,6 @@ export default function AdminConsole({ onClose, embedded = false }) {
   const [relation, setRelation] = useState('Other');
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
-
   const [view, setView] = useState('invite');
   const [allUsers, setAllUsers] = useState([]);
   const [allUsersLoading, setAllUsersLoading] = useState(true);
@@ -90,7 +81,6 @@ export default function AdminConsole({ onClose, embedded = false }) {
   const [deletingEmail, setDeletingEmail] = useState('');
   const [insightLoadingEmail, setInsightLoadingEmail] = useState('');
   const [resettingEmail, setResettingEmail] = useState('');
-
   // v3.61: so admins can tell which Group Account is theirs (and which is
   // anyone else's) before toggling its plan -- Group Accounts previously
   // only showed a name, no member emails.
@@ -117,17 +107,14 @@ export default function AdminConsole({ onClose, embedded = false }) {
     });
     return map;
   }, [allUsers]);
-
   useEffect(() => {
     loadHouseholds();
     loadAllUsers();
   }, []);
-
   async function authHeader() {
     const { data: { session } } = await supabase.auth.getSession();
     return { Authorization: `Bearer ${session?.access_token}` };
   }
-
   async function loadHouseholds() {
     setLoading(true);
     try {
@@ -145,7 +132,6 @@ export default function AdminConsole({ onClose, embedded = false }) {
       setLoading(false);
     }
   }
-
   // Free/paid plan tier (v3.60) -- manual/admin-granted only, no payment
   // processor wired up yet (see supabase/migration_plan_tier.sql). This is
   // currently the ONLY way a household's plan changes.
@@ -171,7 +157,6 @@ export default function AdminConsole({ onClose, embedded = false }) {
       setPlanUpdatingId('');
     }
   }
-
   async function loadAllUsers() {
     setAllUsersLoading(true);
     setAllUsersError('');
@@ -190,14 +175,12 @@ export default function AdminConsole({ onClose, embedded = false }) {
       setAllUsersLoading(false);
     }
   }
-
   async function handleDeleteUser(u) {
     const label = u.email;
     const confirmMsg = u.userId
       ? `Permanently delete ${label}? This removes their login and group account membership from Supabase. This cannot be undone.`
       : `Cancel the pending invite for ${label}?`;
     if (!window.confirm(confirmMsg)) return;
-
     setDeletingEmail(u.email);
     try {
       const headers = { 'Content-Type': 'application/json', ...(await authHeader()) };
@@ -217,7 +200,6 @@ export default function AdminConsole({ onClose, embedded = false }) {
       setDeletingEmail('');
     }
   }
-
   async function handleGetInsights(u) {
     if (!u.userId) return;
     setInsightLoadingEmail(u.email);
@@ -244,7 +226,6 @@ export default function AdminConsole({ onClose, embedded = false }) {
       setInsightLoadingEmail('');
     }
   }
-
   async function handleResetPassword(u) {
     if (!u.userId) return;
     const typed = window.prompt(
@@ -277,7 +258,6 @@ export default function AdminConsole({ onClose, embedded = false }) {
       setResettingEmail('');
     }
   }
-
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
@@ -310,14 +290,11 @@ export default function AdminConsole({ onClose, embedded = false }) {
       setError(e.message || 'Something went wrong');
     }
   }
-
   const Wrap = embedded ? 'div' : 'div';
   const wrapClass = embedded ? '' : 'center-screen';
   const cardClass = embedded ? '' : 'login-card';
-
   const successfulUsers = allUsers.filter((u) => SUCCESSFUL_STATUSES.has(u.status));
   const unsuccessfulUsers = allUsers.filter((u) => !SUCCESSFUL_STATUSES.has(u.status))
-
   // v2.23: group the Users tab by household -- sort so everyone in the
   // same household is adjacent, then UserGroup inserts a header row each
   // time the household name changes.
@@ -326,7 +303,6 @@ export default function AdminConsole({ onClose, embedded = false }) {
     const bh = b.households[0]?.householdName || 'zzz No household'
     return ah.localeCompare(bh) || a.email.localeCompare(b.email)
   });
-
   return (
     <Wrap className={wrapClass}>
       <div className={cardClass} style={embedded ? { textAlign: 'left' } : { maxWidth: 480, textAlign: 'left' }}>
@@ -334,7 +310,6 @@ export default function AdminConsole({ onClose, embedded = false }) {
         <p className="sub" style={{ textAlign: embedded ? 'left' : 'center' }}>
           Create a login and send the group account invite in one step, or see everyone who's signed up (or tried to) across every group account.
         </p>
-
         <div className="input-tabs" style={{ margin: '12px 0 16px' }}>
           <button className={`btn small ${view === 'invite' ? '' : 'secondary'}`} onClick={() => setView('invite')} type="button">Invite</button>
           <button className={`btn small ${view === 'users' ? '' : 'secondary'}`} onClick={() => setView('users')} type="button">
@@ -347,7 +322,6 @@ export default function AdminConsole({ onClose, embedded = false }) {
             Group Accounts
           </button>
         </div>
-
         {view === 'invite' && (
           <>
             <form onSubmit={handleSubmit} style={{ marginTop: 16 }}>
@@ -360,7 +334,6 @@ export default function AdminConsole({ onClose, embedded = false }) {
                   ))}
                 </select>
               </div>
-
               {!householdId && (
                 <div className="field" style={{ marginBottom: 10 }}>
                   <label>New group account name</label>
@@ -372,12 +345,10 @@ export default function AdminConsole({ onClose, embedded = false }) {
                   />
                 </div>
               )}
-
               <div className="field" style={{ marginBottom: 10 }}>
                 <label>Email to invite</label>
                 <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
               </div>
-
               <div className="field" style={{ marginBottom: 14 }}>
                 <label>Relation</label>
                 <select value={relation} onChange={(e) => setRelation(e.target.value)}>
@@ -386,17 +357,14 @@ export default function AdminConsole({ onClose, embedded = false }) {
                   ))}
                 </select>
               </div>
-
               <button className="btn" type="submit" disabled={status === 'sending'}>
                 {status === 'sending' ? 'Creating...' : 'Create login & send invite'}
               </button>
             </form>
-
             {status === 'sent' && <div className="login-sent">Login created and invite sent.</div>}
             {error && <div className="login-error">{error}</div>}
           </>
         )}
-
         {view === 'users' && (
           <div>
             {allUsersLoading && <div className="muted-small">Loading users...</div>}
@@ -413,20 +381,17 @@ export default function AdminConsole({ onClose, embedded = false }) {
                 <div className="muted-small" style={{ marginBottom: 10, fontWeight: 600 }}>
                   {successfulUsers.length} successful signup{successfulUsers.length === 1 ? '' : 's'} -- {unsuccessfulUsers.length} unsuccessful / pending
                 </div>
-
                 <UserGroup title="Successful signups" users={successfulUsersSorted} onDelete={handleDeleteUser} deletingEmail={deletingEmail} onInsights={handleGetInsights} insightLoadingEmail={insightLoadingEmail} onResetPassword={handleResetPassword} resettingEmail={resettingEmail} />
                 <UserGroup title="Unsuccessful / pending" users={unsuccessfulUsers} onDelete={handleDeleteUser} deletingEmail={deletingEmail} />
               </>
             )}
           </div>
         )}
-
         {view === 'project' && (
           <div>
             <ProjectTab />
           </div>
         )}
-
         {view === 'households' && (
           <div>
             <div className="muted-small" style={{ marginBottom: 14, fontSize: 12.5, lineHeight: 1.6 }}>
@@ -434,24 +399,20 @@ export default function AdminConsole({ onClose, embedded = false }) {
             </div>
             {loading && <div className="muted-small">Loading group accounts...</div>}
             {!loading && households.length === 0 && <div className="empty">No group accounts yet.</div>}
-            {/* v3.65: one consolidated table instead of a separate card +
-                mini-table per group account -- the repeated card borders
-                and re-printed column headers made the page read as messy
-                once there were more than a couple of accounts. Now it's a
-                single table with a bold group-header row (name + Free/Paid
-                toggle) per account, member rows underneath, and every
-                column only defined once at the top -- matching the same
-                grouped-table pattern already used in the Users tab above. */}
+            {/* v3.67: dropped the group-header row that printed the
+                household name above each block of members -- the name
+                added noise without adding anything member details didn't
+                already convey, and per explicit request it's gone now.
+                Member rows are now the only rows in the table; the Free/
+                Paid toggle for a group account lives in that group's
+                first member row, in the same Plan column every other
+                member row shows a static Free/Paid label in (so Plan
+                stays a single, consistently-positioned trailing column
+                throughout, just as v3.66 set out to do). A household with
+                no members yet still gets one row so its toggle is always
+                reachable. */}
             {!loading && households.length > 0 && (
               <div className="table-scroll">
-                {/* v3.66: Plan is now its own trailing column (like every
-                    other column here) instead of a flex row floated inside
-                    a merged cell -- the Free/Paid toggle now lines up in
-                    exactly the same place on every group-header row, at
-                    the true right edge of the table, instead of appearing
-                    to float under whichever column happened to be last.
-                    Also trimmed the group-header row's own padding/font so
-                    it reads as a slim divider, not another full-height row. */}
                 <table className="responsive-table admin-users-table" style={{ fontSize: 11.5 }}>
                   <thead>
                     <tr>
@@ -463,37 +424,37 @@ export default function AdminConsole({ onClose, embedded = false }) {
                   <tbody>
                     {households.map((h) => {
                       const members = membersByHousehold[h.id] || [];
+                      const planToggle = (
+                        <div className="input-tabs" style={{ margin: 0 }}>
+                          <button
+                            type="button"
+                            className={`btn small ${h.plan !== 'paid' ? '' : 'secondary'}`}
+                            disabled={planUpdatingId === h.id}
+                            onClick={() => setHouseholdPlan(h.id, 'free')}
+                          >
+                            Free
+                          </button>
+                          <button
+                            type="button"
+                            className={`btn small ${h.plan === 'paid' ? '' : 'secondary'}`}
+                            disabled={planUpdatingId === h.id}
+                            onClick={() => setHouseholdPlan(h.id, 'paid')}
+                          >
+                            Paid
+                          </button>
+                        </div>
+                      );
+                      if (members.length === 0) {
+                        return (
+                          <tr key={h.id}>
+                            <td colSpan={9} className="muted-small">No members yet</td>
+                            <td data-label="Plan">{planToggle}</td>
+                          </tr>
+                        );
+                      }
                       return (
                         <Fragment key={h.id}>
-                          <tr className="admin-household-group-header">
-                            <td colSpan={9} style={{ padding: '5px 8px', fontSize: 11.5 }}>
-                              {h.name}
-                            </td>
-                            <td style={{ padding: '4px 8px' }}>
-                              <div className="input-tabs" style={{ margin: 0 }}>
-                                <button
-                                  type="button"
-                                  className={`btn small ${h.plan !== 'paid' ? '' : 'secondary'}`}
-                                  disabled={planUpdatingId === h.id}
-                                  onClick={() => setHouseholdPlan(h.id, 'free')}
-                                >
-                                  Free
-                                </button>
-                                <button
-                                  type="button"
-                                  className={`btn small ${h.plan === 'paid' ? '' : 'secondary'}`}
-                                  disabled={planUpdatingId === h.id}
-                                  onClick={() => setHouseholdPlan(h.id, 'paid')}
-                                >
-                                  Paid
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                          {members.length === 0 && (
-                            <tr><td colSpan={10} className="muted-small">No members yet</td></tr>
-                          )}
-                          {members.map((m) => (
+                          {members.map((m, idx) => (
                             <tr key={m.email}>
                               <td data-label="Name">{m.name || '--'}</td>
                               <td data-label="Email">{m.email}</td>
@@ -504,7 +465,9 @@ export default function AdminConsole({ onClose, embedded = false }) {
                               <td data-label="Last Seen">{m.lastSeen || '--'}</td>
                               <td data-label="Joined">{m.joined ? new Date(m.joined).toLocaleDateString() : '--'}</td>
                               <td data-label="Last Login">{m.lastLogin ? new Date(m.lastLogin).toLocaleDateString() : '--'}</td>
-                              <td data-label="Plan" className="muted-small">{h.plan === 'paid' ? 'Paid' : 'Free'}</td>
+                              <td data-label="Plan" className="muted-small">
+                                {idx === 0 ? planToggle : (h.plan === 'paid' ? 'Paid' : 'Free')}
+                              </td>
                             </tr>
                           ))}
                         </Fragment>
@@ -516,7 +479,6 @@ export default function AdminConsole({ onClose, embedded = false }) {
             )}
           </div>
         )}
-
         <button className="btn secondary small" style={{ marginTop: 16 }} onClick={onClose}>
           {embedded ? 'Close' : 'Back'}
         </button>
@@ -524,7 +486,6 @@ export default function AdminConsole({ onClose, embedded = false }) {
     </Wrap>
   );
 }
-
 function UserGroup({ title, users, onDelete, deletingEmail, onInsights, insightLoadingEmail, onResetPassword, resettingEmail }) {
   if (!users.length) return null;
   return (
