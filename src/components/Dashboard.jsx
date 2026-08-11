@@ -984,6 +984,18 @@ const [mobileReportOpen, setMobileReportOpen] = useState(false);
   // last action in the dropdown instead of its own top-bar button.
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef(null);
+  // v3.69: dedicated ref for ONLY the desktop trigger button (see
+  // profileMenuDesktopRef usage below) -- profileMenuRef itself is shared
+  // with the mobile bottom-nav's own Profile button (same ref object, per
+  // the v3.28 comment above), and since that mobile button always mounts
+  // later in the tree than this desktop one, its ref-attach callback ran
+  // last and silently overwrote profileMenuRef.current with ITS OWN node --
+  // a button sitting inside display:none-on-desktop .mobile-bottom-nav.
+  // getBoundingClientRect() on a display:none element returns an all-zero
+  // rect, which is exactly what was sending the dropdown to right:innerWidth
+  // (fully off-screen) below. profileMenuRef.current was never wrong at
+  // click time -- it was already wrong the moment the mobile button mounted.
+  const profileMenuDesktopRef = useRef(null);
   const [profileDropdownPos, setProfileDropdownPos] = useState(null);
   // v2.25: the REAL bug behind "Sign out does nothing" -- .sticky-dashboard-frame
   // (the header's sticky container) sets overflow-x: clip with overflow-y:
@@ -1020,10 +1032,10 @@ useEffect(() => {
         // visible or reachable -- which is exactly what "Sign out does
         // nothing" looked like. Deferring the read to the next animation
         // frame guarantees layout has actually finished before we measure it.
-        if (!isMobile && profileMenuRef.current) {
+        if (!isMobile && profileMenuDesktopRef.current) {
                   raf = requestAnimationFrame(() => {
-                              if (!profileMenuRef.current) return;
-                              const r = profileMenuRef.current.getBoundingClientRect();
+                              if (!profileMenuDesktopRef.current) return;
+                              const r = profileMenuDesktopRef.current.getBoundingClientRect();
                               const openUpward = r.top > window.innerHeight - 220;
                               setProfileDropdownPos(
                                             openUpward
@@ -6395,7 +6407,7 @@ function ReportHtmlView({ data }) {
                 which is why the dropdown portal below moved outside this check
                 (it needs to render regardless of which trigger opened it). */}
             {!isMobile && (
-<div className="profile-menu-wrap" ref={profileMenuRef}>
+<div className="profile-menu-wrap" ref={(el) => { profileMenuRef.current = el; profileMenuDesktopRef.current = el; }}>
               <button
                 type="button"
                 className="profile-icon-btn"
