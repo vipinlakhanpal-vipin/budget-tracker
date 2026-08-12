@@ -9347,6 +9347,12 @@ I can help you track expenses, understand spending patterns, create budgets, and
 
                 <div className="row" style={{ gap: 8, marginBottom: 16 }}>
                   <button
+            className={`btn-teal ${settingsSubTab === 'account' ? '' : 'secondary'}`}
+            onClick={() => setSettingsSubTab('account')}
+          >
+            Account
+          </button>
+          <button
                     className={`btn-teal ${settingsSubTab === 'app' ? '' : 'secondary'}`}
                     onClick={() => setSettingsSubTab('app')}
                   >
@@ -9746,63 +9752,108 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 ) : (
                 <>
                 {/* Household name/app-title editing moved to the header
-                    itself (click the title next to the logo, owners only) --
-                    it no longer has a separate field here, so there's one
-                    place to rename it instead of two. */}
-                <div className="row" style={{ marginBottom: 12 }}>
-                  <div className="field">
-                    <label>Currency</label>
-                    <input
-                      key={currencyDraft}
-                      list="currency-options"
-                      defaultValue={currencyDraft}
-                      onFocus={(e) => { e.target.value = ''; }}
-                      onBlur={(e) => { if (!e.target.value) e.target.value = currencyDraft; }}
-                      onChange={(e) => { const v = e.target.value; if (CURRENCIES.includes(v)) commitCurrency(v); }}
-                      placeholder="Search currency..."
-                    />
-                    <datalist id="currency-options">
-                      {CURRENCIES.map((c) => (
-                        <option key={c} value={c}>{c} - {CURRENCY_REGIONS[c] || ''}</option>
-                      ))}
-                    </datalist>
-                  </div>
+            itself (click the title next to the logo, owners only) --
+            it no longer has a separate field here, so there's one
+            place to rename it instead of two. */}
+        {settingsSubTab === 'app' && (
+          <>
+            <div className="row" style={{ marginBottom: 12 }}>
+              <div className="field">
+                <label>Currency</label>
+                <input
+                  key={currencyDraft}
+                  list="currency-options"
+                  defaultValue={currencyDraft}
+                  onFocus={(e) => { e.target.value = ''; }}
+                  onBlur={(e) => { if (!e.target.value) e.target.value = currencyDraft; }}
+                  onChange={(e) => { const v = e.target.value; if (CURRENCIES.includes(v)) commitCurrency(v); }}
+                  placeholder="Search currency..."
+                />
+                <datalist id="currency-options">
+                  {CURRENCIES.map((c) => (
+                    <option key={c} value={c}>{c} — {CURRENCY_REGIONS[c] || ''}</option>
+                  ))}
+                </datalist>
+              </div>
+            </div>
+            <div className="muted-small">Changes save automatically as you edit -- there's no Save button to click.</div>
+          </>
+        )}
+        {/* v3.70: Account Settings sub-tab -- Name/Phone/Location reuse the same
+            myDetailsDraft state and commitMyDetailsField() auto-save handler as
+            the profile dropdown, so there's exactly one place this data is
+            edited from. Email is read-only here (changing login email needs its
+            own verification flow). Delete My Account moved here from the
+            Currency tab per explicit request, alongside the Terms/Privacy links
+            -- both still required for app store review. */}
+        {settingsSubTab === 'account' && (
+          <>
+            <div className="row" style={{ marginBottom: 10 }}>
+              <div className="field">
+                <label>Email</label>
+                <input type="text" value={session.user.email || ''} disabled style={{ opacity: 0.7 }} />
+              </div>
+            </div>
+            <div className="muted-small" style={{ marginBottom: 12 }}>
+              {isOwner ? 'Owner' : 'User'}
+              {session.user.created_at && (
+                <> &middot; Member since {new Date(session.user.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</>
+              )}
+            </div>
+            <div className="row" style={{ marginBottom: 10, gap: 12, flexWrap: 'wrap' }}>
+              <div className="field" style={{ flex: '1 1 200px' }}>
+                <label>Full name</label>
+                <input
+                  type="text"
+                  value={myDetailsDraft.name}
+                  onChange={(e) => setMyDetailsDraft((d) => ({ ...d, name: e.target.value }))}
+                  onBlur={(e) => commitMyDetailsField('name', e.target.value)}
+                />
+              </div>
+              <div className="field" style={{ flex: '1 1 200px' }}>
+                <label>Phone (optional)</label>
+                <input
+                  type="text"
+                  value={myDetailsDraft.phone}
+                  onChange={(e) => setMyDetailsDraft((d) => ({ ...d, phone: e.target.value }))}
+                  onBlur={(e) => commitMyDetailsField('phone', e.target.value)}
+                />
+              </div>
+              <div className="field" style={{ flex: '1 1 200px' }}>
+                <label>Location</label>
+                <input
+                  type="text"
+                  value={myDetailsDraft.location}
+                  onChange={(e) => setMyDetailsDraft((d) => ({ ...d, location: e.target.value }))}
+                  onBlur={(e) => commitMyDetailsField('location', e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="muted-small" style={{ marginBottom: 16 }}>Changes save automatically -- there's no Save button to click.</div>
+            <div className="row" style={{ paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+              <div className="field" style={{ width: '100%' }}>
+                <label>Delete account</label>
+                <div className="muted-small" style={{ marginBottom: 10 }}>
+                  Read the <a href="/terms.html" target="_blank" rel="noopener noreferrer">Terms of Service</a> and{' '}
+                  <a href="/privacy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.
                 </div>
-                <div className="muted-small">Changes save automatically as you edit -- there's no Save button to click.</div>
-
-                {/* Account section -- Terms/Privacy links plus self-service
-                    deletion, both required for app store review. Lives here
-                    per explicit request rather than as its own Settings
-                    sub-tab. */}
-                <div className="row" style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
-                  <div className="field" style={{ width: '100%' }}>
-                    <label>Account</label>
-                    <div className="muted-small" style={{ marginBottom: 10 }}>
-                      Read the <a href="/terms.html" target="_blank" rel="noopener noreferrer">Terms of Service</a> and{' '}
-                      <a href="/privacy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.
-                    </div>
-                    {/* alignSelf: flex-start stops this from stretching to
-                        the full row width -- .field is a flex column with
-                        the default align-items: stretch, which was making
-                        this read as one big red bar instead of a small,
-                        clearly-labeled action. Tinted background instead of
-                        a solid outline so it reads as "highlighted" rather
-                        than alarming. */}
-                    <button
-                      type="button"
-                      className="btn small secondary"
-                      style={{
-                        alignSelf: 'flex-start',
-                        borderColor: 'var(--danger, #dc2626)',
-                        color: 'var(--danger, #dc2626)',
-                        background: 'color-mix(in srgb, var(--danger, #dc2626) 12%, transparent)',
-                      }}
-                      onClick={() => { setDeleteAccountConfirmText(''); setDeleteAccountStatus(''); setDeleteAccountModalOpen(true); }}
-                    >
-                      Delete My Account
-                    </button>
-                  </div>
-                </div>
+                <button
+                  type="button"
+                  className="btn small secondary"
+                  style={{
+                    alignSelf: 'flex-start',
+                    borderColor: 'var(--danger, #dc2626)',
+                    color: 'var(--danger, #dc2626)',
+                    background: 'color-mix(in srgb, var(--danger, #dc2626) 12%, transparent)',
+                  }}
+                  onClick={() => { setDeleteAccountConfirmText(''); setDeleteAccountStatus(''); setDeleteAccountModalOpen(true); }}
+                >
+                  Delete My Account
+                </button>
+              </div>
+            </div>
+          </>
+        )}
                 </>
                 )}
               </div>
@@ -10155,8 +10206,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
               </button>
             </div>
             <div style={{ padding: 16, whiteSpace: 'pre-wrap', lineHeight: 1.5, color: 'var(--text)', fontSize: 14 }}>
-              {notePopup}
-            </div>
+setSettingsSubTab('app')            </div>
           </div>
         </div>
       )}
