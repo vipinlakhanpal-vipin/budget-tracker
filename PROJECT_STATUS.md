@@ -1,13 +1,13 @@
 # Hearth -- Expense Management System: Project Status & Handoff Notes
 
-Last updated: 2026-08-11, app version v3.70.
+Last updated: 2026-08-12, app version v3.71.
 
 This file exists so the project can be picked up again -- by you, or by a
 fresh Claude session with no memory of this conversation -- without needing
 the chat history. Point a new session at this file plus the GitHub repo and
 it should have everything it needs.
 
-**Recent changes (through v3.70):** AdminConsole Group Accounts table redesigned (member details only, Plan as its own column); Sign Out bug root-caused and fixed (desktop Profile trigger was sharing a ref with the hidden mobile bottom-nav Profile button, so its dropdown always measured a zero-size element and rendered off-screen -- desktop now uses its own dedicated ref); clear-chat confirm banner moved to render inline directly below the Aria chat input instead of as a document.body-portaled floating banner. A full desktop + code-level mobile QA pass found no console errors or broken flows. Known gaps before a Google Play submission: no payment processor wired up yet (the $39/year Premium plan is only a manual Free/Paid toggle in Admin Console -- Google Play requires Play Billing for any in-app digital subscription purchase), no service worker/offline support, and no /.well-known/assetlinks.json yet (added at TWA-wrapping time).
+**Recent changes (through v3.71):** AdminConsole Group Accounts table redesigned (member details only, Plan as its own column); Sign Out bug root-caused and fixed (desktop Profile trigger was sharing a ref with the hidden mobile bottom-nav Profile button, so its dropdown always measured a zero-size element and rendered off-screen -- desktop now uses its own dedicated ref); clear-chat confirm banner moved to render inline directly below the Aria chat input instead of as a document.body-portaled floating banner. New Account sub-tab in Settings (first tab, visible to all users) with Full name/Phone/Location fields reusing the same auto-save state as the profile dropdown, plus read-only email and Owner/Member-since info; Delete My Account moved here from the Currency tab, which now only shows Currency. A full desktop + code-level mobile QA pass found no console errors or broken flows. Known gaps before a Google Play submission: no payment processor wired up yet (the $39/year Premium plan is only a manual Free/Paid toggle in Admin Console) -- Google Play requires Play Billing for any in-app digital subscription purchase), no service worker/offline support, and no /.well-known/assetlinks.json yet (added at TWA-wrapping time).
 
 
 ## Where everything actually lives (the real backups)
