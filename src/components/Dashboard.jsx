@@ -2394,7 +2394,7 @@ useEffect(() => {
   // it up instead of taken on faith. Remaining/Net are deliberately left out
   // -- they're differences, not sums, so there's no item list to show.
   
-  const nonCreditCardRecurringTotal = useMemo(() => recurringForMonth.filter((r) => r.payment_source !== 'Credit Card').reduce((s, r) => s + Number(r.amount), 0), [recurringForMonth]);
+  const nonCreditCardExpenseTotal = useMemo(() => rangeExpenses.filter((e) => e.payment_source !== 'Credit Card').reduce((s, e) => s + Number(e.amount), 0), [rangeExpenses]);  const nonCreditCardRecurringTotal = useMemo(() => recurringForMonth.filter((r) => r.payment_source !== 'Credit Card').reduce((s, r) => s + Number(r.amount), 0), [recurringForMonth]);
   // Credit card spend is a liability that hasn't left the bank account yet, so it's
   // excluded here from the outflow subtracted from income for the Net tile.
   // (combinedOutflow/remaining above are unaffected and still include credit card spend.)
