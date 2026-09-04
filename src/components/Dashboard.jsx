@@ -2869,11 +2869,11 @@ useEffect(() => {
   // Per-request: same "view breakdown" treatment as the sum tiles above --
   // filters the same two source arrays used by byPaymentType so the list a
   // user sees always matches the number on the tile exactly.
-  const paymentTypeBreakdownItems = (type, key) => {
+  const paymentTypeBreakdownItems = (type, key) => { const srcLabel = (src) => (src === 'Bank' ? 'Bank Account' : src === 'Salary' ? 'Salary Deduction' : src); const shortBank = (b) => (b || '').split('(')[0].trim();
     const items = [];
     rangeExpenses.forEach((e) => {
-      if (e.payment_source !== type) return;
-      if ((e.payment_bank || '__none__') !== key) return;
+      if (srcLabel(e.payment_source || 'Cash') !== type) return;
+      if ((shortBank(e.payment_bank) || '__none__') !== key) return;
       items.push({
         id: `e-${e.id}`,
         date: e.expense_date,
@@ -2884,8 +2884,8 @@ useEffect(() => {
       });
     });
     recurringForMonth.forEach((r) => {
-      if (r.payment_source !== type) return;
-      if ((r.payment_bank || '__none__') !== key) return;
+      if (srcLabel(r.payment_source || 'Cash') !== type) return;
+      if ((shortBank(r.payment_bank) || '__none__') !== key) return;
       items.push({
         id: `r-${r.id}`,
         date: r.due_date || r.start_date,
