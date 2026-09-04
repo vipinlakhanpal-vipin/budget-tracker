@@ -1124,6 +1124,9 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
   .header-tab-pill-group { flex-wrap: wrap; border-radius: 16px; }
 }
 .card .k { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.tile-breakdown-btn { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; padding: 0; border: none; border-radius: 999px; background: transparent; color: var(--muted); cursor: pointer; flex: 0 0 auto; }
+.tile-breakdown-btn:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
+
 .card .v { font-size: 24px; font-weight: 700; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .card.over .v { color: var(--danger); }
 .card.ok .v { color: var(--ok); }
