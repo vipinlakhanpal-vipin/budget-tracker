@@ -1460,11 +1460,11 @@ useEffect(() => {
   // dropdown got auto-filled rather than silently changing. Purely
   // additive -- if the API key isn't configured yet or the call fails, this
   // just never fires and the form behaves exactly as before.
-  const [aiCategoryHint, setAiCategoryHint] = useState('');
+  const [aiCategoryHint, setAiCategoryHint] = useState(''); const aiDescTimerRef = useRef(null);
   
   // suggestion for Fixed Expenses' Name field, kept in its own state so
   // it never clashes with the Regular Expenses hint above.
-  const [fixedAiCategoryHint, setFixedAiCategoryHint] = useState('');// AI feature #1b: same auto-categorize behaviour as Regular Expenses'
+  const [fixedAiCategoryHint, setFixedAiCategoryHint] = useState(''); const aiFixedDescTimerRef = useRef(null);// AI feature #1b: same auto-categorize behaviour as Regular Expenses'
   // AI feature #2 (monthly digest): a short AI-written summary of the
   // currently viewed month's spending, generated on demand (not
   // automatically) so it never costs anything unless someone actually asks
@@ -7485,8 +7485,8 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   type="text"
                   placeholder="e.g. Groceries at Trader Joe's"
                   value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  onBlur={(e) => suggestCategoryFromDescription(e.target.value)}
+                  onChange={(e) => { const v = e.target.value; setForm({ ...form, description: v }); clearTimeout(aiDescTimerRef.current); aiDescTimerRef.current = setTimeout(() => suggestCategoryFromDescription(v), 500); }}
+
                 />
               </div>
               <div className="field">
@@ -7932,8 +7932,8 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   type="text"
                   placeholder="e.g. Car loan EMI"
                   value={newRecurring.name}
-                  onChange={(e) => setNewRecurring({ ...newRecurring, name: e.target.value })}
-                  onBlur={(e) => suggestFixedCategoryFromDescription(e.target.value)}
+                  onChange={(e) => { const v = e.target.value; setNewRecurring({ ...newRecurring, name: v }); clearTimeout(aiFixedDescTimerRef.current); aiFixedDescTimerRef.current = setTimeout(() => suggestFixedCategoryFromDescription(v), 500); }}
+
                 />
               </div>
               <div className="field" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : { flex: '0 0 auto' }}>
