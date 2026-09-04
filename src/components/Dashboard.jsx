@@ -2385,7 +2385,15 @@ useEffect(() => {
   // much is actually free to spend.
   const combinedOutflow = total + savingsTotal;
   const remaining = totalBudget - combinedOutflow;
-  const nonCreditCardExpenseTotal = useMemo(() => rangeExpenses.filter((e) => e.payment_source !== 'Credit Card').reduce((s, e) => s + Number(e.amount), 0), [rangeExpenses]);
+  
+  // v3.72: Per-tile "view breakdown" data -- each of the sum-based dashboard
+  // tiles (Spent so far, Combined income, Combined expenses, My Investments,
+  // and the Credit Card/Debit Card/Bank Account tiles) gets a small list icon
+  // that opens a modal listing the individual line items behind that total,
+  // so a single aggregate number can actually be checked against what makes
+  // it up instead of taken on faith. Remaining/Net are deliberately left out
+  // -- they're differences, not sums, so there's no item list to show.
+  
   const nonCreditCardRecurringTotal = useMemo(() => recurringForMonth.filter((r) => r.payment_source !== 'Credit Card').reduce((s, r) => s + Number(r.amount), 0), [recurringForMonth]);
   // Credit card spend is a liability that hasn't left the bank account yet, so it's
   // excluded here from the outflow subtracted from income for the Net tile.
@@ -2400,7 +2408,63 @@ useEffect(() => {
   }, [incomes, currentMonth]);
   const totalIncome = useMemo(() => incomeForMonth.reduce((s, i) => s + Number(i.amount), 0), [incomeForMonth]);
   const netCombined = totalIncome - nonCreditCardOutflow;
-
+  const outflowBreakdownItems = useMemo(() => {
+    const items = [];
+    rangeExpenses.forEach((e) => {
+      items.push({
+        id: `e-${e.id}`,
+        date: e.expense_date,
+        label: e.description || categoryNameById[e.category_id] || 'Expense',
+        sub: categoryNameById[e.category_id] || '',
+        amount: Number(e.amount),
+        tag: 'Regular',
+      });
+    });
+    recurringForMonth.forEach((r) => {
+      items.push({
+        id: `r-${r.id}`,
+        date: r.due_date || r.start_date,
+        label: r.name,
+        sub: categoryNameById[r.category_id] || '',
+        amount: Number(r.amount),
+        tag: 'Fixed',
+      });
+    });
+    savingsForMonth.forEach((s) => {
+      items.push({
+        id: `s-${s.id}`,
+        date: s.start_date,
+        label: s.name || 'Savings',
+        sub: '',
+        amount: Number(s.amount),
+        tag: 'Savings',
+      });
+    });
+    return items.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+  }, [rangeExpenses, recurringForMonth, savingsForMonth, categoryNameById]);
+  const incomeBreakdownItems = useMemo(() => incomeForMonth
+    .map((i) => ({
+      id: `i-${i.id}`,
+      date: i.start_date,
+      label: i.name,
+      sub: displayNameForEmail(i.member_email),
+      amount: Number(i.amount),
+      tag: 'Income',
+    }))
+    .sort((a, b) => String(b.date || '').localeCompare(String(a.date || ''))), [incomeForMonth]);
+  const investmentBreakdownItems = useMemo(() => investments.map((inv) => {
+    const cur = investAccruedValue(inv);
+    const gain = cur - Number(inv.principal_amount || 0);
+    return {
+      id: `inv-${inv.id}`,
+      date: '',
+      label: inv.name,
+      sub: inv.investment_type || '',
+      amount: cur,
+      tag: gain >= 0 ? 'Gain' : 'Loss',
+    };
+  }), [investments, investFxRates]);
+  const [tileBreakdown, setTileBreakdown] = useState(null);
   // ---- Filters for the 4 month-scoped lists below (Regular Expenses, Fixed
   // Expenses, Income, Savings). These only narrow what's rendered on screen --
   // every total, chart, and the PDF report keep reading the original
@@ -2801,6 +2865,37 @@ useEffect(() => {
       catLine: tileCategoryLine(type, key),
       key: `${type}-${key}`,
     }));
+  };
+  // Per-request: same "view breakdown" treatment as the sum tiles above --
+  // filters the same two source arrays used by byPaymentType so the list a
+  // user sees always matches the number on the tile exactly.
+  const paymentTypeBreakdownItems = (type, key) => {
+    const items = [];
+    rangeExpenses.forEach((e) => {
+      if (e.payment_source !== type) return;
+      if ((e.payment_bank || '__none__') !== key) return;
+      items.push({
+        id: `e-${e.id}`,
+        date: e.expense_date,
+        label: e.description || categoryNameById[e.category_id] || 'Expense',
+        sub: categoryNameById[e.category_id] || '',
+        amount: Number(e.amount),
+        tag: 'Regular',
+      });
+    });
+    recurringForMonth.forEach((r) => {
+      if (r.payment_source !== type) return;
+      if ((r.payment_bank || '__none__') !== key) return;
+      items.push({
+        id: `r-${r.id}`,
+        date: r.due_date || r.start_date,
+        label: r.name,
+        sub: categoryNameById[r.category_id] || '',
+        amount: Number(r.amount),
+        tag: 'Fixed',
+      });
+    });
+    return items.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
   };
 
   // The pie chart specifically (not Bar/Pareto/Treemap) gets capped to its
@@ -6940,7 +7035,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
           )}
           {(!isMobile || showAllMobileCards) && (
           <>
-            <div className="grid">
+                    <div className="grid">
                 <div className="card card-budget">
           <div className="k">Monthly Budget</div>
           {totalBudget > 0 ? (
@@ -6950,7 +7045,11 @@ I can help you track expenses, understand spending patterns, create budgets, and
           )}
         </div>
         <div className={`card card-spent ${totalBudget > 0 && combinedOutflow > totalBudget ? 'over' : ''}`}>
-          <div className="k">Spent so far (incl. savings)</div><div className="v"><Amt value={combinedOutflow} /></div>
+          <div className="k" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+            Spent so far (incl. savings)
+            <button type="button" className="tile-breakdown-btn" onClick={() => setTileBreakdown({ title: 'Spent so far (incl. savings)', items: outflowBreakdownItems, total: combinedOutflow })} aria-label="View items behind this total" title="View items behind this total"><List size={12} /></button>
+          </div>
+          <div className="v"><Amt value={combinedOutflow} /></div>
           {savingsTotal > 0 && (
             <div className="muted-small" style={{ marginTop: 4 }}>
               Expenses <Amt value={total} /> + Savings <Amt value={savingsTotal} />
@@ -6966,7 +7065,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             </>
           ) : (
             <>
-              <div className="v"></div>
+              <div className="v"></div>
               <div className="muted-small" style={{ marginTop: 4 }}>Set a monthly budget to track this</div>
             </>
           )}
@@ -6975,7 +7074,10 @@ I can help you track expenses, understand spending patterns, create budgets, and
 
       <div className="grid">
         <div className="card card-income ok">
-          <div className="k">Combined income</div>
+          <div className="k" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+            Combined income
+            <button type="button" className="tile-breakdown-btn" onClick={() => setTileBreakdown({ title: 'Combined income', items: incomeBreakdownItems, total: totalIncome })} aria-label="View items behind this total" title="View items behind this total"><List size={12} /></button>
+          </div>
           <div className="v"><Amt value={totalIncome} /></div>
           {/* Same breakdown treatment as Combined expenses/Spent so far --
               income doesn't have fixed "types" the way expenses do
@@ -6992,7 +7094,10 @@ I can help you track expenses, understand spending patterns, create budgets, and
           )}
         </div>
         <div className="card card-expenses">
-          <div className="k">Combined expenses (incl. savings)</div>
+          <div className="k" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+            Combined expenses (incl. savings)
+            <button type="button" className="tile-breakdown-btn" onClick={() => setTileBreakdown({ title: 'Combined expenses (incl. savings)', items: outflowBreakdownItems, total: combinedOutflow })} aria-label="View items behind this total" title="View items behind this total"><List size={12} /></button>
+          </div>
           <div className="v"><Amt value={combinedOutflow} /></div>
           <div className="muted-small" style={{ marginTop: 4 }}>
             Regular <Amt value={oneOffTotal} /> + Fixed <Amt value={recurringTotal} />{savingsTotal > 0 ? <> + Savings <Amt value={savingsTotal} /></> : ''}
@@ -7004,7 +7109,10 @@ I can help you track expenses, understand spending patterns, create budgets, and
         </div>
         {(
           <div className={`card card-invest ${investmentTotals.gain < 0 ? 'over' : 'ok'}`}>
-            <div className="k">My Investments</div>
+            <div className="k" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+              My Investments
+              <button type="button" className="tile-breakdown-btn" onClick={() => setTileBreakdown({ title: 'My Investments', items: investmentBreakdownItems, total: investmentTotals.current })} aria-label="View items behind this total" title="View items behind this total"><List size={12} /></button>
+            </div>
             <div className="v"><Amt value={investmentTotals.current} /></div>
             <div className="muted-small" style={{ marginTop: 4 }}>
               Invested <Amt value={investmentTotals.principal} /> -- {investmentTotals.gain >= 0 ? 'Gain' : 'Loss'} <Amt value={Math.abs(investmentTotals.gain)} />
@@ -7013,21 +7121,30 @@ I can help you track expenses, understand spending patterns, create budgets, and
         )}
         {paymentTypeTiles('Credit Card').map((tile) => (
           <div className="card card-cc card-payment-split" key={tile.key}>
-            <div className="k">{tile.tileLabel}</div>
+            <div className="k" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+              {tile.tileLabel}
+              <button type="button" className="tile-breakdown-btn" onClick={() => setTileBreakdown({ title: tile.tileLabel, items: paymentTypeBreakdownItems('Credit Card', tile.key.replace('Credit Card-', '')), total: tile.value })} aria-label="View items behind this total" title="View items behind this total"><List size={12} /></button>
+            </div>
             <div className="v"><Amt value={tile.value} /></div>
             {tile.catLine && <div className="muted-small" style={{ marginTop: 2 }}>{tile.catLine}</div>}
           </div>
         ))}
         {paymentTypeTiles('Debit Card').map((tile) => (
           <div className="card card-dc card-payment-split" key={tile.key}>
-            <div className="k">{tile.tileLabel}</div>
+            <div className="k" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+              {tile.tileLabel}
+              <button type="button" className="tile-breakdown-btn" onClick={() => setTileBreakdown({ title: tile.tileLabel, items: paymentTypeBreakdownItems('Debit Card', tile.key.replace('Debit Card-', '')), total: tile.value })} aria-label="View items behind this total" title="View items behind this total"><List size={12} /></button>
+            </div>
             <div className="v"><Amt value={tile.value} /></div>
             {tile.catLine && <div className="muted-small" style={{ marginTop: 2 }}>{tile.catLine}</div>}
           </div>
         ))}
         {paymentTypeTiles('Bank Account').map((tile) => (
           <div className="card card-ba card-payment-split" key={tile.key}>
-            <div className="k">{tile.tileLabel}</div>
+            <div className="k" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+              {tile.tileLabel}
+              <button type="button" className="tile-breakdown-btn" onClick={() => setTileBreakdown({ title: tile.tileLabel, items: paymentTypeBreakdownItems('Bank Account', tile.key.replace('Bank Account-', '')), total: tile.value })} aria-label="View items behind this total" title="View items behind this total"><List size={12} /></button>
+            </div>
             <div className="v"><Amt value={tile.value} /></div>
             {tile.catLine && <div className="muted-small" style={{ marginTop: 2 }}>{tile.catLine}</div>}
           </div>
@@ -9830,26 +9947,38 @@ I can help you track expenses, understand spending patterns, create budgets, and
               </div>
             </div>
             <div className="muted-small" style={{ marginBottom: 16 }}>Changes save automatically -- there's no Save button to click.</div>
-            <div className="row" style={{ paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+                        <div className="row" style={{ paddingTop: 16, borderTop: '1px solid var(--border)' }}>
               <div className="field" style={{ width: '100%' }}>
-                <label>Delete account</label>
-                <div className="muted-small" style={{ marginBottom: 10 }}>
-                  Read the <a href="/terms.html" target="_blank" rel="noopener noreferrer">Terms of Service</a> and{' '}
-                  <a href="/privacy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.
-                </div>
-                <button
-                  type="button"
-                  className="btn small secondary"
+                {/* v3.72: red-tinted box around the whole section, plus a
+                    colored label, so this reads as a distinct danger zone
+                    instead of blending into the rest of the settings form. */}
+                <div
                   style={{
-                    alignSelf: 'flex-start',
-                    borderColor: 'var(--danger, #dc2626)',
-                    color: 'var(--danger, #dc2626)',
-                    background: 'color-mix(in srgb, var(--danger, #dc2626) 12%, transparent)',
+                    border: '1px solid color-mix(in srgb, var(--danger, #dc2626) 35%, transparent)',
+                    background: 'color-mix(in srgb, var(--danger, #dc2626) 6%, transparent)',
+                    borderRadius: 10,
+                    padding: 14,
                   }}
-                  onClick={() => { setDeleteAccountConfirmText(''); setDeleteAccountStatus(''); setDeleteAccountModalOpen(true); }}
                 >
-                  Delete My Account
-                </button>
+                  <label style={{ color: 'var(--danger, #dc2626)' }}>Delete account</label>
+                  <div className="muted-small" style={{ marginBottom: 10 }}>
+                    Read the <a href="/terms.html" target="_blank" rel="noopener noreferrer">Terms of Service</a> and{' '}
+                    <a href="/privacy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.
+                  </div>
+                  <button
+                    type="button"
+                    className="btn small secondary"
+                    style={{
+                      alignSelf: 'flex-start',
+                      borderColor: 'var(--danger, #dc2626)',
+                      color: 'var(--danger, #dc2626)',
+                      background: 'color-mix(in srgb, var(--danger, #dc2626) 12%, transparent)',
+                    }}
+                    onClick={() => { setDeleteAccountConfirmText(''); setDeleteAccountStatus(''); setDeleteAccountModalOpen(true); }}
+                  >
+                    Delete My Account
+                  </button>
+                </div>
               </div>
             </div>
           </>
@@ -10074,7 +10203,60 @@ I can help you track expenses, understand spending patterns, create budgets, and
           pattern, since this is irreversible and affects login access
           itself. See handleDeleteAccount above and api/invite-member.js's
           deleteOwnAccount for exactly what happens. */}
-      {deleteAccountModalOpen && (
+            {/* v3.72: dashboard tile "view breakdown" modal -- reuses the same
+          attachment-viewer-overlay/modal classes as the delete-account and
+          attachment modals below, so it looks consistent with the rest of
+          the app instead of introducing a new one-off modal style. */}
+      {tileBreakdown && (
+        <div
+          className="attachment-viewer-overlay"
+          onClick={() => setTileBreakdown(null)}
+        >
+          <div
+            className="attachment-viewer-modal"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: 440, maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}
+          >
+            <div className="attachment-viewer-head">
+              <span className="attachment-viewer-title">{tileBreakdown.title}</span>
+              <button
+                type="button"
+                className="mobile-sheet-close"
+                onClick={() => setTileBreakdown(null)}
+                aria-label="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ padding: '4px 18px', overflowY: 'auto', flex: '1 1 auto' }}>
+              {tileBreakdown.items.length === 0 ? (
+                <div className="muted-small" style={{ padding: '16px 0' }}>Nothing recorded for this yet.</div>
+              ) : (
+                tileBreakdown.items.map((it) => (
+                  <div
+                    key={it.id}
+                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--border)', gap: 12 }}
+                  >
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.label}</div>
+                      <div className="muted-small" style={{ marginTop: 2 }}>
+                        {[it.tag, it.sub, it.date].filter(Boolean).join(' · ')}
+                      </div>
+                    </div>
+                    <div style={{ fontWeight: 600, whiteSpace: 'nowrap' }}><Amt value={it.amount} /></div>
+                  </div>
+                ))
+              )}
+            </div>
+            <div style={{ padding: '12px 18px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
+              <span>Total</span>
+              <Amt value={tileBreakdown.total} />
+            </div>
+          </div>
+        </div>
+      )}
+
+{deleteAccountModalOpen && (
         <div
           className="attachment-viewer-overlay"
           onClick={() => { if (deleteAccountStatus !== 'deleting') setDeleteAccountModalOpen(false); }}
