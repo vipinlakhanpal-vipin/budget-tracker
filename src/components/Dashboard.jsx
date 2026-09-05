@@ -10,7 +10,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { supabase } from '../supabaseClient';
 import AdminConsole from './AdminConsole.jsx';
-import EManual from './EManual.jsx';
+import EManual from './EManual.jsx'; import AutomationSettings from './AutomationSettings.jsx';
 import { formatVersionBadge, APP_VERSION } from '../version.js';
 import {
   Home, Plus, FileText, Users as UsersIcon, Settings as SettingsIcon,
@@ -9946,7 +9946,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 />
               </div>
             </div>
-            <div className="muted-small" style={{ marginBottom: 16 }}>Changes save automatically -- there's no Save button to click.</div>
+            <div className="muted-small" style={{ marginBottom: 16 }}>Changes save automatically -- there's no Save button to click.</div><AutomationSettings session={session} />
                         <div className="row" style={{ paddingTop: 16, borderTop: '1px solid var(--border)' }}>
               <div className="field" style={{ width: '100%' }}>
                 {/* v3.72: red-tinted box around the whole section, plus a
