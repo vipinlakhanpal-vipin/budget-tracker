@@ -3019,6 +3019,40 @@ row. */
   0%, 100% { box-shadow: 0 0 0 0 rgba(13, 148, 136, .45); }
   50% { box-shadow: 0 0 0 6px rgba(13, 148, 136, .12); }
 }
+/* New-update-available flashing text, shown next to the refresh button on
+   desktop (below the header icon) and above the Refresh tab in the mobile
+   bottom nav, in addition to the existing red dot badge. */
+.update-flash-desktop, .update-flash-mobile {
+  position: absolute;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 700;
+  color: #0066ff;
+  background: var(--card);
+  border: 1px solid #0066ff;
+  padding: 2px 8px;
+  border-radius: 6px;
+  z-index: 50;
+  animation: update-flash-blink 1s ease-in-out infinite;
+  pointer-events: none;
+}
+.update-flash-desktop {
+  top: 100%;
+  right: 0;
+  margin-top: 6px;
+}
+.update-flash-mobile {
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 6px;
+  font-size: 10px;
+  padding: 2px 6px;
+}
+@keyframes update-flash-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
 @media (max-width: 640px) {
   /* On mobile the Aria icon itself is hidden (.chat-fab-btn.tab-hide-mobile
      -- it lives in the bottom nav instead), but its wrapper
