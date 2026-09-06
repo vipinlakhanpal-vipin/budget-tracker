@@ -13,7 +13,7 @@ import AdminConsole from './AdminConsole.jsx';
 import EManual from './EManual.jsx'; import AutomationSettings from './AutomationSettings.jsx';
 import { formatVersionBadge, APP_VERSION } from '../version.js';
 import {
-  Home, Plus, FileText, Users as UsersIcon, Settings as SettingsIcon,
+  Home, LayoutDashboard, Plus, FileText, Users as UsersIcon, Settings as SettingsIcon,
   Pencil, Trash2, X, ChevronLeft, ChevronRight, ChevronDown, Camera, MessageCircle, Bot, Sparkles, User,
   Palette, Check, StickyNote, Paperclip, ExternalLink, Mail, Lightbulb,
   Wallet, CalendarClock, ShoppingCart, PiggyBank, HelpCircle, Filter, Search, Sun, Moon, RefreshCw, Landmark, BookOpen,
@@ -828,8 +828,9 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     return amount;
   }
   const investmentTotals = useMemo(() => {
-    const principal = investments.reduce((s, x) => s + investToBase(Number(x.principal_amount || 0), x.currency), 0);
-    const current = investments.reduce((s, x) => s + investToBase(investAccruedValue(x), x.currency), 0);
+    const activeInvestments = investments.filter((x) => x.status !== 'Closed');
+    const principal = activeInvestments.reduce((s, x) => s + investToBase(Number(x.principal_amount || 0), x.currency), 0);
+    const current = activeInvestments.reduce((s, x) => s + investToBase(investAccruedValue(x), x.currency), 0);
     return { principal, current, gain: current - principal };
   }, [investments, investFxRates]);
 
@@ -1928,6 +1929,10 @@ useEffect(() => {
   const [showIncomeNotes, setShowIncomeNotes] = useState(false);
   const [incomeFiles, setIncomeFiles] = useState([]);
   const incomeFilesInputRef = useRef(null);
+  // Same note/attachment pattern as the income/expense forms.
+  const [showInvestmentNotes, setShowInvestmentNotes] = useState(false);
+  const [investmentFiles, setInvestmentFiles] = useState([]);
+  const investmentFilesInputRef = useRef(null);
 
   // Report panel state -- generates a PDF for a chosen date range covering
   // Expenses this month / Income / Fixed Expenses. Kept as a data URI in
@@ -3281,7 +3286,7 @@ useEffect(() => {
     return {
       investmentType: 'Fixed Deposit', name: '', institution: '', principal: '', currentValue: '',
       interestRate: '', sipAmount: '', startDate: new Date().toISOString().slice(0, 10), maturityDate: '', status: 'Active',
-      currency: CURRENT_CURRENCY,
+      currency: CURRENT_CURRENCY, notes: '',
     };
   }
 
@@ -3299,6 +3304,7 @@ useEffect(() => {
       maturityDate: inv.maturity_date || '',
       status: inv.status || 'Active',
       currency: inv.currency || CURRENT_CURRENCY,
+      notes: inv.notes || '',
     });
   }
 
@@ -3325,18 +3331,28 @@ useEffect(() => {
       maturity_date: investmentForm.investmentType === 'Fixed Deposit' ? (investmentForm.maturityDate || null) : null,
       status: investmentForm.status || 'Active',
       currency: investmentForm.currency || CURRENT_CURRENCY,
+      notes: investmentForm.notes ? investmentForm.notes.trim() : null,
     };
     let error;
+    let newInvestmentId = null;
     if (editingInvestmentId) {
       ({ error } = await supabase.from('investments').update(payload).eq('id', editingInvestmentId));
     } else {
-      ({ error } = await supabase.from('investments').insert({
+      const { data: insertedInv, error: insErr } = await supabase.from('investments').insert({
         household_id: householdId, created_by: session.user.id, created_by_email: session.user.email, ...payload,
-      }));
+      }).select().single();
+      error = insErr;
+      newInvestmentId = insertedInv?.id || null;
     }
     if (error) { notify('Could not save investment: ' + error.message); return; }
+    if (investmentFiles.length > 0 && newInvestmentId) {
+      await uploadAttachmentsForRow('investments', newInvestmentId, investmentFiles);
+    }
     const wasEditing = !!editingInvestmentId;
     cancelEditInvestment();
+    setShowInvestmentNotes(false);
+    setInvestmentFiles([]);
+    if (investmentFilesInputRef.current) investmentFilesInputRef.current.value = '';
     await loadAll();
     showToast(wasEditing ? 'Investment updated' : 'Investment added');
     setDeskFrameFor('investments', 'view');
@@ -6310,7 +6326,7 @@ function ReportHtmlView({ data }) {
           onClick={goToOverview}
           title="Dashboard"
         >
-          <Home size={18} />
+          <LayoutDashboard size={18} />
           <span>Dash</span>
         </button>
         <button
@@ -6494,6 +6510,7 @@ function ReportHtmlView({ data }) {
           >
             <RefreshCw size={16} />
             {updateAvailable && <span className="refresh-app-btn-badge">!</span>}
+            {updateAvailable && <span className="update-flash-desktop">New Update Available</span>}
           </button>
           )}
           <div className="corner-badge-group">
@@ -7337,6 +7354,37 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   </select>
                 </div>
               )}
+              <div className="field" style={{ flex: '0 0 auto' }}>
+                <label style={{ visibility: 'hidden' }}>Note</label>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <button
+                    type="button"
+                    className={`icon-btn-outline ${investmentForm.notes ? 'active' : ''}`}
+                    title="Add a note"
+                    onClick={() => setShowInvestmentNotes((s) => !s)}
+                    style={{ height: 40, width: 40, flex: '0 0 auto' }}
+                  >
+                    <StickyNote size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    className={`icon-btn-outline ${investmentFiles.length > 0 ? 'active' : ''}`}
+                    title="Attach documents"
+                    onClick={() => investmentFilesInputRef.current?.click()}
+                    style={{ height: 40, width: 40, flex: '0 0 auto' }}
+                  >
+                    <Paperclip size={16} />
+                  </button>
+                  <input
+                    type="file"
+                    accept={ATTACHMENT_ACCEPT}
+                    ref={investmentFilesInputRef}
+                    multiple
+                    style={{ display: 'none' }}
+                    onChange={(e) => handleAttachmentPick(e.target.files, setInvestmentFiles)}
+                  />
+                </div>
+              </div>
               <div className="field" style={{ flex: '0 0 auto', display: 'flex', gap: 8 }}>
                 <button className="btn" type="button" onClick={handleSaveInvestment} style={{ height: 40 }}>
                   {editingInvestmentId ? 'Save Changes' : 'Add'}
@@ -7347,6 +7395,18 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   </button>
                 )}
               </div>
+              {showInvestmentNotes && (
+                <div className="field" style={{ marginTop: 8 }}>
+                  <label>Note (optional, long description)</label>
+                  <textarea
+                    rows={2}
+                    placeholder="Any extra detail about this investment..."
+                    value={investmentForm.notes || ''}
+                    onChange={(e) => setInvestmentForm({ ...investmentForm, notes: e.target.value })}
+                  />
+                </div>
+              )}
+              <PendingAttachmentChips files={investmentFiles} onRemove={(i) => removeAttachmentAt(setInvestmentFiles, i)} />
             </div>
           </div>
           )}
@@ -10329,6 +10389,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
         >
           <RefreshCw size={20} strokeWidth={2.2} />
           {updateAvailable && <span className="notif-badge" style={{ top: -2, right: 4 }}>!</span>}
+          {updateAvailable && <span className="update-flash-mobile">New Update Available</span>}
           <span>Refresh</span>
         </button>
         <button data-tour="nav-add" onClick={() => goToAdd(inputTab || 'expense')}>
