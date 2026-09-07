@@ -78,7 +78,7 @@ async function trackLogin(session) {
 
 const ADMIN_EMAIL = 'vipinlakhanpal@gmail.com';
 
-export default // Shown while the initial auth/session check or household resolution is
+// Shown while the initial auth/session check or household resolution is
 // still in flight. A plain "Loading..." line on a blank background reads as
 // a broken/frozen page on a slow connection or when the database is waking
 // up from being idle (Supabase free-tier projects pause after inactivity
@@ -106,7 +106,7 @@ function LoadingScreen() {
   );
 }
 
-function App() {
+export default function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [household, setHousehold] = useState(null);
