@@ -2,6 +2,28 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      // Self-heals the "blank white screen right after a new version ships"
+      // failure mode: this app's JS/CSS filenames change on every deploy,
+      // and the production URL only ever serves the *latest* deployment's
+      // files -- so a tab that already had an older index.html cached (or
+      // was simply left open across a deploy) can end up requesting a
+      // bundle that no longer exists and 404s, and the app never boots.
+      // Reloading once re-fetches index.html, which points at the current
+      // bundle, and fixes it. Guarded by sessionStorage so a genuine 404
+      // (e.g. actually offline) can't reload-loop forever -- once per tab.
+      window.addEventListener('error', function (e) {
+        var t = e.target;
+        if (!t || !t.tagName) return;
+        var src = t.src || t.href || '';
+        if ((t.tagName === 'SCRIPT' || t.tagName === 'LINK') && src.indexOf('/assets/') !== -1) {
+          if (!sessionStorage.getItem('__stale_asset_reload')) {
+            sessionStorage.setItem('__stale_asset_reload', '1');
+            location.reload();
+          }
+        }
+      }, true);
+    </script>
     <!-- viewport-fit=cover lets the app draw behind the iPhone notch/home
          indicator area, which the bottom nav's safe-area-inset padding then
          insets around -- without it, iOS just letterboxes the page instead
