@@ -834,6 +834,19 @@ export default function Dashboard({ session, household, onHouseholdChange, isAdm
     return { principal, current, gain: current - principal };
   }, [investments, investFxRates]);
 
+  // Dashboard tile totals are month-scoped: an investment shouldn't count
+  // toward (or appear in the breakdown of) any month before it existed --
+  // e.g. an FD opened in July shouldn't show up while browsing May. The full
+  // "Investment Records" list further down stays all-time on purpose, since
+  // that's meant to be the complete ledger.
+  const dashboardInvestmentTotals = useMemo(() => {
+    const key = monthKey(currentMonth);
+    const activeInvestments = investments.filter((x) => x.status !== 'Closed' && x.start_date && x.start_date.slice(0, 7) <= key);
+    const principal = activeInvestments.reduce((s, x) => s + investToBase(Number(x.principal_amount || 0), x.currency), 0);
+    const current = activeInvestments.reduce((s, x) => s + investToBase(investAccruedValue(x), x.currency), 0);
+    return { principal, current, gain: current - principal };
+  }, [investments, investFxRates, currentMonth]);
+
   useEffect(() => {
     let cancelled = false;
     fetch(`https://open.er-api.com/v6/latest/${CURRENT_CURRENCY}`)
@@ -1933,6 +1946,10 @@ useEffect(() => {
   const [showInvestmentNotes, setShowInvestmentNotes] = useState(false);
   const [investmentFiles, setInvestmentFiles] = useState([]);
   const investmentFilesInputRef = useRef(null);
+  // Active/Closed/All quick filter for the Investment Records list below --
+  // lets a matured FD be marked Closed (see investDisplayStatus) and kept
+  // around as history without cluttering the default Active view.
+  const [investmentStatusFilter, setInvestmentStatusFilter] = useState('Active');
 
   // Report panel state -- generates a PDF for a chosen date range covering
   // Expenses this month / Income / Fixed Expenses. Kept as a data URI in
@@ -2457,18 +2474,23 @@ useEffect(() => {
       tag: 'Income',
     }))
     .sort((a, b) => String(b.date || '').localeCompare(String(a.date || ''))), [incomeForMonth]);
-  const investmentBreakdownItems = useMemo(() => investments.map((inv) => {
-    const cur = investAccruedValue(inv);
-    const gain = cur - Number(inv.principal_amount || 0);
-    return {
-      id: `inv-${inv.id}`,
-      date: '',
-      label: inv.name,
-      sub: inv.investment_type || '',
-      amount: cur,
-      tag: gain >= 0 ? 'Gain' : 'Loss',
-    };
-  }), [investments, investFxRates]);
+  const investmentBreakdownItems = useMemo(() => {
+    const key = monthKey(currentMonth);
+    return investments
+      .filter((inv) => inv.status !== 'Closed' && inv.start_date && inv.start_date.slice(0, 7) <= key)
+      .map((inv) => {
+        const cur = investAccruedValue(inv);
+        const gain = cur - Number(inv.principal_amount || 0);
+        return {
+          id: `inv-${inv.id}`,
+          date: '',
+          label: inv.name,
+          sub: inv.investment_type || '',
+          amount: cur,
+          tag: gain >= 0 ? 'Gain' : 'Loss',
+        };
+      });
+  }, [investments, investFxRates, currentMonth]);
   const [tileBreakdown, setTileBreakdown] = useState(null);
   // ---- Filters for the 4 month-scoped lists below (Regular Expenses, Fixed
   // Expenses, Income, Savings). These only narrow what's rendered on screen --
@@ -7125,14 +7147,14 @@ I can help you track expenses, understand spending patterns, create budgets, and
           <div className="muted-small" style={{ marginTop: 4 }}>Income left after debit card, bank, and savings outflows - excludes credit card spend, which hasn't left your account yet.</div>
         </div>
         {(
-          <div className={`card card-invest ${investmentTotals.gain < 0 ? 'over' : 'ok'}`}>
+          <div className={`card card-invest ${dashboardInvestmentTotals.gain < 0 ? 'over' : 'ok'}`}>
             <div className="k" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
               My Investments
-              <button type="button" className="tile-breakdown-btn" onClick={() => setTileBreakdown({ title: 'My Investments', items: investmentBreakdownItems, total: investmentTotals.current })} aria-label="View items behind this total" title="View items behind this total"><List size={12} /></button>
+              <button type="button" className="tile-breakdown-btn" onClick={() => setTileBreakdown({ title: 'My Investments', items: investmentBreakdownItems, total: dashboardInvestmentTotals.current })} aria-label="View items behind this total" title="View items behind this total"><List size={12} /></button>
             </div>
-            <div className="v"><Amt value={investmentTotals.current} /></div>
+            <div className="v">{dashboardInvestmentTotals.current === 0 && dashboardInvestmentTotals.principal === 0 ? <span className="muted-small" style={{ fontSize: 14 }}>No active investments</span> : <Amt value={dashboardInvestmentTotals.current} />}</div>
             <div className="muted-small" style={{ marginTop: 4 }}>
-              Invested <Amt value={investmentTotals.principal} /> -- {investmentTotals.gain >= 0 ? 'Gain' : 'Loss'} <Amt value={Math.abs(investmentTotals.gain)} />
+              Invested <Amt value={dashboardInvestmentTotals.principal} /> -- {dashboardInvestmentTotals.gain >= 0 ? 'Gain' : 'Loss'} <Amt value={Math.abs(dashboardInvestmentTotals.gain)} />
             </div>
           </div>
         )}
@@ -7419,11 +7441,30 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 
                 {investments.length} {investments.length === 1 ? 'entry' : 'entries'} -- Invested <strong><Amt value={investmentTotals.principal} /></strong> -- Current <strong style={{ color: '#0ea5e9' }}><Amt value={investmentTotals.current} /></strong> -- <strong style={{ color: investmentTotals.gain >= 0 ? '#1a7f37' : '#d1242f' }}>{investmentTotals.gain >= 0 ? 'Gain' : 'Loss'} <Amt value={Math.abs(investmentTotals.gain)} /></strong>
               </div>
-              {investments.length === 0 ? (
-                <div className="empty">No investments added yet.</div>
-              ) : (
+              <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+                {['Active', 'Closed', 'All'].map((f) => (
+                  <button
+                    key={f}
+                    type="button"
+                    className={`btn small ${investmentStatusFilter === f ? '' : 'secondary'}`}
+                    onClick={() => setInvestmentStatusFilter(f)}
+                  >
+                    {f} {f === 'Active' ? `(${investments.filter((x) => investDisplayStatus(x) !== 'Closed').length})` : f === 'Closed' ? `(${investments.filter((x) => investDisplayStatus(x) === 'Closed').length})` : `(${investments.length})`}
+                  </button>
+                ))}
+              </div>
+              {(() => {
+                const visibleInvestments = investments.filter((inv) => {
+                  if (investmentStatusFilter === 'All') return true;
+                  if (investmentStatusFilter === 'Closed') return investDisplayStatus(inv) === 'Closed';
+                  return investDisplayStatus(inv) !== 'Closed';
+                });
+                if (visibleInvestments.length === 0) {
+                  return <div className="empty">{investmentStatusFilter === 'Closed' ? 'No closed investments yet.' : investmentStatusFilter === 'Active' ? 'No active investments.' : 'No investments added yet.'}</div>;
+                }
+                return (
                 <div className="mobile-txn-list">
-                  {investments.map((inv) => {
+                  {visibleInvestments.map((inv) => {
                     const cur = investAccruedValue(inv);
                     const gain = cur - Number(inv.principal_amount || 0);
                     const estFlag = investIsEstimated(inv);
@@ -7469,7 +7510,8 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     );
                   })}
                 </div>
-              )}
+                );
+              })()}
             </div>
           </div>
           )}
