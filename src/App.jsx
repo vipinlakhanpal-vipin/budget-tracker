@@ -134,10 +134,22 @@ function App() {
   }, []);
 
   useEffect(() => {
+    let settled = false;
     supabase.auth.getSession().then(({ data: { session } }) => {
+      settled = true;
       setSession(session);
       setLoading(false);
     });
+    // Safety net: getSession() can occasionally hang indefinitely (seen
+    // during testing -- some storage/lock stall keeps the promise from ever
+    // settling), which would otherwise leave the user stuck on the loading
+    // screen forever with no way out. If it hasn't resolved within 10s,
+    // stop blocking on it and fall through to the Login screen instead --
+    // if a real session does turn up later via onAuthStateChange below, the
+    // app will still pick it up and move past Login on its own.
+    const safety = setTimeout(() => {
+      if (!settled) setLoading(false);
+    }, 10000);
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
@@ -149,7 +161,7 @@ function App() {
       setSession(session);
     });
 
-    return () => listener.subscription.unsubscribe();
+    return () => { listener.subscription.unsubscribe(); clearTimeout(safety); };
   }, []);
 
   // IMPORTANT: this only re-resolves the household when the signed-in USER
