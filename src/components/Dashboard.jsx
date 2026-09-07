@@ -7474,7 +7474,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                         key={inv.id}
                         type="button"
                         className="mobile-txn-row"
-                        onClick={() => startEditInvestment(inv)}
+                        onClick={() => { startEditInvestment(inv); setDeskFrameFor('investments', 'add'); }}
                       >
                         <span className="mobile-txn-icon" style={{ background: isFD ? '#8b5cf6' : '#0d9488' }}>
                           {isFD ? 'FD' : 'MF'}
