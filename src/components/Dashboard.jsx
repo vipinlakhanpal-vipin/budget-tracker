@@ -1,4 +1,3 @@
-
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -6997,12 +6996,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             {rangeIsFullMonth ? 'Full month' : `${fmtDate(rangeStart)} - ${fmtDate(rangeEnd)}`}
             {!rangeIsFullMonth && <span className="filter-active-dot" />}
           </button>
-          {/* v3.34: version number surfaced right here per explicit request --
-              the only other place it showed was buried inside the profile
-              dropdown/pill, which made it hard to quickly confirm which
-              build is actually running (especially useful this round, to
-              verify a fresh deploy landed vs a stale cached one). */}
-          <span className="mini-version-badge" title="App version">v{APP_VERSION}</span>
+          
           {rangeOpen && (
             <div className="filter-dropdown" style={{ width: 240 }}>
               <div className="filter-dropdown-title">Date range within {monthLabel(currentMonth)}</div>
@@ -7446,113 +7440,134 @@ I can help you track expenses, understand spending patterns, create budgets, and
           </div>
           )}
 
-          {(deskFrame.investments === 'view') && (
+                    {(deskFrame.investments === 'view') && (
           <div className="panel" style={{ maxWidth: '100%', marginBottom: 24 }}>
-            <h2 className="panel-title-themed" style={{ fontSize: 16 }}>Your Investment Records</h2>
-            <div>
-              <div className="muted-small" style={{ marginBottom: 14, fontSize: 13, background: 'rgba(14,165,233,0.12)', border: '1px solid rgba(14,165,233,0.35)', borderRadius: 8, padding: '10px 12px' }}>
-                
-                {investments.length} {investments.length === 1 ? 'entry' : 'entries'} -- Invested <strong><Amt value={investmentTotals.principal} /></strong> -- Current <strong style={{ color: '#0ea5e9' }}><Amt value={investmentTotals.current} /></strong> -- <strong style={{ color: investmentTotals.gain >= 0 ? '#1a7f37' : '#d1242f' }}>{investmentTotals.gain >= 0 ? 'Gain' : 'Loss'} <Amt value={Math.abs(investmentTotals.gain)} /></strong>
-              </div>
-              <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-                {['Active', 'Closed', 'All'].map((f) => (
+            <div className="panel-title-row-inline" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <h2 className="panel-title-themed" style={{ marginBottom: 0, fontSize: 16 }}>Your Investment Records</h2>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {['Active', 'Matured', 'Closed', 'All'].map((f) => (
                   <button
                     key={f}
                     type="button"
                     className={`btn small ${investmentStatusFilter === f ? '' : 'secondary'}`}
                     onClick={() => setInvestmentStatusFilter(f)}
                   >
-                    {f} {f === 'Active' ? `(${investments.filter((x) => investDisplayStatus(x) !== 'Closed').length})` : f === 'Closed' ? `(${investments.filter((x) => investDisplayStatus(x) === 'Closed').length})` : `(${investments.length})`}
+                    {f} ({f === 'All' ? investments.length : investments.filter((x) => investDisplayStatus(x) === f).length})
                   </button>
                 ))}
               </div>
+            </div>
+            <div>
               {(() => {
-                const visibleInvestments = investments.filter((inv) => {
+                const monthScopedInvestments = investments.filter((inv) => !inv.start_date || inv.start_date.slice(0, 7) <= monthKey(currentMonth));
+                const visibleInvestments = monthScopedInvestments.filter((inv) => {
                   if (investmentStatusFilter === 'All') return true;
-                  if (investmentStatusFilter === 'Closed') return investDisplayStatus(inv) === 'Closed';
-                  return investDisplayStatus(inv) !== 'Closed';
+                  return investDisplayStatus(inv) === investmentStatusFilter;
                 });
-                if (visibleInvestments.length === 0) {
-                  return <div className="empty">{investmentStatusFilter === 'Closed' ? 'No closed investments yet.' : investmentStatusFilter === 'Active' ? 'No active investments.' : 'No investments added yet.'}</div>;
-                }
+                const visTotals = visibleInvestments.reduce((acc, inv) => {
+                  acc.principal += Number(inv.principal_amount || 0);
+                  acc.current += investAccruedValue(inv);
+                  return acc;
+                }, { principal: 0, current: 0 });
+                const visGain = visTotals.current - visTotals.principal;
                 return (
-                <div className="mobile-txn-list">
-                  {visibleInvestments.map((inv) => {
-                    const cur = investAccruedValue(inv);
-                    const gain = cur - Number(inv.principal_amount || 0);
-                    const estFlag = investIsEstimated(inv);
-                    const isFD = inv.investment_type === 'Fixed Deposit';
-                    return (
-                      <div key={inv.id} className="mobile-txn-row">
-                        <span className="mobile-txn-icon" style={{ background: isFD ? '#8b5cf6' : '#0d9488' }}>
-                          {isFD ? 'FD' : 'MF'}
-                        </span>
-                        <span className="mobile-txn-mid">
-                          <span className="mobile-txn-title">{inv.name}</span>
-                          <span className="mobile-txn-sub">
-                            {inv.institution || '--'}
+                <>
+                <div className="muted-small" style={{ marginBottom: 14, fontSize: 13, background: 'rgba(14,165,233,0.12)', border: '1px solid rgba(14,165,233,0.35)', borderRadius: 8, padding: '10px 12px' }}>
+                  {visibleInvestments.length} {visibleInvestments.length === 1 ? 'entry' : 'entries'} as of {monthLabel(currentMonth)} -- Invested <strong><Amt value={visTotals.principal} /></strong> -- Current <strong style={{ color: '#0ea5e9' }}><Amt value={visTotals.current} /></strong> -- <strong style={{ color: visGain >= 0 ? '#1a7f37' : '#d1242f' }}>{visGain >= 0 ? 'Gain' : 'Loss'} <Amt value={Math.abs(visGain)} /></strong>
+                </div>
+                {visibleInvestments.length === 0 ? (
+                  <div className="muted-small">No investment records to show for {monthLabel(currentMonth)} with this filter.</div>
+                ) : (
+                <div className="table-scroll">
+                <table className="responsive-table investments-records-table">
+                  <thead>
+                    <tr>
+                      <th>FD / Investment Details</th>
+                      <th>Interest / SIP</th>
+                      <th>Start Date</th>
+                      <th>End Date</th>
+                      <th>Status</th>
+                      <th style={{ textAlign: 'right' }}>Gained</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleInvestments.map((inv) => {
+                      const cur = investAccruedValue(inv);
+                      const gain = cur - Number(inv.principal_amount || 0);
+                      const estFlag = investIsEstimated(inv);
+                      const isFD = inv.investment_type === 'Fixed Deposit';
+                      const dStatus = investDisplayStatus(inv);
+                      return (
+                        <tr key={inv.id}>
+                          <td data-label="FD / Investment Details">
+                            <div style={{ fontWeight: 600 }}>{inv.name}</div>
+                            <div className="muted-small">{inv.institution || '--'}</div>
+                          </td>
+                          <td data-label="Interest / SIP">
                             {isFD
-                              ? (inv.interest_rate != null ? ` \u00b7 ${inv.interest_rate}% p.a.` : '')
-                              : (inv.sip_amount != null ? ` \u00b7 ${fmt(inv.sip_amount)}/mo` : '')}
-                            {inv.start_date ? ` \u00b7 Started ${inv.start_date}` : ''}
-                          </span>
-                          <span style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
-                            {['Active', 'Matured', 'Closed'].map((s) => (
-                              <button
-                                key={s}
-                                type="button"
-                                onClick={() => handleQuickInvestmentStatus(inv, s)}
-                                style={{
-                                  fontSize: 10, padding: '2px 8px', borderRadius: 10, cursor: 'pointer',
-                                  border: `1px solid ${investDisplayStatus(inv) === s ? 'var(--accent)' : 'var(--border)'}`,
-                                  background: investDisplayStatus(inv) === s ? 'var(--accent)' : 'transparent',
-                                  color: investDisplayStatus(inv) === s ? '#fff' : 'var(--muted)',
-                                }}
-                              >
-                                {s}
-                              </button>
-                            ))}
-                          </span>
-                        </span>
-                        <span style={{ textAlign: 'right', flex: '0 0 auto' }}>
-                          <span className="mobile-txn-amount"><AmtCur value={cur} currency={inv.currency} />{estFlag && <span className="muted-small" style={{ marginLeft: 4 }}>(est.)</span>}</span>
-                          <div className="muted-small" style={{ marginTop: 2 }}>{investDisplayStatus(inv)}{inv.maturity_date ? ` \u00b7 ${inv.maturity_date}` : ''}</div>
-                          <div style={{ fontSize: 12, fontWeight: 600, marginTop: 2, color: gain >= 0 ? '#1a7f37' : '#d1242f' }}>
-                            {gain >= 0 ? '+' : '-'}<AmtCur value={Math.abs(gain)} currency={inv.currency} />
-                          </div>
-                          <span style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
-                            <span
-                              role="button"
-                              tabIndex={0}
+                              ? (inv.interest_rate != null ? `${inv.interest_rate}% p.a.` : '--')
+                              : (inv.sip_amount != null ? `${fmt(inv.sip_amount)}/mo` : '--')}
+                          </td>
+                          <td data-label="Start Date">{fmtDate(inv.start_date)}</td>
+                          <td data-label="End Date">{fmtDate(inv.maturity_date)}</td>
+                          <td data-label="Status">
+                            <div className="muted-small" style={{ marginBottom: 4 }}>{dStatus}</div>
+                            <span style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                              {['Active', 'Matured', 'Closed'].map((s) => (
+                                <button
+                                  key={s}
+                                  type="button"
+                                  onClick={() => handleQuickInvestmentStatus(inv, s)}
+                                  style={{
+                                    fontSize: 10, padding: '2px 8px', borderRadius: 10, cursor: 'pointer',
+                                    border: `1px solid ${dStatus === s ? '#0ea5e9' : 'var(--border)'}`,
+                                    background: dStatus === s ? '#0ea5e9' : 'transparent',
+                                    color: dStatus === s ? '#fff' : 'var(--muted)',
+                                  }}
+                                >
+                                  {s}
+                                </button>
+                              ))}
+                            </span>
+                          </td>
+                          <td data-label="Gained" style={{ textAlign: 'right' }}>
+                            <div style={{ fontWeight: 600, color: gain >= 0 ? '#1a7f37' : '#d1242f' }}>
+                              {gain >= 0 ? '+' : '-'}<AmtCur value={Math.abs(gain)} currency={inv.currency} />
+                            </div>
+                            <div className="muted-small"><AmtCur value={cur} currency={inv.currency} />{estFlag && ' (est.)'}</div>
+                          </td>
+                          <td>
+                            <button
+                              type="button"
+                              className="row-icon-btn"
                               title="Edit"
                               onClick={() => { startEditInvestment(inv); setDeskFrameFor('investments', 'add'); }}
-                              onKeyDown={(e) => { if (e.key === 'Enter') { startEditInvestment(inv); setDeskFrameFor('investments', 'add'); } }}
-                              style={{ display: 'inline-flex', cursor: 'pointer', color: 'var(--muted)' }}
                             >
                               <Pencil size={13} />
-                            </span>
-                            <span
-                            role="button"
-                            tabIndex={0}
-                            title="Delete"
-                            onClick={(e) => { e.stopPropagation(); handleDeleteInvestment(inv.id, inv.name); }}
-                            onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); handleDeleteInvestment(inv.id, inv.name); } }}
-                            style={{ display: 'inline-flex', marginTop: 4, cursor: 'pointer', color: 'var(--muted)' }}
-                          >
-                            <Trash2 size={13} />
-                          </span>
-                          </span>
-                        </span>
-                      </div>
-                    );
-                  })}
+                            </button>
+                            <button
+                              type="button"
+                              className="row-icon-btn"
+                              title="Delete"
+                              onClick={(e) => { e.stopPropagation(); handleDeleteInvestment(inv.id, inv.name); }}
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
                 </div>
+                )}
+                </>
                 );
               })()}
             </div>
           </div>
-          )}
-</>
+          )}</>
 ) : (
 <>
 <div className="input-tabs data-entry-tabs">
