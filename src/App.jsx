@@ -78,7 +78,35 @@ async function trackLogin(session) {
 
 const ADMIN_EMAIL = 'vipinlakhanpal@gmail.com';
 
-export default function App() {
+export default // Shown while the initial auth/session check or household resolution is
+// still in flight. A plain "Loading..." line on a blank background reads as
+// a broken/frozen page on a slow connection or when the database is waking
+// up from being idle (Supabase free-tier projects pause after inactivity
+// and the first query after that can take many seconds) -- the spinner
+// signals the app is actually working, and the delayed note explains *why*
+// it's taking a while instead of leaving the user guessing.
+function LoadingScreen() {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setSlow(true), 7000);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <div className="center-screen">
+      <div style={{ textAlign: 'center' }}>
+        <div className="loading-spinner" />
+        <div>Loading...</div>
+        {slow && (
+          <div className="muted-small" style={{ marginTop: 10, maxWidth: 280 }}>
+            Still working on it -- this can take up to a minute if the database is waking up after being idle.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [household, setHousehold] = useState(null);
@@ -206,11 +234,11 @@ export default function App() {
   let mainContent;
 
   if (loading) {
-    mainContent = <div className="center-screen">Loading...</div>;
+    mainContent = <LoadingScreen />;
   } else if (passwordRecovery) {
     mainContent = <ResetPassword onDone={() => setPasswordRecovery(false)} />;
   } else if (session && !householdChecked) {
-    mainContent = <div className="center-screen">Loading...</div>;
+    mainContent = <LoadingScreen />;
   } else if (!session) {
     mainContent = <Login />;
   } else {
