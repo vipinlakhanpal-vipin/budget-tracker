@@ -3390,6 +3390,19 @@ useEffect(() => {
     loadAll();
   }
 
+  // One-tap status change straight from the records list -- Active/Matured/
+  // Closed no longer require opening the edit form at all. Marking an FD
+  // Closed here has the same effect as doing it via the edit form's Status
+  // dropdown: it drops out of the dashboard total but stays visible under
+  // the Closed filter above.
+  async function handleQuickInvestmentStatus(inv, newStatus) {
+    const { error } = await supabase.from('investments').update({ status: newStatus }).eq('id', inv.id);
+    if (error) { notify('Could not update status: ' + error.message); return; }
+    if (editingInvestmentId === inv.id) setInvestmentForm((f) => ({ ...f, status: newStatus }));
+    await loadAll();
+    showToast(`Marked ${newStatus}`);
+  }
+
   async function handleScanFileChange(e) {
     const file = e.target.files?.[0];
     e.target.value = ''; // lets the same file be re-picked later if needed
@@ -7407,7 +7420,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   />
                 </div>
               </div>
-              <div className="field" style={{ flex: '0 0 auto', display: 'flex', gap: 8 }}>
+              <div className="field" style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'row', gap: 8 }}>
                 <button className="btn" type="button" onClick={handleSaveInvestment} style={{ height: 40 }}>
                   {editingInvestmentId ? 'Save Changes' : 'Add'}
                 </button>
@@ -7470,12 +7483,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     const estFlag = investIsEstimated(inv);
                     const isFD = inv.investment_type === 'Fixed Deposit';
                     return (
-                      <button
-                        key={inv.id}
-                        type="button"
-                        className="mobile-txn-row"
-                        onClick={() => { startEditInvestment(inv); setDeskFrameFor('investments', 'add'); }}
-                      >
+                      <div key={inv.id} className="mobile-txn-row">
                         <span className="mobile-txn-icon" style={{ background: isFD ? '#8b5cf6' : '#0d9488' }}>
                           {isFD ? 'FD' : 'MF'}
                         </span>
@@ -7488,6 +7496,23 @@ I can help you track expenses, understand spending patterns, create budgets, and
                               : (inv.sip_amount != null ? ` \u00b7 ${fmt(inv.sip_amount)}/mo` : '')}
                             {inv.start_date ? ` \u00b7 Started ${inv.start_date}` : ''}
                           </span>
+                          <span style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
+                            {['Active', 'Matured', 'Closed'].map((s) => (
+                              <button
+                                key={s}
+                                type="button"
+                                onClick={() => handleQuickInvestmentStatus(inv, s)}
+                                style={{
+                                  fontSize: 10, padding: '2px 8px', borderRadius: 10, cursor: 'pointer',
+                                  border: `1px solid ${investDisplayStatus(inv) === s ? 'var(--accent)' : 'var(--border)'}`,
+                                  background: investDisplayStatus(inv) === s ? 'var(--accent)' : 'transparent',
+                                  color: investDisplayStatus(inv) === s ? '#fff' : 'var(--muted)',
+                                }}
+                              >
+                                {s}
+                              </button>
+                            ))}
+                          </span>
                         </span>
                         <span style={{ textAlign: 'right', flex: '0 0 auto' }}>
                           <span className="mobile-txn-amount"><AmtCur value={cur} currency={inv.currency} />{estFlag && <span className="muted-small" style={{ marginLeft: 4 }}>(est.)</span>}</span>
@@ -7495,7 +7520,18 @@ I can help you track expenses, understand spending patterns, create budgets, and
                           <div style={{ fontSize: 12, fontWeight: 600, marginTop: 2, color: gain >= 0 ? '#1a7f37' : '#d1242f' }}>
                             {gain >= 0 ? '+' : '-'}<AmtCur value={Math.abs(gain)} currency={inv.currency} />
                           </div>
-                          <span
+                          <span style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
+                            <span
+                              role="button"
+                              tabIndex={0}
+                              title="Edit"
+                              onClick={() => { startEditInvestment(inv); setDeskFrameFor('investments', 'add'); }}
+                              onKeyDown={(e) => { if (e.key === 'Enter') { startEditInvestment(inv); setDeskFrameFor('investments', 'add'); } }}
+                              style={{ display: 'inline-flex', cursor: 'pointer', color: 'var(--muted)' }}
+                            >
+                              <Pencil size={13} />
+                            </span>
+                            <span
                             role="button"
                             tabIndex={0}
                             title="Delete"
@@ -7505,8 +7541,9 @@ I can help you track expenses, understand spending patterns, create budgets, and
                           >
                             <Trash2 size={13} />
                           </span>
+                          </span>
                         </span>
-                      </button>
+                      </div>
                     );
                   })}
                 </div>
