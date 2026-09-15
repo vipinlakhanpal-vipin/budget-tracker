@@ -5472,7 +5472,7 @@ function ReportHtmlView({ data }) {
                                 onBlur={(e) => commitMemberDetailField(m.id, 'name', e.target.value)}
                               />
                             </td>
-                            <td data-label="Email">{m.email}</td>
+                            <td data-label="Email"><span style={{ fontSize: 14 }}>{m.email}</span></td>
                             <td data-label="Phone">
                               <input
                                 data-editable
@@ -5497,7 +5497,7 @@ function ReportHtmlView({ data }) {
                         ) : (
                           <>
                             <td data-label="Name">{m.name || <span className="muted-small">--</span>}</td>
-                            <td data-label="Email">{m.email}</td>
+                            <td data-label="Email"><span style={{ fontSize: 14 }}>{m.email}</span></td>
                             <td className="muted-small" data-label="Phone">{m.phone || '--'}</td>
                             <td className="muted-small" data-label="Location">{m.location || '--'}</td>
                           </>
