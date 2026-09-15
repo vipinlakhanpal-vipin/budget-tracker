@@ -2127,7 +2127,11 @@ td.amount { font-weight: 600; text-align: right; }
 .group-cat-row button { background: none; border: none; color: var(--muted); cursor: pointer; display: inline-flex; align-items: center; flex-shrink: 0; }
 .group-cat-row button:hover { color: var(--danger); }
 .group-card.ungrouped .group-card-head { opacity: 0.85; }
-.cat-budget-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; }
+.cat-budget-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; border-left: 3px solid transparent; padding-left: 8px; border-radius: 6px; }
+.cat-budget-row:nth-child(4n+1) { border-left-color: #0d9488; }
+.cat-budget-row:nth-child(4n+2) { border-left-color: #0ea5e9; }
+.cat-budget-row:nth-child(4n+3) { border-left-color: #7f77dd; }
+.cat-budget-row:nth-child(4n+4) { border-left-color: #d85a30; }
 /* The category name used to be bare text and the amount used to have its
    own conflicting width/border/padding rules (below) that fought with the
    shared ".tight" pill treatment added above -- together those made the
@@ -2213,6 +2217,11 @@ td.amount { font-weight: 600; text-align: right; }
     .mobile-side-rail .notif-badge { top: 2px; right: 6px; }
     .mobile-side-rail button svg { display: block; }
     .mobile-side-rail button:active { transform: scale(.94); }
+    .mobile-side-rail button:nth-child(4n+1) { background: rgba(13,148,136,0.16); border-radius: 10px; color: #5dcaa5; }
+    .mobile-side-rail button:nth-child(4n+2) { background: rgba(14,165,233,0.16); border-radius: 10px; color: #7cc5f0; }
+    .mobile-side-rail button:nth-child(4n+3) { background: rgba(127,119,221,0.16); border-radius: 10px; color: #afa9ec; }
+    .mobile-side-rail button:nth-child(4n+4) { background: rgba(216,90,48,0.16); border-radius: 10px; color: #f0997b; }
+    .mobile-side-rail button.active { background: var(--accent-light) !important; color: var(--accent) !important; box-shadow: inset 0 0 0 1px var(--accent); }
     /* v3.30: restore the colorful conic-gradient swatch look for the
        rail's Theme button -- it was rendering as a plain muted Palette
        icon (matching the other rail buttons' single-color style) instead
@@ -2582,6 +2591,11 @@ instead of overflowing at the unconditional 35px desktop size. */
     display: block; border: none; padding: 8px 0; font-size: 13px;
   }
   table.responsive-table td:not(:last-child) { border-bottom: 1px solid var(--bg); }
+  table.plan-compare-table { display: table !important; }
+  table.plan-compare-table thead { display: table-header-group !important; }
+  table.plan-compare-table tr { display: table-row !important; }
+  table.plan-compare-table th, table.plan-compare-table td { display: table-cell !important; font-size: 12px !important; padding: 6px 4px !important; border-bottom: 1px solid var(--border) !important; }
+  table.plan-compare-table td[data-label]::before { content: none !important; display: none !important; }
   table.responsive-table td[data-label]::before {
     content: attr(data-label);
     display: block; font-size: 11px; font-weight: 800; color: var(--text);
@@ -3924,14 +3938,14 @@ row. */
 
 .group-count-highlight {
   display: inline-block;
-  background: var(--accent2-light);
+  background: rgba(14,165,233,0.18);
   border: 1px solid var(--accent2);
   border-radius: 10px;
   padding: 8px 14px;
   margin: 0 0 10px;
   font-size: 13px;
   font-weight: 700;
-  color: var(--text);
+  color: #7cc5f0;
 }
 
 /* Recharts tooltip polish: kill the default full-height hover-cursor rect
