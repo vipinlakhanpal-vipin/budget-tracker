@@ -6375,7 +6375,7 @@ function ReportHtmlView({ data }) {
             goToOverview() handler and active-state check bottom nav used. */}
         <button
           type="button"
-          className={!activePanel && !addSheetOpen ? 'active' : ''}
+          className={!activePanel && !addSheetOpen && !inputTab ? 'active' : ''}
           onClick={goToOverview}
           title="Dashboard"
         >
@@ -6831,7 +6831,7 @@ function ReportHtmlView({ data }) {
                   ? { position: 'fixed', top: 'auto', left: 62, right: 12, bottom: 'calc(78px + env(safe-area-inset-bottom) + 8px)', maxHeight: '60vh', overflowY: 'auto', zIndex: 500 }
                   : { position: 'fixed', top: notifDropdownPos?.top ?? 60, right: notifDropdownPos?.right ?? 12, zIndex: 500 }}
               >
-                <div className="notif-dropdown-title">Notifications</div>
+                <div className="notif-dropdown-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>Notifications<button type="button" onClick={() => setNotifOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: 2, display: 'flex' }} aria-label="Close"><X size={14} /></button></div>
                 {notifications.length === 0 ? (
                   <div className="notif-empty">You&rsquo;re all caught up.</div>
                 ) : (
@@ -8075,7 +8075,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
           <div className="panel">
             <h2 className="panel-title-themed form-title-mobile-hide">Fixed Expenses</h2>
             {confirmBanner('fixed')}{noticeBanner('fixed')}
-            <div className="muted-small" style={{ textAlign: 'center', marginTop: -6, marginBottom: 12 }}>
+            <div className="muted-small" style={{ textAlign: 'center', marginTop: -6, marginBottom: 12, display: 'inline-block', background: 'rgba(127,119,221,0.28)', color: '#afa9ec', padding: '5px 12px', borderRadius: 8, fontWeight: 700 }}>
               Loans, EMIs, credit cards, rent
             </div>
             {/* With 7 fields, this form can wrap onto several lines on
@@ -8618,7 +8618,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             {confirmBanner('savings')}{noticeBanner('savings')}
             {isMobile && renderMobilePills('savings')}
             {(deskFrame.savings === 'add') && (<>
-            <div className="muted-small" style={{ textAlign: 'left', marginTop: -6, marginBottom: 12 }}>
+            <div className="muted-small" style={{ textAlign: 'left', marginTop: -6, marginBottom: 12, display: 'inline-block', background: 'rgba(13,148,136,0.28)', color: '#5dcaa5', padding: '5px 12px', borderRadius: 8, fontWeight: 700 }}>
               How much you want to set aside each month
             </div>
             <form onSubmit={handleAddSaving}>
@@ -10127,7 +10127,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 <div className="muted-small" style={{ marginBottom: 10 }}>
                   Your group account is currently on the {isPaidPlan ? 'Premium' : 'Free'} plan.
                 </div>
-                <button type="button" onClick={() => setUpgradeModalSection('plans')} style={{ display: 'inline-block', width: 'auto', background: 'rgba(13,148,136,0.16)', border: '1px solid var(--accent)', color: 'var(--accent)', fontSize: 13, fontWeight: 700, padding: '8px 14px', borderRadius: 8, cursor: 'pointer' }}>
+                <button type="button" onClick={() => setUpgradeModalSection('plans')} style={{ display: 'inline-block', width: 'auto', alignSelf: 'flex-start', background: 'var(--accent)', border: '1px solid var(--accent)', color: '#fff', fontSize: 13, fontWeight: 700, padding: '8px 14px', borderRadius: 8, cursor: 'pointer' }}>
                   Compare Free vs Premium
                 </button>
               </div>
