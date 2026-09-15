@@ -26,7 +26,7 @@ const PLATFORM_CENTER = { x: 264, y: 290 };
 // importantly, the ring itself was pushed outward (see PLATFORM_RING_*
 // below) specifically to buy every spoke visibly more breathing room
 // before the dark navy ring -- the single biggest ask in the redesign.
-const PLATFORM_ICON_RADIUS = 122;
+const PLATFORM_ICON_RADIUS = 130;
 // Ring grown outward (200/218 -> 232/250) so its inner edge sits well
 // past every spoke's outer reach even for the widest two-line labels,
 // leaving an unmistakable gap instead of a marginal one.
