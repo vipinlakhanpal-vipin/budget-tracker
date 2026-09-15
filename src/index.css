@@ -1046,7 +1046,7 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
   font-weight: 600;
 }
 .desk-frame-rail button:hover { background: var(--accent-light); color: var(--accent); }
-.desk-frame-rail button.active { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+.desk-frame-rail button.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
 @media (max-width: 640px) {
   .desk-frame-rail { display: none; }
 }
@@ -1086,7 +1086,7 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
   font-size: 12.5px;
   font-weight: 600;
 }
-.mobile-frame-pills button.active { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+.mobile-frame-pills button.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
 
 /* Top tab bar redesign (v3.51) -- Vipin picked "floating segmented pill"
    over two other mockups: the whole Dashboard/Income/Fixed/Regular/
@@ -2188,12 +2188,15 @@ td.amount { font-weight: 600; text-align: right; }
       top: calc(env(safe-area-inset-top) + 84px);
       width: 54px; padding: 10px 0; z-index: 55; overflow-y: visible;
       background: var(--card); border-right: 1px solid var(--border);
+      bottom: calc(56px + env(safe-area-inset-bottom));
     }
+.rail-version-footer { margin-top: auto; font-size: 8.5px; font-weight: 700; color: var(--muted); text-align: center; padding-bottom: 4px; }
+
     .mobile-side-rail button {
       position: relative;
       background: none; border: none; padding: 6px 2px; display: flex;
       flex-direction: column; align-items: center; gap: 3px; color: var(--muted);
-      font-size: 8.5px; font-weight: 700; cursor: pointer; width: 100%;
+      font-size: 9.5px; font-weight: 700; cursor: pointer; width: 100%;
     }
     /* v3.60: small lock badge on Fixed/Savings/Investments when the
        household is on the Free plan -- tapping still works (opens the
@@ -2217,10 +2220,10 @@ td.amount { font-weight: 600; text-align: right; }
     .mobile-side-rail .notif-badge { top: 2px; right: 6px; }
     .mobile-side-rail button svg { display: block; }
     .mobile-side-rail button:active { transform: scale(.94); }
-    .mobile-side-rail button:nth-child(4n+1) { background: rgba(13,148,136,0.16); border-radius: 10px; color: #5dcaa5; }
-    .mobile-side-rail button:nth-child(4n+2) { background: rgba(14,165,233,0.16); border-radius: 10px; color: #7cc5f0; }
-    .mobile-side-rail button:nth-child(4n+3) { background: rgba(127,119,221,0.16); border-radius: 10px; color: #afa9ec; }
-    .mobile-side-rail button:nth-child(4n+4) { background: rgba(216,90,48,0.16); border-radius: 10px; color: #f0997b; }
+    .mobile-side-rail button:nth-child(4n+1) { background: rgba(13,148,136,0.34); border-radius: 10px; color: #5dcaa5; }
+    .mobile-side-rail button:nth-child(4n+2) { background: rgba(14,165,233,0.34); border-radius: 10px; color: #7cc5f0; }
+    .mobile-side-rail button:nth-child(4n+3) { background: rgba(127,119,221,0.34); border-radius: 10px; color: #afa9ec; }
+    .mobile-side-rail button:nth-child(4n+4) { background: rgba(216,90,48,0.34); border-radius: 10px; color: #f0997b; }
     .mobile-side-rail button.active { background: var(--accent-light) !important; color: var(--accent) !important; box-shadow: inset 0 0 0 1px var(--accent); }
     /* v3.30: restore the colorful conic-gradient swatch look for the
        rail's Theme button -- it was rendering as a plain muted Palette
