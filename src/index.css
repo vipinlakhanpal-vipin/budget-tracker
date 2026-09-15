@@ -2318,7 +2318,7 @@ td.amount { font-weight: 600; text-align: right; }
 /* Mobile: shrink the editable app-title input/h1 so "Expense
 Management" (or whatever it's renamed to) fits the narrow header
 instead of overflowing at the unconditional 35px desktop size. */
-  .app-title-purple { font-size: 27px; }
+  .app-title-purple { font-size: 22px; }
   .month-nav { gap: 8px; margin: 4px 0 10px; flex-wrap: wrap; }
   .month-nav .label { min-width: 0; flex: 1; font-size: 14px; }
         .month-nav > button { width: 21px; height: 21px; font-size: 12px; flex-shrink: 0; }
@@ -2487,7 +2487,7 @@ instead of overflowing at the unconditional 35px desktop size. */
      Expenses for {month}" list headings below, which use the same
      panel-title-themed class but carry real information -- which month --
      so they stay visible). */
-  .form-title-mobile-hide { display: none; }
+  .form-title-mobile-hide { display: block; font-size: 20px; margin-bottom: 4px; }
 }
 
 /* Responsive "card" tables: below 720px, each row becomes a bordered card
@@ -2727,9 +2727,14 @@ instead of overflowing at the unconditional 35px desktop size. */
     position: relative;
     flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
     background: none; border: none; color: var(--muted); font-size: 10.5px; font-weight: 700;
-    padding: 7px 2px; margin: 0 2px; border-radius: 12px; cursor: pointer;
+    padding: 6px 3px; margin: 0 3px; border-radius: 9px; cursor: pointer;
     transition: color .15s ease, background-color .15s ease;
   }
+  .mobile-bottom-nav button:nth-child(4n+1) { background: rgba(13,148,136,0.26); color: #5dcaa5; }
+  .mobile-bottom-nav button:nth-child(4n+2) { background: rgba(14,165,233,0.26); color: #7cc5f0; }
+  .mobile-bottom-nav button:nth-child(4n+3) { background: rgba(127,119,221,0.26); color: #afa9ec; }
+  .mobile-bottom-nav button:nth-child(4n) { background: rgba(216,90,48,0.26); color: #f0997b; }
+  .mobile-bottom-nav button[data-tour="nav-aria"] { background: rgba(168,85,247,0.22); color: #a855f7; }
   .mobile-bottom-nav button svg { display: block; }
   .mobile-bottom-nav button.active { color: #fff; background: var(--accent); animation: tab-blink 1.4s ease-in-out infinite; }
   .mobile-bottom-nav button[data-tour="nav-aria"] {
