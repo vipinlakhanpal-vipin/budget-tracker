@@ -10111,6 +10111,17 @@ I can help you track expenses, understand spending patterns, create budgets, and
               </div>
             </div>
             <div className="muted-small" style={{ marginBottom: 16 }}>Changes save automatically -- there's no Save button to click.</div><AutomationSettings session={session} />
+            <div className="row" style={{ paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+              <div className="field" style={{ width: '100%' }}>
+                <label>Your Plan</label>
+                <div className="muted-small" style={{ marginBottom: 10 }}>
+                  Your group account is currently on the {isPaidPlan ? 'Premium' : 'Free'} plan.
+                </div>
+                <button type="button" className="btn secondary" onClick={() => setUpgradeModalSection('plans')}>
+                  Compare Free vs Premium
+                </button>
+              </div>
+            </div>
                         <div className="row" style={{ paddingTop: 16, borderTop: '1px solid var(--border)' }}>
               <div className="field" style={{ width: '100%' }}>
                 {/* v3.72: red-tinted box around the whole section, plus a
