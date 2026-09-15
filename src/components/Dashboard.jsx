@@ -6485,6 +6485,7 @@ function ReportHtmlView({ data }) {
           <span className="rail-theme-swatch"><Palette size={13} /></span>
           <span>Theme</span>
         </button>
+        <div className="rail-version-footer">v{APP_VERSION}</div>
       </nav>,
       document.body
       )}
