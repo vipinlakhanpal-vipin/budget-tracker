@@ -10250,38 +10250,65 @@ I can help you track expenses, understand spending patterns, create budgets, and
           this just points people at Support to ask about upgrading. */}
       {upgradeModalSection && (
         <div className="attachment-viewer-overlay" onClick={() => setUpgradeModalSection(null)}>
-          <div className="attachment-viewer-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 380 }}>
+          <div className="attachment-viewer-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
             <div className="attachment-viewer-head">
               <span className="attachment-viewer-title">
                 <Landmark size={15} style={{ marginRight: 6, verticalAlign: -3 }} />
-                Premium feature
+                {upgradeModalSection === 'plans' ? 'Free vs Premium' : `${PLAN_SECTION_LABEL[upgradeModalSection]} is part of Premium`}
               </span>
               <button type="button" className="mobile-sheet-close" onClick={() => setUpgradeModalSection(null)} aria-label="Close">
                 <X size={18} />
               </button>
             </div>
             <div style={{ padding: '20px' }}>
-              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>
-                {PLAN_SECTION_LABEL[upgradeModalSection]} is part of Premium
+              <div className="muted-small" style={{ marginBottom: 14, lineHeight: 1.6 }}>
+                Your group account is currently on the <strong>{isPaidPlan ? 'Premium' : 'Free'}</strong> plan.
               </div>
-              <div className="muted-small" style={{ marginBottom: 18, lineHeight: 1.6 }}>
-                Your group account is currently on the Free plan (Income, Regular Expenses, and Reports). Upgrading unlocks Fixed Expenses, Savings, Investments, and Aria.
+              <div className="table-scroll" style={{ marginBottom: 18 }}>
+              <table className="responsive-table" style={{ fontSize: 13 }}>
+                <thead>
+                  <tr>
+                    <th>Feature</th>
+                    <th style={{ textAlign: 'center' }}>Free</th>
+                    <th style={{ textAlign: 'center' }}>Premium</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {PLAN_COMPARISON_FEATURES.map((f) => (
+                    <tr key={f.label}>
+                      <td data-label="Feature">{f.label}</td>
+                      <td data-label="Free" style={{ textAlign: 'center' }}>
+                        {f.free ? <Check size={15} style={{ color: '#1a7f37' }} /> : <X size={15} style={{ color: 'var(--muted)' }} />}
+                      </td>
+                      <td data-label="Premium" style={{ textAlign: 'center' }}>
+                        <Check size={15} style={{ color: '#1a7f37' }} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
               </div>
-              <button
-                type="button"
-                className="btn"
-                style={{ width: '100%' }}
-                onClick={() => {
-                  const sectionLabel = PLAN_SECTION_LABEL[upgradeModalSection];
-                  setUpgradeModalSection(null);
-                  openSuggestionModal({
-                    topics: ['App Upgrade'],
-                    message: `I'd like to upgrade to Premium to unlock ${sectionLabel}.`,
-                  });
-                }}
-              >
-                Ask about upgrading
-              </button>
+              {isPaidPlan ? (
+                <div className="muted-small" style={{ textAlign: 'center' }}>
+                  You already have Premium -- thanks for supporting Hearth!
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="btn"
+                  style={{ width: '100%' }}
+                  onClick={() => {
+                    const sectionLabel = PLAN_SECTION_LABEL[upgradeModalSection];
+                    setUpgradeModalSection(null);
+                    openSuggestionModal({
+                      topics: ['App Upgrade'],
+                      message: sectionLabel ? `I'd like to upgrade to Premium to unlock ${sectionLabel}.` : `I'd like to upgrade to Premium.`,
+                    });
+                  }}
+                >
+                  Ask about upgrading
+                </button>
+              )}
             </div>
           </div>
         </div>
