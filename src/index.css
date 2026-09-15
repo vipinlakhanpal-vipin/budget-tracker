@@ -916,8 +916,8 @@ sitting duplicated under the summary cards. */
 }
 .notif-dropdown-title { font-size: 12px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; padding: 2px 6px 8px; }
 .notif-item {
-  font-size: 13px; font-weight: 600; color: var(--danger); background: var(--danger-bg);
-  border: 1px solid #fecaca; border-radius: 8px; padding: 8px 10px; margin-bottom: 6px;
+  font-size: 13px; font-weight: 600; color: #fac775; background: rgba(239,159,39,0.16);
+  border: 1px solid rgba(239,159,39,0.4); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px;
 }
 .notif-item:last-child { margin-bottom: 0; }
 .notif-empty { font-size: 13px; color: var(--muted); padding: 10px 6px; text-align: center; }
@@ -1000,6 +1000,7 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
 .page-title-row .month-nav { grid-column: 1; grid-row: 1; margin: 0; justify-self: start; min-width: 0; max-width: 100%; }
 
 .month-nav { display: flex; align-items: center; gap: 12px; margin: 16px 0 20px; }
+.month-nav .label { background: rgba(13,148,136,0.34); color: #5dcaa5; font-weight: 700; padding: 6px 12px; border-radius: 8px; }
 /* ">" child combinator, not a plain descendant selector -- the </> arrow
    buttons are direct children of .month-nav, but the new date-range Filter
    button is nested one level deeper inside .filter-wrap. A descendant
@@ -1330,9 +1331,12 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
 .page-title-themed { font-size: 25px; color: var(--accent); text-align: left; margin: 0 0 4px 0; }
 
 .filter-field input[type="date"] {
-  padding: 7px 9px; border: 1.5px solid var(--border); border-radius: 8px;
-  font-size: 12px; background: var(--card); color: var(--text); font-family: inherit;
+  padding: 7px 9px; border: 1.5px solid var(--accent); border-radius: 8px;
+  font-size: 12px; background: rgba(13,148,136,0.20); color: var(--text); font-family: inherit;
+  text-align: left;
 }
+input[type="date"]::-webkit-datetime-edit { text-align: left; }
+input[type="date"]::-webkit-datetime-edit-fields-wrapper { display: flex; justify-content: flex-start; }
 .filter-field input[type="date"]:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
 
 /* Filter buttons/dropdowns -- Regular Expenses, Fixed Expenses, Income, and
@@ -1359,8 +1363,8 @@ h1 { font-size: 22px; margin: 0 0 4px 0; }
 }
 .filter-btn {
   display: inline-flex; align-items: center; gap: 6px;
-  border: 1.5px solid var(--border); border-radius: 9px; background: var(--card);
-  color: var(--muted); font-size: 12px; font-weight: 700; cursor: pointer;
+  border: 1.5px solid #7cc5f0; border-radius: 9px; background: rgba(14,165,233,0.34);
+  color: #7cc5f0; font-size: 12px; font-weight: 700; cursor: pointer;
   padding: 7px 12px; white-space: nowrap; transition: border-color .15s ease, color .15s ease;
 }
 .filter-btn:hover { border-color: #a9d9d5; color: var(--text); }
@@ -2599,6 +2603,10 @@ instead of overflowing at the unconditional 35px desktop size. */
   }
   table.responsive-table td:not(:last-child) { border-bottom: 1px solid var(--bg); }
   table.plan-compare-table { display: table !important; }
+  table.plan-compare-table thead th:first-child { background: var(--card) !important; }
+  table.plan-compare-table thead th:nth-child(2) { background: rgba(216,90,48,0.28) !important; color: #f0997b !important; }
+  table.plan-compare-table thead th:nth-child(3) { background: rgba(13,148,136,0.28) !important; color: #5dcaa5 !important; }
+  table.plan-compare-table thead th { padding: 8px 6px !important; border-radius: 6px 6px 0 0; }
   table.plan-compare-table thead { display: table-header-group !important; }
   table.plan-compare-table tr { display: table-row !important; }
   table.plan-compare-table th, table.plan-compare-table td { display: table-cell !important; font-size: 12px !important; padding: 6px 4px !important; border-bottom: 1px solid var(--border) !important; }
