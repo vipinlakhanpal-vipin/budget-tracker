@@ -850,6 +850,10 @@ sitting duplicated under the summary cards. */
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.06); }
 }
+@keyframes tab-blink {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: .55; transform: scale(1.07); }
+}
 .theme-fab-btn, .notif-bell-btn, .chat-fab-btn {
   animation: tab-heartbeat 3.2s ease-in-out infinite;
 }
@@ -2190,7 +2194,7 @@ td.amount { font-weight: 600; text-align: right; }
       background: var(--card); border-right: 1px solid var(--border);
       bottom: calc(56px + env(safe-area-inset-bottom));
     }
-.rail-version-footer { margin-top: auto; font-size: 8.5px; font-weight: 700; color: var(--muted); text-align: center; padding-bottom: 4px; }
+.rail-version-footer { margin-top: auto; font-size: 11px; font-weight: 700; color: var(--muted); text-align: center; padding-bottom: 4px; }
 
     .mobile-side-rail button {
       position: relative;
@@ -2224,7 +2228,7 @@ td.amount { font-weight: 600; text-align: right; }
     .mobile-side-rail button:nth-child(4n+2) { background: rgba(14,165,233,0.34); border-radius: 10px; color: #7cc5f0; }
     .mobile-side-rail button:nth-child(4n+3) { background: rgba(127,119,221,0.34); border-radius: 10px; color: #afa9ec; }
     .mobile-side-rail button:nth-child(4n+4) { background: rgba(216,90,48,0.34); border-radius: 10px; color: #f0997b; }
-    .mobile-side-rail button.active { background: var(--accent-light) !important; color: var(--accent) !important; box-shadow: inset 0 0 0 1px var(--accent); }
+    .mobile-side-rail button.active { background: var(--accent) !important; color: #fff !important; box-shadow: inset 0 0 0 1px var(--accent); animation: tab-blink 1.4s ease-in-out infinite; }
     /* v3.30: restore the colorful conic-gradient swatch look for the
        rail's Theme button -- it was rendering as a plain muted Palette
        icon (matching the other rail buttons' single-color style) instead
@@ -2719,14 +2723,14 @@ instead of overflowing at the unconditional 35px desktop size. */
     transition: color .15s ease, background-color .15s ease;
   }
   .mobile-bottom-nav button svg { display: block; }
-  .mobile-bottom-nav button.active { color: var(--accent); background: var(--accent-light); animation: tab-heartbeat 3.2s ease-in-out infinite; }
+  .mobile-bottom-nav button.active { color: #fff; background: var(--accent); animation: tab-blink 1.4s ease-in-out infinite; }
   .mobile-bottom-nav button[data-tour="nav-aria"] {
     color: #a855f7;
   }
   .mobile-bottom-nav button[data-tour="nav-aria"].active {
-    color: #a855f7;
-    background: color-mix(in srgb, #a855f7 15%, transparent);
-    animation: tab-heartbeat 3.2s ease-in-out infinite;
+    color: #fff;
+    background: #a855f7;
+    animation: tab-blink 1.4s ease-in-out infinite;
   }
   .mobile-bottom-nav button:active { transform: scale(.94); }
 
