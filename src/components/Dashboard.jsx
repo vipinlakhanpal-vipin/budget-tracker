@@ -5385,6 +5385,15 @@ function ReportHtmlView({ data }) {
                 Connect your bank accounts and cards so income, expenses, and card transactions capture themselves automatically instead of manual entry -- transactions land in Hearth the moment they post. This is a bigger piece of work (it needs a secure banking-data provider behind the scenes), so it's planned for after the app is live and we've learned how the household actually uses it day to day.
               </p>
             </div>
+            <div className="my-details-box" style={{ marginBottom: 18, padding: 16, border: '1px solid var(--border)', borderRadius: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <span style={{ fontSize: 20 }}>&#128241;</span>
+                <span style={{ fontWeight: 700, fontSize: 15 }}>iPhone SMS auto-import</span>
+              </div>
+              <p style={{ margin: 0, color: 'var(--muted)' }}>
+                iOS doesn't let any app read SMS content in the background, so a fully automatic, zero-tap import like Android's isn't possible the same way yet. We're working on a reliable iPhone path -- for now, screenshot the bank text and use Scan a Receipt, or type the transaction in by hand; both take just a few seconds. See the E-Manual for iPhone options that already work today.
+              </p>
+            </div>
             <div className="muted-small" style={{ marginTop: 4 }}>
               Have a feature you'd like to see next, or something not working right? Use the Support link at the bottom of the app to let us know.
             </div>
