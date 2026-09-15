@@ -233,7 +233,7 @@ export default function Splash({ session }) {
           hasn't resolved yet); the "Good X" half is always shown, driven
           purely by the visitor's own device clock via getGreeting(). */}
       <div className="splash-greeting">
-        {firstName ? `Hello ${firstName}, ` : ''}{getGreeting()}
+        {getGreeting()}{firstName ? ` ${firstName}` : ''}
       </div>
 
       {/* Standalone brand line near the top -- deliberately just below the
