@@ -9862,6 +9862,20 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     App Settings, per explicit request. Adding, renaming, and
                     removing categories all live here now. */}
                 <div className="field">
+                  <label>New group</label>
+                  <div className="row">
+                    <input
+                      type="text"
+                      placeholder="e.g. Subscriptions, Etisalat"
+                      style={{ flex: 1 }}
+                      value={newGroupName}
+                      onChange={(e) => setNewGroupName(e.target.value)}
+                    />
+                    <button className="btn secondary small" onClick={handleAddGroup}>+ Add group</button>
+                  </div>
+                </div>
+
+                <div className="field" style={{ marginTop: 14 }}>
                   <label>Add category</label>
                   <div className="row">
                     <input
@@ -9878,20 +9892,6 @@ I can help you track expenses, understand spending patterns, create budgets, and
                       ))}
                     </select>
                     <button className="btn secondary small" onClick={handleAddCategory}>Add</button>
-                  </div>
-                </div>
-
-                <div className="field" style={{ marginTop: 14 }}>
-                  <label>New group</label>
-                  <div className="row">
-                    <input
-                      type="text"
-                      placeholder="e.g. Subscriptions, Etisalat"
-                      style={{ flex: 1 }}
-                      value={newGroupName}
-                      onChange={(e) => setNewGroupName(e.target.value)}
-                    />
-                    <button className="btn secondary small" onClick={handleAddGroup}>+ Add group</button>
                   </div>
                 </div>
 
@@ -10126,7 +10126,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 <div className="muted-small" style={{ marginBottom: 10 }}>
                   Your group account is currently on the {isPaidPlan ? 'Premium' : 'Free'} plan.
                 </div>
-                <button type="button" className="btn secondary" onClick={() => setUpgradeModalSection('plans')}>
+                <button type="button" onClick={() => setUpgradeModalSection('plans')} style={{ display: 'inline-block', width: 'auto', background: 'rgba(13,148,136,0.16)', border: '1px solid var(--accent)', color: 'var(--accent)', fontSize: 13, fontWeight: 700, padding: '8px 14px', borderRadius: 8, cursor: 'pointer' }}>
                   Compare Free vs Premium
                 </button>
               </div>
@@ -10274,12 +10274,12 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 Your group account is currently on the <strong>{isPaidPlan ? 'Premium' : 'Free'}</strong> plan.
               </div>
               <div className="table-scroll" style={{ marginBottom: 18 }}>
-              <table className="responsive-table" style={{ fontSize: 13 }}>
+              <table className="responsive-table plan-compare-table" style={{ fontSize: 13 }}>
                 <thead>
                   <tr>
                     <th>Feature</th>
                     <th style={{ textAlign: 'center' }}>Free</th>
-                    <th style={{ textAlign: 'center' }}>Premium</th>
+                    <th style={{ textAlign: 'center', color: 'var(--accent)' }}>Premium</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -10287,10 +10287,10 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     <tr key={f.label}>
                       <td data-label="Feature">{f.label}</td>
                       <td data-label="Free" style={{ textAlign: 'center' }}>
-                        {f.free ? <Check size={15} style={{ color: '#1a7f37' }} /> : <X size={15} style={{ color: 'var(--muted)' }} />}
+                        {f.free ? <Check size={15} style={{ color: 'var(--accent)' }} /> : <X size={15} style={{ color: '#e2807f' }} />}
                       </td>
                       <td data-label="Premium" style={{ textAlign: 'center' }}>
-                        <Check size={15} style={{ color: '#1a7f37' }} />
+                        <Check size={15} style={{ color: 'var(--accent)' }} />
                       </td>
                     </tr>
                   ))}
