@@ -320,7 +320,7 @@ export default function Splash({ session }) {
                   const isTwoLine = words.length > 1;
                   return (
                     <g key={tab.label} transform={`translate(${pos.x - 12} ${pos.y - 22})`}>
-                      <g className="platform-tab-icon" style={{ animationDelay: `${0.7 + i * 0.09}s` }}>
+                      <g className="platform-tab-icon" transform="scale(1.2)" style={{ animationDelay: `${0.7 + i * 0.09}s` }}>
                         <g stroke="#1b2a5e" strokeWidth="1.7" fill="none" strokeLinecap="round" strokeLinejoin="round">
                           <PlatformIcon type={tab.icon} />
                         </g>
