@@ -269,7 +269,7 @@ button, input, select, textarea { font-family: inherit; }
    per-line width, every label now sits with a large, obvious gap before
    the ring instead of a marginal one. */
 .platform-tab-label {
-  fill: #16224a; font-family: 'Nunito', sans-serif; font-size: 10px; font-weight: 800;
+  fill: #16224a; font-family: 'Nunito', sans-serif; font-size: 15px; font-weight: 800;
 }
 /* Each tab spoke pops in with its own staggered delay (set inline per-icon
    in Splash.jsx) rather than all at once, echoing the old float-in cast. */
