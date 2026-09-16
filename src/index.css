@@ -3110,6 +3110,9 @@ row. */
   .chat-fab-wrap-spaced { margin-left: 0; }
   .refresh-app-btn { margin-left: 6px; }
 }
+.chat-backdrop {
+  position: fixed; inset: 0; background: rgba(10, 14, 34, 0.82); z-index: 199;
+}
 .chat-window {
   position: absolute; top: calc(100% + 8px); right: 0; z-index: 200;
   width: 340px; max-width: min(85vw, 340px); height: 440px; max-height: 65vh;
