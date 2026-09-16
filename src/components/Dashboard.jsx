@@ -4601,6 +4601,4608 @@ useEffect(() => {
     autoTable(doc, {
       ...tableDefaults,
       styles: { ...tableDefaults.styles, ...autoFitTableStyles(rangeExpenses.length, y) },
+import { createPortal } from 'react-dom';
+import {
+  PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, LabelList,
+  ComposedChart, Line, Treemap,
+} from 'recharts';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { supabase } from '../supabaseClient';
+import AdminConsole from './AdminConsole.jsx';
+import EManual from './EManual.jsx'; import AutomationSettings from './AutomationSettings.jsx';
+import { formatVersionBadge, APP_VERSION } from '../version.js';
+import {
+  Home, LayoutDashboard, Plus, FileText, Users as UsersIcon, Settings as SettingsIcon,
+  Pencil, Trash2, X, ChevronLeft, ChevronRight, ChevronDown, Camera, MessageCircle, Bot, Sparkles, User,
+  Palette, Check, StickyNote, Paperclip, ExternalLink, Mail, Lightbulb,
+  Wallet, CalendarClock, ShoppingCart, PiggyBank, HelpCircle, Filter, Search, Sun, Moon, RefreshCw, Landmark, BookOpen,
+  Maximize2, LifeBuoy, List, BarChart3, Lock,
+} from 'lucide-react';
+
+// v1.89: cross-browser searchable dropdown, replacing the old
+// <input list="..."> + <datalist> combo. Native HTML5 datalist support is
+// inconsistent across browsers/engines (and can silently fail to show
+// suggestions depending on the page's rendering state), which was causing
+// Bank/Currency selection to appear broken for some users even though the
+// underlying save logic worked. This component renders its own dropdown
+// list via a portal, so it behaves identically everywhere.
+function SearchableCombobox({ value, onChange, onCommit, options, placeholder, style }) {
+  const [open, setOpen] = useState(false);
+  const [rect, setRect] = useState(null);
+  const [displayValue, setDisplayValue] = useState(value || '');
+  const inputRef = useRef(null);
+  useEffect(() => { setDisplayValue(value || ''); }, [value]);
+  const norm = useMemo(
+    () => options.map((o) => (typeof o === 'string' ? { value: o, label: o } : o)),
+    [options]
+  );
+  const filtered = useMemo(() => {
+    const q = (displayValue || '').toLowerCase().trim();
+    const list = q
+      ? norm.filter((o) => o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q))
+      : norm;
+    return list.slice(0, 60);
+  }, [displayValue, norm]);
+  function updatePos() {
+    if (inputRef.current) setRect(inputRef.current.getBoundingClientRect());
+  }
+  function selectOption(opt) {
+    setDisplayValue(opt.value);
+    onChange(opt.value);
+    if (onCommit) onCommit(opt.value);
+    setOpen(false);
+  }
+  return (
+    <div style={{ position: 'relative', width: '100%' }}>
+      <input
+        ref={inputRef}
+        type="text"
+        value={displayValue}
+        placeholder={placeholder}
+        style={style}
+        autoComplete="off"
+        onFocus={() => {
+          // v1.90: clear the visible text on focus (same trick already used
+          // for the Settings Currency field) so the FULL option list shows
+          // immediately, instead of being filtered down to near-nothing by
+          // whatever value is already sitting in the field -- previously a
+          // user had to manually delete the existing text before any
+          // suggestions would appear, which looked broken.
+          setDisplayValue('');
+          updatePos();
+          setOpen(true);
+        }}
+        onChange={(e) => { setDisplayValue(e.target.value); onChange(e.target.value); updatePos(); setOpen(true); }}
+        onBlur={(e) => {
+          setOpen(false);
+          const finalValue = e.target.value || value || '';
+          setDisplayValue(finalValue);
+          onChange(finalValue);
+          if (onCommit) onCommit(finalValue);
+        }}
+        onKeyDown={(e) => { if (e.key === 'Escape') { setOpen(false); e.currentTarget.blur(); } }}
+      />
+      {open && filtered.length > 0 && rect && createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            top: rect.bottom + 2,
+            left: rect.left,
+            width: Math.max(rect.width, 160),
+            maxHeight: 220,
+            overflowY: 'auto',
+            background: '#1c2333',
+            border: '1px solid #3a445c',
+            borderRadius: 6,
+            zIndex: 99999,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+          }}
+        >
+          {filtered.map((opt) => (
+            <div
+              key={opt.value}
+              onMouseDown={(e) => { e.preventDefault(); selectOption(opt); }}
+              style={{ padding: '7px 10px', fontSize: 12, cursor: 'pointer', color: '#e6e9f0' }}
+            >
+              {opt.label}
+            </div>
+          ))}
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}
+
+
+// Max size for a note/fixed-expense attachment (images or PDF only). Kept as
+// a constant so the Add-expense form, Fixed Expenses form, and the shared
+// upload helper all enforce exactly the same limit.
+const ATTACHMENT_MAX_BYTES = 5 * 1024 * 1024; // 5MB
+const ATTACHMENT_ACCEPT = 'image/*,application/pdf';
+
+function isAllowedAttachment(file) {
+  if (!file) return true;
+  if (file.size > ATTACHMENT_MAX_BYTES) return false;
+  return file.type.startsWith('image/') || file.type === 'application/pdf';
+}
+
+// Small reusable "AI powered" pill -- a magic-wand sparkle + label used next
+// to every AI feature (auto-categorize, receipt scan, AI Insights, Budget
+// Coach, chat assistant) so they all read as visually distinct from regular
+// app chrome, consistently, wherever they appear.
+function AiTag({ style }) {
+  return (
+    <span className="ai-powered-tag" style={style}>
+      <Sparkles size={11} className="ai-tag-sparkle" strokeWidth={2.25} />
+      AI powered
+    </span>
+  );
+}
+
+// Header logo -- a small, resized copy of the splash screen's own circular
+// "platform" badge (glowing blue sphere + "AI POWERED Hearth" text), per
+// explicit request to use that badge as the app's logo everywhere rather
+// than two different marks. The dark navy ring that originally surrounded
+// the sphere was removed per explicit follow-up request ("dark blue ring
+// around the logo... can u remove that and keep the rest asis") -- sphere
+// + text are unchanged, just no outer ring stroke around them anymore.
+function HearthMark({ size = 56 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        {/* Same 3-stop blue gradient as the splash sphere (Splash.jsx's
+            platformSphere) -- own id since this and the splash badge can
+            both be mounted at once (the splash overlays on top of the
+            already-loaded Dashboard for its first 6 seconds), and SVG
+            gradient ids must be unique across the whole page. */}
+        <radialGradient id="headerBadgeSphere" cx="34%" cy="28%" r="78%">
+          <stop offset="0" stopColor="#7fabf7" />
+          <stop offset="48%" stopColor="#33509f" />
+          <stop offset="100%" stopColor="#0e1a3f" />
+        </radialGradient>
+      </defs>
+      <circle className="platform-sphere-pulse" cx="50" cy="50" r="38" fill="url(#headerBadgeSphere)" />
+      <text x="50" y="36" textAnchor="middle" className="header-badge-kicker">AI POWERED</text>
+      <text x="50" y="54" textAnchor="middle" className="header-badge-brand">Hearth</text>
+    </svg>
+  );
+}
+
+const COLORS = [
+  '#f97316', '#0ea5e9', '#a855f7', '#22c55e', '#ef4444',
+  '#eab308', '#14b8a6', '#ec4899', '#6366f1', '#84cc16',
+  '#06b6d4', '#f43f5e',
+];
+const RELATIONS = ['Self', 'Spouse', 'Partner', 'Child', 'Parent', 'Sibling', 'Roommate', 'Other'];
+const CURRENCIES = ['AED', 'AFN', 'ALL', 'AMD', 'ANG', 'AOA', 'ARS', 'AUD', 'AWG', 'AZN', 'BAM', 'BBD', 'BDT', 'BGN', 'BHD', 'BIF', 'BMD', 'BND', 'BOB', 'BRL', 'BSD', 'BTN', 'BWP', 'BYN', 'BZD', 'CAD', 'CDF', 'CHF', 'CLP', 'CNY', 'COP', 'CRC', 'CUP', 'CVE', 'CZK', 'DJF', 'DKK', 'DOP', 'DZD', 'EGP', 'ERN', 'ETB', 'EUR', 'FJD', 'FKP', 'GBP', 'GEL', 'GHS', 'GIP', 'GMD', 'GNF', 'GTQ', 'GYD', 'HKD', 'HNL', 'HTG', 'HUF', 'IDR', 'ILS', 'INR', 'IQD', 'IRR', 'ISK', 'JMD', 'JOD', 'JPY', 'KES', 'KGS', 'KHR', 'KMF', 'KPW', 'KRW', 'KWD', 'KYD', 'KZT', 'LAK', 'LBP', 'LKR', 'LRD', 'LSL', 'LYD', 'MAD', 'MDL', 'MGA', 'MKD', 'MMK', 'MNT', 'MOP', 'MRU', 'MUR', 'MVR', 'MWK', 'MXN', 'MYR', 'MZN', 'NAD', 'NGN', 'NIO', 'NOK', 'NPR', 'NZD', 'OMR', 'PAB', 'PEN', 'PGK', 'PHP', 'PKR', 'PLN', 'PYG', 'QAR', 'RON', 'RSD', 'RUB', 'RWF', 'SAR', 'SBD', 'SCR', 'SDG', 'SEK', 'SGD', 'SHP', 'SLE', 'SOS', 'SRD', 'SSP', 'STN', 'SYP', 'SZL', 'THB', 'TJS', 'TMT', 'TND', 'TOP', 'TRY', 'TTD', 'TWD', 'TZS', 'UAH', 'UGX', 'USD', 'UYU', 'UZS', 'VES', 'VND', 'VUV', 'WST', 'XAF', 'XCD', 'XOF', 'XPF', 'YER', 'ZAR', 'ZMW', 'ZWL'];
+const CURRENCY_REGIONS = { AED: 'United Arab Emirates', AFN: 'Afghanistan', ALL: 'Albania', AMD: 'Armenia', ANG: 'Curaçao', AOA: 'Angola', ARS: 'Argentina', AUD: 'Australia', AWG: 'Aruba', AZN: 'Azerbaijan', BAM: 'Bosnia & Herzegovina', BBD: 'Barbados', BDT: 'Bangladesh', BGN: 'Bulgaria', BHD: 'Bahrain', BIF: 'Burundi', BMD: 'Bermuda', BND: 'Brunei', BOB: 'Bolivia', BRL: 'Brazil', BSD: 'Bahamas', BTN: 'Bhutan', BWP: 'Botswana', BYN: 'Belarus', BZD: 'Belize', CAD: 'Canada', CDF: 'DR Congo', CHF: 'Switzerland', CLP: 'Chile', CNY: 'China', COP: 'Colombia', CRC: 'Costa Rica', CUP: 'Cuba', CVE: 'Cape Verde', CZK: 'Czech Republic', DJF: 'Djibouti', DKK: 'Denmark', DOP: 'Dominican Republic', DZD: 'Algeria', EGP: 'Egypt', ERN: 'Eritrea', ETB: 'Ethiopia', EUR: 'Eurozone', FJD: 'Fiji', FKP: 'Falkland Islands', GBP: 'United Kingdom', GEL: 'Georgia', GHS: 'Ghana', GIP: 'Gibraltar', GMD: 'Gambia', GNF: 'Guinea', GTQ: 'Guatemala', GYD: 'Guyana', HKD: 'Hong Kong', HNL: 'Honduras', HTG: 'Haiti', HUF: 'Hungary', IDR: 'Indonesia', ILS: 'Israel', INR: 'India', IQD: 'Iraq', IRR: 'Iran', ISK: 'Iceland', JMD: 'Jamaica', JOD: 'Jordan', JPY: 'Japan', KES: 'Kenya', KGS: 'Kyrgyzstan', KHR: 'Cambodia', KMF: 'Comoros', KPW: 'North Korea', KRW: 'South Korea', KWD: 'Kuwait', KYD: 'Cayman Islands', KZT: 'Kazakhstan', LAK: 'Laos', LBP: 'Lebanon', LKR: 'Sri Lanka', LRD: 'Liberia', LSL: 'Lesotho', LYD: 'Libya', MAD: 'Morocco', MDL: 'Moldova', MGA: 'Madagascar', MKD: 'North Macedonia', MMK: 'Myanmar', MNT: 'Mongolia', MOP: 'Macau', MRU: 'Mauritania', MUR: 'Mauritius', MVR: 'Maldives', MWK: 'Malawi', MXN: 'Mexico', MYR: 'Malaysia', MZN: 'Mozambique', NAD: 'Namibia', NGN: 'Nigeria', NIO: 'Nicaragua', NOK: 'Norway', NPR: 'Nepal', NZD: 'New Zealand', OMR: 'Oman', PAB: 'Panama', PEN: 'Peru', PGK: 'Papua New Guinea', PHP: 'Philippines', PKR: 'Pakistan', PLN: 'Poland', PYG: 'Paraguay', QAR: 'Qatar', RON: 'Romania', RSD: 'Serbia', RUB: 'Russia', RWF: 'Rwanda', SAR: 'Saudi Arabia', SBD: 'Solomon Islands', SCR: 'Seychelles', SDG: 'Sudan', SEK: 'Sweden', SGD: 'Singapore', SHP: 'Saint Helena', SLE: 'Sierra Leone', SOS: 'Somalia', SRD: 'Suriname', SSP: 'South Sudan', STN: 'São Tomé & Príncipe', SYP: 'Syria', SZL: 'Eswatini', THB: 'Thailand', TJS: 'Tajikistan', TMT: 'Turkmenistan', TND: 'Tunisia', TOP: 'Tonga', TRY: 'Turkey', TTD: 'Trinidad & Tobago', TWD: 'Taiwan', TZS: 'Tanzania', UAH: 'Ukraine', UGX: 'Uganda', USD: 'United States', UYU: 'Uruguay', UZS: 'Uzbekistan', VES: 'Venezuela', VND: 'Vietnam', VUV: 'Vanuatu', WST: 'Samoa', XAF: 'Central Africa (CEMAC)', XCD: 'Eastern Caribbean', XOF: 'West Africa (UEMOA)', XPF: 'French Pacific', YER: 'Yemen', ZAR: 'South Africa', ZMW: 'Zambia', ZWL: 'Zimbabwe' };
+
+// Shown as a prefix inside every amount field so what you're typing is
+// unambiguous at a glance -- codes without one universally-recognized
+// glyph (AED/SAR/PKR) just repeat the code itself, matching how fmt()
+// already labels totals elsewhere in the app.
+const CURRENCY_SYMBOLS = { AED: 'AED', AFN: 'AFN', ALL: 'ALL', AMD: 'AMD', ANG: 'ANG', AOA: 'AOA', ARS: '$', AUD: '$', AWG: 'AWG', AZN: 'AZN', BAM: 'BAM', BBD: '$', BDT: 'BDT', BGN: 'BGN', BHD: 'BHD', BIF: 'BIF', BMD: '$', BND: '$', BOB: 'BOB', BRL: 'R$', BSD: '$', BTN: 'BTN', BWP: 'P', BYN: 'BYN', BZD: 'BZ$', CAD: '$', CDF: 'CDF', CHF: 'CHF', CLP: '$', CNY: 'CNY', COP: '$', CRC: 'CRC', CUP: '$', CVE: 'CVE', CZK: 'CZK', DJF: 'DJF', DKK: 'DKK', DOP: 'RD$', DZD: 'DZD', EGP: 'EGP', ERN: 'ERN', ETB: 'ETB', EUR: 'EUR', FJD: '$', FKP: 'FKP', GBP: 'GBP', GEL: 'GEL', GHS: 'GHS', GIP: 'GIP', GMD: 'GMD', GNF: 'GNF', GTQ: 'GTQ', GYD: '$', HKD: '$', HNL: 'HNL', HTG: 'HTG', HUF: 'HUF', IDR: 'IDR', ILS: 'ILS', INR: 'INR', IQD: 'IQD', IRR: 'IRR', ISK: 'ISK', JMD: '$', JOD: 'JOD', JPY: 'JPY', KES: 'KES', KGS: 'KGS', KHR: 'KHR', KMF: 'KMF', KPW: 'KPW', KRW: 'KRW', KWD: 'KWD', KYD: '$', KZT: 'KZT', LAK: 'LAK', LBP: 'LBP', LKR: 'LKR', LRD: '$', LSL: 'LSL', LYD: 'LYD', MAD: 'MAD', MDL: 'MDL', MGA: 'MGA', MKD: 'MKD', MMK: 'MMK', MNT: 'MNT', MOP: 'MOP', MRU: 'MRU', MUR: 'MUR', MVR: 'MVR', MWK: 'MWK', MXN: '$', MYR: 'RM', MZN: 'MZN', NAD: '$', NGN: 'NGN', NIO: 'C$', NOK: 'NOK', NPR: 'NPR', NZD: '$', OMR: 'OMR', PAB: 'PAB', PEN: 'PEN', PGK: 'PGK', PHP: 'PHP', PKR: 'PKR', PLN: 'PLN', PYG: 'PYG', QAR: 'QAR', RON: 'RON', RSD: 'RSD', RUB: 'RUB', RWF: 'RWF', SAR: 'SAR', SBD: '$', SCR: 'SCR', SDG: 'SDG', SEK: 'SEK', SGD: '$', SHP: 'SHP', SLE: 'SLE', SOS: 'SOS', SRD: '$', SSP: 'SSP', STN: 'STN', SYP: 'SYP', SZL: 'SZL', THB: 'THB', TJS: 'TJS', TMT: 'TMT', TND: 'TND', TOP: 'TOP', TRY: 'TRY', TTD: '$', TWD: 'NT$', TZS: 'TZS', UAH: 'UAH', UGX: 'UGX', USD: '$', UYU: '$U', UZS: 'UZS', VES: 'VES', VND: 'VND', VUV: 'VUV', WST: 'WS$', XAF: 'XAF', XCD: '$', XOF: 'XOF', XPF: 'XPF', YER: 'YER', ZAR: 'R', ZMW: 'ZMW', ZWL: 'ZWL' };
+
+const FREQUENCIES = [
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'alternate', label: 'Alternate month' },
+  { value: 'quarterly', label: 'Quarterly' },
+  { value: 'half_yearly', label: 'Half-yearly' },
+  { value: 'yearly', label: 'Once a year' },
+];
+
+// How an expense was paid. Bank name only matters (and only shows) for the
+// two card options -- Cash has nothing to pick.
+const PAYMENT_SOURCES = ['Cash', 'Credit Card', 'Debit Card', 'Bank'];
+// Fixed/recurring expenses get a 4th option: some of them (health insurance,
+// a salary loan EMI) are deducted straight from the paycheck rather than
+// paid via cash or a card, so they don't fit either existing bucket. Only
+// offered on the Fixed Expenses forms/table, not one-off expenses.
+// "Bank" is its own option (distinct from Credit/Debit Card) for fixed
+// bills that are debited straight from a bank account -- a car loan EMI,
+// for instance -- rather than paid via a card. It still needs a bank name
+// picked, same as the two card options, so it's included in
+// CARD_PAYMENT_SOURCES below (which really means "needs a bank picker"
+// at this point, not strictly "is a card").
+const RECURRING_PAYMENT_SOURCES = [...PAYMENT_SOURCES, 'Salary'];
+const paymentSourceLabel = (p) => (p === 'Salary' ? 'Salary Deduction' : p);
+const CARD_PAYMENT_SOURCES = ['Credit Card', 'Debit Card', 'Bank'];
+// Free-tier household size cap: the owner plus this many additional people
+// (active members + pending invites combined).
+const MAX_ADDITIONAL_USERS = Infinity; // No cap on household size
+// Common UAE retail banks, since this household is based in Dubai -- "Other"
+// covers anything not listed rather than blocking entry.
+// Major banks across UAE/GCC, Levant & Egypt, North America, UK, Europe,
+// Australia/NZ, South Asia, East & Southeast Asia, Africa, and Latin America --
+// each bank name includes its country/region so a global list of similarly
+// named entries is still unambiguous at a glance. "Other" still covers
+// anything not listed rather than blocking entry.
+const BANKS = [
+  'Emirates NBD (UAE)', 'ADCB (UAE)', 'FAB (First Abu Dhabi Bank) (UAE)', 'Dubai Islamic Bank (UAE)', 'Mashreq (UAE)', 'ADIB (UAE)', 'RAKBANK (UAE)', 'CBD (Commercial Bank of Dubai) (UAE)', 'HSBC UAE (UAE)', 'Standard Chartered UAE (UAE)', 'Citibank UAE (UAE)', 'Saudi National Bank (Saudi Arabia)', 'Al Rajhi Bank (Saudi Arabia)', 'Riyad Bank (Saudi Arabia)', 'SABB (Saudi Arabia)', 'Qatar National Bank (Qatar)', 'Doha Bank (Qatar)', 'National Bank of Kuwait (Kuwait)', 'Gulf Bank (Kuwait)', 'Bank Muscat (Oman)', 'Bank of Bahrain and Kuwait (Bahrain)', 'Ahli United Bank (Bahrain)', 'Bank Audi (Lebanon)', 'Byblos Bank (Lebanon)', 'Arab Bank (Jordan)', 'Bank of Jordan (Jordan)', 'National Bank of Egypt (Egypt)', 'CIB (Commercial International Bank) (Egypt)', 'Banque Misr (Egypt)', 'JPMorgan Chase (USA)', 'Bank of America (USA)', 'Wells Fargo (USA)', 'Citibank (USA)', 'U.S. Bank (USA)', 'PNC Bank (USA)', 'Truist (USA)', 'Capital One (USA)', 'TD Bank (USA)', 'Goldman Sachs (USA)', 'American Express (USA)', 'Charles Schwab Bank (USA)', 'USAA (USA)', 'Ally Bank (USA)', 'RBC Royal Bank (Canada)', 'TD Canada Trust (Canada)', 'Scotiabank (Canada)', 'BMO Bank of Montreal (Canada)', 'CIBC (Canada)', 'National Bank of Canada (Canada)', 'Barclays (UK)', 'HSBC UK (UK)', 'Lloyds Bank (UK)', 'NatWest (UK)', 'Santander UK (UK)', 'Nationwide (UK)', 'TSB (UK)', 'Halifax (UK)', 'Monzo (UK)', 'Revolut (UK)', 'Starling Bank (UK)', 'Deutsche Bank (Germany)', 'Commerzbank (Germany)', 'BNP Paribas (France)', 'Societe Generale (France)', 'Credit Agricole (France)', 'ING (Netherlands)', 'Rabobank (Netherlands)', 'ABN AMRO (Netherlands)', 'UniCredit (Italy)', 'Intesa Sanpaolo (Italy)', 'Banco Santander (Spain)', 'BBVA (Spain)', 'CaixaBank (Spain)', 'UBS (Switzerland)', 'Credit Suisse (Switzerland)', 'Nordea (Nordics)', 'Danske Bank (Nordics)', 'SEB (Nordics)', 'Swedbank (Nordics)', 'Erste Group (Austria)', 'Raiffeisen Bank (Austria)', 'KBC Bank (Belgium)', 'mBank (Poland)', 'PKO Bank Polski (Poland)', 'Commonwealth Bank (Australia)', 'Westpac (Australia)', 'ANZ (Australia)', 'NAB (National Australia Bank) (Australia)', 'Bendigo Bank (Australia)', 'ASB Bank (New Zealand)', 'ANZ New Zealand (New Zealand)', 'BNZ (New Zealand)', 'Kiwibank (New Zealand)', 'State Bank of India (India)', 'HDFC Bank (India)', 'ICICI Bank (India)', 'Axis Bank (India)', 'Kotak Mahindra Bank (India)', 'Punjab National Bank (India)', 'Bank of Baroda (India)', 'Yes Bank (India)', 'IndusInd Bank (India)', 'HBL (Habib Bank) (Pakistan)', 'UBL (United Bank) (Pakistan)', 'MCB Bank (Pakistan)', 'Meezan Bank (Pakistan)', 'Allied Bank (Pakistan)', 'National Bank of Pakistan (Pakistan)', 'Bank Alfalah (Pakistan)', 'ICBC (China)', 'China Construction Bank (China)', 'Bank of China (China)', 'Agricultural Bank of China (China)', 'Bank of Communications (China)', 'MUFG Bank (Japan)', 'Sumitomo Mitsui Banking (Japan)', 'Mizuho Bank (Japan)', 'Japan Post Bank (Japan)', 'KB Kookmin Bank (South Korea)', 'Shinhan Bank (South Korea)', 'Woori Bank (South Korea)', 'Hana Bank (South Korea)', 'DBS Bank (Singapore)', 'OCBC Bank (Singapore)', 'UOB (Singapore)', 'Maybank (Malaysia)', 'CIMB (Malaysia)', 'Bangkok Bank (Thailand)', 'Kasikornbank (Thailand)', 'BDO Unibank (Philippines)', 'BPI (Bank of the Philippine Islands) (Philippines)', 'Bank Mandiri (Indonesia)', 'BCA (Indonesia)', 'Vietcombank (Vietnam)', 'Standard Bank (South Africa)', 'FirstRand/FNB (South Africa)', 'ABSA (South Africa)', 'Nedbank (South Africa)', 'Access Bank (Nigeria)', 'GTBank (Nigeria)', 'Zenith Bank (Nigeria)', 'First Bank of Nigeria (Nigeria)', 'UBA (United Bank for Africa) (Nigeria)', 'Equity Bank (Kenya)', 'KCB Bank (Kenya)', 'Itau Unibanco (Brazil)', 'Banco do Brasil (Brazil)', 'Bradesco (Brazil)', 'Caixa Economica Federal (Brazil)', 'Santander Brasil (Brazil)', 'BBVA Mexico (Mexico)', 'Banorte (Mexico)', 'Citibanamex (Mexico)', 'Banco de Chile (Chile)', 'BancoEstado (Chile)', 'Bancolombia (Colombia)', 'Banco de Bogota (Colombia)', 'BBVA Argentina (Argentina)', 'Banco Galicia (Argentina)', 'Banco Santander Rio (Argentina)', 'Other',
+];
+const FREQUENCY_MONTHS = { monthly: 1, alternate: 2, quarterly: 3, half_yearly: 6, yearly: 12 };
+
+// Difference, in whole months, between two "YYYY-MM" keys (to >= from assumed
+// for the recurring-expense-occurs-this-month check below).
+function monthDiff(fromKey, toKey) {
+  const [fy, fm] = fromKey.split('-').map(Number);
+  const [ty, tm] = toKey.split('-').map(Number);
+  return (ty - fy) * 12 + (tm - fm);
+}
+
+// Shared by the dashboard's current-month view and the PDF report: whether a
+// recurring expense lands in a given "YYYY-MM" month, honouring its start/end
+// dates and repeat frequency (e.g. alternate-month rent only counts every
+// 2nd month from its start date).
+function recurringOccursInMonth(r, key) {
+  if (!r.active) return false;
+  const startKey = r.start_date.slice(0, 7);
+  const startsOk = startKey <= key;
+  const endsOk = !r.end_date || r.end_date.slice(0, 7) >= key;
+  if (!startsOk || !endsOk) return false;
+  const interval = FREQUENCY_MONTHS[r.frequency] || 1;
+  if (interval <= 1) return true;
+  return monthDiff(startKey, key) % interval === 0;
+}
+
+// All "YYYY-MM" month keys from one date to another, inclusive.
+function monthsBetween(fromDateStr, toDateStr) {
+  const from = new Date(fromDateStr + 'T00:00:00');
+  const to = new Date(toDateStr + 'T00:00:00');
+  const keys = [];
+  let cur = new Date(from.getFullYear(), from.getMonth(), 1);
+  const end = new Date(to.getFullYear(), to.getMonth(), 1);
+  while (cur <= end) {
+    keys.push(monthKey(cur));
+    cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
+  }
+  return keys;
+}
+
+// The UAE's new official Dirham symbol (a "D" crossed by two horizontal
+// strokes) isn't in a shipped Unicode font yet, so it can't be typed as plain
+// text. Since Recharts renders to inline SVG, we draw a vector approximation
+// directly so it displays correctly everywhere without relying on any font.
+// Renders one chip per picked-but-not-yet-uploaded file on the Income/Fixed
+// Expenses/Regular Expenses/Savings add-forms, each with its own remove
+// button -- replaces the old single "one file" chip now that a row can carry
+// more than one attachment (per explicit request). `files` is a plain array
+// of File objects; `onRemove(index)` drops just that one from the list.
+function PendingAttachmentChips({ files, onRemove }) {
+  if (!files || files.length === 0) return null;
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+      {files.map((f, i) => (
+        <div key={`${f.name}-${i}`} className="muted-small attachment-chip">
+          <Paperclip size={12} /> {f.name}
+          <button type="button" className="attachment-chip-remove" onClick={() => onRemove(i)}>
+            <X size={12} />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DirhamBarLabel(props) {
+  const { x, y, width, height, value } = props;
+  const cy = y + height / 2;
+  const startX = x + width + 6;
+  const numStr = Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return (
+    <g>
+      <text x={startX} y={cy} dy={3.5} fontSize={12} fontWeight={700} fill="white" fontFamily="Arial, sans-serif">D</text>
+      <line x1={startX - 1} y1={cy - 2.5} x2={startX + 6.5} y2={cy - 2.5} stroke="white" strokeWidth={1} />
+      <line x1={startX - 1} y1={cy + 2.5} x2={startX + 6.5} y2={cy + 2.5} stroke="white" strokeWidth={1} />
+      <text x={startX + 10} y={cy} dy={3.5} fontSize={12} fill="white">{numStr}</text>
+    </g>
+  );
+}
+
+// Rotated (vertical, reading bottom-to-top) variants of the label above --
+// used only on Home's big "Explore" bar chart (both orientations it
+// offers), per explicit request: instead of the value trailing off
+// sideways from the bar's tip (eating into the chart's width), it prints
+// straight up from the bar's own edge instead. That frees up the
+// horizontal room the old sideways label needed, which is exactly what
+// lets the bars themselves shrink and the plot area cover more of the
+// available width -- "more coverage, more elegantly" as asked. Built by
+// laying the exact same D-glyph + number out along +x from a pivot point
+// (the bar's edge), then rotating the whole group -90 degrees around that
+// same pivot, which swings +x to point straight up.
+function DirhamBarLabelVerticalSideways(props) {
+  // v2.35: per explicit request, value labels next to the sideways Bar
+  // chart's bars must read horizontally (flowing right off the bar's tip),
+  // not rotated vertical -- so this now shares the same horizontal layout
+  // as DirhamBarLabel above instead of a -90deg rotated <g>.
+  const { x, y, width, height, value } = props;
+  const cy = y + height / 2;
+  const startX = x + width + 6;
+  const numStr = Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return (
+    <g>
+      <text x={startX} y={cy} dy={3} fontSize={10.5} fontWeight={700} fill="white" fontFamily="Arial, sans-serif">D</text>
+      <line x1={startX - 1} y1={cy - 2} x2={startX + 6} y2={cy - 2} stroke="white" strokeWidth={1} />
+      <line x1={startX - 1} y1={cy + 2} x2={startX + 6} y2={cy + 2} stroke="white" strokeWidth={1} />
+      <text x={startX + 9.5} y={cy} dy={3} fontSize={10.5} fill="white">{numStr}</text>
+    </g>
+  );
+}
+function shortSourceLabel(fullName) {
+  if (!fullName) return fullName;
+  const CODE = { 'Credit Card': 'CC', 'Debit Card': 'DC', 'Bank Account': 'BA' };
+  const m = fullName.match(/^([^(]+?)\s*(?:\((.+)\))?$/);
+  if (!m) return fullName;
+  const base = m[1].trim();
+  const inner = m[2];
+  const code = CODE[base] || base;
+  if (!inner) return code;
+  const bankCode = inner.split('(')[0].trim();
+  return bankCode ? `${code}-${bankCode}` : code;
+}
+function DirhamBarLabelVerticalColumn(props) {
+  const { x, y, width, value } = props;
+  const px = x + width / 2;
+  const py = y;
+  const numStr = Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return (
+    <g transform={`rotate(-90, ${px}, ${py})`}>
+      <text x={px + 3} y={py} dy={3} fontSize={11} fontWeight={700} fill="white" fontFamily="Arial, sans-serif">D</text>
+      <line x1={px + 2} y1={py - 2.2} x2={px + 8.5} y2={py - 2.2} stroke="white" strokeWidth={1} />
+      <line x1={px + 2} y1={py + 2.2} x2={px + 8.5} y2={py + 2.2} stroke="white" strokeWidth={1} />
+      <text x={px + 11.5} y={py} dy={3} fontSize={11} fill="white">{numStr}</text>
+    </g>
+  );
+}
+
+// Larger variant of DirhamBarLabelVerticalColumn (fontSize 9 -> 11, offsets
+// scaled to match) used only by the Budgeted vs Actual chart -- per explicit
+// request to bump the value-label text size there without touching the
+// original everywhere else it's already shipped (Bar/By Source charts).
+function DirhamBarLabelVerticalColumnLg(props) {
+  const { x, y, width, value, color } = props;
+  const px = x + width / 2;
+  const py = y;
+  const c = color || 'white';
+  const numStr = Math.round(Number(value)).toLocaleString();
+  return (
+    <g transform={`rotate(-90, ${px}, ${py})`}>
+      <text x={px + 3} y={py} dy={3} fontSize={13} fontWeight={700} fill={c} fontFamily="Arial, sans-serif">D</text>
+      <line x1={px + 2} y1={py - 2.7} x2={px + 9.5} y2={py - 2.7} stroke={c} strokeWidth={1} />
+      <line x1={px + 2} y1={py + 2.7} x2={px + 9.5} y2={py + 2.7} stroke={c} strokeWidth={1} />
+      <text x={px + 13} y={py} dy={3} fontSize={13} fill={c}>{numStr}</text>
+    </g>
+  );
+}
+
+// Y-axis tick for the Budgeted vs Actual chart -- reuses the same
+// CurrencyPrefix component every plain-text amount in the app already uses
+// (draws the Dirham glyph for AED, or the right symbol/code for any other
+// household currency) via a foreignObject, instead of the generic fmt()
+// "AED 1,234.00" text every other chart's axis still uses. Scoped to just
+// this chart per explicit request, rather than changing fmt() itself and
+// touching every existing chart's axis along with it.
+function DirhamYAxisTick({ x, y, payload }) {
+  const numStr = Math.round(Number(payload.value)).toLocaleString();
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <foreignObject x={-92} y={-9} width={88} height={18}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2, fontSize: 11, color: 'var(--muted)', height: '100%' }}>
+          <CurrencyPrefix />{numStr}
+        </div>
+      </foreignObject>
+    </g>
+  );
+}
+
+// Treemap tile renderer -- each category gets a box sized by how much was
+// spent, colored from the same palette as the other charts. Unlike a pie
+// slice, a treemap box has room to print its own label directly inside it,
+// so nothing overlaps regardless of how many categories there are -- boxes
+// too small to hold readable text (the tiny "long tail" categories) simply
+// render as an unlabeled colored tile instead of cramming text in, which is
+// exactly the clutter a many-category pie chart runs into.
+function TreemapTile(props) {
+  const { x, y, width, height, index, name, value } = props;
+  const color = COLORS[index % COLORS.length];
+  const canLabel = width > 46 && height > 24;
+  const canShowValue = width > 60 && height > 40;
+  const label = name && name.length > 14 ? name.slice(0, 14) + '&' : name;
+  return (
+    <g>
+      <rect x={x} y={y} width={width} height={height} style={{ fill: color, stroke: '#fff', strokeWidth: 1.5 }} />
+      {canLabel && (
+        <text x={x + 6} y={y + 16} fontSize={12.5} fontWeight={700} fill="#fff">{label}</text>
+      )}
+      {canShowValue && (
+        <text x={x + 6} y={y + 30} fontSize={11} fill="#fff" fillOpacity={0.9}>{fmt(value)}</text>
+      )}
+    </g>
+  );
+}
+
+// First-time-user spotlight tour -- a short, dismissible walkthrough of the
+// handful of things a brand-new household member most needs to find (the
+// title/logo, Home, adding an expense, the spending chart, Settings, the
+// notification bell, and Help). Each step's `selector` is a data-tour="..."
+// attribute already sitting on the real, live button/element -- desktop and
+// mobile intentionally share the SAME data-tour value on their respective
+// versions of "the same" action (e.g. the desktop header's Home button and
+// the mobile bottom-nav's Home button both carry data-tour="nav-home"), so
+// this one step list works unmodified on both layouts: querySelectorAll
+// picks whichever of the two is actually visible (offsetParent !== null)
+// rather than needing an isMobile branch here. No SVG mask/cutout -- the
+// "hole" in the dark backdrop is the classic CSS trick of a transparent box
+// exactly the target's size with an enormous box-shadow around it, which
+// naturally follows the target's real rect (no separate math to keep two
+// shapes in sync as the page scrolls/resizes).
+const TOUR_STEPS = [
+  {
+    selector: '[data-tour="brand"]',
+    title: 'Welcome to Hearth',
+    body: 'A quick 30-second look around -- skip anytime, or replay this later from Help.',
+  },
+  {
+    selector: '[data-tour="nav-home"]',
+    title: 'Dashboard',
+    body: 'Your dashboard: budget, spending, and income at a glance, plus a bigger Explore view with the chart, AI Insights, and Budget Coach.',
+  },
+  {
+    selector: '[data-tour="nav-add"]',
+    title: 'Add an expense',
+    body: 'Log a regular expense here -- Income, Fixed Expenses, and Savings all work the same way and auto-save as you type.',
+  },
+  {
+    selector: '[data-tour="chart-toggle"]',
+    title: 'Spending by category',
+    body: 'Switch between Pie, Bar, Pareto, Treemap, and By Source to see where your money is going.',
+    ensureView: 'home',
+  },
+  {
+    selector: '[data-tour="nav-settings"]',
+    title: 'Smart Budget',
+    body: 'Set a monthly budget per category here -- go over, and youll get a heads-up in the bell icon next.',
+  },
+  {
+    selector: '[data-tour="notif-bell"]',
+    title: 'Notifications',
+    body: 'Over-budget categories and bills due soon show up here, with an unread count.',
+  },
+  {
+    selector: '[data-tour="nav-help"]',
+    title: 'Need more?',
+    body: 'Help has a full guide to every feature, and you can replay this tour anytime from there.',
+  },
+];
+
+function SpotlightTour({ stepIndex, onNext, onPrev, onSkip }) {
+  const [rect, setRect] = useState(null);
+  const step = TOUR_STEPS[stepIndex];
+
+    useLayoutEffect(() => {
+    // Clear any previous step's highlight immediately on step change --
+    // showing nothing for a frame beats showing the WRONG (previous
+    // step's) box, which is what a one-shot setTimeout measurement used
+    // to do here: if steps advanced faster than its 260ms delay (a normal
+    // double-click, or this component's own smooth-scroll re-triggering
+    // the old step's scroll listener before its cleanup ran), the stale
+    // rect from the step you just left could get painted under the NEW
+    // step's tooltip text, or -- worse -- a scroll event mid-transition
+    // could hand the old closure a completely unrelated element's rect.
+    // A continuous requestAnimationFrame loop instead of a single delayed
+    // measurement has no "stale snapshot" to leak: every frame re-reads
+    // the real DOM and the real scroll-into-view position, so it always
+    // self-corrects to the truth within one frame, and rAF ids (not a
+    // closed-over boolean) fully own their own cancellation.
+    if (!step) { setRect(null); return; }
+    setRect(null);
+    let cancelled = false;
+    let rafId = null;
+    let hasScrolled = false;
+    const tick = () => {
+      if (cancelled) return;
+      const candidates = Array.from(document.querySelectorAll(step.selector));
+      const el = candidates.find((c) => c.offsetParent !== null) || candidates[0];
+      if (el) {
+        if (!hasScrolled) {
+          el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          hasScrolled = true;
+        }
+        setRect(el.getBoundingClientRect());
+      } else {
+        setRect(null);
+      }
+      rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+    return () => {
+      cancelled = true;
+      if (rafId != null) cancelAnimationFrame(rafId);
+    };
+  }, [stepIndex, step]);
+
+  if (!step) return null;
+  const pad = 8;
+  const highlightStyle = rect
+    ? {
+        position: 'fixed',
+        top: rect.top - pad,
+        left: rect.left - pad,
+        width: rect.width + pad * 2,
+        height: rect.height + pad * 2,
+        borderRadius: 12,
+      }
+    : null;
+  // Tooltip prefers sitting below the target; flips above if there isn't
+  // room, and always stays clamped within the viewport horizontally so it
+  // never runs off the left/right edge on a narrow phone screen.
+  const tooltipWidth = 300;
+  let tooltipTop = rect ? rect.bottom + pad + 10 : 100;
+  let flipAbove = false;
+  if (rect && tooltipTop + 160 > window.innerHeight) {
+    tooltipTop = Math.max(10, rect.top - pad - 10 - 160);
+    flipAbove = true;
+  }
+  let tooltipLeft = rect ? Math.min(Math.max(10, rect.left + rect.width / 2 - tooltipWidth / 2), window.innerWidth - tooltipWidth - 10) : 20;
+
+  return (
+    <div className="tour-overlay">
+      {highlightStyle && <div className="tour-highlight" style={highlightStyle} />}
+      <div
+        className={`tour-tooltip ${flipAbove ? 'tour-tooltip-above' : ''}`}
+        style={{ top: tooltipTop, left: tooltipLeft, width: tooltipWidth }}
+      >
+        <div className="tour-tooltip-title">{step.title}</div>
+        <div className="tour-tooltip-body">{step.body}</div>
+        <div className="tour-tooltip-foot">
+          <button type="button" className="tour-skip-link" onClick={onSkip}>Skip tour</button>
+          <div className="tour-tooltip-actions">
+            <span className="tour-step-count">{stepIndex + 1} / {TOUR_STEPS.length}</span>
+            {stepIndex > 0 && (
+              <button type="button" className="btn small secondary" onClick={onPrev}>Back</button>
+            )}
+            <button type="button" className="btn small" onClick={onNext}>
+              {stepIndex === TOUR_STEPS.length - 1 ? 'Done' : 'Next'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Module-level so the standalone fmt() helper (used all over the JSX below)
+// can stay a simple function instead of threading a currency prop through
+// every call site. Updated at the top of each Dashboard render from the
+// household's saved currency setting.
+let CURRENT_CURRENCY = 'AED';
+
+function fmt(n) {
+  const v = Number(n) || 0;
+  return CURRENT_CURRENCY + ' ' + v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function fmtCur(n, cur) {
+  const v = Number(n) || 0;
+  return (cur || CURRENT_CURRENCY) + ' ' + v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function investAccruedValue(inv) {
+  const principal = Number(inv.principal_amount || 0);
+  const cv = inv.current_value;
+  const hasOverride = cv !== null && cv !== undefined && cv !== '' && Number(cv) !== principal;
+  if (hasOverride) return Number(cv);
+  if (inv.investment_type === 'Fixed Deposit' && inv.interest_rate && inv.start_date) {
+    const rate = Number(inv.interest_rate) || 0;
+    const start = new Date(inv.start_date);
+    const maturity = inv.maturity_date ? new Date(inv.maturity_date) : null;
+    const today = new Date();
+    const end = (maturity && today > maturity) ? maturity : today;
+    const msPerYear = 365.25 * 24 * 3600 * 1000;
+    const years = Math.max(0, (end - start) / msPerYear);
+    return principal * (1 + (rate / 100) * years);
+  }
+  return cv !== null && cv !== undefined && cv !== '' ? Number(cv) : principal;
+}
+
+function investIsEstimated(inv) {
+  const principal = Number(inv.principal_amount || 0);
+  const cv = inv.current_value;
+  const hasOverride = cv !== null && cv !== undefined && cv !== '' && Number(cv) !== principal;
+  return !hasOverride && inv.investment_type === 'Fixed Deposit' && !!inv.interest_rate && !!inv.start_date;
+}
+
+function investDisplayStatus(inv) {
+  if (inv.status && inv.status !== 'Active') return inv.status;
+  if (inv.maturity_date && new Date() > new Date(inv.maturity_date)) return 'Matured';
+  return inv.status || 'Active';
+}
+
+// The little prefix shown inside every amount input (Add forms, edit
+// sheets, and the inline-editable tables) so the currency is always
+// visible right where you're typing, not just in the household's Settings.
+function currencySymbol() {
+  return CURRENCY_SYMBOLS[CURRENT_CURRENCY] || CURRENT_CURRENCY;
+}
+
+// The UAE's new official Dirham symbol (unveiled by the Central Bank in
+// March 2025 -- a Latin "D" crossed by two horizontal lines) has no Unicode
+// codepoint yet (assigned U+20C3, but not shipping in any font until
+// Unicode 18.0 lands, expected ~Sept 2026), so there's no font character to
+// just type. Drawing it as a tiny inline SVG (currentColor, sized to the
+// surrounding text) is the only faithful way to show the real symbol today
+// instead of falling back to the "AED" text abbreviation. Renders inside
+// the currency-prefix span everywhere an amount is entered/shown.
+// size defaults to "1em" rather than a fixed pixel value so the glyph
+// always scales with whatever font-size its surrounding text is using --
+// small next to a table figure, larger next to a big bold dashboard
+// number -- instead of staying visually tiny/mismatched against large
+// values (the em unit resolves against the <svg>'s own inherited
+// font-size, and the fixed viewBox keeps the D + double-line drawing
+// proportioned correctly at any size).
+function DirhamGlyph({ size = '1em' }) {
+  return (
+    // viewBox tightly wraps just the drawn D + two lines (the old 0 0 16 16
+    // box left a wide margin of empty space to the right/below the glyph,
+    // which read as a built-in gap before the number even started -- a "$"
+    // never has that dead space, so this crops it out the same way.
+    <svg width={size} height={size} viewBox="0 3 10 11" fill="none" style={{ flex: '0 0 auto' }}>
+      <text x="1" y="12.5" fontSize="12" fontWeight="800" fontFamily="Arial, sans-serif" fill="currentColor">D</text>
+      <line x1="0.5" y1="5.4" x2="9.5" y2="5.4" stroke="currentColor" strokeWidth="1.3" />
+      <line x1="0.5" y1="8.6" x2="9.5" y2="8.6" stroke="currentColor" strokeWidth="1.3" />
+    </svg>
+  );
+}
+
+// Prefix shown inside every amount field: the real Dirham glyph for AED
+// households, or the plain text symbol for any other currency (those all
+// already have a normal Unicode symbol -- $, ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¿ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ½, ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¿ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ½, ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¿ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ½ -- so there's nothing
+// to substitute there).
+function CurrencyPrefix() {
+  if (CURRENT_CURRENCY === 'AED') return <DirhamGlyph />;
+  return currencySymbol();
+}
+
+// Every editable amount field (top-level Add forms + in-table cells) sizes
+// its input to exactly fit the digits typed, so the currency symbol sits
+// glued against them with zero gap -- the same "$4,500" look the read-only
+// dashboard figures and description text already have for free (a plain
+// text node just IS as wide as its content). An <input> can't do that on
+// its own, so this measures the actual rendered pixel width of the typed
+// value with a shared offscreen canvas and returns it directly, instead of
+// approximating it from a per-character formula. The formula approach (an
+// earlier version of this fix) used a flat "1ch per character" estimate,
+// which is close but not exact -- a "." is narrower than a digit, and even
+// digits aren't perfectly uniform width in this font, so different values
+// with the same character count ended up with visibly different amounts of
+// slack once right-aligned. Measuring the real string removes that
+// residual inconsistency entirely rather than tuning the formula further.
+let _amtMeasureCanvas = null;
+function measureAmountWidthPx(value, font, emptyFallback) {
+  if (!_amtMeasureCanvas) _amtMeasureCanvas = document.createElement('canvas');
+  const ctx = _amtMeasureCanvas.getContext('2d');
+  ctx.font = font;
+  const text = String(value ?? '').trim() || emptyFallback;
+  return ctx.measureText(text).width;
+}
+// Table cells: 11px Nunito (the unified table font size -- see the
+// "Unify font size across all table inputs/selects" fix). Small fixed
+// buffer just for the input's own subpixel rounding/caret, not a safety
+// margin for missing digits (the measurement is exact, so it doesn't need
+// one the way the old ch-based formula did). Empty is rare here (rows
+// already have a value), but floors at 2 digits' width same as before.
+function tightAmountPx(value) {
+  return Math.ceil(measureAmountWidthPx(value, '400 11px Nunito, sans-serif', '00')) + 2;
+}
+// Top-level Add-form fields: 14px, the standard .field input size. Empty
+// measures against the field's own "0.00" placeholder (not a bare "0") --
+// otherwise the box sizes for 1 character while 4 characters of grey
+// placeholder text are actually rendered inside it, clipping the "0.00".
+function formAmountPx(value) {
+  return Math.ceil(measureAmountWidthPx(value, '400 14px Nunito, sans-serif', '0.00')) + 2;
+}
+
+// Read-only currency display used everywhere a figure is just shown (not
+// edited) -- dashboard summary cards, mobile transaction amounts, budget-cap
+// progress, etc. Glues the symbol straight onto the number with no space,
+// same "$4,500" convention the editable amount fields already use, instead
+// of the old "AED 4,500.00" (code + space) text format. A leading minus
+// sign (for negative/over-budget figures) is pulled out in front of the
+// symbol -- "-AED50" reads oddly, "-ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¿ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ½50" reads the way "-$50" would.
+function Amt({ value }) {
+  const v = Number(value) || 0;
+  const neg = v < 0;
+  const numStr = Math.abs(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return (
+    <span className="amt-tight">
+      {neg ? '-' : ''}<CurrencyPrefix />{numStr}
+    </span>
+  );
+}
+
+// Same as Amt, but for a value in a currency other than the household's --
+// used by Investments, where each Fixed Deposit/SIP can be opened in a
+// different currency than the household's own. Reuses the same Dirham
+// glyph and CURRENCY_SYMBOLS map the rest of the app already uses (instead
+// of a plain "AED 250.00" text prefix), so investment amounts look and
+// feel exactly like every other amount in the app when they happen to be
+// in the household's currency, and fall back to the 3-letter code only for
+// currencies with no recognizable glyph.
+function AmtCur({ value, currency }) {
+  const v = Number(value) || 0;
+  const neg = v < 0;
+  const numStr = Math.abs(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const cur = currency || CURRENT_CURRENCY;
+  const symbol = cur === 'AED' ? <DirhamGlyph /> : (CURRENCY_SYMBOLS[cur] || cur + ' ');
+  return (
+    <span className="amt-tight">
+      {neg ? '-' : ''}{symbol}{numStr}
+    </span>
+  );
+}
+
+function monthKey(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+
+function monthLabel(d) {
+  return d.toLocaleString('default', { month: 'long', year: 'numeric' });
+}
+
+// First/last calendar day of a given month, as yyyy-mm-dd strings -- used to
+// bound the dashboard's date-range picker (see rangeStart/rangeEnd below) so
+// it can never be dragged outside whichever month is currently selected via
+// the </> month nav.
+function firstDayOfMonthStr(d) {
+  return monthKey(d) + '-01';
+}
+function lastDayOfMonthStr(d) {
+  const last = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+  return monthKey(d) + '-' + String(last.getDate()).padStart(2, '0');
+}
+
+function fmtDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function hexToRgb(hex) {
+  const n = parseInt(hex.replace('#', ''), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+export default function Dashboard({ session, household, onHouseholdChange, isAdmin, onOpenAdmin }) {
+  const householdId = household.id;
+  const isOwner = household.role === 'owner';
+  // Investments (Fixed Deposits / Mutual Fund SIPs) is a private tab -- only
+  // Vipin's own login sees it; everyone else in the household continues to
+  // see just the existing "Coming Soon" placeholder, untouched.
+  const isMe = (session.user.email || '').trim().toLowerCase() === 'vipinlakhanpal@gmail.com';
+
+  // Free/paid plan tier (v3.60) -- admin-granted only for now, no payment
+  // processor wired up yet (see supabase/migration_plan_tier.sql and the
+  // Admin Console's Households tab, which is the only place a household's
+  // plan actually changes). Free: Income, Regular Expenses, Reports.
+  // Paid: adds Fixed Expenses, Savings, Investments, and Aria -- all
+  // visible to every member of a Paid household (v3.81).
+  const isPaidPlan = household.plan === 'paid';
+  const PLAN_LOCKED_SECTIONS = ['fixed', 'savings', 'investments', 'aria'];
+  const [upgradeModalSection, setUpgradeModalSection] = useState(null);
+  function tryOpenSection(section, openFn) {
+    if (!isPaidPlan && PLAN_LOCKED_SECTIONS.includes(section)) {
+      setUpgradeModalSection(section);
+      return;
+    }
+    openFn();
+  }
+  const PLAN_SECTION_LABEL = { fixed: 'Fixed Expenses', savings: 'Savings', investments: 'Investments', aria: 'Aria' };
+  // v3.81: side-by-side Free vs Premium comparison shown in the upgrade
+  // modal, both when a locked section is tapped and from the new
+  // "Compare Free vs Premium" entry point in Account Settings.
+  const PLAN_COMPARISON_FEATURES = [
+    { label: 'Income', free: true },
+    { label: 'Regular Expenses', free: true },
+    { label: 'Reports', free: true },
+    { label: 'Fixed Expenses', free: false },
+    { label: 'Savings', free: false },
+    { label: 'Investments', free: false },
+    { label: 'Aria (AI Assistant)', free: false },
+  ];
+
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const d = new Date();
+    d.setDate(1);
+    return d;
+  });
+
+  const [categories, setCategories] = useState([]);
+  const [expenses, setExpenses] = useState([]);
+  const [recurringExpenses, setRecurringExpenses] = useState([]);
+  const [incomes, setIncomes] = useState([]);
+  const [investments, setInvestments] = useState([]);
+  const [investmentForm, setInvestmentForm] = useState({
+    investmentType: 'Fixed Deposit', name: '', institution: '', principal: '', currentValue: '',
+    interestRate: '', sipAmount: '', startDate: new Date().toISOString().slice(0, 10), maturityDate: '', status: 'Active',
+    currency: CURRENT_CURRENCY,
+  });
+  const [investFxRates, setInvestFxRates] = useState(null);
+  const [showInvestmentMoreFields, setShowInvestmentMoreFields] = useState(false);
+  const [investChartType, setInvestChartType] = useState('bar-h');
+  const [editingInvestmentId, setEditingInvestmentId] = useState(null);
+  function investToBase(amount, cur) {
+    if (!cur || cur === CURRENT_CURRENCY) return amount;
+    if (investFxRates && investFxRates[cur]) return amount / investFxRates[cur];
+    return amount;
+  }
+  const investmentTotals = useMemo(() => {
+    const activeInvestments = investments.filter((x) => x.status !== 'Closed');
+    const principal = activeInvestments.reduce((s, x) => s + investToBase(Number(x.principal_amount || 0), x.currency), 0);
+    const current = activeInvestments.reduce((s, x) => s + investToBase(investAccruedValue(x), x.currency), 0);
+    return { principal, current, gain: current - principal };
+  }, [investments, investFxRates]);
+
+  // Dashboard tile totals are month-scoped: an investment shouldn't count
+  // toward (or appear in the breakdown of) any month before it existed --
+  // e.g. an FD opened in July shouldn't show up while browsing May. The full
+  // "Investment Records" list further down stays all-time on purpose, since
+  // that's meant to be the complete ledger.
+  const dashboardInvestmentTotals = useMemo(() => {
+    const key = monthKey(currentMonth);
+    const activeInvestments = investments.filter((x) => x.status !== 'Closed' && x.start_date && x.start_date.slice(0, 7) <= key);
+    const principal = activeInvestments.reduce((s, x) => s + investToBase(Number(x.principal_amount || 0), x.currency), 0);
+    const current = activeInvestments.reduce((s, x) => s + investToBase(investAccruedValue(x), x.currency), 0);
+    return { principal, current, gain: current - principal };
+  }, [investments, investFxRates, currentMonth]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`https://open.er-api.com/v6/latest/${CURRENT_CURRENCY}`)
+      .then((r) => r.json())
+      .then((j) => { if (!cancelled && j && j.rates) setInvestFxRates(j.rates); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [isMe]);
+  // Total monthly budget now lives per-calendar-month (one row per month, in
+  // the monthly_budgets table), exactly like Income/Savings, instead of one
+  // flat number that applied to every month forever. `totalBudget` below is
+  // derived from this list for whichever month is currently selected, so
+  // every existing calculation that reads `totalBudget` (Remaining, the
+  // over-budget banner, the PDF report, AI insights, etc.) automatically
+  // reflects the right month's figure without changing at every call site.
+  const [monthlyBudgets, setMonthlyBudgets] = useState([]);
+  const [currency, setCurrency] = useState('AED');
+  const [currencyDraft, setCurrencyDraft] = useState('AED');
+  // Self-service household rename (owner-only) -- previously the name
+  // could only be set once at creation, or changed by the superadmin via
+  // Admin Console. Synced from the `household` prop whenever it changes
+  // (e.g. after commitHouseholdName() triggers onHouseholdChange() to
+  // re-fetch it), same pattern as totalBudgetDraft/currencyDraft above.
+  const [householdNameDraft, setHouseholdNameDraft] = useState(household.name || '');
+  useEffect(() => {
+    setHouseholdNameDraft(household.name || '');
+  }, [household.name]);
+  const [chartType, setChartType] = useState('pie');
+  const [chartFullscreen, setChartFullscreen] = useState(false);
+  // Bar chart orientation -- only exposed on the Home tab's big "Explore"
+  // chart (see renderChartCard(big) below); the normal small chart panel
+  // next to every other tab keeps its original fixed orientation, per
+  // explicit request. 'vertical' matches the app's original/default bar
+  // layout (categories stacked in a vertical list, bars extending
+  // sideways); 'horizontal' is the more familiar column-chart look (bars
+  // standing up, categories spread left-to-right along the bottom) -- handy
+  // on Home's wider canvas where there's room for that.
+  const [barOrientation, setBarOrientation] = useState('vertical');
+  const [groupChartMode, setGroupChartMode] = useState('group');
+  const [loading, setLoading] = useState(true);
+  // Exactly one of these panels (Budget settings / Users / Admin console / Help)
+  // can be open at a time -- they all render in the same spot below the chart,
+  // and opening one auto-scrolls its title into view.
+  const [activePanel, setActivePanel] = useState(null);
+  const panelRef = useRef(null);
+const [mobileReportOpen, setMobileReportOpen] = useState(false);
+  // Which sub-section shows inside the Settings panel -- App Settings
+  // (budget/currency/categories) or, for the admin user only, the Admin
+  // Console. Previously Admin Console was its own separate top-bar button
+  // and panel; folding it into Settings as a sub-toggle instead reduces the
+  // top bar to fewer buttons and groups "app configuration" together.
+  const [settingsSubTab, setSettingsSubTab] = useState('app');
+  // Help panel is now an accordion -- each topic's bold title is a button;
+  // clicking one opens just that topic's description and closes whichever
+  // other one was open, instead of one long always-visible wall of text.
+  // Starts with nothing open so the panel reads as a clean list of topics
+  // first, per explicit request ("when Home is clicked... the Home
+  // description appears... do this for all").
+  const [helpOpenTopic, setHelpOpenTopic] = useState(null);
+  function togglePanel(name) {
+    // Closing the mobile add sheet whenever a different panel opens keeps
+    // only one "overlay" on screen at a time, so Report/Users/Settings
+    // never end up stacked underneath an already-open Add sheet.
+    setAddSheetOpen(false);
+    closeAllMobileEditSheets();
+    // v3.42: actually TOGGLE -- tapping Settings/Soon/Report/Investments/
+    // Help while it's already the open panel now closes it back to the
+    // Dashboard (activePanel === null, same state Dash/Income/etc. use),
+    // instead of re-setting the same value (a no-op that left mobile users
+    // stuck on Settings/Soon with no way to back out short of tapping a
+    // different tab -- confirmed live: "settings once clicked the popup
+    // stays... same problem with soon button").
+    setActivePanel((prev) => {
+      const opening = prev !== name;
+      // Vipin: "whenever user clicks income or expense or any tab by
+      // default user should come to Add tab" -- applies to Investments
+      // too, which uses activePanel/togglePanel instead of setInputTab.
+      // Only reset on the "opening" transition, not the "closing back to
+      // Dashboard" tap of the same button.
+      if (opening && name === 'investments') setDeskFrameFor('investments', 'add');
+      return opening ? name : null;
+    });
+    // Also clear inputTab -- Report/Settings/Help are meant to pair with
+    // Home, not linger stacked on top of whichever Income/Fixed Expenses/
+    // Regular Expenses/Savings tab was previously selected.
+    setInputTab(null);
+  }
+
+  // Bell icon (top bar, just before Help) replaces the old always-visible red
+  // "over budget" / "bill due soon" banners -- same underlying warnings, just
+  // tucked behind a click instead of shouting across the top of the page on
+  // every visit. Read/unread state is remembered per-household in
+  // localStorage (keyed by notification id, e.g. "over-cat-Credit Card EMI")
+  // so a notification only shows as unread once, even across reloads/logins,
+  // until its underlying condition actually changes (a new id shows up again).
+  // v3.32: moved up from where this used to live further down in the
+  // component -- the notif/profile/theme outside-click effects just below
+  // now read isMobile in their dependency arrays, and referencing a
+  // `const` before its original declaration point throws (TDZ), so this
+  // has to be declared before all three of those effects, not after.
+  const [isMobile, setIsMobile] = useState(
+        () => typeof window !== 'undefined' && window.matchMedia('(max-width: 640px), ((pointer: coarse) and (hover: none) and (max-width: 1366px))').matches
+  );
+  useEffect(() => {
+        const mq = window.matchMedia('(max-width: 640px), ((pointer: coarse) and (hover: none) and (max-width: 1366px))');
+    const handler = (e) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
+  const [notifOpen, setNotifOpen] = useState(false);
+  const notifSeenKey = `hearth-seen-notifs-${household.id}`;
+  const [seenNotifIds, setSeenNotifIds] = useState(() => {
+    try {
+      return new Set(JSON.parse(localStorage.getItem(notifSeenKey) || '[]'));
+    } catch {
+      return new Set();
+    }
+  });
+  const notifBellRef = useRef(null);
+  const notifDropdownRef = useRef(null);
+  const [notifDropdownPos, setNotifDropdownPos] = useState(null);
+  useEffect(() => {
+    if (!notifOpen) return;
+    // v3.32: mobile ignores notifDropdownPos entirely (fixed bottom-sheet
+    // style) and closes via the full-screen scrim instead of an outside-
+    // click listener -- skip both on mobile so opening the dropdown from
+    // a touch tap does the absolute minimum synchronous work.
+    if (!isMobile && notifBellRef.current) {
+      const r = notifBellRef.current.getBoundingClientRect();
+      setNotifDropdownPos({ top: r.bottom + 8, right: Math.max(8, window.innerWidth - r.right) });
+    }
+    if (isMobile) return;
+    function onDocClick(e) {
+      if (
+        notifBellRef.current && !notifBellRef.current.contains(e.target) &&
+        !(notifDropdownRef.current && notifDropdownRef.current.contains(e.target))
+      ) setNotifOpen(false);
+    }
+    const t = setTimeout(() => document.addEventListener('mousedown', onDocClick), 60);
+    return () => { clearTimeout(t); document.removeEventListener('mousedown', onDocClick); };
+  }, [notifOpen, isMobile]);
+
+  // Profile icon (replaces the old standalone "Sign out" button) -- same
+  // open/close-on-outside-click pattern as the notification bell above.
+  // Shows the signed-in email plus the same self-editable Name/Phone/
+  // Location fields as "My details" in Users (myDetailsDraft/
+  // commitMyDetailsField, already defined below), with Sign out as the
+  // last action in the dropdown instead of its own top-bar button.
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef(null);
+  // v3.69: dedicated ref for ONLY the desktop trigger button (see
+  // profileMenuDesktopRef usage below) -- profileMenuRef itself is shared
+  // with the mobile bottom-nav's own Profile button (same ref object, per
+  // the v3.28 comment above), and since that mobile button always mounts
+  // later in the tree than this desktop one, its ref-attach callback ran
+  // last and silently overwrote profileMenuRef.current with ITS OWN node --
+  // a button sitting inside display:none-on-desktop .mobile-bottom-nav.
+  // getBoundingClientRect() on a display:none element returns an all-zero
+  // rect, which is exactly what was sending the dropdown to right:innerWidth
+  // (fully off-screen) below. profileMenuRef.current was never wrong at
+  // click time -- it was already wrong the moment the mobile button mounted.
+  const profileMenuDesktopRef = useRef(null);
+  const [profileDropdownPos, setProfileDropdownPos] = useState(null);
+  // v2.25: the REAL bug behind "Sign out does nothing" -- .sticky-dashboard-frame
+  // (the header's sticky container) sets overflow-x: clip with overflow-y:
+  // visible. Per the CSS overflow spec, when one axis is non-visible the
+  // other axis silently becomes 'auto' instead of staying 'visible' -- so
+  // that header frame was ACTUALLY clipping anything extending past its own
+  // bottom edge, even though it kept painting the dropdown fine visually.
+  // The dropdown is tall enough to extend well past the frame, so every
+  // real click on "Sign out" (or the fields above it) was hit-testing
+  // straight through to whatever dashboard content sits behind it -- not a
+  // mousedown/click race after all (that v2.24 fix was harmless but not
+  // the actual cause). Rendering the dropdown as position:fixed, measured
+  // from the toggle button the moment it opens, escapes that clipping
+  // ancestor entirely so clicks land on the real buttons again.
+  //
+  // v2.26: position:fixed alone still wasn't enough -- .sticky-dashboard-frame
+  // also carries will-change:transform (an iOS repaint-lag fix, see v1.47
+  // above), and ANY transform on an ancestor makes it the containing block
+  // for position:fixed descendants too, not just absolute ones. So the
+  // "fixed" dropdown was still being sized/clipped relative to that frame
+  // instead of the viewport. Rendering it through a portal straight into
+  // document.body sidesteps both the clipping and the transform-containment
+  // issue for good.
+  const profileDropdownRef = useRef(null);
+useEffect(() => {
+        if (!profileMenuOpen) return;
+        let raf = null;
+        // v3.68: the position calc below used to run synchronously in this
+        // effect and could still race with layout/paint still settling right
+        // after the button appears (e.g. the sticky header/splash finishing
+        // their own transitions) -- that intermittently measured an all-zero
+        // rect and sent the dropdown to right:innerWidth, i.e. fully
+        // off-screen to the left. It was rendering the whole time, just never
+        // visible or reachable -- which is exactly what "Sign out does
+        // nothing" looked like. Deferring the read to the next animation
+        // frame guarantees layout has actually finished before we measure it.
+        if (!isMobile && profileMenuDesktopRef.current) {
+                  raf = requestAnimationFrame(() => {
+                              if (!profileMenuDesktopRef.current) return;
+                              const r = profileMenuDesktopRef.current.getBoundingClientRect();
+                              const openUpward = r.top > window.innerHeight - 220;
+                              setProfileDropdownPos(
+                                            openUpward
+                                              ? { bottom: window.innerHeight - r.top + 8, right: Math.max(8, window.innerWidth - r.right) }
+                                              : { top: r.bottom + 8, right: Math.max(8, window.innerWidth - r.right) }
+                                          );
+                  });
+        }
+        if (isMobile) return () => { if (raf) cancelAnimationFrame(raf); };
+        // v3.65: was listening on 'click' with only a 60ms attach delay -- on
+        // some browsers/timing, the same physical click that opened the menu
+        // could still be in flight when the listener attached, so it read as
+        // an "outside click" and closed the menu back down within the same
+        // interaction (looked exactly like "the button does nothing"). Using
+        // 'mousedown' (fires and finishes before 'click', same event type as
+        // the notif dropdown above already uses successfully) plus a longer 150ms
+        // delay makes it impossible for the opening click to also be read as
+        // the closing one.
+        function onDocClick(e) {
+                  if (
+                              profileMenuRef.current && !profileMenuRef.current.contains(e.target) &&
+                              !(profileDropdownRef.current && profileDropdownRef.current.contains(e.target))
+                            ) setProfileMenuOpen(false);
+        }
+        const t = setTimeout(() => document.addEventListener('mousedown', onDocClick), 150);
+        return () => { if (raf) cancelAnimationFrame(raf); clearTimeout(t); document.removeEventListener('mousedown', onDocClick); };
+}, [profileMenuOpen, isMobile]);
+  // Color theme picker -- swaps the app's --accent/--accent2 pairs (see the
+  // [data-theme="..."] rules in index.css) via a data-theme attribute on
+  // <html>, remembered per-browser in localStorage. Purely cosmetic/local:
+  // there's no per-household "theme" column, so each signed-in device can
+  // pick its own without affecting anyone else in the household.
+  const THEMES = [
+    { id: 'teal', label: 'Teal (default)', color: '#0d9488' },
+    { id: 'ocean', label: 'Ocean blue', color: '#0369a1' },
+    { id: 'purple', label: 'Purple', color: '#7c3aed' },
+    { id: 'rose', label: 'Rose', color: '#db2777' },
+    { id: 'forest', label: 'Forest green', color: '#15803d' },
+{ id: 'amber', label: 'Amber', color: '#b45309' },
+  { id: 'indigo', label: 'Indigo', color: '#4f46e5' },
+  { id: 'slate', label: 'Slate', color: '#475569' },
+  { id: 'wine', label: 'Wine', color: '#9f1239' },
+  ];
+  const [theme, setTheme] = useState(() => {
+    try {
+      return localStorage.getItem('hearth-theme') || 'teal';
+    } catch {
+      return 'teal';
+    }
+  });
+  const [themeMenuOpen, setThemeMenuOpen] = useState(false);
+  const themeMenuRef = useRef(null);
+  const [themeDropdownPos, setThemeDropdownPos] = useState(null);
+  useEffect(() => {
+    if (theme === 'teal') {
+      document.documentElement.removeAttribute('data-theme');
+    } else {
+      document.documentElement.setAttribute('data-theme', theme);
+    }
+    try {
+      localStorage.setItem('hearth-theme', theme);
+    } catch {
+      // ignore -- purely a nice-to-have persistence, not worth surfacing an error for
+    }
+  }, [theme]);
+    // Light/dark mode -- stored separately from the color theme above (its own
+    // localStorage key) so switching one never resets the other. Toggled via
+    // a [data-mode="dark"] attribute on <html>; index.css recolors --bg/
+    // --card/--text/--muted/--border off of that attribute for every color
+    // theme at once.
+    const [mode, setMode] = useState(() => {
+      try {
+        return localStorage.getItem('hearth-mode') || 'dark';
+      } catch {
+        return 'dark';
+      }
+    });
+    useEffect(() => {
+      if (mode === 'dark') {
+        document.documentElement.setAttribute('data-mode', 'dark');
+      } else {
+        document.documentElement.removeAttribute('data-mode');
+      }
+      try {
+        localStorage.setItem('hearth-mode', mode);
+      } catch {
+        // ignore -- same nice-to-have persistence as the color theme above
+      }
+    }, [mode]);
+
+  const themeDropdownRef = useRef(null);
+  useEffect(() => {
+    if (!themeMenuOpen) return;
+    // v3.32: same as above -- skip the layout read + outside-click
+    // listener on mobile (fixed bottom-sheet + scrim handle it instead).
+    if (!isMobile && themeMenuRef.current) {
+      const r = themeMenuRef.current.getBoundingClientRect();
+      setThemeDropdownPos({ top: r.bottom + 8, right: Math.max(8, window.innerWidth - r.right) });
+    }
+    if (isMobile) return;
+    function onDocClick(e) {
+      if (
+        themeMenuRef.current && !themeMenuRef.current.contains(e.target) &&
+        !(themeDropdownRef.current && themeDropdownRef.current.contains(e.target))
+      ) setThemeMenuOpen(false);
+    }
+    const t = setTimeout(() => document.addEventListener('click', onDocClick), 60);
+    return () => { clearTimeout(t); document.removeEventListener('click', onDocClick); };
+  }, [themeMenuOpen, isMobile]);
+  // Attachment viewer modal -- opened from every place a document can be
+  // viewed (aggregated Attachments dropdown, each table's row icon, each
+  // mobile edit sheet). Holds the signed URL + name of whichever attachment
+  // is currently open, so one modal + one set of handlers covers all of them.
+  const [attachmentViewer, setAttachmentViewer] = useState(null);
+  // Multiple-attachments-per-row support: rowAttachments maps
+  // "{table}:{rowId}" -> array of { id, storage_path, file_name, created_at },
+  // loaded in bulk in loadAll() from the row_attachments join table (see
+  // migration_multi_attachments.sql) rather than a single attachment_url
+  // column per row. attachmentListModal holds which row's list is currently
+  // open (table/rowId/label) -- clicking an item in that list opens the
+  // existing single-file attachmentViewer above, unchanged, so the
+  // view/email/WhatsApp actions work exactly as before per attachment.
+  const [rowAttachments, setRowAttachments] = useState({});
+  const [attachmentListModal, setAttachmentListModal] = useState(null);
+  function rowAttachmentKey(table, rowId) {
+    return `${table}:${rowId}`;
+  }
+  function getRowAttachments(table, rowId) {
+    return rowAttachments[rowAttachmentKey(table, rowId)] || [];
+  }
+  function openAttachmentList(table, rowId, label) {
+    setAttachmentListModal({ table, rowId, label: label || 'Attachments' });
+  }
+  // Footer "Support" form -- lets any signed-in user send a support
+  // request straight to the app owner's inbox (see api/send-suggestion.js,
+  // kept under its original filename to stay under Vercel Hobby's
+  // 12-serverless-function cap) without needing a whole ticketing system.
+  // Pre-filled from the same name/location the user already saved under
+  // "My details" so most people can just pick a topic and describe the
+  // issue. Internal identifiers still say "suggestion" (renamed only in
+  // the UI to "Support") to avoid a risky wide rename.
+  const SUPPORT_TOPICS = [
+    'App Upgrade', 'Account & Login', 'Expenses & Bills', 'Income & Savings', 'Reports & PDF',
+    'Aria (AI Assistant)', 'Notifications & Alerts', 'Group Account & Members',
+    "Something's not working", 'Feature request', 'Other',
+  ];
+  const [suggestionModalOpen, setSuggestionModalOpen] = useState(false);
+  const [suggestionForm, setSuggestionForm] = useState({ name: '', email: '', location: '', message: '', topics: [] });
+  const [suggestionStatus, setSuggestionStatus] = useState(''); // '', 'sending', 'sent', 'error'
+  function openSuggestionModal(prefill) {
+    setSuggestionForm({
+      name: myDetailsDraft.name || '',
+      email: session?.user?.email || '',
+      location: myDetailsDraft.location || '',
+      message: prefill?.message || '',
+      topics: prefill?.topics || [],
+    });
+    setSuggestionStatus('');
+    setSuggestionModalOpen(true);
+  }
+  function toggleSupportTopic(topic) {
+    setSuggestionForm((f) => ({
+      ...f,
+      topics: f.topics.includes(topic) ? f.topics.filter((t) => t !== topic) : [...f.topics, topic],
+    }));
+  }
+  async function handleSubmitSuggestion(e) {
+    e.preventDefault();
+    if (!suggestionForm.name.trim() || !suggestionForm.message.trim()) return;
+    setSuggestionStatus('sending');
+    try {
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const res = await fetch('/api/send-suggestion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authSession?.access_token}` },
+        body: JSON.stringify(suggestionForm),
+      });
+      if (!res.ok) throw new Error('failed');
+      setSuggestionStatus('sent');
+    } catch {
+      setSuggestionStatus('error');
+    }
+  }
+  function markNotifsSeen(ids) {
+    setSeenNotifIds((cur) => {
+      const next = new Set(cur);
+      ids.forEach((id) => next.add(id));
+      try {
+        localStorage.setItem(notifSeenKey, JSON.stringify([...next]));
+      } catch {}
+      return next;
+    });
+  }
+
+  // Mobile bottom navigation -- a fixed, thumb-reachable bar (shown only
+  // below 640px via CSS) that jumps straight to the app's main destinations,
+  // instead of making a phone user scroll back up to the top button rows
+  // every time they want to switch sections. It's additive: the existing
+  // top action row and input tabs still work exactly as before on any
+  // screen size, this just gives mobile a faster, app-like way to get
+  // around using the same underlying state.
+  const topRef = useRef(null);
+  const stickyFrameRef = useRef(null);
+  const [stickyFrameSpacerHeight, setStickyFrameSpacerHeight] = useState(0);
+  useEffect(() => {
+    const el = stickyFrameRef.current;
+    if (!el) return undefined;
+    const update = () => setStickyFrameSpacerHeight(el.getBoundingClientRect().bottom + 16);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    window.addEventListener('resize', update);
+    window.addEventListener('orientationchange', update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', update);
+      window.removeEventListener('orientationchange', update);
+    };
+  }, []);
+  const inputTabsSectionRef = useRef(null);
+  // On mobile, tapping "+" or "Add" opens the exact same Add
+  // expense/income/fixed/savings forms as a sliding bottom sheet instead of
+  // scrolling to them -- the standard native quick-add pattern. This reuses
+  // the identical form JSX and state that desktop already renders inline;
+  // only a CSS class (added below, mobile-breakpoint only) turns that same
+  // section into an overlay, so nothing about desktop's layout or behavior
+  // changes.
+  const [addSheetOpen, setAddSheetOpen] = useState(false);
+
+  // Collapsed by default on the Home "Explore" pie card so the chart
+  // itself gets the available width/height instead of competing with a
+  // long category list next to (desktop) or above/below (mobile) it.
+  const [showTop10, setShowTop10] = useState(false);
+
+  // v3.27: on mobile, the summary-card grids (10-11 tiles) pushed the
+  // Explore chart below the fold. Remaining + Net now render once more, up
+  // top, as a 2-card "hero" row (same <Amt>/derived values as the full
+  // grids below, just displayed a second time -- no new calculation), and
+  // the original two .grid blocks (every tile, unchanged) collapse behind
+  // a "See all figures" toggle, closed by default. Desktop is unaffected --
+  // isMobile is false there, so this state is never consulted and both
+  // .grid blocks always render exactly as they did before.
+  const [showAllMobileCards, setShowAllMobileCards] = useState(false);
+
+  // First-time-user spotlight tour (#301) -- shows once automatically for
+  // someone who's never seen it (a localStorage flag, not a DB column: this
+  // is a "have I personally clicked through this once" per-browser thing,
+  // not household data every member should share), and can be replayed
+  // anytime from a link in the Help panel below.
+  const TOUR_SEEN_KEY = 'hearth-tour-seen-v1';
+  const [tourStep, setTourStep] = useState(null); // null = not currently running
+  useEffect(() => {
+    if (!household?.id) return;
+    if (localStorage.getItem(TOUR_SEEN_KEY)) return;
+    // Small delay so the tour's first highlight lands on a settled layout
+    // (post-data-load) instead of racing the initial render/scroll.
+    const t = setTimeout(() => startTour(), 900);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [household?.id]);
+
+  function startTour() {
+    setActivePanel(null);
+    setInputTab(null);
+    setTourStep(0);
+  }
+  function finishTour() {
+    localStorage.setItem(TOUR_SEEN_KEY, '1');
+    setTourStep(null);
+  }
+  function tourNext() {
+    setTourStep((s) => {
+      const next = s + 1;
+      if (next >= TOUR_STEPS.length) {
+        localStorage.setItem(TOUR_SEEN_KEY, '1');
+        return null;
+      }
+      if (TOUR_STEPS[next].ensureView === 'home') {
+        setActivePanel(null);
+        setInputTab(null);
+      }
+      return next;
+    });
+  }
+  function tourPrev() {
+    setTourStep((s) => Math.max(0, s - 1));
+  }
+
+  const [editingExpenseId, setEditingExpenseId] = useState(null);
+  // Same tap-to-edit pattern as Expenses, applied to Income / Fixed
+  // Expenses / Savings so all four mobile lists behave consistently.
+  const [editingIncomeId, setEditingIncomeId] = useState(null);
+  const [editingRecurringId, setEditingRecurringId] = useState(null);
+  const [editingSavingId, setEditingSavingId] = useState(null);
+
+  function closeAllMobileEditSheets() {
+    setEditingExpenseId(null);
+    setEditingIncomeId(null);
+    setEditingRecurringId(null);
+    setEditingSavingId(null);
+  }
+
+  function goToOverview() {
+    setActivePanel(null);
+    setInputTab(null);
+    setAddSheetOpen(false);
+    closeAllMobileEditSheets();
+    scrollToFrameA();
+  }
+  // Scrolls all the way back to the top of the page -- called whenever one
+  // of the header row's own tabs (Home/Income/Fixed/Regular/Savings/Report/
+  // Settings/Help) is clicked, so switching tabs always re-anchors back at
+  // the top instead of leaving the page wherever it happened to be scrolled
+  // to (e.g. after reading through a long Expenses table, or exploring the
+  // Home tab's larger chart section further down the page).
+  //
+  // NOTE: this deliberately uses window.scrollTo rather than
+  // topRef.current.scrollIntoView(...) (the original approach). Frame A
+  // (.sticky-dashboard-frame, which topRef points into) is `position:
+  // sticky; top: 0`, so once the page is scrolled down even a little, that
+  // element is already sitting at the top of the viewport from the
+  // browser's point of view -- scrollIntoView sees it as "already in view"
+  // and does nothing, silently no-op'ing every single time this was called
+  // from anywhere below the fold. That was the actual bug behind tabs not
+  // realigning the page: window.scrollTo always moves the real page scroll
+  // position, regardless of what's currently stuck to the top.
+  //
+  // Also deliberately deferred rather than called synchronously in the same
+  // click handler that flips inputTab/activePanel. Switching tabs changes
+  // which panels/tables are mounted, which can shrink or grow the page's
+  // total height a lot (e.g. Home hides every form and table). Calling
+  // scrollTo *before* React has re-rendered starts it against the OLD
+  // (taller or shorter) page, and if the resize lands mid-scroll the
+  // browser clamps the in-flight position to whatever the new max scroll
+  // position is instead of finishing the trip to 0 -- landing partway down
+  // the page instead of at the top.
+  //
+  // Uses setTimeout(..., 0) rather than requestAnimationFrame to do that
+  // deferring. rAF is the "correct" tool for this in most apps, but it
+  // ties the callback to the next paint -- and turned out to be unreliable
+  // to depend on here (it can end up simply not firing in some automated/
+  // background-tab contexts, silently dropping the scroll entirely).
+  // setTimeout only depends on the ordinary JS event loop finishing the
+  // current render/commit first, which is all we actually need.
+  //
+  // Uses behavior: 'auto' (instant), not 'smooth'. A 'smooth' scroll is an
+  // animation spread over several frames -- if anything on the page nudges
+  // layout again during that window (images/charts finishing their own
+  // layout, a second state update, etc.) the browser can clamp or cancel it
+  // partway, landing short of the top again. An instant jump has no window
+  // for that to happen in, so it reliably lands exactly at the top every
+  // time.
+  function scrollToFrameA() {
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'auto' });
+    }, 0);
+  }
+  function goToAdd(tab) {
+    setActivePanel(null);
+    closeAllMobileEditSheets();
+    setInputTab(tab);
+    setAddSheetOpen(true);
+  }
+  useEffect(() => {
+    if (!activePanel || !panelRef.current) return;
+    // Plain scrollIntoView({block:'start'}) aligns the panel's top edge with
+    // the very top of the viewport -- but .sticky-dashboard-frame (logo,
+    // tab row, month nav, summary cards) is pinned to that exact spot, so it
+    // was covering each panel's own heading (e.g. Help's "How to use this
+    // app") right after the "scroll", leaving users looking at a header they
+    // already had and not the section they just opened. Instead, compute
+    // the sticky frame's real rendered height and land just below it.
+    // Deferred with setTimeout (not requestAnimationFrame) for the same
+    // reliability reason as scrollToFrameA above -- rAF turned out to
+    // silently never fire in some contexts, dropping the scroll entirely
+    // (which is exactly what made Report/Settings/Help look unresponsive).
+    // setTimeout still gives the panel (which only mounts once activePanel
+    // matches) a tick to actually be in the DOM/laid out before measuring
+    // it, without depending on the paint/compositor pipeline to run.
+    //
+    // Uses behavior: 'auto' (instant) rather than 'smooth' -- a 'smooth'
+    // scroll can get clamped or silently cancelled if anything else nudges
+    // the page's layout during the animation window.
+    const t = setTimeout(() => {
+      if (!panelRef.current) return;
+      const stickyHeight = stickyFrameRef.current?.offsetHeight || 0;
+      const panelTop = panelRef.current.getBoundingClientRect().top + window.scrollY;
+      const targetY = Math.max(panelTop - stickyHeight - 12, 0);
+      window.scrollTo({ top: targetY, behavior: 'auto' });
+    }, 0);
+    return () => clearTimeout(t);
+  }, [activePanel]);
+  const [inputTab, setInputTab] = useState('expense');
+  const [members, setMembers] = useState([]);
+  const [pendingInvites, setPendingInvites] = useState([]);
+  // Lets anyone (including accounts created before the Location field
+  // existed, like the very first owner account) fill in / fix their own
+  // Name, Phone, Location later -- without needing to sign out and sign up
+  // again, since signup metadata only ever gets copied into
+  // household_members once, at the moment a household is first joined.
+  const [myDetailsDraft, setMyDetailsDraft] = useState({ name: '', phone: '', location: '' });
+  const [expenseDrafts, setExpenseDrafts] = useState({});
+
+  const [form, setForm] = useState({
+    date: new Date().toISOString().slice(0, 10),
+    categoryId: '',
+    description: '',
+    amount: '',
+    paymentSource: 'Cash',
+    paymentBank: '',
+    notes: '',
+  });
+  // Notes textarea starts collapsed (most expenses don't need a long
+  // description) -- the note icon just reveals it. The file itself isn't
+  // uploaded until the expense is actually saved, since the upload path
+  // needs the new row's own id (see uploadAttachment/handleAddExpense).
+  const [showExpenseNotes, setShowExpenseNotes] = useState(false);
+  const [expenseFiles, setExpenseFiles] = useState([]);
+  const expenseFilesInputRef = useRef(null);
+  // AI feature #1 (auto-categorization): a small hint shown next to the
+  // Category field right after the AI picks one for you, so it's clear the
+  // dropdown got auto-filled rather than silently changing. Purely
+  // additive -- if the API key isn't configured yet or the call fails, this
+  // just never fires and the form behaves exactly as before.
+  const [aiCategoryHint, setAiCategoryHint] = useState(''); const aiDescTimerRef = useRef(null);
+  
+  // suggestion for Fixed Expenses' Name field, kept in its own state so
+  // it never clashes with the Regular Expenses hint above.
+  const [fixedAiCategoryHint, setFixedAiCategoryHint] = useState(''); const aiFixedDescTimerRef = useRef(null);// AI feature #1b: same auto-categorize behaviour as Regular Expenses'
+  // AI feature #2 (monthly digest): a short AI-written summary of the
+  // currently viewed month's spending, generated on demand (not
+  // automatically) so it never costs anything unless someone actually asks
+  // for it. Kept in memory only -- reopening the app or switching months
+  // just shows the "Generate" prompt again instead of a stale digest for a
+  // different month.
+  const [aiDigest, setAiDigest] = useState('');
+  const [aiDigestLoading, setAiDigestLoading] = useState(false);
+  const [aiDigestError, setAiDigestError] = useState(false);
+  const [aiDigestMonthKey, setAiDigestMonthKey] = useState(null);
+  // AI feature #3 (receipt scanning): upload a photo of a receipt, or a
+  // sheet/screenshot listing several expenses, and let Claude read it
+  // instead of typing each line by hand. Per explicit request, scanned
+  // items are now added straight to Regular Expenses (including a best-
+  // guess payment source read off the receipt) rather than sitting in a
+  // review list first -- edit afterwards the same way you'd edit any other
+  // expense (pencil icon in the list / mobile edit sheet) if anything looks
+  // wrong.
+  const scanFileInputRef = useRef(null);
+  const [scanLoading, setScanLoading] = useState(false);
+  const [scanError, setScanError] = useState('');
+  // Read-only summary of what the last scan just added, shown briefly right
+  // below the button -- not an editable staging area anymore.
+  const [lastScanAdded, setLastScanAdded] = useState([]); // [{ description, amount }]
+  // Tiny toast used for "Updated" confirmations (manual Add and receipt
+  // auto-add both trigger it) -- auto-dismisses on its own.
+  const [toastMsg, setToastMsg] = useState('');
+  const toastTimerRef = useRef(null);
+  function showToast(msg) {
+    setToastMsg(msg);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToastMsg(''), 2200);
+  }
+
+  // Inline, in-context replacement for native notify() -- renders as a
+  // banner right inside whichever tab/panel the triggering action lives in
+  // (Income, Fixed Expenses, Regular Expenses, Savings, Investments, Report,
+  // Settings) instead of a native browser dialog pinned to the tab/address
+  // bar chrome (per explicit request -- notifications should show where the
+  // data is being entered, not float near the browser chrome). Scope is
+  // captured automatically from whichever tab is active when notify()
+  // fires, so switching tabs afterward doesn't leave a stale banner
+  // showing in the wrong place. Persists longer than the success toast
+  // above since these are mostly validation/error messages the user needs
+  // time to read, not a fire-and-forget confirmation.
+  const [formNotice, setFormNotice] = useState(null);
+  const formNoticeTimerRef = useRef(null);
+  function notify(msg) {
+    setFormNotice({ text: msg, scope: inputTab || activePanel });
+    if (formNoticeTimerRef.current) clearTimeout(formNoticeTimerRef.current);
+    formNoticeTimerRef.current = setTimeout(() => setFormNotice(null), 5000);
+  }
+  function noticeBanner(scope) {
+    return formNotice && formNotice.scope === scope ? (
+      <div className="notice-banner">{formNotice.text}</div>
+    ) : null;
+  }
+
+  // Inline, in-context replacement for native confirm() -- same rationale as
+  // notify()/noticeBanner() above: destructive actions (deleting an income,
+  // expense, category, etc.) used to pop a native browser confirm() dialog,
+  // which per explicit request should instead render right in the card the
+  // user is working in. askConfirm() stores the pending message + the action
+  // to run if the user says yes; confirmBanner() renders that as a banner
+  // with Yes/Cancel buttons scoped to the tab/panel it was triggered from.
+  // Desktop-only left rail (Add / View / Charts) for the 5 data-entry
+  // tabs -- Vipin: "create a thin panel on left... this way screen may not
+  // look cluttered", one thing shown at a time instead of the Add form and
+  // the full list always stacked together. Mobile is untouched by design
+  // (isMobile is checked everywhere this is read), and 'add' is the
+  // default frame per explicit request ("view that directly will open is
+  // Add a entry frame"). Keyed by inputTab value plus 'investments' (which
+  // uses activePanel instead of inputTab for its own tab state).
+  const [deskFrame, setDeskFrame] = useState({ income: 'add', fixed: 'add', expense: 'add', savings: 'add', investments: 'add' });
+  function setDeskFrameFor(section, frame) {
+    setDeskFrame((f) => ({ ...f, [section]: frame }));
+  }
+  function renderDeskRail(section) {
+    return (
+      <div className="desk-frame-rail">
+        <button type="button" className={deskFrame[section] === 'add' ? 'active' : ''} onClick={() => setDeskFrameFor(section, 'add')} title="Add">
+          <Plus size={18} />
+          <span>Add</span>
+        </button>
+        <button type="button" className={deskFrame[section] === 'view' ? 'active' : ''} onClick={() => setDeskFrameFor(section, 'view')} title="View">
+          <List size={18} />
+          <span>View</span>
+        </button>
+        <button type="button" className={deskFrame[section] === 'charts' ? 'active' : ''} onClick={() => setDeskFrameFor(section, 'charts')} title="Charts">
+          <BarChart3 size={18} />
+          <span>Charts</span>
+        </button>
+      </div>
+    );
+  }
+  // Mobile counterpart of renderDeskRail -- same Add/View/Charts frame
+  // switcher, laid out as a horizontal pill row instead of a side rail
+  // (a side rail doesn't work on a narrow screen). Mobile used to just
+  // stack the Add form and View list on one page always; this lets one
+  // thing show at a time here too, same decluttering win desktop got,
+  // and lets mobile reach the Charts frame for Income/Fixed/Savings for
+  // the first time (previously desktop-only).
+  function renderMobilePills(section) {
+    // Frozen under the sticky dashboard frame (logo/tabs/month nav/summary
+    // cards) rather than scrolling away with the list -- Vipin: "freeze
+    // add, view and charts tabs on mobile along with month and full month
+    // cells". stickyFrameSpacerHeight is the frame's own real rendered
+    // height (already tracked via ResizeObserver for the scroll-landing
+    // logic above), so this sticks flush right below it instead of a
+    // guessed pixel value that would drift whenever the frame's height
+    // changes (tour banner, alerts, theme, etc.).
+    return (
+      <div className="mobile-frame-pills" style={{ position: 'sticky', top: stickyFrameSpacerHeight, zIndex: 55 }}>
+        <button type="button" className={deskFrame[section] === 'add' ? 'active' : ''} onClick={() => setDeskFrameFor(section, 'add')}>
+          <Plus size={15} /> Add
+        </button>
+        <button type="button" className={deskFrame[section] === 'view' ? 'active' : ''} onClick={() => setDeskFrameFor(section, 'view')}>
+          <List size={15} /> View
+        </button>
+        <button type="button" className={deskFrame[section] === 'charts' ? 'active' : ''} onClick={() => setDeskFrameFor(section, 'charts')}>
+          <BarChart3 size={15} /> Charts
+        </button>
+      </div>
+    );
+  }
+  // Which of the 5 data-entry sections (if any) is currently active, and
+  // its selected frame -- drives content-grid becoming a real 3-column
+  // layout (rail | content | chart) on desktop, with whichever of
+  // content/chart holds the active frame's output spanning BOTH of the
+  // non-rail columns so it always uses the full remaining width, per
+  // explicit request ("middle panel where data is entered, viewed will be
+  // expanded until end of right... charts will be fully visible when
+  // chart tab is clicked"). Investments uses activePanel instead of
+  // inputTab for its own tab state, everything else uses inputTab.
+  const activeDeskSection = activePanel === 'investments' ? 'investments' : (inputTab || null);
+  const activeDeskFrame = activeDeskSection ? deskFrame[activeDeskSection] : null;
+  const deskRailActive = !isMobile && !!activeDeskSection;
+
+  const [confirmState, setConfirmState] = useState(null);
+  function askConfirm(message, scope, onConfirm) {
+    setConfirmState({ message, scope, onConfirm });
+  }
+  function confirmBanner(scope) {
+    if (!confirmState || confirmState.scope !== scope) return null;
+    return (
+              <div className={`confirm-banner${scope === 'aria' ? ' confirm-banner-inline' : ''}`}>
+        <div className="confirm-banner-msg">{confirmState.message}</div>
+        <div className="confirm-banner-actions">
+          <button type="button" className="confirm-banner-yes" onClick={() => { const fn = confirmState.onConfirm; setConfirmState(null); fn(); }}>Remove</button>
+          <button type="button" className="confirm-banner-no" onClick={() => setConfirmState(null)}>Cancel</button>
+        </div>
+      </div>
+    );
+  }
+
+  // Centered popup for viewing a row's saved note -- replaces the old
+  // notify(x.notes) calls on the Income/Fixed Expenses/Savings/Regular
+  // Expenses row note icons, which rendered as the browser's native alert
+  // dialog pinned to the tab/address-bar chrome instead of an in-app
+  // element. Reuses the existing attachment-viewer-overlay/modal styling
+  // for a consistent, properly viewport-centered popup.
+  const [notePopup, setNotePopup] = useState(null);
+  const [showManual, setShowManual] = useState(false);
+
+  // AI feature #4 (chat assistant): a floating Q&A bubble, available from
+  // anywhere in the app (not tied to a specific tab/panel), that answers
+  // questions using this household's own data -- spending by category,
+  // budget status, recent-month comparisons. Each request re-sends a fresh
+  // snapshot of the household's numbers rather than trying to keep data
+  // "inside" a saved conversation, so answers can't go stale mid-chat.
+  // The conversation ITSELF, though, is persisted (see chat_messages table
+  // / migration_chat_messages.sql) -- per explicit request ("can chatbot
+  // record the previous chats and save them... so I can retrieve and
+  // continue"), one continuous thread shared by the whole household
+  // (everyone reads/adds to the same running history, same visibility
+  // model as the rest of the app's shared data), loaded once below and
+  // appended to as each message is sent.
+  const [chatOpen, setChatOpen] = useState(false);
+  // Owner-only new version available indicator + one-click refresh --
+  // polls the tiny static /version.json file (bumped in lockstep with
+  // APP_VERSION every time a change is pushed) rather than the already-
+  // loaded bundle, since running code cannot know about a newer build of
+  // itself. Desktop + owner only, per explicit request -- lets Vipin hit
+  // one button instead of remembering to hard-refresh the browser tab.
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [latestVersion, setLatestVersion] = useState(null);
+  // Captured once, on mount, never re-computed -- lets the user see exactly
+  // when THIS copy of the page was actually loaded. If the tile/number
+  // content ever changes without the user clicking refresh, they can check
+  // this: if it changed too, the browser silently reloaded the page (e.g.
+  // an inactive tab being reclaimed) -- if it stayed the same, something
+  // else is going on and it's worth reporting.
+  const [loadedAt] = useState(() => new Date());
+  useEffect(() => {
+    let cancelled = false;
+    const checkVersion = () => {
+      fetch(`/version.json?t=${Date.now()}`, { cache: 'no-store' })
+        .then((r) => r.json())
+        .then((data) => {
+          if (!cancelled && data && data.version && data.version !== APP_VERSION) { setUpdateAvailable(true); setLatestVersion(data.version); }
+        })
+        .catch(() => {});
+    };
+    checkVersion();
+    const id = setInterval(checkVersion, 60000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, []);
+  const [chatMessages, setChatMessages] = useState([]); // [{ role: 'user'|'assistant', content }]
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
+  const chatMessagesRef = useRef(null);
+  useEffect(() => {
+    let cancelled = false;
+    supabase
+      .from('chat_messages')
+      .select('role, content')
+      .eq('household_id', householdId)
+      .order('created_at', { ascending: true })
+      .then(({ data }) => {
+        if (!cancelled && data) setChatMessages(data.map((m) => ({ role: m.role, content: m.content })));
+      });
+    return () => { cancelled = true; };
+  }, [householdId]);
+  // Chat bubble now lives as a fixed icon button in the header, directly
+  // next to the notification bell (see .chat-fab-wrap in index.css) --
+  // no longer a free-floating, draggable FAB. That removes the recurring
+  // "collides with the header/bell" bugs for good, since its position is
+  // now just normal document flow right next to the bell (same dropdown
+  // pattern as the bell and profile menus) instead of fixed viewport
+  // coordinates that had to be reclamped on every header change.
+  const chatMenuRef = useRef(null);
+  // Aria's popup used to live nested inside the sticky header frame, but
+  // that frame clips descendant hit-testing (not just painting) to its own
+  // box height -- once the popup grew tall enough for its input row to sit
+  // below that boundary, real clicks/taps on the input passed straight
+  // through to whatever page content was underneath instead of reaching
+  // the input, and the outside-click handler below (seeing a click outside
+  // chatMenuRef) correctly-by-its-own-logic closed the chat before anyone
+  // could type. Fix: on desktop, portal the popup to document.body as a
+  // position:fixed element anchored under the header icon, so it's fully
+  // outside that clipped subtree. chatWindowRef lets the outside-click
+  // check treat the portaled content as "inside" too. Mobile keeps its
+  // existing (already-working) inline rendering untouched.
+  const chatWindowRef = useRef(null);
+  const [chatPos, setChatPos] = useState(null);
+  // v3.42: lets the input's onFocus handler below force an immediate
+  // recalculation instead of only relying on window.visualViewport's own
+  // resize/scroll events -- those have proven unreliable specifically in
+  // iOS's standalone/home-screen PWA mode (confirmed live: the input row
+  // still ends up hidden behind the keyboard even with the events wired
+  // up). A ref (not state) so the effect below can populate it without
+  // re-running itself.
+  const updateChatPosRef = useRef(() => {});
+  useEffect(() => {
+    if (!chatOpen) { setChatPos(null); return; }
+    function updateChatPos() {
+      if (isMobile) {
+        // Anchor the popup near the BOTTOM of the screen (like a normal
+        // mobile chat sheet, and close to where the Aria icon actually
+        // lives in the bottom nav) instead of pinning it near the top --
+        // opening at the very top of the screen read as "it jumped up and
+        // got stuck" since a position:fixed element doesn't move when the
+        // page scrolls, which is exactly what page-scroll used to do for
+        // it before. bottomOffset is how far the *visible* area (above
+        // the on-screen keyboard, tracked via window.visualViewport) falls
+        // short of the true screen bottom, so the sheet naturally rises to
+        // clear the keyboard when it opens and settles just above the
+        // bottom nav when it's closed.
+        const vv = window.visualViewport;
+        const layoutH = window.innerHeight;
+        const vvBottom = vv ? vv.offsetTop + vv.height : layoutH;
+        const navClearance = 74;
+        const bottomOffset = Math.max(navClearance, (layoutH - vvBottom) + 12);
+        const maxHeight = Math.max(200, (vv ? vv.height : layoutH) - bottomOffset - 16);
+        setChatPos({ mobile: true, bottom: bottomOffset, maxHeight });
+      } else {
+        if (!chatMenuRef.current) return;
+        const r = chatMenuRef.current.getBoundingClientRect();
+        setChatPos({ mobile: false, top: r.bottom + 8, right: Math.max(8, window.innerWidth - r.right) });
+      }
+    }
+    updateChatPosRef.current = updateChatPos;
+    updateChatPos();
+    // Mobile DOES need to keep tracking window.visualViewport live (via
+    // these listeners) -- without it, the sheet stays glued to its
+    // opening position and the keyboard simply covers the input/Send
+    // button once it opens (confirmed: that's exactly what not tracking
+    // it caused). The earlier "jump" complaint wasn't really about
+    // tracking the keyboard at all -- it was that the position snapped
+    // instantly instead of sliding, which the .chat-window CSS transition
+    // (bottom/max-height) now smooths out. So: keep live-tracking on both
+    // mobile and desktop, and let the CSS transition handle the "feel".
+    window.addEventListener('resize', updateChatPos);
+    window.addEventListener('scroll', updateChatPos, true);
+    if (isMobile && window.visualViewport) {
+      window.visualViewport.addEventListener('resize', updateChatPos);
+      window.visualViewport.addEventListener('scroll', updateChatPos);
+    }
+    return () => {
+      window.removeEventListener('resize', updateChatPos);
+      window.removeEventListener('scroll', updateChatPos, true);
+      if (isMobile && window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', updateChatPos);
+        window.visualViewport.removeEventListener('scroll', updateChatPos);
+      }
+    };
+  }, [chatOpen, isMobile]);
+  // iOS's native "scroll the focused input into view" behaviour jumps the
+  // WHOLE page the instant the chat input is tapped, even though the chat
+  // itself is a position:fixed sheet that never needed scrolling into view
+  // in the first place -- confirmed by the user still seeing a visible
+  // jump-and-snap-back after the earlier fix (v1.76) that re-pins scrollY
+  // AFTER the jump happens. Reacting after the fact still shows one frame
+  // of the jump, which reads as unpolished. The reliable fix is to remove
+  // iOS's ability to scroll the page AT ALL while the chat is open, using
+  // the standard iOS body-scroll-lock trick (pin body as position:fixed at
+  // its current scroll offset) -- with nothing scrollable to move, there's
+  // nothing for the native behaviour to jump.
+  useEffect(() => {
+    if (!chatOpen || !isMobile) return;
+    const scrollY = window.scrollY;
+    const body = document.body;
+    const prev = { position: body.style.position, top: body.style.top, left: body.style.left, right: body.style.right, width: body.style.width };
+    body.style.position = 'fixed';
+    body.style.top = `-${scrollY}px`;
+    body.style.left = '0';
+    body.style.right = '0';
+    body.style.width = '100%';
+    return () => {
+      body.style.position = prev.position;
+      body.style.top = prev.top;
+      body.style.left = prev.left;
+      body.style.right = prev.right;
+      body.style.width = prev.width;
+      window.scrollTo(0, scrollY);
+    };
+  }, [chatOpen, isMobile]);
+  useEffect(() => {
+    if (!chatOpen) return;
+    function onDocClick(e) {
+      // v3.42: the "Clear chat history" confirm banner (.confirm-banner,
+      // Remove/Cancel) is portaled straight to document.body -- same as
+      // chat-window itself -- so its DOM node is a SIBLING of chatWindowRef,
+      // not a descendant, and .contains() below returns false for taps on
+      // it. That made this listener treat a tap on "Remove" as an outside
+      // click and close the whole chat on mousedown, before the button's
+      // own onClick could run on the following click -- confirmed live as
+      // "clicking remove... nothing happens and popup remains". Skipping
+      // the close entirely while that confirm is pending fixes it, and is
+      // the right behavior anyway: a destructive confirm shouldn't get
+      // silently dismissed by an incidental outside tap.
+      if (confirmState && confirmState.scope === 'aria') return;
+      const inMenu = chatMenuRef.current && chatMenuRef.current.contains(e.target);
+      const inWindow = chatWindowRef.current && chatWindowRef.current.contains(e.target);
+      if (!inMenu && !inWindow) setChatOpen(false);
+    }
+    // Attach on the NEXT tick, not immediately -- if we attach synchronously
+    // while still inside the same click that just opened the popup, some
+    // browsers can treat that same in-flight click as the "outside" click
+    // and close it before it's even visible. Deferring by one tick (0ms)
+    // guarantees the opening click has fully finished before we start
+    // listening, without weakening the outside-click behavior at all.
+    const timer = setTimeout(() => {
+      document.addEventListener('mousedown', onDocClick);
+    }, 0);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('mousedown', onDocClick);
+    };
+  }, [chatOpen, confirmState]);
+  useEffect(() => {
+    if (chatMessagesRef.current) {
+      chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight;
+    }
+  }, [chatMessages, chatLoading]);
+
+  // AI feature #5 (Budget Coach): unlike the monthly digest (#2), which
+  // summarizes just the currently viewed month, this looks across the last
+  // 6 months for trends -- a category over its cap for several months
+  // running, spending creeping up or down, whether planned savings still
+  // look realistic. Suggestions-only, per explicit choice -- it never
+  // writes to Settings itself, so nothing changes unless the user goes and
+  // changes it themselves.
+  const [coachLoading, setCoachLoading] = useState(false);
+  const [coachError, setCoachError] = useState(false);
+  const [coachResult, setCoachResult] = useState('');
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [categoryNameDrafts, setCategoryNameDrafts] = useState({});
+  const [categoryBudgetDrafts, setCategoryBudgetDrafts] = useState({});
+  const [categoryGroups, setCategoryGroups] = useState([]);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [groupNameDrafts, setGroupNameDrafts] = useState({});
+  const [expandedGroups, setExpandedGroups] = useState({});
+  const [newCategoryGroupId, setNewCategoryGroupId] = useState('');
+  // Which month the "Budgeting" settings tab is currently editing -- defaults
+  // to the dashboard's current month every time that tab is opened (see the
+  // "Budgeting" button's onClick), can be changed via its own Month field to
+  // set/review a different month's budget without leaving the tab.
+  const [budgetMonthDraft, setBudgetMonthDraft] = useState(() => monthKey(currentMonth));
+  const [totalBudgetDraft, setTotalBudgetDraft] = useState('');
+  // Opt-in per-user privacy: a member can mark their own income/expense/
+  // fixed-expense/savings entries private so only they (not the rest of
+  // the household) can see them. These four just hold the checkbox state
+  // for each add-form; myPrivacyEnabled (below, near commitMyDetailsField)
+  // gates whether the checkbox even renders.
+  const [expenseIsPrivate, setExpenseIsPrivate] = useState(false);
+  const [incomeIsPrivate, setIncomeIsPrivate] = useState(false);
+  const [recurringIsPrivate, setRecurringIsPrivate] = useState(false);
+  const [savingIsPrivate, setSavingIsPrivate] = useState(false);
+
+  const [newRecurring, setNewRecurring] = useState({
+    name: '',
+    categoryId: '',
+    amount: '',
+    startDate: new Date().toISOString().slice(0, 10),
+    endDate: '',
+    frequency: 'monthly',
+    dueDate: '',
+    paymentSource: 'Cash',
+    paymentBank: '',
+    notes: '',
+  });
+  const [recurringDrafts, setRecurringDrafts] = useState({});
+  // Same note/attachment pattern as the one-off expense form above.
+  const [showRecurringNotes, setShowRecurringNotes] = useState(false);
+  const [showRecurringMoreDates, setShowRecurringMoreDates] = useState(false);
+  const [recurringFiles, setRecurringFiles] = useState([]);
+  const recurringFilesInputRef = useRef(null);
+
+  // Savings goals -- how much the household wants to set aside each month.
+  // Entered per month on purpose, exactly like Income (no auto-rollover) --
+  // savings amounts often change month to month, so re-entering a fresh
+  // value each month avoids silently counting last month's amount again.
+  const [savingsGoals, setSavingsGoals] = useState([]);
+  const [newSaving, setNewSaving] = useState({
+    name: '',
+    amount: '',
+    month: monthKey(new Date()),
+    notes: '',
+  });
+  const [savingsDrafts, setSavingsDrafts] = useState({});
+  // Same note/attachment pattern as the expense forms.
+  const [showSavingNotes, setShowSavingNotes] = useState(false);
+  const [savingFiles, setSavingFiles] = useState([]);
+  const savingFilesInputRef = useRef(null);
+
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRelation, setInviteRelation] = useState('Spouse');
+  const [inviteStatus, setInviteStatus] = useState('');
+
+  // Income is entered per month on purpose (no auto-rollover) -- see newIncome.month.
+  const [newIncome, setNewIncome] = useState({
+    name: '',
+    memberEmail: session.user.email,
+    amount: '',
+    month: monthKey(new Date()),
+    notes: '',
+  });
+  const [incomeDrafts, setIncomeDrafts] = useState({});
+  // Same note/attachment pattern as the expense forms.
+  const [showIncomeNotes, setShowIncomeNotes] = useState(false);
+  const [incomeFiles, setIncomeFiles] = useState([]);
+  const incomeFilesInputRef = useRef(null);
+  // Same note/attachment pattern as the income/expense forms.
+  const [showInvestmentNotes, setShowInvestmentNotes] = useState(false);
+  const [investmentFiles, setInvestmentFiles] = useState([]);
+  const investmentFilesInputRef = useRef(null);
+  // Active/Closed/All quick filter for the Investment Records list below --
+  // lets a matured FD be marked Closed (see investDisplayStatus) and kept
+  // around as history without cluttering the default Active view.
+  const [investmentStatusFilter, setInvestmentStatusFilter] = useState('Active');
+
+  // Report panel state -- generates a PDF for a chosen date range covering
+  // Expenses this month / Income / Fixed Expenses. Kept as a data URI in
+  // state after "Generate" so Download and Email can both reuse it without
+  // rebuilding the PDF twice.
+  const [reportFrom, setReportFrom] = useState(() => monthKey(new Date()) + '-01');
+  const [reportTo, setReportTo] = useState(() => new Date().toISOString().slice(0, 10));
+  const [reportDoc, setReportDoc] = useState(null); // { blob, dataUri, previewUrl, filename, rangeLabel }
+  const [reportEmail, setReportEmail] = useState('');
+  const [reportStatus, setReportStatus] = useState('');
+  const [reportPreviewOpen, setReportPreviewOpen] = useState(false);
+  const [reportInfoOpen, setReportInfoOpen] = useState(false); // v1.29: mobile-only collapsible report description toggle
+  const [investmentsInfoOpen, setInvestmentsInfoOpen] = useState(false); // collapsible Investments description toggle, reusing the report-info-btn/report-desc pattern
+  // Tracks the current blob: URL used for the on-screen preview so it can be
+  // revoked (freeing memory) whenever a new one is generated or the
+  // component unmounts.
+  const reportPreviewUrlRef = useRef(null);
+  useEffect(() => {
+    return () => {
+      if (reportPreviewUrlRef.current) URL.revokeObjectURL(reportPreviewUrlRef.current);
+    };
+  }, []);
+
+  // Keep the "Add income" form's default Month field in sync with whichever
+  // month the dashboard is currently showing, so adding income while viewing
+  // August defaults to August instead of whatever month the app happened to
+  // load on.
+  useEffect(() => {
+    setNewIncome((i) => ({ ...i, month: monthKey(currentMonth) }));
+  }, [currentMonth]);
+
+  // Same idea for the "Add saving" form's default Month field.
+  useEffect(() => {
+    setNewSaving((s) => ({ ...s, month: monthKey(currentMonth) }));
+  }, [currentMonth]);
+
+  // Seed the "My details" self-edit fields from the signed-in user's own
+  // household_members row -- but only ONCE, the first time it becomes
+  // available. After that, commitMyDetailsField keeps this draft in sync
+  // directly, so this effect never runs again and can't clobber whatever
+  // the user is currently typing with a stale value from a background
+  // refresh.
+  const didInitMyDetails = useRef(false);
+  useEffect(() => {
+    if (didInitMyDetails.current) return;
+    const mine = members.find((m) => m.email?.toLowerCase() === session.user.email.toLowerCase());
+    if (mine) {
+      setMyDetailsDraft({ name: mine.name || '', phone: mine.phone || '', location: mine.location || '' });
+      didInitMyDetails.current = true;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [members]);
+
+  // These three commit functions deliberately do NOT call loadAll() after a
+  // successful save. Doing so previously re-fetched and replaced the whole
+  // `members`/`pendingInvites` arrays on every single field blur -- when
+  // tabbing quickly through Full name -> Phone -> Location, that refresh
+  // (plus the realtime subscription's own echo of the same change) could
+  // land mid-keystroke and effectively knock focus out of the field the
+  // user was still typing into. Updating local state directly with the
+  // exact value just saved keeps the UI in sync instantly with zero risk of
+  // a background refresh interrupting typing; the realtime subscription
+  // still keeps everything else (other users' edits) in sync in the
+  // background.
+  const myMemberRow = members.find((m) => m.email?.toLowerCase() === session.user.email.toLowerCase());
+  const myPrivacyEnabled = !!myMemberRow?.privacy_enabled;
+
+  async function togglePrivacyEnabled(next) {
+    const mine = members.find((m) => m.email?.toLowerCase() === session.user.email.toLowerCase());
+    if (!mine) return;
+    const { error } = await supabase.from('household_members').update({ privacy_enabled: next }).eq('id', mine.id);
+    if (error) {
+      notify('Could not save: ' + error.message);
+      return;
+    }
+    setMembers((prev) => prev.map((m) => (m.id === mine.id ? { ...m, privacy_enabled: next } : m)));
+  }
+
+  async function commitMyDetailsField(field, value) {
+    const mine = members.find((m) => m.email?.toLowerCase() === session.user.email.toLowerCase());
+    if (!mine) return;
+    const cleaned = value.trim() || null;
+    const { error } = await supabase.from('household_members').update({ [field]: cleaned }).eq('id', mine.id);
+    if (error) {
+      notify('Could not save: ' + error.message);
+      return;
+    }
+    setMembers((prev) => prev.map((m) => (m.id === mine.id ? { ...m, [field]: cleaned } : m)));
+    // Keep the owner-editable Users-table row for this same person in sync
+    // too, since it's a separate draft object for the same underlying row --
+    // without this, editing "My details" wouldn't show up in the table below
+    // until a full page reload.
+    setMemberDetailDrafts((prev) => (prev[mine.id] ? { ...prev, [mine.id]: { ...prev[mine.id], [field]: value } } : prev));
+  }
+
+  // Lets the owner fill in / fix Name, Phone, Location for anyone else in
+  // the household directly from the Users table -- useful since the owner
+  // usually already knows this info for family members who haven't filled
+  // it in themselves yet. Works for both already-joined members and people
+  // who are still only a pending invite.
+  //
+  // These two effects only ADD entries for members/invites we haven't seen
+  // before (or drop ones that were removed) -- they never overwrite an
+  // existing draft entry. That matters because `members`/`pendingInvites`
+  // change on every single field save (including other rows'), and a full
+  // rebuild here would stomp over whatever the owner is mid-typing in a
+  // different row with whatever value happens to already be saved.
+  const [memberDetailDrafts, setMemberDetailDrafts] = useState({});
+  const [inviteDetailDrafts, setInviteDetailDrafts] = useState({});
+
+  useEffect(() => {
+    setMemberDetailDrafts((prev) => {
+      const next = {};
+      members.forEach((m) => {
+        next[m.id] = prev[m.id] ?? { name: m.name || '', phone: m.phone || '', location: m.location || '' };
+      });
+      return next;
+    });
+  }, [members]);
+
+  useEffect(() => {
+    setInviteDetailDrafts((prev) => {
+      const next = {};
+      pendingInvites.forEach((inv) => {
+        next[inv.id] = prev[inv.id] ?? { name: inv.name || '', phone: inv.phone || '', location: inv.location || '' };
+      });
+      return next;
+    });
+  }, [pendingInvites]);
+
+  function updateMemberDetailDraft(id, field, value) {
+    setMemberDetailDrafts((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
+  }
+
+  async function commitMemberDetailField(id, field, value) {
+    const cleaned = value.trim() || null;
+    const { error } = await supabase.from('household_members').update({ [field]: cleaned }).eq('id', id);
+    if (error) {
+      notify('Could not save: ' + error.message);
+      return;
+    }
+    setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, [field]: cleaned } : m)));
+    // If the owner just edited their own row from this table, mirror it
+    // into "My details" too, for the same reason as above -- one row, two
+    // draft objects, both need to agree.
+    const edited = members.find((m) => m.id === id);
+    if (edited && edited.email?.toLowerCase() === session.user.email.toLowerCase()) {
+      setMyDetailsDraft((prev) => ({ ...prev, [field]: value }));
+    }
+  }
+
+  function updateInviteDetailDraft(id, field, value) {
+    setInviteDetailDrafts((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
+  }
+
+  async function commitInviteDetailField(id, field, value) {
+    const cleaned = value.trim() || null;
+    const { error } = await supabase.from('household_invites').update({ [field]: cleaned }).eq('id', id);
+    if (error) {
+      notify('Could not save: ' + error.message);
+      return;
+    }
+    setPendingInvites((prev) => prev.map((inv) => (inv.id === id ? { ...inv, [field]: cleaned } : inv)));
+  }
+
+  // isInitial controls whether the full-page "Loading your budget..." spinner
+  // shows. It should only ever be true for the very first load on mount --
+  // every other call (realtime updates, auto-save refreshes after a field
+  // commit) must update state quietly in the background. Toggling loading
+  // to true here on every keystroke-driven save was unmounting the whole
+  // Dashboard mid-edit, which kicked users out of forms like "My details"
+  // as soon as they tabbed from one field to the next.
+  async function loadAll(isInitial = false) {
+    if (isInitial) setLoading(true);
+    const [{ data: cats }, { data: exps }, { data: settings }, { data: recur }, { data: mem }, { data: invites }, { data: inc }, { data: savings }, { data: mBudgets }, { data: rowAtts }] = await Promise.all([
+      supabase.from('categories').select('*').eq('household_id', householdId).order('name'),
+      // Secondary sort by id is required, not cosmetic -- Postgres doesn't
+      // guarantee a stable order for rows that tie on expense_date (very
+      // common; several expenses share the same day), so without a
+      // tiebreaker the row order could silently shuffle between fetches.
+      // That's exactly what made picking a Payment Source then a Bank feel
+      // broken: committing the Payment Source triggered a reload, ties
+      // re-sorted, and the row the user was mid-selection on jumped to a
+      // different position before they could pick the bank.
+      supabase.from('expenses').select('*').eq('household_id', householdId).order('id', { ascending: false }),
+      supabase.from('settings').select('*').eq('household_id', householdId).maybeSingle(),
+      // Same tiebreaker reasoning as expenses above.
+      supabase.from('recurring_expenses').select('*').eq('household_id', householdId).order('id', { ascending: false }),
+      supabase.from('household_members').select('*').eq('household_id', householdId).order('joined_at'),
+      supabase.from('household_invites').select('*').eq('household_id', householdId).eq('status', 'pending'),
+      supabase.from('incomes').select('*').eq('household_id', householdId).order('id', { ascending: false }),
+      supabase.from('savings_goals').select('*').eq('household_id', householdId).order('id', { ascending: false }),
+      supabase.from('monthly_budgets').select('*').eq('household_id', householdId).order('month'),
+      supabase.from('row_attachments').select('*').eq('household_id', householdId).order('created_at'),
+    ]);
+    // Build the "{table}:{rowId}" -> [attachments] map once per load, in
+    // created_at order, so the list modal always shows attachments in the
+    // order they were added without needing to re-sort per row on click.
+    const raMap = {};
+    (rowAtts || []).forEach((a) => {
+      const k = rowAttachmentKey(a.table_name, a.row_id);
+      (raMap[k] = raMap[k] || []).push(a);
+    });
+    setRowAttachments(raMap);
+    {
+      try {
+        const { data: inv, error: invErr } = await supabase
+          .from('investments')
+          .select('*')
+          .eq('household_id', householdId)
+          .order('start_date', { ascending: false });
+        if (!invErr) setInvestments(inv || []);
+      } catch (e) {
+        // investments table may not exist yet until the one-time SQL
+        // migration has been run -- fail quietly instead of breaking
+        // the rest of the app.
+      }
+    }
+    try {
+      const { data: grps, error: grpErr } = await supabase
+        .from('category_groups')
+        .select('*')
+        .eq('household_id', householdId)
+        .order('name');
+      if (!grpErr) setCategoryGroups(grps || []);
+    } catch (e) {
+      // category_groups table may not exist yet until the one-time SQL
+      // migration has been run -- fail quietly instead of breaking
+      // the rest of the app.
+    }
+    setCategories(cats || []);
+    setExpenses(exps || []);
+    const eDrafts = {};
+    (exps || []).forEach((e) => {
+      eDrafts[e.id] = {
+        date: e.expense_date, categoryId: e.category_id, description: e.description || '', amount: String(e.amount),
+        paymentSource: e.payment_source || 'Cash', paymentBank: e.payment_bank || '',
+      };
+    });
+    setExpenseDrafts(eDrafts);
+    setRecurringExpenses(recur || []);
+    setMembers(mem || []);
+    setPendingInvites(invites || []);
+    setIncomes(inc || []);
+    const iDrafts = {};
+    (inc || []).forEach((i) => {
+      iDrafts[i.id] = { name: i.name, amount: String(i.amount), month: i.start_date.slice(0, 7) };
+    });
+    setIncomeDrafts(iDrafts);
+    setMonthlyBudgets(mBudgets || []);
+    setCurrency(settings?.currency || 'AED');
+    setCurrencyDraft(settings?.currency || 'AED');
+    const drafts = {};
+    const nameDrafts = {};
+    (cats || []).forEach((c) => {
+      drafts[c.id] = c.monthly_budget ? String(c.monthly_budget) : '';
+      nameDrafts[c.id] = c.name;
+    });
+    setCategoryBudgetDrafts(drafts);
+    setCategoryNameDrafts(nameDrafts);
+    const rDrafts = {};
+    (recur || []).forEach((r) => {
+      rDrafts[r.id] = {
+        name: r.name,
+        categoryId: r.category_id,
+        amount: String(r.amount),
+        startDate: r.start_date,
+        endDate: r.end_date || '',
+        frequency: r.frequency || 'monthly',
+        dueDate: r.due_date || '',
+        paymentSource: r.payment_source || 'Cash',
+        paymentBank: r.payment_bank || '',
+      };
+    });
+    setRecurringDrafts(rDrafts);
+    setSavingsGoals(savings || []);
+    const sDrafts = {};
+    (savings || []).forEach((s) => {
+      sDrafts[s.id] = {
+        name: s.name,
+        amount: String(s.amount),
+        month: s.start_date.slice(0, 7),
+      };
+    });
+    setSavingsDrafts(sDrafts);
+    if (!form.categoryId && cats && cats.length) {
+      setForm((f) => ({ ...f, categoryId: cats[0].id }));
+    }
+    if (!newRecurring.categoryId && cats && cats.length) {
+      const emi = cats.find((c) => c.name === 'Loan EMI') || cats[0];
+      setNewRecurring((r) => ({ ...r, categoryId: emi.id }));
+    }
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    loadAll(true);
+    // Wrapped in arrow functions so the realtime payload object Supabase
+    // passes in isn't mistaken for the isInitial flag (which would re-trigger
+    // the full-page spinner on every background change).
+    const refresh = () => loadAll();
+    const channel = supabase
+      .channel('budget-tracker-changes-' + householdId)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses', filter: `household_id=eq.${householdId}` }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories', filter: `household_id=eq.${householdId}` }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'settings', filter: `household_id=eq.${householdId}` }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'recurring_expenses', filter: `household_id=eq.${householdId}` }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'household_members', filter: `household_id=eq.${householdId}` }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'household_invites', filter: `household_id=eq.${householdId}` }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'incomes', filter: `household_id=eq.${householdId}` }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'savings_goals', filter: `household_id=eq.${householdId}` }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'monthly_budgets', filter: `household_id=eq.${householdId}` }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'row_attachments', filter: `household_id=eq.${householdId}` }, refresh)
+      .subscribe();
+    return () => supabase.removeChannel(channel);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [householdId]);
+
+  const monthExpenses = useMemo(() => {
+    const key = monthKey(currentMonth);
+    return expenses.filter((e) => e.expense_date.slice(0, 7) === key);
+  }, [expenses, currentMonth]);
+
+  // ---- Dashboard date range (start/end within the currently viewed month).
+  // Narrows Regular Expenses' contribution to the spending totals/chart --
+  // Spent so far, Remaining, Combined expenses, Net, and Spending by category
+  // all flow from oneOffTotal/byCategory below, which now read rangeExpenses
+  // instead of monthExpenses directly. Combined income, the Fixed Expenses
+  // total, and Savings are NOT affected -- those are only ever entered as one
+  // lump sum for the whole month (no specific day), so there's nothing
+  // meaningful to narrow. The "Regular Expenses for {month}" list further
+  // down the page is a separate view (with its own Category/Payment Filter
+  // button) and always keeps showing the full month, regardless of this
+  // range -- a caption next to the range picker says so.
+  const [rangeStart, setRangeStart] = useState(() => firstDayOfMonthStr(currentMonth));
+  const [rangeEnd, setRangeEnd] = useState(() => lastDayOfMonthStr(currentMonth));
+  const [rangeOpen, setRangeOpen] = useState(false);
+  const rangeRef = useRef(null);
+  useEffect(() => {
+    if (!rangeOpen) return;
+    function onDocClick(e) {
+      if (rangeRef.current && !rangeRef.current.contains(e.target)) setRangeOpen(false);
+    }
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [rangeOpen]);
+  // Reset to the full new month whenever the </> month nav changes months --
+  // a range picked for July shouldn't silently carry over and quietly narrow
+  // August too.
+  useEffect(() => {
+    setRangeStart(firstDayOfMonthStr(currentMonth));
+    setRangeEnd(lastDayOfMonthStr(currentMonth));
+  }, [currentMonth]);
+  const rangeIsFullMonth = rangeStart === firstDayOfMonthStr(currentMonth) && rangeEnd === lastDayOfMonthStr(currentMonth);
+  const rangeExpenses = useMemo(
+    () => monthExpenses.filter((e) => e.expense_date >= rangeStart && e.expense_date <= rangeEnd),
+    [monthExpenses, rangeStart, rangeEnd]
+  );
+
+  // Whichever month the dashboard is currently showing -- see the
+  // monthlyBudgets state declaration above for why this replaced the old
+  // flat totalBudget value. Falls back to 0 (same as before) if no budget
+  // has been set for this particular month yet.
+  const totalBudget = useMemo(() => {
+    const key = monthKey(currentMonth);
+    const row = monthlyBudgets.find((b) => b.month === key);
+    return row ? Number(row.total_budget) : 0;
+  }, [monthlyBudgets, currentMonth]);
+
+  // Keeps the Budgeting tab's Amount field in sync with whichever month its
+  // own Month field is set to (budgetMonthDraft), separate from the
+  // dashboard's currentMonth -- so reviewing/editing a past or future
+  // month's budget there doesn't also flip which month the rest of the
+  // dashboard (charts, tables, Remaining) is showing.
+  useEffect(() => {
+    const row = monthlyBudgets.find((b) => b.month === budgetMonthDraft);
+    setTotalBudgetDraft(row ? String(row.total_budget) : '');
+  }, [budgetMonthDraft, monthlyBudgets]);
+
+  // Follow the dashboard's own month navigation (the < / > arrows) so the
+  // Smart Budget tab's Month field always shows whichever month is
+  // currently selected -- previously it only picked up the current month
+  // the moment the tab was first opened, so switching months with the tab
+  // already open (or already visited) kept showing the stale month.
+  useEffect(() => {
+    setBudgetMonthDraft(monthKey(currentMonth));
+  }, [currentMonth]);
+
+  const recurringForMonth = useMemo(() => {
+    const key = monthKey(currentMonth);
+    return recurringExpenses.filter((r) => recurringOccursInMonth(r, key));
+  }, [recurringExpenses, currentMonth]);
+
+  // Savings entered for the currently viewed month -- exact month match, no
+  // auto-rollover, same as Income (see newIncome/incomeForMonth above).
+  const savingsForMonth = useMemo(() => {
+    const key = monthKey(currentMonth);
+    return savingsGoals.filter((s) => s.active && s.start_date.slice(0, 7) === key);
+  }, [savingsGoals, currentMonth]);
+  const savingsTotal = useMemo(() => savingsForMonth.reduce((s, g) => s + Number(g.amount), 0), [savingsForMonth]);
+
+  const categoryNameById = useMemo(() => {
+    const m = {};
+    categories.forEach((c) => (m[c.id] = c.name));
+    return m;
+  }, [categories]);
+
+  // Maps a household member's login email to their friendly first name (set
+  // under Users -> My details), so the "By" column reads "Vipin"/"Annie"
+  // instead of a raw email-derived string like "vipinlakhanpal". Falls back
+  // to the email's local part if that member hasn't set a name yet.
+  const nameByEmail = useMemo(() => {
+    const m = {};
+    members.forEach((mm) => {
+      if (mm.email) m[mm.email.toLowerCase()] = (mm.name || '').trim();
+    });
+    return m;
+  }, [members]);
+
+  function displayNameForEmail(email) {
+    if (!email) return '';
+    const name = nameByEmail[email.toLowerCase()];
+    // First name only ("Vipin", "Annie") -- keeps the "By" column compact,
+    // matching how it read before (a single short word) rather than a full name.
+    if (name) return name.split(' ')[0];
+    return email.split('@')[0];
+  }
+
+  const byCategory = useMemo(() => {
+    const m = {};
+    // Regular Expenses respects the date-range picker (rangeExpenses is
+    // monthExpenses narrowed to rangeStart/rangeEnd, or the full month by
+    // default) -- Fixed Expenses always contributes its full monthly amount
+    // since it isn't entered per day.
+    rangeExpenses.forEach((e) => {
+      const name = categoryNameById[e.category_id] || 'Uncategorized';
+      m[name] = (m[name] || 0) + Number(e.amount);
+    });
+    recurringForMonth.forEach((r) => {
+      const name = categoryNameById[r.category_id] || 'Uncategorized';
+      m[name] = (m[name] || 0) + Number(r.amount);
+    });
+    return m;
+  }, [rangeExpenses, recurringForMonth, categoryNameById]);
+
+  const oneOffTotal = useMemo(() => rangeExpenses.reduce((s, e) => s + Number(e.amount), 0), [rangeExpenses]);
+  const recurringTotal = useMemo(() => recurringForMonth.reduce((s, r) => s + Number(r.amount), 0), [recurringForMonth]);
+  // "total" = actual spending only (one-off + fixed), used for the per-category
+  // Pareto/budget-cap checks below since savings goals aren't tied to a category.
+  const total = oneOffTotal + recurringTotal;
+  // "combinedOutflow" = spending + planned savings. Savings is money leaving
+  // your income just like an expense would, so every headline figure the
+  // household actually reads (Spent so far, Remaining, Combined expenses, Net)
+  // needs to account for it -- otherwise "Remaining"/"Net" would overstate how
+  // much is actually free to spend.
+  const combinedOutflow = total + savingsTotal;
+  const remaining = totalBudget - combinedOutflow;
+  
+  // v3.72: Per-tile "view breakdown" data -- each of the sum-based dashboard
+  // tiles (Spent so far, Combined income, Combined expenses, My Investments,
+  // and the Credit Card/Debit Card/Bank Account tiles) gets a small list icon
+  // that opens a modal listing the individual line items behind that total,
+  // so a single aggregate number can actually be checked against what makes
+  // it up instead of taken on faith. Remaining/Net are deliberately left out
+  // -- they're differences, not sums, so there's no item list to show.
+  
+  const nonCreditCardExpenseTotal = useMemo(() => rangeExpenses.filter((e) => e.payment_source !== 'Credit Card').reduce((s, e) => s + Number(e.amount), 0), [rangeExpenses]);  const nonCreditCardRecurringTotal = useMemo(() => recurringForMonth.filter((r) => r.payment_source !== 'Credit Card').reduce((s, r) => s + Number(r.amount), 0), [recurringForMonth]);
+  // Credit card spend is a liability that hasn't left the bank account yet, so it's
+  // excluded here from the outflow subtracted from income for the Net tile.
+  // (combinedOutflow/remaining above are unaffected and still include credit card spend.)
+  const nonCreditCardOutflow = nonCreditCardExpenseTotal + nonCreditCardRecurringTotal + savingsTotal;
+
+  const incomeForMonth = useMemo(() => {
+    const key = monthKey(currentMonth);
+    // Income is entered per month on purpose -- no auto-rollover -- so this is
+    // an exact month match rather than a start/end range like expenses.
+    return incomes.filter((i) => i.active && i.start_date.slice(0, 7) === key);
+  }, [incomes, currentMonth]);
+  const totalIncome = useMemo(() => incomeForMonth.reduce((s, i) => s + Number(i.amount), 0), [incomeForMonth]);
+  const netCombined = totalIncome - nonCreditCardOutflow;
+  const outflowBreakdownItems = useMemo(() => {
+    const items = [];
+    rangeExpenses.forEach((e) => {
+      items.push({
+        id: `e-${e.id}`,
+        date: e.expense_date,
+        label: e.description || categoryNameById[e.category_id] || 'Expense',
+        sub: categoryNameById[e.category_id] || '',
+        amount: Number(e.amount),
+        tag: 'Regular',
+      });
+    });
+    recurringForMonth.forEach((r) => {
+      items.push({
+        id: `r-${r.id}`,
+        date: r.due_date || r.start_date,
+        label: r.name,
+        sub: categoryNameById[r.category_id] || '',
+        amount: Number(r.amount),
+        tag: 'Fixed',
+      });
+    });
+    savingsForMonth.forEach((s) => {
+      items.push({
+        id: `s-${s.id}`,
+        date: s.start_date,
+        label: s.name || 'Savings',
+        sub: '',
+        amount: Number(s.amount),
+        tag: 'Savings',
+      });
+    });
+    return items.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+  }, [rangeExpenses, recurringForMonth, savingsForMonth, categoryNameById]);
+  const incomeBreakdownItems = useMemo(() => incomeForMonth
+    .map((i) => ({
+      id: `i-${i.id}`,
+      date: i.start_date,
+      label: i.name,
+      sub: displayNameForEmail(i.member_email),
+      amount: Number(i.amount),
+      tag: 'Income',
+    }))
+    .sort((a, b) => String(b.date || '').localeCompare(String(a.date || ''))), [incomeForMonth]);
+  const investmentBreakdownItems = useMemo(() => {
+    const key = monthKey(currentMonth);
+    return investments
+      .filter((inv) => inv.status !== 'Closed' && inv.start_date && inv.start_date.slice(0, 7) <= key)
+      .map((inv) => {
+        const cur = investAccruedValue(inv);
+        const gain = cur - Number(inv.principal_amount || 0);
+        return {
+          id: `inv-${inv.id}`,
+          date: '',
+          label: inv.name,
+          sub: inv.investment_type || '',
+          amount: cur,
+          tag: gain >= 0 ? 'Gain' : 'Loss',
+        };
+      });
+  }, [investments, investFxRates, currentMonth]);
+  const [tileBreakdown, setTileBreakdown] = useState(null);
+  // ---- Filters for the 4 month-scoped lists below (Regular Expenses, Fixed
+  // Expenses, Income, Savings). These only narrow what's rendered on screen --
+  // every total, chart, and the PDF report keep reading the original
+  // (unfiltered) monthExpenses/recurringForMonth/incomeForMonth/savingsForMonth
+  // arrays above, so an active filter never skews a number, only which rows
+  // are visible. Each section gets its own state/open/ref trio, following the
+  // same click-to-open, click-outside-to-close pattern as the theme picker
+  // (themeMenuOpen/themeMenuRef above).
+  const [expenseFilter, setExpenseFilter] = useState({ category: '', payment: '', bank: '' });
+  const [expenseFilterOpen, setExpenseFilterOpen] = useState(false);
+  const expenseFilterRef = useRef(null);
+  const [expenseSearchOpen, setExpenseSearchOpen] = useState(false);
+  const [expenseSearchQuery, setExpenseSearchQuery] = useState('');
+  const [categoryBudgetSearchOpen, setCategoryBudgetSearchOpen] = useState(false);
+  const [categoryBudgetSearchQuery, setCategoryBudgetSearchQuery] = useState('');
+  // v3.30: separate search for the "Budget for Per Category" input grid
+  // (setting each category's cap) -- distinct from categoryBudgetSearchQuery
+  // above, which filters the "this month's spending vs budget" list further
+  // down the same panel.
+  const [catBudgetInputSearchOpen, setCatBudgetInputSearchOpen] = useState(false);
+  const [catBudgetInputSearchQuery, setCatBudgetInputSearchQuery] = useState('');
+  // v3.30: search across Groups & Category -- filters both the Ungrouped
+  // list and every group's category list by name; a group also stays
+  // visible (and auto-expands) if its own name matches even when none of
+  // its categories do.
+  const [groupCatSearchOpen, setGroupCatSearchOpen] = useState(false);
+  const [groupCatSearchQuery, setGroupCatSearchQuery] = useState('');
+  useEffect(() => {
+    if (!expenseFilterOpen) return;
+    function onDocClick(e) {
+      if (expenseFilterRef.current && !expenseFilterRef.current.contains(e.target)) setExpenseFilterOpen(false);
+    }
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [expenseFilterOpen]);
+  const expenseFilterActive = !!(expenseFilter.category || expenseFilter.payment || expenseFilter.bank);
+  const filteredMonthExpenses = useMemo(() => {
+    return rangeExpenses.filter((e) => {
+      if (expenseFilter.category && e.category_id !== expenseFilter.category) return false;
+      if (expenseFilter.payment && (e.payment_source || 'Cash') !== expenseFilter.payment) return false;
+      if (expenseFilter.bank && (e.payment_bank || '') !== expenseFilter.bank) return false;
+      if (expenseSearchQuery.trim()) {
+        const q = expenseSearchQuery.trim().toLowerCase();
+        const label = (e.description || categoryNameById[e.category_id] || '').toLowerCase();
+        if (!label.includes(q)) return false;
+      }
+      return true;
+    }).sort((a, b) => (b.expense_date || '').localeCompare(a.expense_date || '') || (b.created_at || '').localeCompare(a.created_at || ''));
+  }, [rangeExpenses, expenseFilter, expenseSearchQuery]);
+
+  const [recurringFilter, setRecurringFilter] = useState({ category: '', payment: '', bank: '' });
+  const [recurringFilterOpen, setRecurringFilterOpen] = useState(false);
+  const recurringFilterRef = useRef(null);
+  const [recurringSearchOpen, setRecurringSearchOpen] = useState(false);
+  const [recurringSearchQuery, setRecurringSearchQuery] = useState('');
+  useEffect(() => {
+    if (!recurringFilterOpen) return;
+    function onDocClick(e) {
+      if (recurringFilterRef.current && !recurringFilterRef.current.contains(e.target)) setRecurringFilterOpen(false);
+    }
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [recurringFilterOpen]);
+  const recurringFilterActive = !!(recurringFilter.category || recurringFilter.payment || recurringFilter.bank);
+  const filteredRecurringForMonth = useMemo(() => {
+    return recurringForMonth.filter((r) => {
+      if (recurringFilter.category && r.category_id !== recurringFilter.category) return false;
+      if (recurringFilter.payment && (r.payment_source || 'Cash') !== recurringFilter.payment) return false;
+      if (recurringFilter.bank && (r.payment_bank || '') !== recurringFilter.bank) return false;
+      if (recurringSearchQuery.trim()) {
+        const q = recurringSearchQuery.trim().toLowerCase();
+        const label = (r.name || categoryNameById[r.category_id] || '').toLowerCase();
+        if (!label.includes(q)) return false;
+      }
+      return true;
+    }).sort((a, b) => (b.start_date || '').localeCompare(a.start_date || '') || (b.created_at || '').localeCompare(a.created_at || ''));
+  }, [recurringForMonth, recurringFilter, recurringSearchQuery]);
+
+  const [incomeFilter, setIncomeFilter] = useState({ source: '', member: '' });
+  const [incomeFilterOpen, setIncomeFilterOpen] = useState(false);
+  const incomeFilterRef = useRef(null);
+  useEffect(() => {
+    if (!incomeFilterOpen) return;
+    function onDocClick(e) {
+      if (incomeFilterRef.current && !incomeFilterRef.current.contains(e.target)) setIncomeFilterOpen(false);
+    }
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [incomeFilterOpen]);
+  const incomeFilterActive = !!(incomeFilter.source || incomeFilter.member);
+  // Income has no category/payment fields (see Source/Member/Amount/Month
+  // columns), so it's filtered on what it actually has instead -- distinct
+  // Source names and Members actually present this month, not every source
+  // ever entered across all months.
+  const incomeSourceOptions = useMemo(
+    () => Array.from(new Set(incomeForMonth.map((i) => (i.name || '').trim()).filter(Boolean))).sort(),
+    [incomeForMonth]
+  );
+  const incomeMemberOptions = useMemo(
+    () => Array.from(new Set(incomeForMonth.map((i) => i.member_email).filter(Boolean))).sort(),
+    [incomeForMonth]
+  );
+  const filteredIncomeForMonth = useMemo(() => {
+    return incomeForMonth.filter((i) => {
+      if (incomeFilter.source && (i.name || '').trim() !== incomeFilter.source) return false;
+      if (incomeFilter.member && i.member_email !== incomeFilter.member) return false;
+      return true;
+    }).sort((a, b) => (b.start_date || '').localeCompare(a.start_date || '') || (b.created_at || '').localeCompare(a.created_at || ''));
+  }, [incomeForMonth, incomeFilter]);
+
+  const [savingsFilter, setSavingsFilter] = useState({ name: '' });
+  const [savingsFilterOpen, setSavingsFilterOpen] = useState(false);
+  const savingsFilterRef = useRef(null);
+  useEffect(() => {
+    if (!savingsFilterOpen) return;
+    function onDocClick(e) {
+      if (savingsFilterRef.current && !savingsFilterRef.current.contains(e.target)) setSavingsFilterOpen(false);
+    }
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [savingsFilterOpen]);
+  const savingsFilterActive = !!savingsFilter.name;
+  // Savings only has a Name field to filter on (see Name/Amount/Month
+  // columns) -- distinct names actually present this month.
+  const savingsNameOptions = useMemo(
+    () => Array.from(new Set(savingsForMonth.map((s) => (s.name || '').trim()).filter(Boolean))).sort(),
+    [savingsForMonth]
+  );
+  const filteredSavingsForMonth = useMemo(() => {
+    return savingsForMonth.filter((s) => {
+      if (savingsFilter.name && (s.name || '').trim() !== savingsFilter.name) return false;
+      return true;
+    }).sort((a, b) => (b.start_date || '').localeCompare(a.start_date || '') || (b.created_at || '').localeCompare(a.created_at || ''));
+  }, [savingsForMonth, savingsFilter]);
+
+  // Bills/rent due soon -- an in-app pop-up style banner starting N days
+  // before the due date (default 3) and continuing to show until the due
+  // date itself. Email reminders on the same schedule are a server-side
+  // feature (needs a daily cron + mail sender) and aren't wired up yet.
+  const dueReminders = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return recurringExpenses
+      .filter((r) => r.active && r.due_date)
+      .map((r) => {
+        const due = new Date(r.due_date + 'T00:00:00');
+        const daysUntil = Math.round((due - today) / 86400000);
+        return { ...r, daysUntil };
+      })
+      .filter((r) => r.daysUntil >= 0 && r.daysUntil <= (r.remind_before_days ?? 3));
+  }, [recurringExpenses]);
+
+  const overCategories = useMemo(() => {
+    return categories
+      .filter((c) => c.monthly_budget > 0 && (byCategory[c.name] || 0) > c.monthly_budget)
+      .map((c) => c.name);
+  }, [categories, byCategory]);
+
+  const pieData = Object.entries(byCategory).map(([name, value]) => ({ name, value })).sort((a, b) => a.value - b.value);
+
+  // By Group chart data -- spend aggregated per category group (categories
+  // with no group_id fall into an 'Ungrouped' bucket), per explicit request
+  // for a group-wise spend chart with a category/group toggle.
+  const groupData = useMemo(() => {
+    const m = {};
+    categories.forEach((c) => {
+      const spend = byCategory[c.name] || 0;
+      if (!spend) return;
+      const grp = categoryGroups.find((g) => g.id === c.group_id);
+      const groupName = grp ? grp.name : 'Ungrouped';
+      m[groupName] = (m[groupName] || 0) + spend;
+    });
+    return Object.entries(m).map(([name, value]) => ({ name, value })).sort((a, b) => a.value - b.value);
+  }, [categories, categoryGroups, byCategory]);
+
+  // Budgeted vs Actual chart-toggle option: one row per category that has a
+  // budget cap set in Settings > Category Budgets (categories with no cap
+  // are excluded -- there's nothing to compare them against). Same byCategory
+  // spend figures used everywhere else on the dashboard.
+  const budgetVsActualData = useMemo(() => {
+    return categories
+      .filter((c) => c.monthly_budget > 0)
+      .map((c) => ({ name: c.name, budgeted: Number(c.monthly_budget), spent: byCategory[c.name] || 0 }))
+      // Worst overspend first, so problem categories are visible without scrolling past 20+ bars.
+      .sort((a, b) => (b.spent - b.budgeted) - (a.spent - a.budgeted));
+  }, [categories, byCategory]);
+  // Category names shortened before going on the chart's X-axis -- with two
+  // bars per category there's less width per label than the single-bar
+  // charts get, so the same 14-char truncation used elsewhere kicks in
+  // earlier here.
+  const shortCatLabel = (name) => (name && name.length > 14 ? name.slice(0, 14) + '\u2026' : name);
+
+  // Income vs Expenses chart-toggle option: one group of 3 bars per month
+  // across the currently viewed year (Jan-Dec) -- Income, Expenses (Regular
+  // + Fixed, i.e. the same "total" used everywhere else on the dashboard,
+  // but excluding Savings since that now gets its own bar here), and
+  // Savings. Fixed Expenses count for a given month purely via
+  // recurringOccursInMonth's schedule check (no separate Regular Expense
+  // entry needed -- see the recurringForMonth comment above); Income and
+  // Savings need an entry dated in that specific month, same exact-match
+  // logic as incomeForMonth/savingsForMonth above, just generalized to run
+  // across all 12 months instead of only the one currently selected via the
+  // </> month nav.
+  const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  // Earliest month this household has ANY real entry in, across Income,
+  // Regular Expenses, Fixed Expenses, and Savings -- used as the left-hand
+  // cutoff for the Income vs Expenses chart below, same idea as the
+  // right-hand (future) cutoff: a household's data visibility should start
+  // from the month they actually began using the app, not before, and (per
+  // the future-month cutoff) not project ahead of real time either. This is
+  // intentionally a general rule for every household, not just this one --
+  // it's derived purely from each household's own data, so a brand-new
+  // signup with no entries yet just sees an empty chart until they add
+  // something, and a long-time user sees their real history.
+  const earliestActivityKey = useMemo(() => {
+    const dates = [];
+    incomes.forEach((i) => i.start_date && dates.push(i.start_date.slice(0, 7)));
+    expenses.forEach((e) => e.expense_date && dates.push(e.expense_date.slice(0, 7)));
+    recurringExpenses.forEach((r) => r.start_date && dates.push(r.start_date.slice(0, 7)));
+    savingsGoals.forEach((s) => s.start_date && dates.push(s.start_date.slice(0, 7)));
+    if (dates.length === 0) return null;
+    return dates.reduce((min, d) => (d < min ? d : min));
+  }, [incomes, expenses, recurringExpenses, savingsGoals]);
+  const monthlyTrendData = useMemo(() => {
+    const year = currentMonth.getFullYear();
+    // Future months (after the real today, not just the month currently
+    // being viewed via the </> nav) are held at zero rather than projecting
+    // Fixed Expenses forward -- per explicit request, this chart should only
+    // ever show real actuals, with each month's bars appearing once that
+    // month actually begins. Past months are left as-is: a Fixed Expense's
+    // start_date reflects when it genuinely started, so counting it for a
+    // past month you never logged a Regular Expense in is correct, not a bug.
+    const currentRealKey = monthKey(new Date());
+    return MONTH_ABBR.map((label, m) => {
+      const key = year + '-' + String(m + 1).padStart(2, '0');
+      if (key > currentRealKey || (earliestActivityKey && key < earliestActivityKey)) {
+        return { month: label, monthIndex: m, income: 0, expenses: 0, savings: 0 };
+      }
+      const income = incomes
+        .filter((i) => i.active && i.start_date.slice(0, 7) === key)
+        .reduce((s, i) => s + Number(i.amount), 0);
+      const oneOff = expenses
+        .filter((e) => e.expense_date.slice(0, 7) === key)
+        .reduce((s, e) => s + Number(e.amount), 0);
+      const fixed = recurringExpenses
+        .filter((r) => recurringOccursInMonth(r, key))
+        .reduce((s, r) => s + Number(r.amount), 0);
+      const savings = savingsGoals
+        .filter((s2) => s2.active && s2.start_date.slice(0, 7) === key)
+        .reduce((s, g) => s + Number(g.amount), 0);
+      return { month: label, monthIndex: m, income, expenses: oneOff + fixed, savings };
+    });
+  }, [incomes, expenses, recurringExpenses, savingsGoals, currentMonth, earliestActivityKey]);
+  // v3.45: mobile starts on the last 6 months instead of all 12 --
+  // the Income vs Expenses chart squeezes a Jan-Dec label under every
+  // group of bars, and 12 of them on a ~380px screen just overlap into
+  // unreadable text. Users can still open the Months filter and pick
+  // All 12 (now scrollable/readable at that width via the chart's own
+  // horizontal room), this only changes the starting point on mobile.
+  const [selectedMonths, setSelectedMonths] = useState(
+    isMobile ? [6, 7, 8, 9, 10, 11] : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+  );
+  const filteredMonthlyTrendData = useMemo(
+    () => monthlyTrendData
+      .filter((d) => selectedMonths.includes(d.monthIndex))
+      // Jan-Jun expenses are intentionally hidden from the Income vs Expenses chart per request.
+      .map((d) => (d.monthIndex <= 5 ? { ...d, expenses: 0 } : d)),
+    [monthlyTrendData, selectedMonths]
+  );
+  const [monthsFilterOpen, setMonthsFilterOpen] = useState(false);
+  const monthsFilterRef = useRef(null);
+  useEffect(() => {
+    if (!monthsFilterOpen) return;
+    function onDocClick(e) {
+      if (monthsFilterRef.current && !monthsFilterRef.current.contains(e.target)) setMonthsFilterOpen(false);
+    }
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [monthsFilterOpen]);
+  const toggleTrendMonth = (m) => {
+    setSelectedMonths((prev) => (prev.includes(m) ? prev.filter((x) => x !== m) : [...prev, m].sort((a, b) => a - b)));
+  };
+
+  // Payment-source breakdown for the "By Source" chart-toggle option (Phase 2,
+  // per explicit request: show Credit Card / Debit Card / Bank Account spend on
+  // the Dashboard as a chart rather than new tiles). Same data scope as
+  // byCategory above (rangeExpenses + recurringForMonth) so the two toggle
+  // options always describe the exact same pool of spending, just grouped
+  // differently. 'Bank' / 'Salary' are Fixed Expenses-only payment sources
+  // (see RECURRING_PAYMENT_SOURCES) -- relabeled here for a clearer chart.
+  const byPaymentSource = useMemo(() => {
+    const m = {};
+    const label = (src) => (src === 'Bank' ? 'Bank Account' : src === 'Salary' ? 'Salary Deduction' : src);
+    const BANK_BREAKDOWN_SOURCES = ['Credit Card', 'Debit Card', 'Bank Account'];
+    const keyFor = (rawSrc, bank) => {
+      const name = label(rawSrc || 'Cash');
+      return BANK_BREAKDOWN_SOURCES.includes(name) && bank ? `${name} (${bank})` : name;
+    };
+    rangeExpenses.forEach((e) => {
+      const name = keyFor(e.payment_source, e.payment_bank);
+      m[name] = (m[name] || 0) + Number(e.amount);
+    });
+    recurringForMonth.forEach((r) => {
+      const name = keyFor(r.payment_source, r.payment_bank);
+      m[name] = (m[name] || 0) + Number(r.amount);
+    });
+    return m;
+  }, [rangeExpenses, recurringForMonth]);
+  const paymentSourceData = Object.entries(byPaymentSource).map(([name, value]) => ({ name, value })).sort((a, b) => a.value - b.value);
+
+  // Phase 2 dashboard tiles: unlike the By Source chart (broken out per bank),
+  // these three roll every Credit Card / Debit Card / Bank Account entry up
+  // to a single type-level total for an at-a-glance summary above the fold --
+  // no per-bank detail here, that's what the By Source chart is for.
+  const byPaymentType = useMemo(() => {
+    const totals = {};
+    const banks = {};
+    const perBank = {};
+    const bankOrder = {};
+    const catByBank = {};
+    const label = (src) => (src === 'Bank' ? 'Bank Account' : src === 'Salary' ? 'Salary Deduction' : src);
+    // Per-request: the Credit Card / Debit Card / Bank Account tiles now split
+    // into one tile per bank actually used that month (instead of one combined
+    // tile whose description read e.g. "Credit Card (FAB/HSBC)") -- this is
+    // still built live from each household's own payment_bank entries, so a
+    // different household only ever sees its own bank names here. Each tile
+    // also gets a small category-breakdown caption underneath (per explicit
+    // request, so the total isn't just a bare number -- gives a sense of
+    // *what* the spend on that card/account actually was for).
+    const shortBank = (b) => (b || '').split('(')[0].trim();
+    const add = (rawSrc, rawBank, amount, categoryName) => {
+      const name = label(rawSrc || 'Cash');
+      totals[name] = (totals[name] || 0) + Number(amount);
+      const b = shortBank(rawBank);
+      if (b) {
+        banks[name] = banks[name] || new Set();
+        banks[name].add(b);
+      }
+      perBank[name] = perBank[name] || {};
+      const key = b || '__none__';
+      if (perBank[name][key] === undefined) {
+        bankOrder[name] = bankOrder[name] || [];
+        bankOrder[name].push(key);
+      }
+      perBank[name][key] = (perBank[name][key] || 0) + Number(amount);
+      catByBank[name] = catByBank[name] || {};
+      catByBank[name][key] = catByBank[name][key] || {};
+      const cat = categoryName || 'Uncategorized';
+      catByBank[name][key][cat] = (catByBank[name][key][cat] || 0) + Number(amount);
+    };
+    rangeExpenses.forEach((e) => add(e.payment_source, e.payment_bank, e.amount, categoryNameById[e.category_id]));
+    recurringForMonth.forEach((r) => add(r.payment_source, r.payment_bank, r.amount, categoryNameById[r.category_id]));
+    return { totals, banks, perBank, bankOrder, catByBank };
+  }, [rangeExpenses, recurringForMonth, categoryNameById]);
+  const paymentTypeTileLabel = (type) => {
+    const bankSet = byPaymentType.banks[type];
+    return bankSet && bankSet.size > 0 ? `${type} (${Array.from(bankSet).join('/')})` : type;
+  };
+  // Top 2 categories behind a tile's total, e.g. "Groceries + Dining +3 more"
+  // -- broad strokes only (not a full breakdown, that's what the By Source
+  // chart and Report tab are for), just enough to place the number.
+  const tileCategoryLine = (type, key) => {
+    const cats = (byPaymentType.catByBank[type] || {})[key];
+    if (!cats) return '';
+    const sorted = Object.entries(cats).sort((a, b) => b[1] - a[1]);
+    if (sorted.length === 0) return '';
+    const total = sorted.reduce((s, [, amt]) => s + amt, 0);
+    const top = sorted.slice(0, 2).map(([n, amt]) => `${n} ${total > 0 ? Math.round((amt / total) * 100) : 0}%`);
+    const rest = sorted.length - Math.min(2, sorted.length);
+    return rest > 0 ? `${top.join(' + ')} +${rest} more` : top.join(' + ');
+  };
+  // One tile per bank actually used for this payment type this month -- falls
+  // back to a single bare-type tile (value 0) when there's no data yet, same
+  // as the old always-3-tiles behavior so the row never collapses to nothing.
+  // Dashboard-tile-only display shortening -- applies for every user, not
+  // just this household. "Bank Account" reads as "Bank A/c" here (full
+  // word used everywhere else in the app). Bank names get a short trailing
+  // country/region qualifier stripped (e.g. "HSBC UAE" -> "HSBC") so the
+  // tile stays compact -- the bank's full name (with qualifier) is
+  // untouched in the actual data and everywhere else it's displayed.
+  const TILE_TYPE_LABEL = { 'Bank Account': 'Bank A/c' };
+  const BANK_NAME_SUFFIX_STRIP = new Set(['UAE', 'USA', 'US', 'UK', 'GB', 'KSA', 'KWT', 'QAT', 'BHR', 'OMN', 'IND', 'IN', 'GCC', 'INTL', 'LTD', 'PLC']);
+  const shortBankName = (name) => {
+    if (!name) return name;
+    const parts = name.trim().split(/\s+/);
+    if (parts.length > 1 && BANK_NAME_SUFFIX_STRIP.has(parts[parts.length - 1].toUpperCase())) {
+      return parts.slice(0, -1).join(' ');
+    }
+    return name;
+  };
+  const paymentTypeTiles = (type) => {
+    const order = byPaymentType.bankOrder[type];
+    const displayType = TILE_TYPE_LABEL[type] || type;
+    if (!order || order.length === 0) return [{ tileLabel: displayType, value: 0, catLine: '', key: type }];
+    return order.map((key) => ({
+      tileLabel: key === '__none__' ? displayType : `${displayType} (${shortBankName(key)})`,
+      value: byPaymentType.perBank[type][key] || 0,
+      catLine: tileCategoryLine(type, key),
+      key: `${type}-${key}`,
+    }));
+  };
+  // Per-request: same "view breakdown" treatment as the sum tiles above --
+  // filters the same two source arrays used by byPaymentType so the list a
+  // user sees always matches the number on the tile exactly.
+  const paymentTypeBreakdownItems = (type, key) => { const srcLabel = (src) => (src === 'Bank' ? 'Bank Account' : src === 'Salary' ? 'Salary Deduction' : src); const shortBank = (b) => (b || '').split('(')[0].trim();
+    const items = [];
+    rangeExpenses.forEach((e) => {
+      if (srcLabel(e.payment_source || 'Cash') !== type) return;
+      if ((shortBank(e.payment_bank) || '__none__') !== key) return;
+      items.push({
+        id: `e-${e.id}`,
+        date: e.expense_date,
+        label: e.description || categoryNameById[e.category_id] || 'Expense',
+        sub: categoryNameById[e.category_id] || '',
+        amount: Number(e.amount),
+        tag: 'Regular',
+      });
+    });
+    recurringForMonth.forEach((r) => {
+      if (srcLabel(r.payment_source || 'Cash') !== type) return;
+      if ((shortBank(r.payment_bank) || '__none__') !== key) return;
+      items.push({
+        id: `r-${r.id}`,
+        date: r.due_date || r.start_date,
+        label: r.name,
+        sub: categoryNameById[r.category_id] || '',
+        amount: Number(r.amount),
+        tag: 'Fixed',
+      });
+    });
+    return items.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+  };
+
+  // The pie chart specifically (not Bar/Pareto/Treemap) gets capped to its
+  // biggest slices with everything else folded into "Other". A pie is the
+  // one chart type where every extra category makes EVERY slice harder to
+  // read (more slivers competing for the same ring of space), so this is
+  // what actually fixes clutter -- shrinking or resizing the chart doesn't,
+  // since the underlying problem is too many slices, not too little room.
+  const PIE_TOP_N = 6;
+  // Home's bigger "Explore" pie gets a slightly higher cap than the normal
+  // small side-panel pie -- there's enough room on that larger canvas for a
+  // few more slices before it turns back into clutter, per explicit
+  // request ("Pie can slightly expand with more categories"). The small
+  // panel used everywhere else keeps the original PIE_TOP_N untouched.
+  const PIE_TOP_N_BIG = 9;
+  function getPieChartData(topN) {
+    if (pieData.length <= topN) return pieData;
+    const sorted = [...pieData].sort((a, b) => b.value - a.value);
+    const top = sorted.slice(0, topN);
+    const otherTotal = sorted.slice(topN).reduce((s, d) => s + d.value, 0);
+    return otherTotal > 0 ? [...top, { name: 'Other', value: otherTotal }] : top;
+  }
+  const pieChartData = useMemo(() => getPieChartData(PIE_TOP_N), [pieData]);
+
+  // Pareto = categories sorted highest-spend-first with a running cumulative
+  // percentage line overlaid, so it's easy to see which categories make up
+  // the bulk (e.g. 80%) of this month's spending.
+  const paretoData = useMemo(() => {
+    const sorted = [...pieData].sort((a, b) => b.value - a.value);
+    const totalVal = sorted.reduce((s, d) => s + d.value, 0) || 1;
+    let cum = 0;
+    return sorted.map((d) => {
+      cum += d.value;
+      return { ...d, cumulative: Math.round((cum / totalVal) * 1000) / 10 };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [byCategory]);
+
+  // Pareto bar thickness/label size shrink as the category count grows, so
+  // every category always fits within the chart's own width -- no horizontal
+  // scrolling needed regardless of how many categories exist.
+  const paretoBarSize = Math.max(6, Math.min(22, Math.floor(260 / Math.max(paretoData.length, 1))));
+  const paretoFontSize = paretoData.length > 14 ? 7 : paretoData.length > 9 ? 8 : 9;
+  const paretoMaxNameLen = paretoData.length > 14 ? 6 : paretoData.length > 9 ? 9 : 14;
+
+  // Shared by the one-off expense form, Income, Fixed Expenses, and Savings
+  // forms. Uploads to the private "attachments" Storage bucket under a
+  // {household_id}/{table}-{row_id}-{filename} path -- the RLS policies on
+  // storage.objects check that the first path segment is a household this
+  // signed-in user belongs to (via my_household_ids()), so nobody outside
+  // the household can read/write another household's files even though the
+  // bucket itself is shared. Runs AFTER the row insert, since the path needs
+  // the new row's own id.
+  //
+  // Takes an ARRAY of files (not a single file) and inserts one row per file
+  // into the row_attachments join table (see migration_multi_attachments.sql)
+  // instead of patching a single attachment_url/attachment_name column --
+  // this is what lets a row carry more than one attachment. Each file
+  // uploads/inserts independently so one bad file doesn't block the rest.
+  async function uploadAttachmentsForRow(table, rowId, files) {
+    const list = (files || []).filter(Boolean);
+    if (list.length === 0) return;
+    for (const file of list) {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const path = `${householdId}/${table}-${rowId}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}-${safeName}`;
+      const { error: uploadError } = await supabase.storage.from('attachments').upload(path, file, {
+        contentType: file.type || undefined,
+        upsert: false,
+      });
+      if (uploadError) {
+        notify(`Saved, but "${file.name}" could not be uploaded: ` + uploadError.message);
+        continue;
+      }
+      const { error: insertError } = await supabase.from('row_attachments').insert({
+        household_id: householdId,
+        table_name: table,
+        row_id: rowId,
+        storage_path: path,
+        file_name: file.name,
+        created_by: session.user.id,
+      });
+      if (insertError) {
+        notify(`Saved and uploaded, but "${file.name}" could not be linked: ` + insertError.message);
+      }
+    }
+    loadAll();
+  }
+
+  // The bucket is private, so viewing/downloading a saved attachment needs a
+  // signed URL generated on demand -- the stored attachment_url is just the
+  // storage path, never a public link. This opens the attachment-viewer
+  // modal (used from every table row, mobile edit sheet, etc.) rather than
+  // navigating away directly, so the same "view inline / open / share" set
+  // of options is available everywhere a document can be attached.
+  async function openAttachmentViewer(path, name) {
+    if (!path) return;
+    setAttachmentViewer({ loading: true, path, name: name || 'Attachment', url: null });
+    const { data, error } = await supabase.storage.from('attachments').createSignedUrl(path, 3600);
+    if (error || !data?.signedUrl) {
+      notify('Could not open attachment: ' + (error?.message || 'unknown error'));
+      setAttachmentViewer(null);
+      return;
+    }
+    setAttachmentViewer({ loading: false, path, name: name || 'Attachment', url: data.signedUrl });
+  }
+
+  // Deletes a single already-uploaded attachment: removes the file from the
+  // "attachments" Storage bucket and its row_attachments record, then updates
+  // local state so the UI (edit forms, aggregated Attachments list) reflects
+  // the removal immediately without a full reload.
+  async function removeExistingAttachment(table, rowId, attachment) {
+    if (!attachment) return;
+    const { error: storageError } = await supabase.storage.from('attachments').remove([attachment.storage_path]);
+    if (storageError) {
+      notify('Could not remove attachment: ' + storageError.message);
+      return;
+    }
+    const { error: dbError } = await supabase.from('row_attachments').delete().eq('id', attachment.id);
+    if (dbError) {
+      notify('Could not remove attachment: ' + dbError.message);
+      return;
+    }
+    setRowAttachments((prev) => {
+      const k = rowAttachmentKey(table, rowId);
+      return { ...prev, [k]: (prev[k] || []).filter((a) => a.id !== attachment.id) };
+    });
+  }
+
+  function isImageAttachment(name) {
+    return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(name || '');
+  }
+  function isPdfAttachment(name) {
+    return /\.pdf$/i.test(name || '');
+  }
+
+  // Share generates its OWN fresh, longer-lived link (24h) rather than
+  // reusing the viewer's 1-hour link -- the recipient on the other end of an
+  // email/WhatsApp message may not open it right away, so the share link
+  // needs more runway than the in-app viewer does.
+  async function shareAttachment(path, name, via) {
+    const { data, error } = await supabase.storage.from('attachments').createSignedUrl(path, 86400);
+    if (error || !data?.signedUrl) {
+      notify('Could not create a shareable link: ' + (error?.message || 'unknown error'));
+      return;
+    }
+    const link = data.signedUrl;
+    const label = name || 'attachment';
+    if (via === 'email') {
+      const subject = encodeURIComponent(`Hearth document: ${label}`);
+      const body = encodeURIComponent(`Sharing a document from Hearth: ${label}\n\n${link}\n\n(This link expires in 24 hours.)`);
+      window.open(`mailto:?subject=${subject}&body=${body}`, '_blank');
+    } else if (via === 'whatsapp') {
+      const text = encodeURIComponent(`${label}: ${link}\n(link expires in 24 hours)`);
+      window.open(`https://wa.me/?text=${text}`, '_blank');
+    }
+  }
+
+  // Now takes a FileList/array (was a single file) so more than one document
+  // can be attached to the same row -- per explicit request. Valid files are
+  // APPENDED to whatever's already picked (not replaced), so picking again
+  // adds more rather than starting over; each invalid file is skipped with
+  // one combined alert rather than one popup per bad file.
+  function handleAttachmentPick(files, setFilesFn) {
+    const list = Array.from(files || []);
+    if (list.length === 0) return;
+    const valid = [];
+    let rejected = 0;
+    for (const file of list) {
+      if (isAllowedAttachment(file)) valid.push(file);
+      else rejected++;
+    }
+    if (rejected > 0) {
+      notify(`${rejected} file${rejected === 1 ? '' : 's'} skipped -- attachments must be an image or PDF, 5MB or smaller.`);
+    }
+    if (valid.length > 0) {
+      setFilesFn((cur) => [...(cur || []), ...valid]);
+    }
+  }
+
+  function removeAttachmentAt(setFilesFn, index) {
+    setFilesFn((cur) => (cur || []).filter((_, i) => i !== index));
+  }
+
+  async function handleAddExpense(e) {
+    e.preventDefault();
+    const amount = parseFloat(form.amount);
+    if (!form.categoryId || isNaN(amount) || amount <= 0) {
+      notify('Please choose a category and enter a valid amount.');
+      return;
+    }
+    const { data: inserted, error } = await supabase.from('expenses').insert({
+      household_id: householdId,
+      expense_date: form.date,
+      category_id: form.categoryId,
+      description: form.description.trim(),
+      amount,
+      payment_source: form.paymentSource || null,
+      payment_bank: form.paymentSource === 'Cash' ? null : (form.paymentBank || null),
+      notes: form.notes.trim() || null,
+      created_by: session.user.id,
+      created_by_email: session.user.email,
+      ...(myPrivacyEnabled ? { is_private: expenseIsPrivate } : {}),
+    }).select().single();
+    if (error) {
+      notify('Could not save expense: ' + error.message);
+      return;
+    }
+    if (expenseFiles.length > 0 && inserted?.id) {
+      await uploadAttachmentsForRow('expenses', inserted.id, expenseFiles);
+    }
+    const d = new Date(form.date + 'T00:00:00');
+    setCurrentMonth(new Date(d.getFullYear(), d.getMonth(), 1));
+    setForm((f) => ({ ...f, description: '', amount: '', notes: '' }));
+    setShowExpenseNotes(false);
+    setExpenseFiles([]);
+    if (expenseFilesInputRef.current) expenseFilesInputRef.current.value = '';
+    loadAll();
+    showToast('Updated');
+    setDeskFrameFor('expense', 'view');
+  }
+
+  // AI feature #1: ask Claude to pick the best category for what the user
+  // just typed, and auto-fill the dropdown if it's confident. Fires once
+  // the Description field loses focus. Never throws into the UI -- worst
+  // case, nothing gets suggested and the user picks a category as normal.
+  async function suggestCategoryFromDescription(text) {
+    const trimmed = (text || '').trim();
+    if (trimmed.length < 4 || categories.length === 0) return;
+    try {
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const res = await fetch('/api/categorize-expense', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authSession?.access_token}` },
+        body: JSON.stringify({ description: trimmed, categoryNames: categories.map((c) => c.name) }),
+      });
+      if (!res.ok) return;
+      const json = await res.json();
+      if (!json.categoryName) return;
+      const match = categories.find((c) => c.name === json.categoryName);
+      if (!match) return;
+      setForm((f) => (f.description.trim() === trimmed ? { ...f, categoryId: match.id } : f));
+      setAiCategoryHint(`( AI-suggested: ${match.name}`);
+      setTimeout(() => setAiCategoryHint((h) => (h.includes(match.name) ? '' : h)), 4000);
+    } catch {
+      // AI suggestion is a nice-to-have -- silently skip on any failure.
+    }
+  }
+
+  // Same AI category-suggestion flow as Regular Expenses, but wired to
+  // the Fixed Expenses form's own state (newRecurring/setNewRecurring)
+  // and its own hint variable so the two forms never step on each other.
+  async function suggestFixedCategoryFromDescription(text) {
+    const trimmed = (text || '').trim();
+    if (trimmed.length < 4 || categories.length === 0) return;
+    try {
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const res = await fetch('/api/categorize-expense', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authSession?.access_token}` },
+                body: JSON.stringify({ description: trimmed, categoryNames: categories.map((c) => c.name) }),
+      });
+      if (!res.ok) return;
+      const json = await res.json();
+      if (!json.categoryName) return;
+      const match = categories.find((c) => c.name === json.categoryName);
+      if (!match) return;
+      setNewRecurring((f) => (f.name.trim() === trimmed ? { ...f, categoryId: match.id } : f));
+      setFixedAiCategoryHint(`( AI-suggested: ${match.name}`);
+      setTimeout(() => setFixedAiCategoryHint((h) => (h.includes(match.name) ? '' : h)), 4000);
+    } catch {
+      // AI suggestion is a nice-to-have -- worst case, nothing gets suggested.
+    }
+  }
+
+  // AI feature #2: build a short, plain-language summary of the currently
+  // viewed month (income, spending by category, fixed bills, savings, and
+  // whether any category or the overall budget is over) and ask Claude to
+  // turn it into a few sentences of insight plus a couple of concrete
+  // suggestions. Only runs when the user clicks the button -- never
+  // automatically -- since unlike the category auto-fill, this isn't
+  // something that should happen silently in the background on every visit.
+  async function generateMonthlyDigest() {
+    setAiDigestLoading(true);
+    setAiDigestError(false);
+    try {
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const categoryBreakdown = Object.entries(byCategory)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8)
+        .map(([name, amount]) => ({ name, amount }));
+      const res = await fetch('/api/monthly-digest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authSession?.access_token}` },
+        body: JSON.stringify({
+          currency: CURRENT_CURRENCY,
+          monthLabel: monthLabel(currentMonth),
+          totalIncome,
+          totalBudget,
+          remaining,
+          fixedTotal: recurringTotal,
+          savingsTotal,
+          // The REAL totals, computed from every category -- categoryBreakdown
+          // below is capped to the top 8 for a readable prompt, so it must
+          // never be summed server-side to derive "total spent" (that was a
+          // real bug: it silently dropped every category past the top 8).
+          totalSpendExcludingSavings: total,
+          totalSpendIncludingSavings: combinedOutflow,
+          categoryBreakdown,
+          categoryBreakdownIsPartial: pieData.length > categoryBreakdown.length,
+          overBudgetCategories: overCategories,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.digest) {
+        setAiDigestError(true);
+        setAiDigest('');
+        return;
+      }
+      setAiDigest(json.digest);
+      setAiDigestMonthKey(monthKey(currentMonth));
+    } catch {
+      setAiDigestError(true);
+      setAiDigest('');
+    } finally {
+      setAiDigestLoading(false);
+    }
+  }
+
+  // AI feature #3 helper: shrink and re-encode the uploaded image client-side
+  // before it ever leaves the browser. Phone camera photos are routinely
+  // 3-4000px and several MB, which risks Vercel's serverless request-body
+  // limit and Anthropic's own per-image size guidance -- capping the long
+  // edge to 1600px and re-encoding as JPEG keeps the payload small and the
+  // request reliable without any visible quality loss for reading text.
+  function readFileAsResizedBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('Could not read file'));
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = () => reject(new Error('Could not read image'));
+        img.onload = () => {
+          const maxDim = 1600;
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim) {
+            const scale = maxDim / Math.max(width, height);
+            width = Math.round(width * scale);
+            height = Math.round(height * scale);
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.85).split(',')[1]);
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // Maps whatever the model read off the receipt to one of the app's own
+  // PAYMENT_SOURCES values -- defaults to 'Cash' (same default the manual
+  // Add form uses) when the receipt didn't show a clear payment marker.
+  function matchPaymentSource(detected) {
+    return PAYMENT_SOURCES.includes(detected) ? detected : 'Cash';
+  }
+
+  // Auto-fill a bank for Credit Card / Debit Card payment sources by reusing
+  // whichever bank this household most recently used for that same source --
+  // saves re-picking the same bank on every single expense, and covers the
+  // AI receipt-scan path too (a receipt itself never states which bank issued
+  // the card, so that path used to leave payment_bank blank every time).
+  function getDefaultBankFor(source) {
+    if (source !== 'Credit Card' && source !== 'Debit Card') return '';
+    const match = expenses
+      .filter((x) => x.payment_source === source && x.payment_bank)
+      .sort((a, b) => new Date(b.expense_date) - new Date(a.expense_date))[0];
+    return match ? match.payment_bank : '';
+  }
+
+  function blankInvestmentForm() {
+    return {
+      investmentType: 'Fixed Deposit', name: '', institution: '', principal: '', currentValue: '',
+      interestRate: '', sipAmount: '', startDate: new Date().toISOString().slice(0, 10), maturityDate: '', status: 'Active',
+      currency: CURRENT_CURRENCY, notes: '',
+    };
+  }
+
+  function startEditInvestment(inv) {
+    setEditingInvestmentId(inv.id);
+    setInvestmentForm({
+      investmentType: inv.investment_type,
+      name: inv.name,
+      institution: inv.institution || '',
+      principal: String(inv.principal_amount || ''),
+      currentValue: inv.current_value != null ? String(inv.current_value) : '',
+      interestRate: inv.interest_rate != null ? String(inv.interest_rate) : '',
+      sipAmount: inv.sip_amount != null ? String(inv.sip_amount) : '',
+      startDate: inv.start_date || '',
+      maturityDate: inv.maturity_date || '',
+      status: inv.status || 'Active',
+      currency: inv.currency || CURRENT_CURRENCY,
+      notes: inv.notes || '',
+    });
+  }
+
+  function cancelEditInvestment() {
+    setEditingInvestmentId(null);
+    setInvestmentForm(blankInvestmentForm());
+  }
+
+  async function handleSaveInvestment() {
+    const principal = parseFloat(investmentForm.principal);
+    if (!investmentForm.name.trim() || isNaN(principal) || principal <= 0) {
+      notify('Please enter a name and a valid principal / invested amount.');
+      return;
+    }
+    const payload = {
+      investment_type: investmentForm.investmentType,
+      name: investmentForm.name.trim(),
+      institution: investmentForm.institution.trim() || null,
+      principal_amount: principal,
+      current_value: investmentForm.currentValue ? parseFloat(investmentForm.currentValue) : null,
+      interest_rate: investmentForm.investmentType === 'Fixed Deposit' && investmentForm.interestRate ? parseFloat(investmentForm.interestRate) : null,
+      sip_amount: investmentForm.investmentType === 'Mutual Fund' && investmentForm.sipAmount ? parseFloat(investmentForm.sipAmount) : null,
+      start_date: investmentForm.startDate || null,
+      maturity_date: investmentForm.investmentType === 'Fixed Deposit' ? (investmentForm.maturityDate || null) : null,
+      status: investmentForm.status || 'Active',
+      currency: investmentForm.currency || CURRENT_CURRENCY,
+      notes: investmentForm.notes ? investmentForm.notes.trim() : null,
+    };
+    let error;
+    let newInvestmentId = null;
+    if (editingInvestmentId) {
+      ({ error } = await supabase.from('investments').update(payload).eq('id', editingInvestmentId));
+    } else {
+      const { data: insertedInv, error: insErr } = await supabase.from('investments').insert({
+        household_id: householdId, created_by: session.user.id, created_by_email: session.user.email, ...payload,
+      }).select().single();
+      error = insErr;
+      newInvestmentId = insertedInv?.id || null;
+    }
+    if (error) { notify('Could not save investment: ' + error.message); return; }
+    if (investmentFiles.length > 0 && newInvestmentId) {
+      await uploadAttachmentsForRow('investments', newInvestmentId, investmentFiles);
+    }
+    const wasEditing = !!editingInvestmentId;
+    cancelEditInvestment();
+    setShowInvestmentNotes(false);
+    setInvestmentFiles([]);
+    if (investmentFilesInputRef.current) investmentFilesInputRef.current.value = '';
+    await loadAll();
+    showToast(wasEditing ? 'Investment updated' : 'Investment added');
+    setDeskFrameFor('investments', 'view');
+  }
+
+  function handleDeleteInvestment(id, name) {
+    askConfirm(`Remove "${name}" from your investments? This can't be undone.`, 'investments', () => doDeleteInvestment(id));
+  }
+  async function doDeleteInvestment(id) {
+    const { error } = await supabase.from('investments').delete().eq('id', id);
+    if (error) { notify('Could not delete: ' + error.message); return; }
+    if (editingInvestmentId === id) cancelEditInvestment();
+    loadAll();
+  }
+
+  // One-tap status change straight from the records list -- Active/Matured/
+  // Closed no longer require opening the edit form at all. Marking an FD
+  // Closed here has the same effect as doing it via the edit form's Status
+  // dropdown: it drops out of the dashboard total but stays visible under
+  // the Closed filter above.
+  async function handleQuickInvestmentStatus(inv, newStatus) {
+    const { error } = await supabase.from('investments').update({ status: newStatus }).eq('id', inv.id);
+    if (error) { notify('Could not update status: ' + error.message); return; }
+    if (editingInvestmentId === inv.id) setInvestmentForm((f) => ({ ...f, status: newStatus }));
+    await loadAll();
+    showToast(`Marked ${newStatus}`);
+  }
+
+  async function handleScanFileChange(e) {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // lets the same file be re-picked later if needed
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setScanError('Please choose an image file (photo or screenshot of the receipt).');
+      return;
+    }
+    setScanLoading(true);
+    setScanError('');
+    setLastScanAdded([]);
+    try {
+      const base64 = await readFileAsResizedBase64(file);
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const res = await fetch('/api/scan-receipt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authSession?.access_token}` },
+        body: JSON.stringify({ imageBase64: base64, categoryNames: categories.map((c) => c.name) }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.items || json.items.length === 0) {
+        setScanError("Couldn't find any expenses in that image -- try a clearer photo, or enter it manually below.");
+        return;
+      }
+      // Straight to the database -- no review step. categoryId falls back
+      // to the first category (same fallback the old review list used) so
+      // a row never goes in with no category at all; payment source falls
+      // back to Cash. Both are just as editable afterwards as anything
+      // typed in by hand.
+      const rows = json.items
+        .filter((item) => item.amount && Number(item.amount) > 0)
+        .map((item) => {
+          const match = categories.find((c) => c.name.toLowerCase() === (item.categoryName || '').toLowerCase());
+          const paymentSource = matchPaymentSource(item.paymentSource);
+          return {
+            household_id: householdId,
+            expense_date: item.date || new Date().toISOString().slice(0, 10),
+            category_id: match ? match.id : (categories[0]?.id || null),
+            description: (item.description || '').trim(),
+            amount: Number(item.amount),
+            payment_source: paymentSource,
+            payment_bank: getDefaultBankFor(paymentSource) || null,
+            created_by: session.user.id,
+            created_by_email: session.user.email,
+          };
+        });
+      if (rows.length === 0) {
+        setScanError("Couldn't find any expenses in that image -- try a clearer photo, or enter it manually below.");
+        return;
+      }
+      const { error } = await supabase.from('expenses').insert(rows);
+      if (error) {
+        setScanError('Could not save scanned expenses: ' + error.message);
+        return;
+      }
+      setLastScanAdded(rows.map((r) => ({ description: r.description || '(no description)', amount: r.amount })));
+      loadAll();
+      showToast('Updated');
+    } catch {
+      setScanError("Couldn't read that image -- try again, or enter it manually below.");
+    } finally {
+      setScanLoading(false);
+    }
+  }
+
+  // Shared by AI feature #4 (chat) and #5 (Budget Coach): a snapshot of one
+  // "YYYY-MM" month's actuals, computed the same way the dashboard's own
+  // current-month figures are (recurringOccursInMonth, exact-month-match for
+  // income/savings) so multi-month numbers handed to either endpoint always
+  // agree with what the app itself shows for that month.
+  function computeMonthSnapshot(key) {
+    const mExp = expenses.filter((e) => e.expense_date.slice(0, 7) === key);
+    const mRecur = recurringExpenses.filter((r) => recurringOccursInMonth(r, key));
+    const mIncome = incomes.filter((i) => i.active && i.start_date.slice(0, 7) === key);
+    const mSavings = savingsGoals.filter((s) => s.active && s.start_date.slice(0, 7) === key);
+    const catTotals = {};
+    mExp.forEach((e) => {
+      const n = categoryNameById[e.category_id] || 'Uncategorized';
+      catTotals[n] = (catTotals[n] || 0) + Number(e.amount);
+    });
+    mRecur.forEach((r) => {
+      const n = categoryNameById[r.category_id] || 'Uncategorized';
+      catTotals[n] = (catTotals[n] || 0) + Number(r.amount);
+    });
+    const overBudget = categories
+      .filter((c) => c.monthly_budget > 0 && (catTotals[c.name] || 0) > c.monthly_budget)
+      .map((c) => c.name);
+    const expensesTotal = mExp.reduce((s, e) => s + Number(e.amount), 0) + mRecur.reduce((s, r) => s + Number(r.amount), 0);
+    const savingsTotalM = mSavings.reduce((s, g) => s + Number(g.amount), 0);
+    // The household's total monthly budget is a single current setting, not
+    // stored per-month historically, so this same value is applied to every
+    // month here (same simplification the rest of the app already makes).
+    // remainingVsBudget is computed here -- not left for the AI to derive --
+    // after an earlier bug where the chat assistant told the user they were
+    // "not over budget" when they actually were AED 2,112.45 over: it had
+    // been asked to compare raw totals itself and got the arithmetic wrong.
+    const remainingVsBudget = totalBudget > 0 ? totalBudget - (expensesTotal + savingsTotalM) : null;
+    const d = new Date(key + '-01T00:00:00');
+    return {
+      monthLabel: monthLabel(d),
+      income: mIncome.reduce((s, i) => s + Number(i.amount), 0),
+      expensesTotal,
+      savingsTotal: savingsTotalM,
+      categoryTotals: catTotals,
+      overBudgetCategories: overBudget,
+      remainingVsBudget, // negative = over budget by this amount that month; null = no budget set
+    };
+  }
+
+  // AI feature #4 needed a fix shortly after shipping: it could only see
+  // category-level MONTHLY TOTALS (via computeMonthSnapshot), never the
+  // individual expense rows themselves -- so it had no way to answer a
+  // question like "what did I spend at Carrefour" or "show me my taxi
+  // rides", since a specific description isn't part of a category sum.
+  // This returns the actual one-off expense rows (date, description,
+  // category, amount) for one "YYYY-MM" month, capped defensively so a
+  // very high-transaction-volume household can't blow up the request size.
+  function rawExpensesForMonth(key) {
+    return expenses
+      .filter((e) => e.expense_date.slice(0, 7) === key)
+      .slice(0, 200)
+      .map((e) => ({
+        date: e.expense_date,
+        description: e.description || '',
+        category: categoryNameById[e.category_id] || 'Uncategorized',
+        amount: Number(e.amount),
+        // Payment method wasn't being sent at all -- so a question like
+        // "what did I spend on my FAB credit card" had no way to be
+        // answered correctly; the assistant could only see date/category/
+        // amount/description, never which card or account paid for it.
+        paymentSource: e.payment_source || 'Cash',
+        paymentBank: e.payment_bank || null,
+      }));
+  }
+
+  function recentMonthSnapshots(count) {
+    const out = [];
+    for (let i = count - 1; i >= 0; i--) {
+      const d = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - i, 1);
+      out.push(computeMonthSnapshot(monthKey(d)));
+    }
+    return out;
+  }
+
+  // Fire-and-forget row insert into chat_messages -- failures here shouldn't
+  // block the conversation itself (worst case that one message just doesn't
+  // survive a reload), so this deliberately swallows its own errors instead
+  // of surfacing them in the chat UI.
+  async function saveChatMessage(role, content) {
+    try {
+      await supabase.from('chat_messages').insert({
+        household_id: householdId,
+        role,
+        content,
+        created_by: session.user.id,
+        created_by_email: session.user.email,
+      });
+    } catch {
+      // ignore -- see comment above
+    }
+  }
+
+  function clearChatHistory() {
+    askConfirm("Clear the whole chat history for everyone in the group account? This can't be undone.", 'aria', doClearChatHistory);
+  }
+  async function doClearChatHistory() {
+    await supabase.from('chat_messages').delete().eq('household_id', householdId);
+    setChatMessages([]);
+  }
+
+  async function sendChatMessage() {
+    const text = chatInput.trim();
+    if (!text || chatLoading) return;
+    const newHistory = [...chatMessages, { role: 'user', content: text }];
+    setChatMessages(newHistory);
+    setChatInput('');
+    setChatLoading(true);
+    saveChatMessage('user', text);
+    try {
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const prevMonthDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
+      const context = {
+        currency: CURRENT_CURRENCY,
+        totalBudget,
+        categoryBudgetCaps: categories.map((c) => ({ name: c.name, monthlyCap: c.monthly_budget || null })),
+        fixedExpenses: recurringExpenses
+          .filter((r) => r.active)
+          .map((r) => ({ name: r.name, category: categoryNameById[r.category_id], amount: r.amount, frequency: r.frequency, dueDate: r.due_date || null })),
+        savingsGoalsThisMonth: savingsForMonth.map((s) => ({ name: s.name, amount: s.amount })),
+        // Individual income line items (not just the combined monthly total
+        // already inside recentMonths) -- without this the assistant could
+        // say what total income was but not name a single income source,
+        // which read as "it can't see the Income tab at all" even though
+        // the total itself was correct.
+        incomeThisMonth: incomeForMonth.map((i) => ({ source: i.name, member: i.member_email, amount: i.amount })),
+        recentMonths: recentMonthSnapshots(3),
+        // Individual expense rows (not just category totals) for the
+        // current and previous month, so questions about a specific
+        // merchant or transaction description can actually be answered.
+        transactionsThisMonth: rawExpensesForMonth(monthKey(currentMonth)),
+        transactionsPreviousMonth: rawExpensesForMonth(monthKey(prevMonthDate)),
+        // Who's in the household -- so "who are the members" or "who added
+        // this" type questions can be answered instead of only ever seeing
+        // financial numbers. Name/email only (no phone/location) since
+        // those aren't relevant to a budget question.
+        householdMembers: members.map((m) => ({ name: m.name || m.email.split('@')[0], email: m.email })),
+      };
+      const res = await fetch('/api/chat-assistant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authSession?.access_token}` },
+        body: JSON.stringify({ message: text, history: newHistory.slice(0, -1).slice(-10), context }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.reply) {
+        // Deliberately NOT saved to chat_messages -- a transient "try again"
+        // notice isn't part of the actual conversation and would just be
+        // confusing clutter to see again on a later reload.
+        setChatMessages((prev) => [...prev, { role: 'assistant', content: "Sorry, I couldn't answer that just now -- try again in a moment." }]);
+        return;
+      }
+      setChatMessages((prev) => [...prev, { role: 'assistant', content: json.reply }]);
+      saveChatMessage('assistant', json.reply);
+    } catch {
+      setChatMessages((prev) => [...prev, { role: 'assistant', content: "Sorry, I couldn't answer that just now -- try again in a moment." }]);
+    } finally {
+      setChatLoading(false);
+    }
+  }
+
+  async function generateBudgetCoach() {
+    setCoachLoading(true);
+    setCoachError(false);
+    try {
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const context = {
+        currency: CURRENT_CURRENCY,
+        categoryBudgetCaps: categories.map((c) => ({ name: c.name, monthlyCap: c.monthly_budget || null })),
+        months: recentMonthSnapshots(6),
+      };
+      const res = await fetch('/api/budget-coach', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authSession?.access_token}` },
+        body: JSON.stringify(context),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.advice) {
+        setCoachError(true);
+        setCoachResult('');
+        return;
+      }
+      setCoachResult(json.advice);
+    } catch {
+      setCoachError(true);
+      setCoachResult('');
+    } finally {
+      setCoachLoading(false);
+    }
+  }
+
+  async function handleDeleteExpense(id) {
+    const { error } = await supabase.from('expenses').delete().eq('id', id);
+    if (error) notify('Could not delete: ' + error.message);
+    loadAll();
+  }
+
+  // Expenses this month auto-saves like Fixed monthly expenses -- text/number
+  // fields commit on blur, dates/dropdowns commit immediately on change.
+  function updateExpenseDraftField(id, field, value) {
+    setExpenseDrafts((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
+  }
+
+  async function commitExpenseField(id, field, value, extra) {
+    const merged = { ...(expenseDrafts[id] || {}), [field]: value, ...(extra || {}) };
+    setExpenseDrafts((prev) => ({ ...prev, [id]: merged }));
+    const amount = parseFloat(merged.amount);
+    if (!merged.date || isNaN(amount) || amount <= 0) return;
+    const { error } = await supabase
+      .from('expenses')
+      .update({
+        expense_date: merged.date,
+        category_id: merged.categoryId,
+        description: (merged.description || '').trim(),
+        amount,
+        payment_source: merged.paymentSource || null,
+        payment_bank: merged.paymentSource === 'Cash' ? null : (merged.paymentBank || null),
+        notes: (merged.notes ?? '').trim(),
+      })
+      .eq('id', id);
+    if (error) {
+      notify('Could not update expense: ' + error.message);
+      return;
+    }
+    loadAll();
+  }
+
+  function handleAutofillBanks() {
+    const missing = expenses.filter((x) => (x.payment_source === 'Credit Card' || x.payment_source === 'Debit Card') && !x.payment_bank);
+    if (missing.length === 0) { notify('No expenses are missing a bank right now.'); return; }
+    const bySource = {};
+    for (const src of ['Credit Card', 'Debit Card']) {
+      const bank = getDefaultBankFor(src);
+      const count = missing.filter((x) => x.payment_source === src).length;
+      if (count > 0 && bank) bySource[src] = { bank, count };
+    }
+    const lines = Object.entries(bySource).map(([src, v]) => `${v.count} ${src} entr${v.count === 1 ? 'y' : 'ies'} -> ${v.bank}`);
+    if (lines.length === 0) {
+      notify("Can't auto-fill yet -- none of your existing Credit Card or Debit Card expenses have a bank saved to copy from. Pick a bank on one expense first, then try again.");
+      return;
+    }
+    const resolvedCount = Object.values(bySource).reduce((s, v) => s + v.count, 0);
+    const unresolved = missing.length - resolvedCount;
+    let msg = `Fill in the missing bank on:\n${lines.join('\n')}`;
+    if (unresolved > 0) msg += `\n\n${unresolved} more entr${unresolved === 1 ? 'y' : 'ies'} will stay as-is (no bank on file yet for that payment source).`;
+    askConfirm(msg, 'expense', () => doAutofillBanks(bySource));
+  }
+  async function doAutofillBanks(bySource) {
+    for (const [src, v] of Object.entries(bySource)) {
+      const { error } = await supabase.from('expenses').update({ payment_bank: v.bank }).eq('household_id', householdId).eq('payment_source', src).is('payment_bank', null);
+      if (error) { notify('Could not update: ' + error.message); return; }
+    }
+    loadAll();
+    showToast('Banks filled in');
+  }
+
+  async function handleAddCategory() {
+    const name = newCategoryName.trim();
+    if (!name) return;
+    const { error } = await supabase.from('categories').insert({ name, household_id: householdId, group_id: newCategoryGroupId || null });
+    if (error) {
+      notify('Could not add category: ' + error.message);
+      return;
+    }
+    setNewCategoryName('');
+    setNewCategoryGroupId('');
+    loadAll();
+  }
+
+  function handleRemoveCategory(id, name) {
+    const hasExpenses = expenses.some((e) => e.category_id === id);
+    const msg = hasExpenses ? `"${name}" has expenses logged against it. Remove anyway?` : `Remove category "${name}"?`;
+    askConfirm(msg, 'settings', () => doRemoveCategory(id));
+  }
+  async function doRemoveCategory(id) {
+    const { error } = await supabase.from('categories').delete().eq('id', id);
+    if (error) notify('Could not remove category: ' + error.message);
+    loadAll();
+  }
+
+  async function handleRenameCategory(id) {
+    const name = (categoryNameDrafts[id] || '').trim();
+    const current = categories.find((c) => c.id === id);
+    if (!name || (current && name === current.name)) return;
+    const { error } = await supabase.from('categories').update({ name }).eq('id', id);
+    if (error) {
+      notify('Could not rename category: ' + error.message);
+      return;
+    }
+    loadAll();
+  }
+
+  async function handleAddGroup() {
+    const name = newGroupName.trim();
+    if (!name) return;
+    const { error } = await supabase.from('category_groups').insert({ name, household_id: householdId });
+    if (error) {
+      notify('Could not add group: ' + error.message);
+      return;
+    }
+    setNewGroupName('');
+    loadAll();
+  }
+
+  async function handleRenameGroup(id) {
+    const current = categoryGroups.find((g) => g.id === id);
+    const name = (groupNameDrafts[id] ?? current?.name ?? '').trim();
+    if (!name || (current && name === current.name)) return;
+    const { error } = await supabase.from('category_groups').update({ name }).eq('id', id);
+    if (error) {
+      notify('Could not rename group: ' + error.message);
+      return;
+    }
+    loadAll();
+  }
+
+  function handleRemoveGroup(id, name) {
+    const count = categories.filter((c) => c.group_id === id).length;
+    const msg = count > 0
+      ? `'${name}' has ${count} categor${count === 1 ? 'y' : 'ies'} in it. Remove the group? Its categories become ungrouped, not deleted.`
+      : `Remove group '${name}'?`;
+    askConfirm(msg, 'settings', () => doRemoveGroup(id));
+  }
+  async function doRemoveGroup(id) {
+    const { error } = await supabase.from('category_groups').delete().eq('id', id);
+    if (error) notify('Could not remove group: ' + error.message);
+    loadAll();
+  }
+
+  async function handleMoveCategoryToGroup(categoryId, groupId) {
+    const { error } = await supabase.from('categories').update({ group_id: groupId || null }).eq('id', categoryId);
+    if (error) notify('Could not move category: ' + error.message);
+    loadAll();
+  }
+
+  // Settings auto-saves field by field (like Income/Fixed Expenses/Savings)
+  // instead of a single "Save settings" button -- each field commits on its
+  // own blur/change, so nothing is lost if someone edits one field and
+  // navigates away without touching the others.
+  // The monthly budget is now one row per household+month (upsert on the
+  // unique constraint), same as Income/Savings, instead of one flat number
+  // on "settings" -- see the monthlyBudgets state declaration for why.
+  async function commitMonthlyBudget(monthStr, value) {
+    const total = parseFloat(value);
+    const { error } = await supabase
+      .from('monthly_budgets')
+      .upsert({ household_id: householdId, month: monthStr, total_budget: isNaN(total) ? 0 : total }, { onConflict: 'household_id,month' });
+    if (error) {
+      notify('Could not update the budget for that month: ' + error.message);
+      return;
+    }
+    loadAll();
+  }
+
+  async function commitCurrency(value) {
+    setCurrencyDraft(value);
+    const { error } = await supabase
+      .from('settings')
+      .update({ currency: value })
+      .eq('household_id', householdId);
+    if (error) {
+      notify('Could not update currency: ' + error.message);
+      return;
+    }
+    loadAll();
+  }
+
+  async function commitHouseholdName(value) {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      setHouseholdNameDraft(household.name || '');
+      return;
+    }
+    if (trimmed === household.name) return;
+    const { error } = await supabase
+      .from('households')
+      .update({ name: trimmed })
+      .eq('id', householdId);
+    if (error) {
+      notify('Could not rename group account: ' + error.message);
+      setHouseholdNameDraft(household.name || '');
+      return;
+    }
+    onHouseholdChange();
+  }
+
+  async function commitCategoryBudget(id, value) {
+    const val = parseFloat(value);
+    const { error } = await supabase
+      .from('categories')
+      .update({ monthly_budget: isNaN(val) || val <= 0 ? 0 : val })
+      .eq('id', id);
+    if (error) {
+      notify('Could not update category budget: ' + error.message);
+      return;
+    }
+    loadAll();
+  }
+
+  // Self-service account deletion (Settings > App > Delete My Account),
+  // required for App Store / Play Store review (Apple 5.1.1(v) and the
+  // equivalent Google Play requirement). See api/invite-member.js's
+  // deleteOwnAccount for exactly what is deleted vs. just unlinked. This
+  // is irreversible, so it gets its own type-to-confirm modal instead of
+  // the shared askConfirm()/confirmBanner() pattern used for row deletes.
+  const [deleteAccountModalOpen, setDeleteAccountModalOpen] = useState(false);
+  const [deleteAccountConfirmText, setDeleteAccountConfirmText] = useState('');
+  const [deleteAccountStatus, setDeleteAccountStatus] = useState(''); // '', 'deleting', 'error'
+  async function handleDeleteAccount() {
+    setDeleteAccountStatus('deleting');
+    try {
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const res = await fetch('/api/invite-member', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authSession?.access_token}` },
+        body: JSON.stringify({ action: 'deleteAccount' }),
+      });
+      if (!res.ok) throw new Error('failed');
+      await supabase.auth.signOut();
+      window.location.reload();
+    } catch {
+      setDeleteAccountStatus('error');
+    }
+  }
+
+  async function handleSignOut() {
+    // v3.63: wrap in try/catch/finally, and sign out with { scope: 'local' }
+    // instead of the default 'global' scope. If the session is already
+    // stale/invalid (e.g. an expired refresh token -- the same condition
+    // that shows "Invalid Session" in Admin Console), the default signOut()
+    // tries to revoke the session on the server first and throws when that
+    // network call fails, which silently aborted this whole function before
+    // it ever reached the reload below -- so Sign Out looked like it did
+    // nothing. { scope: 'local' } just clears the token Supabase stored in
+    // this browser, no server round-trip required, so it can't get stuck
+    // the same way. The reload is now unconditional (finally) so the user
+    // always lands back on a clean login screen either way.
+    try {
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch {
+      // ignore -- local storage gets cleared below regardless
+    } finally {
+      // Extra safety net: directly clear any lingering Supabase auth keys
+      // in localStorage in case signOut() itself couldn't run at all (e.g.
+      // it threw synchronously before clearing storage).
+      try {
+        Object.keys(window.localStorage || {}).forEach((k) => {
+          if (k.startsWith('sb-') && k.includes('-auth-token')) window.localStorage.removeItem(k);
+        });
+      } catch {}
+      // v1.91: force a hard reload after sign-out. The app's top-level
+      // session listener wasn't reliably flipping the UI back to the login
+      // screen after signOut() resolved -- session cleared server-side, but
+      // the Dashboard kept rendering with stale local state. A full reload
+      // re-runs the initial session check from scratch, which we know
+      // correctly shows the login screen when there's no active session.
+      window.location.reload();
+    }
+  }
+
+  async function handleAddRecurring(e) {
+    e.preventDefault();
+    const amount = parseFloat(newRecurring.amount);
+    if (!newRecurring.name.trim() || !newRecurring.categoryId || isNaN(amount) || amount <= 0 || !newRecurring.startDate) {
+      notify('Please fill in name, category, amount, and start date.');
+      return;
+    }
+    const { data: inserted, error } = await supabase.from('recurring_expenses').insert({
+      household_id: householdId,
+      name: newRecurring.name.trim(),
+      category_id: newRecurring.categoryId,
+      amount,
+      start_date: newRecurring.startDate,
+      end_date: newRecurring.endDate || null,
+      frequency: newRecurring.frequency,
+      due_date: newRecurring.dueDate || null,
+      payment_source: newRecurring.paymentSource || null,
+      payment_bank: CARD_PAYMENT_SOURCES.includes(newRecurring.paymentSource) ? (newRecurring.paymentBank || null) : null,
+      notes: newRecurring.notes.trim() || null,
+      created_by: session.user.id,
+      ...(myPrivacyEnabled ? { is_private: recurringIsPrivate } : {}),
+    }).select().single();
+    if (error) {
+      notify('Could not save fixed expense: ' + error.message);
+      return;
+    }
+    if (recurringFiles.length > 0 && inserted?.id) {
+      await uploadAttachmentsForRow('recurring_expenses', inserted.id, recurringFiles);
+    }
+    setNewRecurring((r) => ({ ...r, name: '', amount: '', endDate: '', dueDate: '', notes: '' }));
+    setShowRecurringNotes(false);
+    setRecurringFiles([]);
+    if (recurringFilesInputRef.current) recurringFilesInputRef.current.value = '';
+    loadAll();
+    setDeskFrameFor('fixed', 'view');
+  }
+
+  // Every field in the Fixed monthly expenses table auto-saves -- there's no
+  // separate "Save" button. Text/number fields (name, amount) save on blur
+  // (once you're done typing); dates/dropdowns save immediately on change
+  // since those only fire once a value is actually picked.
+  function updateRecurringDraftField(id, field, value) {
+    setRecurringDrafts((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
+  }
+
+  async function commitRecurringField(id, field, value) {
+    const merged = { ...(recurringDrafts[id] || {}), [field]: value };
+    setRecurringDrafts((prev) => ({ ...prev, [id]: merged }));
+    if (!merged.name?.trim() || !merged.startDate) return;
+    const amount = parseFloat(merged.amount);
+    const { error } = await supabase
+      .from('recurring_expenses')
+      .update({
+        name: merged.name.trim(),
+        category_id: merged.categoryId,
+        amount: isNaN(amount) ? 0 : amount,
+        start_date: merged.startDate,
+        end_date: merged.endDate || null,
+        frequency: merged.frequency || 'monthly',
+        due_date: merged.dueDate || null,
+        payment_source: merged.paymentSource || null,
+        payment_bank: CARD_PAYMENT_SOURCES.includes(merged.paymentSource) ? (merged.paymentBank || null) : null,
+        notes: (merged.notes ?? '').trim(),
+      })
+      .eq('id', id);
+    if (error) notify('Could not update: ' + error.message);
+    loadAll();
+  }
+
+  function handleDeleteRecurring(id, name) {
+    askConfirm(`Remove "${name}" completely (including past months)? To just stop it going forward, set an end month instead and click Save.`, 'fixed', () => doDeleteRecurring(id));
+  }
+  async function doDeleteRecurring(id) {
+    const { error } = await supabase.from('recurring_expenses').delete().eq('id', id);
+    if (error) notify('Could not remove: ' + error.message);
+    loadAll();
+  }
+
+  async function handleAddSaving(e) {
+    e.preventDefault();
+    const amount = parseFloat(newSaving.amount);
+    if (!newSaving.name.trim() || isNaN(amount) || amount <= 0 || !newSaving.month) {
+      notify('Please fill in a name, amount, and month.');
+      return;
+    }
+    const { data: inserted, error } = await supabase.from('savings_goals').insert({
+      household_id: householdId,
+      name: newSaving.name.trim(),
+      amount,
+      start_date: newSaving.month + '-01',
+      end_date: null,
+      notes: newSaving.notes.trim() || null,
+      created_by: session.user.id,
+      ...(myPrivacyEnabled ? { is_private: savingIsPrivate } : {}),
+    }).select().single();
+    if (error) {
+      notify('Could not save: ' + error.message);
+      return;
+    }
+    if (savingFiles.length > 0 && inserted?.id) {
+      await uploadAttachmentsForRow('savings_goals', inserted.id, savingFiles);
+    }
+    setNewSaving((s) => ({ ...s, name: '', amount: '', notes: '' }));
+    setShowSavingNotes(false);
+    setSavingFiles([]);
+    if (savingFilesInputRef.current) savingFilesInputRef.current.value = '';
+    loadAll();
+    setDeskFrameFor('savings', 'view');
+  }
+
+  // Savings rows auto-save like Income -- text/number fields commit on blur,
+  // the Month field commits immediately on change. No Save button, and no
+  // frequency/end date -- entered fresh each month on purpose (see the
+  // comment on savingsGoals above).
+  function updateSavingDraftField(id, field, value) {
+    setSavingsDrafts((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
+  }
+
+  async function commitSavingField(id, field, value) {
+    const merged = { ...(savingsDrafts[id] || {}), [field]: value };
+    setSavingsDrafts((prev) => ({ ...prev, [id]: merged }));
+    if (!merged.name?.trim() || !merged.month) return;
+    const amount = parseFloat(merged.amount);
+    const { error } = await supabase
+      .from('savings_goals')
+      .update({
+        name: merged.name.trim(),
+        amount: isNaN(amount) ? 0 : amount,
+        start_date: merged.month + '-01',
+        end_date: null,
+      })
+      .eq('id', id);
+    if (error) {
+      notify('Could not update: ' + error.message);
+      return;
+    }
+    setSavingsGoals((prev) =>
+      prev.map((s) =>
+        s.id === id
+          ? { ...s, name: merged.name.trim(), amount: isNaN(amount) ? 0 : amount, start_date: merged.month + '-01', end_date: null }
+          : s
+      )
+    );
+  }
+
+  function handleDeleteSaving(id, name) {
+    askConfirm(`Remove the savings goal "${name}"?`, 'savings', () => doDeleteSaving(id));
+  }
+  async function doDeleteSaving(id) {
+    const { error } = await supabase.from('savings_goals').delete().eq('id', id);
+    if (error) {
+      notify('Could not remove: ' + error.message);
+      return;
+    }
+    setSavingsGoals((prev) => prev.filter((s) => s.id !== id));
+  }
+
+  async function handleSendInvite(e) {
+    e.preventDefault();
+    const email = inviteEmail.trim();
+    if (!email) return;
+    // Free-tier cap: owner + 2 additional people per household. Pending
+    // (not-yet-accepted) invites count toward the cap too -- otherwise an
+    // owner could stack up unlimited pending invites and get more than 2
+    // extra people the moment they all sign up.
+    const additionalCount = Math.max(0, members.length - 1) + pendingInvites.length;
+    if (additionalCount >= MAX_ADDITIONAL_USERS) {
+      setInviteStatus('limit-reached');
+      return;
+    }
+    setInviteStatus('sending');
+    const { data: existing } = await supabase
+      .from('household_invites')
+      .select('id')
+      .eq('household_id', householdId)
+      .eq('status', 'pending')
+      .ilike('email', email)
+      .maybeSingle();
+    if (!existing) {
+      const { error } = await supabase.from('household_invites').insert({
+        household_id: householdId,
+        email,
+        relation: inviteRelation,
+        invited_by: session.user.id,
+      });
+      if (error) {
+        setInviteStatus('');
+        notify('Could not create invite: ' + error.message);
+        return;
+      }
+    }
+    setInviteEmail('');
+
+    // The invite itself (the household_invites row) is what actually lets
+    // this person auto-join when they sign up -- that part always works
+    // regardless of what happens below. This email is just a courtesy
+    // notification over the same free Gmail infra as reports/reminders, so
+    // its failure (e.g. GMAIL_USER/GMAIL_APP_PASSWORD not configured yet)
+    // shouldn't be reported as the invite itself failing.
+    try {
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const res = await fetch('/api/invite-member', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authSession?.access_token}` },
+        body: JSON.stringify({ to: email, householdName: household.name }),
+      });
+      if (res.ok) {
+        setInviteStatus('sent');
+      } else {
+        const json = await res.json().catch(() => ({}));
+        setInviteStatus('sent-no-email: ' + (json.error || 'email not sent'));
+      }
+    } catch {
+      setInviteStatus('sent-no-email: could not reach email service');
+    }
+    loadAll();
+  }
+
+  async function handleCancelInvite(id) {
+    const { error } = await supabase.from('household_invites').delete().eq('id', id);
+    if (error) notify('Could not cancel invite: ' + error.message);
+    loadAll();
+  }
+
+  async function handleUpdateMemberRelation(memberId, relation) {
+    const { error } = await supabase.from('household_members').update({ relation }).eq('id', memberId);
+    if (error) notify('Could not update relation: ' + error.message);
+    loadAll();
+  }
+
+  async function handleAddIncome(e) {
+    e.preventDefault();
+    const amount = parseFloat(newIncome.amount);
+    if (!newIncome.name.trim() || isNaN(amount) || amount <= 0 || !newIncome.month) {
+      notify('Please fill in a name, amount, and month.');
+      return;
+    }
+    const { data: inserted, error } = await supabase.from('incomes').insert({
+      household_id: householdId,
+      name: newIncome.name.trim(),
+      member_email: newIncome.memberEmail,
+      amount,
+      start_date: newIncome.month + '-01',
+      end_date: null,
+      notes: newIncome.notes.trim() || null,
+      created_by: session.user.id,
+      ...(myPrivacyEnabled ? { is_private: incomeIsPrivate } : {}),
+    }).select().single();
+    if (error) {
+      notify('Could not save income: ' + error.message);
+      return;
+    }
+    if (incomeFiles.length > 0 && inserted?.id) {
+      await uploadAttachmentsForRow('incomes', inserted.id, incomeFiles);
+    }
+    setNewIncome((i) => ({ ...i, name: '', amount: '', notes: '' }));
+    setShowIncomeNotes(false);
+    setIncomeFiles([]);
+    if (incomeFilesInputRef.current) incomeFilesInputRef.current.value = '';
+    loadAll();
+    setDeskFrameFor('income', 'view');
+  }
+
+  // Income rows auto-save like Fixed Expenses -- text/number fields commit on
+  // blur, the Month field commits immediately on change. No Save button.
+  function updateIncomeDraftField(id, field, value) {
+    setIncomeDrafts((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
+  }
+
+  async function commitIncomeField(id, field, value) {
+    const merged = { ...(incomeDrafts[id] || {}), [field]: value };
+    setIncomeDrafts((prev) => ({ ...prev, [id]: merged }));
+    if (!merged.name?.trim() || !merged.month) return;
+    const amount = parseFloat(merged.amount);
+    const { error } = await supabase
+      .from('incomes')
+      .update({
+        name: merged.name.trim(),
+        amount: isNaN(amount) ? 0 : amount,
+        start_date: merged.month + '-01',
+        end_date: null,
+      })
+      .eq('id', id);
+    if (error) notify('Could not update: ' + error.message);
+    loadAll();
+  }
+
+  function handleDeleteIncome(id, name) {
+    askConfirm(`Remove "${name}"?`, 'income', () => doDeleteIncome(id));
+  }
+  async function doDeleteIncome(id) {
+    const { error } = await supabase.from('incomes').delete().eq('id', id);
+    if (error) notify('Could not remove: ' + error.message);
+    loadAll();
+  }
+
+  // Builds a jsPDF document covering Expenses / Income / Fixed Expenses for
+  // the chosen date range. Returns the doc plus a filename and a human
+  // range label, so the caller can either save it locally or hand it off
+  // to the email endpoint as a base64 attachment.
+  function buildReportPdf(from, to) {
+    const rangeLabel = `${fmtDate(from)} - ${fmtDate(to)}`;
+    const rangeExpenses = expenses.filter((e) => e.expense_date >= from && e.expense_date <= to);
+    const fromMonth = from.slice(0, 7);
+    const toMonth = to.slice(0, 7);
+    const rangeIncomes = incomes.filter((i) => i.active && i.start_date.slice(0, 7) >= fromMonth && i.start_date.slice(0, 7) <= toMonth);
+
+    // Fixed Expenses are recurring, so a date range spanning more than one
+    // month can include multiple occurrences of the same bill (e.g. two
+    // months of rent). Walk every month in the range and include one row
+    // per month a recurring expense actually falls due, using the same
+    // frequency logic as the dashboard -- this is what makes the total
+    // complete instead of only counting each bill once regardless of range.
+    const rangeMonths = monthsBetween(from, to);
+    const rangeRecurringOccurrences = [];
+    rangeMonths.forEach((mKey) => {
+      recurringExpenses.forEach((r) => {
+        if (recurringOccursInMonth(r, mKey)) {
+          rangeRecurringOccurrences.push({ ...r, occurredMonth: mKey });
+        }
+      });
+    });
+
+    // Savings is entered per month on purpose (no auto-rollover, same as
+    // Income) -- so a goal only counts toward the months it was actually
+    // entered for, via an exact month-range match rather than a recurrence
+    // walk. "occurredMonth" is kept on each row so the rest of this page's
+    // sorting/grouping logic below doesn't need to change.
+    const rangeSavingsOccurrences = savingsGoals
+      .filter((s) => s.active && s.start_date.slice(0, 7) >= fromMonth && s.start_date.slice(0, 7) <= toMonth)
+      .map((s) => ({ ...s, occurredMonth: s.start_date.slice(0, 7) }));
+
+    const expenseTotal = rangeExpenses.reduce((s, e) => s + Number(e.amount), 0);
+    const incomeTotal = rangeIncomes.reduce((s, i) => s + Number(i.amount), 0);
+    const fixedTotal = rangeRecurringOccurrences.reduce((s, r) => s + Number(r.amount), 0);
+    const savingsGoalTotal = rangeSavingsOccurrences.reduce((s, g) => s + Number(g.amount), 0);
+    const nonCreditCardExpenseTotalR = rangeExpenses.filter((e) => e.payment_source !== 'Credit Card').reduce((s, e) => s + Number(e.amount), 0);
+    const nonCreditCardFixedTotalR = rangeRecurringOccurrences.filter((r) => r.payment_source !== 'Credit Card').reduce((s, r) => s + Number(r.amount), 0);
+
+    // Combined Regular + Fixed spend per category, used by the bar chart.
+    const categoryTotals = {};
+    rangeExpenses.forEach((e) => {
+      const name = categoryNameById[e.category_id] || 'Uncategorized';
+      categoryTotals[name] = (categoryTotals[name] || 0) + Number(e.amount);
+    });
+    rangeRecurringOccurrences.forEach((r) => {
+      const name = categoryNameById[r.category_id] || 'Uncategorized';
+      categoryTotals[name] = (categoryTotals[name] || 0) + Number(r.amount);
+    });
+    const chartRows = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]);
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const M = 18; // outer margin -- a bit more generous than the previous 14mm for a cleaner, more modern feel.
+    const [accentR, accentG, accentB] = hexToRgb('#0d9488');
+    // Savings is money leaving income just like an expense, so it's folded
+    // into the net figure -- mirrors how the dashboard's "Net (income -
+    // expenses - savings)" card is calculated.
+    const netTotal = incomeTotal - nonCreditCardExpenseTotalR - nonCreditCardFixedTotalR - savingsGoalTotal;
+    const today = fmtDate(new Date().toISOString().slice(0, 10));
+
+    // Repeated on every page: a slim teal header band with the household
+    // name + a per-page "chapter" label (e.g. "01 / Overview"), so each
+    // page reads like a section of one cohesively designed report rather
+    // than a plain stapled-together printout. The page number is read
+    // straight off the document (doc.internal.getNumberOfPages()) instead
+    // of being passed in and hardcoded at each call site -- that matters now
+    // that the Category Breakdown chart and Summary can land on either one
+    // shared page or two separate pages depending on how many expense
+    // categories there are, which shifts every page number after it.
+    function drawHeader(sectionLabel) {
+      const pageNum = doc.internal.getNumberOfPages();
+      doc.setFillColor(accentR, accentG, accentB);
+      doc.rect(0, 0, pageWidth, 26, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFont(undefined, 'bold');
+      doc.setFontSize(14);
+      doc.text(household.name || 'Hearth', M, 11);
+      doc.setFont(undefined, 'normal');
+      doc.setFontSize(8.5);
+      doc.text(`Budget Report -- ${rangeLabel}`, M, 18);
+      doc.setFontSize(9);
+      doc.setFont(undefined, 'bold');
+      doc.text(`0${pageNum} / ${sectionLabel}`, pageWidth - M, 11, { align: 'right' });
+      doc.setFont(undefined, 'normal');
+      doc.setFontSize(7.5);
+      doc.text(`Generated ${today}`, pageWidth - M, 18, { align: 'right' });
+      doc.setTextColor(0, 0, 0);
+      return 38;
+    }
+
+    // Small uppercase "eyebrow" label above a section title -- a common
+    // modern-report typographic touch that adds visual hierarchy without
+    // extra clutter.
+    function drawEyebrow(text, y) {
+      doc.setFontSize(8);
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(accentR, accentG, accentB);
+      doc.text(text.toUpperCase(), M, y);
+      doc.setTextColor(0, 0, 0);
+      doc.setFont(undefined, 'normal');
+    }
+
+    const tableDefaults = {
+      styles: { fontSize: 11.25, cellPadding: 3, lineColor: [230, 234, 238], lineWidth: 0.1 },
+      alternateRowStyles: { fillColor: [248, 250, 251] },
+      margin: { left: M, right: M },
+    };
+
+    // Automatically solves for the largest font size/cell padding that still
+    // lets this table's rows fit within the space actually left on the page
+    // (from startY down to bottomLimit). If the row count is small, that
+    // works out to the roomy default size. If it's large enough that even
+    // the readability floor (7pt) wouldn't fit everything on one page, the
+    // floor size is used anyway and the table is simply left to flow onto a
+    // second page (autoTable does this automatically) -- shrinking further
+    // than 7pt would make the text illegible on screen, in print, and
+    // especially on a phone, so that's the one thing this won't sacrifice.
+    function autoFitTableStyles(rowCount, startY, bottomLimit = 272) {
+  // Always render at the same fixed size on every page/table so the report
+  // reads consistently -- tables that don't fit within bottomLimit simply
+  // flow onto a new page (autoTable does this automatically) instead of
+  // shrinking, which is what caused different font sizes on different pages.
+  const maxFont = 11.25, maxPad = 3;
+  return { fontSize: maxFont, cellPadding: maxPad };
+}
+
+    // ---------- Category Breakdown -- bar chart, plus Summary if it fits ----------
+    // The bar chart and the Summary table share one page by default (there's
+    // usually plenty of room below a chart of a normal household's category
+    // list). Once the chart itself runs long enough to fill most of the
+    // page -- more categories than usual -- Summary automatically moves to
+    // its own fresh page instead of being squeezed in underneath or
+    // overlapping the footer. Either way, every section after this one still
+    // gets its own dedicated page.
+    let y = drawHeader('Category Breakdown');
+
+    drawEyebrow('Spending Breakdown', y);
+    y += 7;
+    doc.setFontSize(12.5);
+    doc.setFont(undefined, 'bold');
+    doc.text('Expenses by Category', M, y);
+    doc.setFont(undefined, 'normal');
+    y += 9;
+
+    if (chartRows.length === 0) {
+      doc.setFontSize(9);
+      doc.setTextColor(120);
+      doc.text('No expenses in this period.', M, y);
+      doc.setTextColor(0);
+    } else {
+      const maxVal = Math.max(...chartRows.map(([, v]) => v)) || 1;
+      const labelX = M;
+      const barX = M + 62; // widened from 48mm (v2.02) so long category names have room to fit without truncating
+      const barMaxWidth = pageWidth - barX - M - 26;
+      // Capped low (5.5) rather than growing to fill whatever space is left
+      // on the page -- with only a handful of categories this used to
+      // stretch the chart tall to use up the full page; it now stays
+      // compact regardless of category count, and only shrinks further
+      // (down to the 2.6 floor) once there are enough categories that it
+      // would otherwise overflow.
+      const usableHeight = 258 - y;
+      const rowUnit = Math.min(5.5, Math.max(3, usableHeight / chartRows.length));
+      const barHeight = Math.max(2, rowUnit * 0.63);
+      const rowGap = Math.max(0.9, rowUnit * 0.37);
+      // v2.02: no more hard character-count truncation ("Home Cleanin...").
+      // Every category name is measured with doc.getTextWidth and only
+      // shrinks -- from this uniform base size down to a 7pt readability
+      // floor -- just far enough to fit the widened label gutter in full.
+      const labelFontSize = 11.25; // Uniform with every other table/section -- the max/base size
+      const labelMinFontSize = 7; // floor a long name is allowed to shrink to before it would otherwise overflow
+      const labelMaxWidth = barX - labelX - 4; // gutter width minus a little breathing room before the bar
+      chartRows.forEach(([name, val], i) => {
+        // Shrinking only goes so far before bars get unreadably thin -- once
+        // an extreme number of categories exists (well beyond a typical
+        // household's list), spill onto a fresh page instead of drawing
+        // past the bottom margin.
+        if (y > 268) { doc.addPage(); y = drawHeader('Category Breakdown'); }
+        const barWidth = Math.max(1, (val / maxVal) * barMaxWidth);
+        const [r, g, b] = hexToRgb(COLORS[i % COLORS.length]);
+        doc.setFillColor(245, 246, 248);
+        doc.roundedRect(barX, y, barMaxWidth, barHeight, 1, 1, 'F');
+        doc.setFillColor(r, g, b);
+        doc.roundedRect(barX, y, barWidth, barHeight, 1, 1, 'F');
+        doc.setTextColor(50);
+        let fitSize = labelFontSize;
+        doc.setFontSize(fitSize);
+        while (fitSize > labelMinFontSize && doc.getTextWidth(name) > labelMaxWidth) {
+          fitSize -= 0.25;
+          doc.setFontSize(fitSize);
+        }
+        const textY = y + barHeight - Math.min(1.3, barHeight * 0.3);
+        doc.text(name, labelX, textY);
+        doc.setFontSize(labelFontSize);
+        doc.setFont(undefined, 'bold');
+        doc.text(fmt(val), barX + barMaxWidth + 3, textY);
+        doc.setFont(undefined, 'normal');
+        y += barHeight + rowGap;
+      });
+    }
+
+    // ---------- Summary -- "At A Glance" totals ----------
+    // The Summary table needs roughly 90mm (eyebrow + title + its 6 rows).
+    // If that doesn't comfortably fit below wherever the bar chart ended,
+    // give Summary its own fresh page instead of squeezing it in or letting
+    // it run into the footer; otherwise it continues right below the chart
+    // on the same page.
+    const SUMMARY_BLOCK_HEIGHT = 90;
+    if (y + SUMMARY_BLOCK_HEIGHT > 262) {
+      doc.addPage();
+      y = drawHeader('Summary');
+    } else {
+      y += 12;
+    }
+
+    drawEyebrow('At A Glance', y);
+    y += 7;
+    doc.setFontSize(12.5);
+    doc.setFont(undefined, 'bold');
+    doc.text('Summary', M, y);
+    doc.setFont(undefined, 'normal');
+    y += 4;
+    autoTable(doc, {
+      startY: y,
+      body: [
+        ['Total Income', fmt(incomeTotal)],
+        ['Total Regular Expenses', fmt(expenseTotal)],
+        ['Total Fixed Expenses', fmt(fixedTotal)],
+        ['Total Savings', fmt(savingsGoalTotal)],
+        ['Total Outflow (Expenses + Savings)', fmt(expenseTotal + fixedTotal + savingsGoalTotal)],
+        ['Net (Income - Total Outflow)', fmt(netTotal)],
+      ],
+      theme: 'plain',
+        styles: { fontSize: 11.25, fontStyle: 'normal', cellPadding: 3 },
+      columnStyles: { 0: { cellWidth: 100 }, 1: { halign: 'right' } },
+      margin: { left: M, right: M },
+      didParseCell: (data) => {
+        if (data.row.index === 4) {
+        data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.fillColor = [241, 245, 249];
+        }
+        if (data.row.index === 5) {
+        data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.fillColor = netTotal >= 0 ? [220, 252, 231] : [254, 226, 226];
+          data.cell.styles.textColor = netTotal >= 0 ? [22, 101, 52] : [153, 27, 27];
+        }
+      },
+    });
+
+    // ---------- Income ----------
+    // ---------- Payment Sources ----------
+    // Point #6 PDF parity: same payment-source grouping as the on-screen
+    // Report view -- total per payment source (bank name appended for
+    // card/bank sources), then a category breakdown nested under each one,
+    // sorted by total desc. Its own dedicated page, same as Income/Expenses
+    // below, so it reads as its own chapter rather than being squeezed in.
+    doc.addPage();
+    y = drawHeader('Payment Sources');
+
+    drawEyebrow('By Payment Method', y);
+    y += 7;
+    doc.setFontSize(12.5);
+    doc.setFont(undefined, 'bold');
+    doc.text('Spend by Payment Source', M, y);
+    doc.setFont(undefined, 'normal');
+    y += 4;
+
+    const pdfSourceLabelFor = (item) => {
+      const src = item.payment_source || 'Cash';
+      return item.payment_bank ? `${src} - ${item.payment_bank}` : src;
+    };
+    const pdfPaymentSourceMap = {};
+    const pdfAddToSourceMap = (item) => {
+      const src = pdfSourceLabelFor(item);
+      const cat = categoryNameById[item.category_id] || 'Uncategorized';
+      if (!pdfPaymentSourceMap[src]) pdfPaymentSourceMap[src] = { total: 0, categories: {} };
+      pdfPaymentSourceMap[src].total += Number(item.amount);
+      pdfPaymentSourceMap[src].categories[cat] = (pdfPaymentSourceMap[src].categories[cat] || 0) + Number(item.amount);
+    };
+    rangeExpenses.forEach(pdfAddToSourceMap);
+    rangeRecurringOccurrences.forEach(pdfAddToSourceMap);
+    const pdfPaymentSourceRows = Object.entries(pdfPaymentSourceMap)
+      .map(([source, v]) => ({
+        source,
+        total: v.total,
+        categories: Object.entries(v.categories).sort((a, b) => b[1] - a[1]),
+      }))
+      .sort((a, b) => b.total - a.total);
+
+    if (pdfPaymentSourceRows.length === 0) {
+      doc.setFontSize(9);
+      doc.setTextColor(120);
+      doc.text('No expenses in this period.', M, y);
+      doc.setTextColor(0);
+    } else {
+      const pdfSourceHeaderRows = new Set();
+      const pdfSourceBody = [];
+      pdfPaymentSourceRows.forEach((row) => {
+        pdfSourceHeaderRows.add(pdfSourceBody.length);
+        pdfSourceBody.push([row.source, fmt(row.total)]);
+        row.categories.forEach(([name, val]) => {
+          pdfSourceBody.push([`     ${name}`, fmt(val)]);
+        });
+      });
+      autoTable(doc, {
+        theme: 'plain',
+        startY: y,
+        body: pdfSourceBody,
+        styles: { fontSize: 10.5, cellPadding: 2.4 },
+        columnStyles: { 0: { cellWidth: 130 }, 1: { halign: 'right' } },
+        margin: { left: M, right: M },
+        didParseCell: (data) => {
+          if (pdfSourceHeaderRows.has(data.row.index)) {
+            data.cell.styles.fontStyle = 'bold';
+            data.cell.styles.fillColor = [241, 245, 249];
+          } else {
+            data.cell.styles.textColor = [90, 90, 90];
+          }
+        },
+      });
+    }
+
+    // Income and Expenses each get their own dedicated page (previously
+    // they shared one page, which -- combined with the bar chart on page 1
+    // already showing per-category expense totals -- made it look like
+    // expenses were being shown twice across two pages).
+    doc.addPage();
+    y = drawHeader('Income');
+
+    drawEyebrow('Money In', y);
+    y += 7;
+    doc.setFontSize(12.5);
+    doc.setFont(undefined, 'bold');
+    doc.text('Income', M, y);
+    doc.setFont(undefined, 'normal');
+    y += 4;
+    autoTable(doc, {
+      ...tableDefaults,
+      styles: { ...tableDefaults.styles, ...autoFitTableStyles(rangeIncomes.length, y) },
+      startY: y,
+      head: [['Month', 'Source', 'Amount']],
+      body: rangeIncomes.map((i) => [i.start_date.slice(0, 7), i.name, fmt(i.amount)]),
+      foot: [['', 'Total', fmt(incomeTotal)]],
+      headStyles: { fillColor: [14, 165, 233] },
+      footStyles: { fillColor: [226, 240, 250], textColor: [15, 42, 46], fontStyle: 'bold' },
+    });
+
+    // ---------- Expenses ----------
+    doc.addPage();
+    y = drawHeader('Expenses');
+
+    drawEyebrow('Money Out', y);
+    y += 7;
+    doc.setFontSize(12.5);
+    doc.setFont(undefined, 'bold');
+    doc.text('Expenses', M, y);
+    doc.setFont(undefined, 'normal');
+    y += 4;
+    autoTable(doc, {
+      ...tableDefaults,
+      styles: { ...tableDefaults.styles, ...autoFitTableStyles(rangeExpenses.length, y) },
       startY: y,
       head: [['Date', 'Category', 'Description', 'Amount']],
       body: rangeExpenses.map((e) => [fmtDate(e.expense_date), categoryNameById[e.category_id] || 'Uncategorized', e.description || '', fmt(e.amount)]),
@@ -6519,7 +11121,7 @@ function ReportHtmlView({ data }) {
       <div className="top-bar" ref={topRef}>
         <div className="top-bar-row">
           <div className="header-title-row" data-tour="brand">
-            <HearthMark size={56} />
+            <HearthMark size={72} />
             {/* The page title is now editable right here, in place, instead
                 of only through Settings > App Settings -- typing here and
                 clicking away (auto-saves, same commitHouseholdName as
