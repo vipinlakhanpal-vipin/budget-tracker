@@ -319,7 +319,7 @@ export default function AdminConsole({ onClose, embedded = false }) {
             Project
           </button>
           <button className={`btn small ${view === 'households' ? '' : 'secondary'}`} onClick={() => setView('households')} type="button">
-            Group Accounts
+            Account Plans
           </button>
         </div>
         {view === 'invite' && (
