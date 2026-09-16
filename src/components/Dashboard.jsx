@@ -6946,7 +6946,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                     {confirmBanner('aria')}
                 </div>
                 );
-                return chatPos ? createPortal(chatWindowEl, document.body) : chatWindowEl;
+                return chatPos ? createPortal(<>{chatPos.mobile && <div className="chat-backdrop" onClick={() => setChatOpen(false)} />}{chatWindowEl}</>, document.body) : chatWindowEl;
               })()}
             </div>
             </div>
