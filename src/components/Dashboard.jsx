@@ -6775,7 +6775,7 @@ function ReportHtmlView({ data }) {
             )}
               {themeMenuOpen && createPortal(
                 <div className="theme-dropdown" ref={themeDropdownRef} style={isMobile ? { position: 'fixed', top: 'auto', left: 62, right: 12, bottom: 'calc(78px + env(safe-area-inset-bottom) + 8px)', maxHeight: '60vh', overflowY: 'auto', zIndex: 500 } : { position: 'fixed', top: themeDropdownPos?.top ?? 60, right: themeDropdownPos?.right ?? 12, zIndex: 500 }}>
-                    <div className="theme-dropdown-title">Appearance</div>
+                    <div className="theme-dropdown-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>Appearance<button type="button" onClick={() => setThemeMenuOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: 2, display: 'flex' }} aria-label="Close"><X size={14} /></button></div>
                     <div className="theme-mode-row">
             <button
               type="button"
@@ -9493,7 +9493,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 inside this narrow content-grid column. */}
             {noticeBanner('report')}
             <div className="row report-daterow" style={{ marginBottom: 12 }}>
-              <div className="field">
+              <div className="field field-date">
                 <label>From</label>
                 <input
                   type="date"
@@ -9501,7 +9501,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   onChange={(e) => { setReportFrom(e.target.value); setReportDoc(null); setReportStatus(''); setReportPreviewOpen(false); }}
                 />
               </div>
-              <div className="field">
+              <div className="field field-date">
                 <label>To</label>
                 <input
                   type="date"
