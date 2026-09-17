@@ -1452,6 +1452,21 @@ useEffect(() => {
     return () => clearTimeout(t);
   }, [activePanel]);
   const [inputTab, setInputTab] = useState('expense');
+  // v3.93: whenever the user navigates to a different panel/tab (activePanel
+  // or inputTab changes) or opens the mobile Add sheet, force-close the
+  // Notifications (Alerts) dropdown and the Theme/color-picker dropdown.
+  // Both are independent boolean states (notifOpen, themeMenuOpen) that
+  // previously had no relationship to navigation at all, so clicking any
+  // left-nav or bottom-nav tab while either was open left it visually
+  // stuck on screen (and, combined with the Add sheet opening, could push
+  // layout around unexpectedly). Confirmed live: "Alert message continue to
+  // stay even when i click left nav bar tabs" / "when theme is clicked it
+  // stays on screen even when i click bottom nav tabs... when i click +
+  // button the left side nav bar disappear".
+  useEffect(() => {
+    setNotifOpen(false);
+    setThemeMenuOpen(false);
+  }, [activePanel, inputTab, addSheetOpen]);
   const [members, setMembers] = useState([]);
   const [pendingInvites, setPendingInvites] = useState([]);
   // Lets anyone (including accounts created before the Location field
