@@ -1437,6 +1437,24 @@ input[type="date"]::-webkit-datetime-edit-fields-wrapper { display: flex; justif
 .help-accordion-body { padding: 0 14px 14px; line-height: 1.6; }
 .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
 .field { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 110px; }
+
+/* v3.90: color-coded data-entry fields, per approved mockup -- teal=date,
+   amber=amount, blue=description/name, purple=category/type, coral=
+   payment source/status. Classes are added alongside the base "field"
+   class in the JSX (e.g. className="field field-date"), scoped to the
+   five entry-form tabs (Regular Expenses, Income, Savings, Fixed
+   Expenses, Investments) so nothing elsewhere in the app is affected. */
+.field.field-date input, .field.field-date select { border-color: #0d9488; }
+.field.field-date label { color: #5dcaa5; }
+.field.field-amount input, .field.field-amount select { border-color: #d97706; }
+.field.field-amount label { color: #f2b705; }
+.field.field-desc input, .field.field-desc select { border-color: #378add; }
+.field.field-desc label { color: #7cc5f0; }
+.field.field-category input, .field.field-category select { border-color: #7f77dd; }
+.field.field-category label { color: #afa9ec; }
+.field.field-source input, .field.field-source select { border-color: #d85a30; }
+.field.field-source label { color: #f0997b; }
+
 /* Wrapper for two related short fields (date+amount, start/end date, etc.)
    that should sit side by side instead of one-per-row. Needs display:flex
    here (not just inside the mobile media query below) because otherwise,
