@@ -7280,7 +7280,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
               If you withdraw money from an FD or SIP and spend it, record that spend as a normal entry under Regular Expenses -- this tab only tracks what's invested, not day-to-day spending.
             </div>
             <div className="row investments-field-row" style={{ flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
-              <div className="field" style={{ flex: '0 1 170px' }}>
+              <div className="field field-category" style={{ flex: '0 1 170px' }}>
                 <label>Type</label>
                 <select
                   value={investmentForm.investmentType}
@@ -7290,7 +7290,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   <option value="Mutual Fund">Mutual Fund / SIP</option>
                 </select>
               </div>
-              <div className="field" style={{ flex: '1 1 180px' }}>
+              <div className="field field-desc" style={{ flex: '1 1 180px' }}>
                 <label>Name</label>
                 <input
                   type="text"
@@ -7299,7 +7299,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   placeholder={investmentForm.investmentType === 'Fixed Deposit' ? 'e.g. 1-Year FD' : 'e.g. HDFC Flexicap SIP'}
                 />
               </div>
-              <div className="field" style={{ flex: '1 1 180px' }}>
+              <div className="field field-source" style={{ flex: '1 1 180px' }}>
                 <label>{investmentForm.investmentType === 'Fixed Deposit' ? 'Bank' : 'Fund House'}</label>
                 {investmentForm.investmentType === 'Fixed Deposit' ? (
                   <SearchableCombobox value={investmentForm.institution} onChange={(v) => setInvestmentForm({ ...investmentForm, institution: v })} options={BANKS} placeholder="Search bank..." />
@@ -7323,7 +7323,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   </div>
                 )}
               </div>
-              <div className="field" style={{ flex: '0 1 140px' }}>
+              <div className="field field-amount" style={{ flex: '0 1 140px' }}>
                 <label>{investmentForm.investmentType === 'Fixed Deposit' ? 'Principal Amount' : 'Total Invested So Far'}</label>
                 <input
                   type="number" min="0" step="0.01"
@@ -7332,7 +7332,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   placeholder="0.00"
                 />
               </div>
-              <div className="field" style={{ flex: '0 1 140px' }}>
+              <div className="field field-amount" style={{ flex: '0 1 140px' }}>
                 <label>Current Value</label>
                 <input
                   type="number" min="0" step="0.01"
@@ -7342,7 +7342,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 />
               </div>
               {showInvestmentMoreFields && (investmentForm.investmentType === 'Fixed Deposit' ? (
-                <div className="field" style={{ flex: '0 1 130px' }}>
+                <div className="field field-amount" style={{ flex: '0 1 130px' }}>
                   <label>Interest Rate (% p.a.)</label>
                   <input
                     type="number" min="0" step="0.01"
@@ -7352,7 +7352,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   />
                 </div>
               ) : (
-                <div className="field" style={{ flex: '0 1 130px' }}>
+                <div className="field field-amount" style={{ flex: '0 1 130px' }}>
                   <label>Monthly SIP Amount</label>
                   <input
                     type="number" min="0" step="0.01"
@@ -7362,7 +7362,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   />
                 </div>
               ))}
-              <div className="field" style={{ flex: '0 1 120px' }}>
+              <div className="field field-date" style={{ flex: '0 1 120px' }}>
                 <label>Start Date</label>
                 <input
                   type="date"
@@ -7381,7 +7381,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 </button>
               </div>
               {showInvestmentMoreFields && (investmentForm.investmentType === 'Fixed Deposit' && (
-                <div className="field" style={{ flex: '0 1 120px' }}>
+                <div className="field field-date" style={{ flex: '0 1 120px' }}>
                   <label>Maturity Date</label>
                   <input
                     type="date"
@@ -7391,7 +7391,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 </div>
               ))}
               {editingInvestmentId && (
-                <div className="field" style={{ flex: '0 1 140px' }}>
+                <div className="field field-source" style={{ flex: '0 1 140px' }}>
                   <label>Status</label>
                   <select
                     value={investmentForm.status}
@@ -7627,7 +7627,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             <form onSubmit={handleAddExpense}>
             <div className="row">
               <div className="field-pair">
-              <div className="field" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : undefined}>
+              <div className="field field-date" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : undefined}>
                 <label>Date</label>
                 <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
               </div>
@@ -7653,7 +7653,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 </div>
               </div>
               </div>
-              <div className="field" style={{ flex: 1.4 }}>
+              <div className="field field-desc" style={{ flex: 1.4 }}>
                 <label>Description</label>
                 <input
                   type="text"
@@ -7663,7 +7663,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
 
                 />
               </div>
-              <div className="field">
+              <div className="field field-category">
                 <label>Category <AiTag /></label>
                 <select value={form.categoryId} onChange={(e) => { setForm({ ...form, categoryId: e.target.value }); setAiCategoryHint(''); }}>
                   {categories.map((c) => (
@@ -7681,7 +7681,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 option is chosen, so Cash payers never see an irrelevant field. */}
             <div className="row" style={{ marginTop: 10, alignItems: 'flex-end' }}>
               <div className="field-pair">
-              <div className="field" style={{ flex: '0 1 150px', minWidth: 130 }}>
+              <div className="field field-source" style={{ flex: '0 1 150px', minWidth: 130 }}>
                 <label>Payment Source</label>
                 <select
                   value={form.paymentSource}
@@ -7693,7 +7693,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 </select>
               </div>
               {form.paymentSource !== 'Cash' && (
-                <div className="field" style={{ flex: '0 1 190px', minWidth: 150 }}>
+                <div className="field field-source" style={{ flex: '0 1 190px', minWidth: 150 }}>
                   <label>Bank</label>
                   <SearchableCombobox value={form.paymentBank} onChange={(v) => setForm({ ...form, paymentBank: v })} options={BANKS} placeholder="Search bank..." />
                 </div>
@@ -7806,7 +7806,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 save an entry for a different month, switch the month-nav
                 first, same as everywhere else the entry list is filtered. */}
             <div className="row">
-              <div className="field" style={{ flex: 1.2 }}>
+              <div className="field field-desc" style={{ flex: 1.2 }}>
                 <label>Source</label>
                 <input
                   type="text"
@@ -7827,7 +7827,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   ))}
                 </select>
               </div>
-              <div className="field" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : { flex: '0 0 auto' }}>
+              <div className="field field-amount" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : { flex: '0 0 auto' }}>
                 <label>Amount / month</label>
                 <div className="amount-field-wrap">
                   <span className="currency-prefix"><CurrencyPrefix /></span>
@@ -8021,7 +8021,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                         )}
                       </div>
                     )}
-                    <div className="field" style={{ marginBottom: 10 }}>
+                    <div className="field field-desc" style={{ marginBottom: 10 }}>
                       <label>Source</label>
                       <input
                         type="text"
@@ -8030,7 +8030,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                         onBlur={(e) => commitIncomeField(i.id, 'name', e.target.value)}
                       />
                     </div>
-                    <div className="field" style={{ marginBottom: 10 }}>
+                    <div className="field field-amount" style={{ marginBottom: 10 }}>
                       <label>Amount</label>
                       <div className="amount-field-wrap">
                         <span className="currency-prefix"><CurrencyPrefix /></span>
@@ -8100,7 +8100,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 which is what made the form look "funny"/out of order. */}
             <div className="row">
               <div className="field-pair">
-              <div className="field" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : { flex: '1.2 1 180px', minWidth: 160 }}>
+              <div className="field field-desc" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : { flex: '1.2 1 180px', minWidth: 160 }}>
                 <label>Description</label>
                 <input
                   type="text"
@@ -8110,7 +8110,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
 
                 />
               </div>
-              <div className="field" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : { flex: '0 0 auto' }}>
+              <div className="field field-amount" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : { flex: '0 0 auto' }}>
                 <label>Amount/M.</label>
                 <div className="amount-field-wrap">
                   <span className="currency-prefix"><CurrencyPrefix /></span>
@@ -8126,7 +8126,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 </div>
               </div>
               </div>
-              <div className="field" style={{ flex: '1.3 1 190px', minWidth: 170 }}>
+              <div className="field field-category" style={{ flex: '1.3 1 190px', minWidth: 170 }}>
                 <label>Category <AiTag /></label>
                 <select
                   value={newRecurring.categoryId}
@@ -8152,7 +8152,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
             </div>
             <div className="row" style={{ marginTop: 10 }}>
               <div className="field-pair">
-              <div className="field" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : { flex: '0 1 190px', minWidth: 170 }}>
+              <div className="field field-date" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : { flex: '0 1 190px', minWidth: 170 }}>
                 <label>Start date</label>
                 <input
                   type="date"
@@ -8161,7 +8161,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 />
               </div>
               {showRecurringMoreDates && (
-<div className="field" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : { flex: '0 1 190px', minWidth: 170 }}>
+<div className="field field-date" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : { flex: '0 1 190px', minWidth: 170 }}>
                 <label>End date (optional)</label>
                 <input
                   type="date"
@@ -8173,7 +8173,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
               </div>
               <div className="field-pair">
               {showRecurringMoreDates && (
-<div className="field" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : { flex: '0 1 170px', minWidth: 150 }}>
+<div className="field field-date" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : { flex: '0 1 170px', minWidth: 150 }}>
                 <label>Due date (optional, for reminders)</label>
                 <input
                   type="date"
@@ -8185,7 +8185,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
               {/* Payment Source sits right next to Due date in this same row now
                   (previously it was pushed onto its own separate row below, which
                   made it look disconnected/unaligned from the rest of the form). */}
-              <div className="field" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : { flex: '0 1 170px', minWidth: 150 }}>
+              <div className="field field-source" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : { flex: '0 1 170px', minWidth: 150 }}>
                 <label>Payment Source</label>
                 <select
                   value={newRecurring.paymentSource}
@@ -8198,7 +8198,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
               </div>
               </div>
               {CARD_PAYMENT_SOURCES.includes(newRecurring.paymentSource) && (
-                <div className="field" style={{ flex: '0 1 190px', minWidth: 150 }}>
+                <div className="field field-source" style={{ flex: '0 1 190px', minWidth: 150 }}>
                   <label>Bank</label>
                   <SearchableCombobox value={newRecurring.paymentBank} onChange={(v) => setNewRecurring({ ...newRecurring, paymentBank: v })} options={BANKS} placeholder="Search bank..." />
                 </div>
@@ -8630,7 +8630,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                 first, same as everywhere else the entry list is filtered. */}
             <div className="row">
               <div className="field-pair">
-              <div className="field" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : { flex: 1.1 }}>
+              <div className="field field-desc" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : { flex: 1.1 }}>
                 <label>Description</label>
                 <input
                   type="text"
@@ -8639,7 +8639,7 @@ I can help you track expenses, understand spending patterns, create budgets, and
                   onChange={(e) => setNewSaving({ ...newSaving, name: e.target.value })}
                 />
               </div>
-              <div className="field" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : { flex: '0 0 auto' }}>
+              <div className="field field-amount" style={isMobile ? { flex: '1 1 0', minWidth: 0 } : { flex: '0 0 auto' }}>
                 <label>Amount/M.</label>
                 <div className="amount-field-wrap">
                   <span className="currency-prefix"><CurrencyPrefix /></span>
