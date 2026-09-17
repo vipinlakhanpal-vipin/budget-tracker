@@ -6519,7 +6519,7 @@ function ReportHtmlView({ data }) {
       <div className="top-bar" ref={topRef}>
         <div className="top-bar-row">
           <div className="header-title-row" data-tour="brand">
-            <HearthMark size={72} />
+            <HearthMark size={92} />
             {/* The page title is now editable right here, in place, instead
                 of only through Settings > App Settings -- typing here and
                 clicking away (auto-saves, same commitHouseholdName as
